@@ -873,31 +873,6 @@ else:
             if os.path.exists(DB_FILE): os.remove(DB_FILE)
             st.session_state.clear()
             st.rerun()
-# --- SISTEMA DE COPIA DE SEGURIDAD ---
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("### 💾 Copia de Seguridad")
-    
-    datos_respaldo = {
-        "equipo_creado": st.session_state.equipo_creado,
-        "nombre_equipo": st.session_state.nombre_equipo,
-        "categoria_equipo": st.session_state.categoria_equipo,
-        "division_equipo": st.session_state.division_equipo,
-        "temporada_equipo": st.session_state.temporada_equipo,
-        "escudo_equipo": st.session_state.get("escudo_equipo", None),
-        "plantilla": st.session_state.plantilla,
-        "sesiones": st.session_state.sesiones,
-        "lesiones": st.session_state.get("lesiones", []),
-        "antropometria": st.session_state.get("antropometria", [])
-    }
-    
-    st.sidebar.download_button(
-        label="Descargar archivo .json",
-        data=json.dumps(datos_respaldo, ensure_ascii=False, indent=4),
-        file_name="backup_loadlab.json",
-        mime="application/json",
-        use_container_width=True,
-        key="btn_backup_seguridad_directo"
-    )
     sesiones_crono = sorted(st.session_state.sesiones, key=lambda x: x["fecha"])
     conteo_entrenos = 0
     conteo_amistosos = 0
