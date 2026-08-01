@@ -901,7 +901,6 @@ else:
             use_container_width=True,
             key="btn_backup_seguridad"
         )
-    )
     sesiones_crono = sorted(st.session_state.sesiones, key=lambda x: x["fecha"])
     conteo_entrenos = 0
     conteo_amistosos = 0
