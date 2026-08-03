@@ -520,14 +520,18 @@ def generar_pdf_completo(sesion, df_para_medias, df_graficos, alertas_multi, ale
             pdf.set_font("Arial", 'B', 11)
             pdf.cell(0, 8, clean_txt("RIESGO MULTIFACTORIAL (2 o más alertas simultáneas):"), ln=True)
             pdf.set_font("Arial", '', 10)
-            for al in alertas_multi: pdf.multi_cell(0, 6, clean_txt(f"- {al.replace('**', '')}"))
+            for al in alertas_multi: 
+                pdf.set_x(15)
+                pdf.multi_cell(260, 6, clean_txt(f"- {al.replace('**', '')}"))
             pdf.ln(4)
 
         pdf.set_font("Arial", 'B', 11)
         pdf.cell(0, 8, clean_txt("Recuperación (1 alerta):"), ln=True)
         pdf.set_font("Arial", '', 10)
         if alertas_rec:
-            for al in alertas_rec: pdf.multi_cell(0, 6, clean_txt(f"- {al.replace('**', '')}"))
+            for al in alertas_rec: 
+                pdf.set_x(15)
+                pdf.multi_cell(260, 6, clean_txt(f"- {al.replace('**', '')}"))
         else:
             pdf.cell(0, 6, clean_txt("Sin alertas individuales."), ln=True)
         pdf.ln(4)
@@ -536,7 +540,9 @@ def generar_pdf_completo(sesion, df_para_medias, df_graficos, alertas_multi, ale
         pdf.cell(0, 8, clean_txt("Carga (1 alerta):"), ln=True)
         pdf.set_font("Arial", '', 10)
         if alertas_car:
-            for al in alertas_car: pdf.multi_cell(0, 6, clean_txt(f"- {al.replace('**', '')}"))
+            for al in alertas_car: 
+                pdf.set_x(15)
+                pdf.multi_cell(260, 6, clean_txt(f"- {al.replace('**', '')}"))
         else:
             pdf.cell(0, 6, clean_txt("Sin alertas individuales."), ln=True)
 
