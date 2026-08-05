@@ -3797,53 +3797,46 @@ else:
                                 # Configurar la clave de API
                                 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
                                 
-                                # 3. El Prompt (Instrucciones + Datos)
-                                prompt_completo = f"""
-                                Eres un preparador físico y readaptador de élite de un equipo de fútbol profesional.
-                                Tu objetivo es analizar los datos físicos de un jugador y crear un plan de trabajo correctivo y de rendimiento MUY ESTRUCTURADO, breve y directo.
+                                # El Prompt directo y con un System Instruction estricto
+                                prompt_sistema = """
+                                Eres un preparador físico y readaptador de élite de un equipo de fútbol profesional. 
+                                Analiza los datos del jugador y genera UNICAMENTE un plan estructurado, breve y directo en ESPAÑOL.
+                                NO muestres razonamientos, NO muestres texto en inglés, NO escribas borradores. Devuelve directamente el formato final con estas 4 secciones exactas:
                                 
-                                Formato obligatorio de tu respuesta:
-                                1. 📋 **Diagnóstico Principal:** (Resumen en 2 líneas del perfil del jugador).
-                                2. 🛡️ **Fase Preventiva / Correctiva:** (Ejercicios específicos agrupando sus asimetrías).
-                                3. ⚡ **Fase de Rendimiento (Fuerza):** (Qué hacer con su ratio de fuerza).
-                                4. 🛌 **Pautas Invisibles:** (Sueño/Nutrición si aplica).
+                                📋 **Diagnóstico Principal:** [Resumen de 2 líneas]
+                                🛡️ **Fase Preventiva / Correctiva:** [Ejercicios agrupados por asimetrías y dolencias]
+                                ⚡ **Fase de Rendimiento (Fuerza):** [Plan de acción para el ratio de fuerza]
+                                🛌 **Pautas Invisibles:** [Sueño y nutrición]
+                                """
                                 
-                                No repitas frases robóticas. Integra los problemas. Si tiene varias asimetrías en la misma pierna, agrúpalas en una sola rutina.
-                                
-                                DATOS DEL JUGADOR ({jug_sel}):
-                                - {contexto_fuerza}
-                                - {contexto_sueno}
-                                - Asimetrías CRÍTICAS (>15%): {contexto_asim_criticas}
-                                - Asimetrías A CONSIDERAR (10-15%): {contexto_asim_cons}
-                                - Molestias: {v_ini.get('Molestias habituales', 'Ninguna') if v_ini else 'Ninguna'}
+                                prompt_usuario = f"""
+                                Datos de {jug_sel}:
+                                - Ratio Fuerza/Peso: {ratio_fuerza:.2f} (Objetivo > 1.5)
+                                - Calidad de Sueño: {calidad_sueno}/5
+                                - Asimetrías Críticas (>15%): {contexto_asim_criticas}
+                                - Asimetrías a considerar (10-15%): {contexto_asim_cons}
+                                - Molestias reportadas: {v_ini.get('Molestias habituales', 'Ninguna') if v_ini else 'Ninguna'}
                                 """
 
-                                # Obtenemos todos los modelos válidos para generar texto
                                 modelos_validos = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
                                 
                                 plan_generado = None
-                                modelo_exitoso = None
-                                
-                                # BUCLE A PRUEBA DE BALAS: Probamos uno por uno hasta que funcione
                                 for nombre_modelo in modelos_validos:
-                                    # Saltamos el que ya sabemos que te da el error 404 por ser nuevo usuario
-                                    if "2.5-flash" in nombre_modelo:
-                                        continue
-                                        
+                                    if "2.5-flash" in nombre_modelo: continue
                                     try:
-                                        model = genai.GenerativeModel(nombre_modelo)
-                                        response = model.generate_content(prompt_completo)
+                                        # Usamos system_instruction para forzar el comportamiento limpio
+                                        model = genai.GenerativeModel(nombre_modelo, system_instruction=prompt_sistema)
+                                        response = model.generate_content(prompt_usuario)
                                         plan_generado = response.text
-                                        modelo_exitoso = nombre_modelo
-                                        break # ¡Funcionó! Rompemos el bucle
+                                        break
                                     except Exception:
-                                        continue # Si da error de permisos o 404, probamos el siguiente de la lista en silencio
+                                        continue
                                 
                                 if plan_generado:
-                                    st.success(f"¡Plan generado con éxito usando {modelo_exitoso.replace('models/', '')}!")
+                                    st.success(f"¡Plan generado con éxito para {jug_sel}!")
                                     st.markdown(plan_generado)
                                 else:
-                                    st.error("No se ha podido generar el plan. Google no ha devuelto ningún modelo compatible para tu clave en este momento.")
+                                    st.error("No se ha podido generar el plan. Revisa la conexión con la API.")
                                 
                             except Exception as e:
                                 st.error(f"Error general al conectar con la API: {e}")
