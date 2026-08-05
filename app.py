@@ -3584,16 +3584,16 @@ else:
                             asimetria = calc_asimetria(row[col_d], row[col_i])
                             df_rom.at[idx, f'Asimetría {nombre} (%)'] = asimetria
                             
-                            # Guardamos en formato estructurado para poder ordenar
+                            # Guardamos el mensaje más limpio, las columnas darán el contexto
                             if asimetria > 15:
                                 alertas_rom_data.append({
                                     'prueba': nombre, 'jugador': jug, 'asimetria': asimetria, 
-                                    'gravedad': 1, 'mensaje': f"🔴 **CRÍTICA (>15%)**: {jug} ({asimetria:.1f}%)"
+                                    'gravedad': 1, 'mensaje': f"🔴 **{jug}**: {asimetria:.1f}%"
                                 })
                             elif 10 <= asimetria <= 15:
                                 alertas_rom_data.append({
                                     'prueba': nombre, 'jugador': jug, 'asimetria': asimetria, 
-                                    'gravedad': 2, 'mensaje': f"🟡 **A CONSIDERAR (10-15%)**: {jug} ({asimetria:.1f}%)"
+                                    'gravedad': 2, 'mensaje': f"🟡 **{jug}**: {asimetria:.1f}%"
                                 })
 
                 # Ordenar por: 1º Tipo de prueba, 2º Gravedad (críticas primero), 3º Mayor asimetría a menor
@@ -3604,16 +3604,36 @@ else:
                 
                 if alertas_rom_data:
                     with st.expander("⚠️ Alertas de Asimetría Estructuradas", expanded=True):
-                        prueba_actual = None
+                        # Extraer pruebas únicas manteniendo el orden
+                        pruebas_unicas = []
                         for a in alertas_rom_data:
-                            # Imprimir encabezado si cambiamos de grupo de prueba
-                            if a['prueba'] != prueba_actual:
-                                if prueba_actual is not None: st.markdown("---") # Separador
-                                st.markdown(f"##### 📌 {a['prueba']}")
-                                prueba_actual = a['prueba']
+                            if a['prueba'] not in pruebas_unicas:
+                                pruebas_unicas.append(a['prueba'])
+                                
+                        for idx_p, prueba in enumerate(pruebas_unicas):
+                            if idx_p > 0: st.markdown("---")
+                            st.markdown(f"##### 📌 {prueba}")
                             
-                            # Imprimir la alerta
-                            st.write(a['mensaje'])
+                            # Crear las dos columnas
+                            col_crit, col_cons = st.columns(2)
+                            
+                            # Separar las alertas de esta prueba en dos listas
+                            criticas = [a for a in alertas_rom_data if a['prueba'] == prueba and a['gravedad'] == 1]
+                            considerar = [a for a in alertas_rom_data if a['prueba'] == prueba and a['gravedad'] == 2]
+                            
+                            with col_crit:
+                                st.markdown("**🔴 Críticas (>15%)**")
+                                if criticas:
+                                    for c in criticas: st.write(c['mensaje'])
+                                else:
+                                    st.caption("✅ Ninguna")
+                                    
+                            with col_cons:
+                                st.markdown("**🟡 A considerar (10-15%)**")
+                                if considerar:
+                                    for c in considerar: st.write(c['mensaje'])
+                                else:
+                                    st.caption("✅ Ninguna")
 
             st.markdown("---")
             st.markdown("### 3️⃣ Perfil 1RM y Potencia")
