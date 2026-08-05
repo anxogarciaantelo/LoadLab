@@ -3790,35 +3790,30 @@ else:
                     
                     # 2. Botón para llamar a la IA
                     if st.button("🤖 Generar Plan Estructurado con Gemini", use_container_width=True):
-                        with st.spinner(f"Gemini está analizando el perfil biomecánico y de fuerza de {jug_sel}..."):
+                        with st.spinner(f"Analizando perfil biomecánico y de fuerza de {jug_sel}..."):
                             try:
                                 import google.generativeai as genai
-                                
-                                # Configurar la clave de API
                                 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
                                 
-                                # Prompt compacto y blindado en una sola string limpia
-                                prompt_final = f"""
-                                Actúa estrictamente como preparador físico de élite. Escribe UNICAMENTE el siguiente plan redactado en castellano. No muestres razonamientos, ni pasos previos, ni texto en inglés, ni borradores. Devuelve exactamente este formato:
+                                # Extraer datos específicos para inyectarlos limpiamente
+                                criticas_str = ", ".join([f"{a[0]} ({a[1]:.1f}%)" for a in alertas_asimetria_jugador if a[2] == "Crítica"]) if criticas else "Ninguna"
+                                moderadas_str = ", ".join([f"{a[0]} ({a[1]:.1f}%)" for a in alertas_asimetria_jugador if a[2] == "A considerar"]) if considerar else "Ninguna"
+                                molestias_str = v_ini.get('Molestias habituales', 'Ninguna') if v_ini else 'Ninguna'
+                                
+                                prompt_estricto = f"""
+                                Rellena esta plantilla exacta basándote en los datos del jugador. No escribas nada más, ni introducciones, ni explicaciones, ni notas en inglés. Devuelve únicamente el texto con este formato:
 
-                                📋 **Diagnóstico Principal:** Desequilibrio neuromuscular severo en cadera, isquiotibiales y aductores con riesgo de pubalgia y déficit de fuerza relativa.
+                                📋 **Diagnóstico Principal:** Desequilibrio neuromuscular severo en cadera, isquiotibiales y aductores con riesgo de pubalgia y déficit de fuerza relativa (Ratio actual: {ratio_fuerza:.2f}).
                                 🛡️ **Fase Preventiva / Correctiva:** 
-                                - Cadera: Movilidad dinámica 90/90 y rotaciones controladas.
-                                - Zona Púbica/Aductores: Copenhagen Plank progresivo y estabilidad de core.
-                                - Isquios/Cuádriceps: Curl nórdico y sentadilla búlgara unilateral.
+                                - Cadera: Movilidad dinámica 90/90 y corrección de asimetrías críticas en rotaciones ({criticas_str}).
+                                - Zona Púbica/Aductores: Copenhagen Plank progresivo y estabilidad de core para tratar la molestia ({molestias_str}).
+                                - Isquios/Cuádriceps: Curl nórdico y sentadilla búlgara unilateral para corregir asimetrías ({criticas_str} y {moderadas_str}).
                                 ⚡ **Fase de Rendimiento (Fuerza):** 
-                                - Objetivo Ratio >1.5 con bloque de fuerza máxima (Peso Muerto y Sentadilla).
-                                - Priorizar cargas unilaterales para corregir asimetrías.
+                                - Objetivo superar el Ratio >1.5 mediante bloque de fuerza máxima (Peso Muerto y Sentadilla).
+                                - Priorizar cargas unilaterales para corregir asimetrías críticas (>15%).
                                 🛌 **Pautas Invisibles:** 
-                                - Sueño: Optimizar descanso para alcanzar 4.5/5 y reparar tejidos.
-                                - Nutrición: Aporte proteico elevado y enfoque antiinflamatorio.
-
-                                Adapta ligeramente este texto basándote en los datos reales de este jugador ({jug_sel}):
-                                - Ratio Fuerza/Peso: {ratio_fuerza:.2f} (Objetivo > 1.5)
-                                - Calidad de Sueño: {calidad_sueno}/5
-                                - Asimetrías Críticas (>15%): {contexto_asim_criticas}
-                                - Asimetrías Moderadas (10-15%): {contexto_asim_cons}
-                                - Molestias: {v_ini.get('Molestias habituales', 'Ninguna') if v_ini else 'Ninguna'}
+                                - Sueño: Optimizar descanso (actual: {calidad_sueno}/5) para favorecer la recuperación tisular.
+                                - Nutrición: Aporte proteico elevado y enfoque antiinflamatorio para el manejo de la zona púbica.
                                 """
 
                                 modelos_validos = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
@@ -3827,17 +3822,15 @@ else:
                                 for nombre_modelo in modelos_validos:
                                     if "2.5-flash" in nombre_modelo: continue
                                     try:
-                                        # Sin system_instruction para evitar confusiones al modelo flash
                                         model = genai.GenerativeModel(nombre_modelo)
-                                        response = model.generate_content(prompt_final)
-                                        texto_respuesta = response.text
+                                        response = model.generate_content(prompt_estricto)
+                                        texto = response.text.strip()
                                         
-                                        # Filtro de seguridad por si acaso vuelve a soltar el thinking
-                                        if "Diagnóstico Principal" in texto_respuesta:
-                                            # Limpiamos por si escupe texto extra al principio
-                                            if "📋" in texto_respuesta:
-                                                texto_respuesta = texto_respuesta[texto_respuesta.find("📋"):]
-                                            plan_generado = texto_respuesta
+                                        # Validación estricta para asegurar que devuelve la plantilla
+                                        if "Diagnóstico Principal" in texto:
+                                            if "📋" in texto:
+                                                texto = texto[texto.find("📋"):]
+                                            plan_generado = texto
                                             break
                                     except Exception:
                                         continue
@@ -3846,7 +3839,7 @@ else:
                                     st.success(f"¡Plan generado con éxito para {jug_sel}!")
                                     st.markdown(plan_generado)
                                 else:
-                                    st.error("No se ha podido generar el plan. Revisa la conexión con la API.")
+                                    st.error("No se ha podido conectar con el modelo. Revisa la clave API.")
                                 
                             except Exception as e:
                                 st.error(f"Error general al conectar con la API: {e}")
