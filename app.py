@@ -3766,38 +3766,68 @@ else:
                     st.warning("No hay datos de 1RM para este jugador.")
 
                 # ==========================================
-                # RECOMENDACIONES AUTOMÁTICAS
+                # RECOMENDACIONES AUTOMÁTICAS E INTELIGENCIA ARTIFICIAL
                 # ==========================================
                 st.markdown("---")
-                st.markdown("### 🎯 Recomendaciones y Estructura de Trabajo")
+                st.markdown("### 🎯 Plan de Trabajo Personalizado")
                 
                 tiene_datos = v_ini or v_rom or v_1rm
                 if not tiene_datos:
-                    st.info("Se necesitan cargar datos de las valoraciones para generar recomendaciones.")
+                    st.info("Se necesitan cargar datos de las valoraciones para generar un plan.")
                 else:
-                    recomendaciones = []
+                    # 1. Recopilamos el contexto del jugador en variables de texto
+                    contexto_fuerza = f"Ratio Fuerza/Peso: {ratio_fuerza:.2f} (Óptimo es >1.5)." if v_1rm else "Sin datos de 1RM."
+                    contexto_sueno = f"Calidad de sueño: {calidad_sueno}/5." if v_ini else "Sin datos de sueño."
                     
-                    # 1. Reglas de Fuerza Relativa
-                    if v_1rm:
-                        if ratio_fuerza < 1.5 and ratio_fuerza > 0:
-                            recomendaciones.append("🏋️‍♂️ **Fuerza Máxima:** Ratio Fuerza/Peso < 1.5. Iniciar bloque prioritario de Fuerza Máxima (Intensidad 80-90% 1RM, 3-5 repeticiones, VMP < 0.50 m/s).")
-                        elif ratio_fuerza >= 1.5:
-                            recomendaciones.append("⚡ **Potencia / RFD:** Nivel de fuerza óptimo (Ratio > 1.5). Priorizar bloque de Potencia y RFD (Entrenamiento basado en velocidad, cargas 30-60% 1RM, pliometría).")
+                    criticas = [f"{a[0]} ({a[1]:.1f}%)" for a in alertas_asimetria_jugador if a[2] == "Crítica"]
+                    considerar = [f"{a[0]} ({a[1]:.1f}%)" for a in alertas_asimetria_jugador if a[2] == "A considerar"]
                     
-                    # 2. Reglas de Asimetría
-                    if v_rom:
-                        for nombre, asim, nivel in alertas_asimetria_jugador:
-                            if nivel == "Crítica":
-                                recomendaciones.append(f"🚨 **Alerta Crítica ({nombre}):** Asimetría del {asim:.1f}%. Iniciar sesión con trabajo excéntrico/isométrico unilateral de la extremidad débil. Reducir carga bilateral temporalmente.")
-                            else:
-                                recomendaciones.append(f"⚠️ **Descompensación ({nombre}):** Asimetría del {asim:.1f}%. Añadir 1-2 series de trabajo accesorio unilateral al final de la sesión.")
-                        if not alertas_asimetria_jugador:
-                            recomendaciones.append("✅ **Equilibrio Estructural:** El jugador no presenta descompensaciones o asimetrías de fuerza significativas (>10%).")
-
-                    # 3. Reglas de Recuperación / Estilo de vida
-                    if v_ini:
-                        if calidad_sueno <= 2:
-                            recomendaciones.append("🛌 **Higiene de Sueño:** Puntuación crítica en descanso. Aplicar protocolo de higiene del sueño (limitar pantallas pre-descanso, ajuste de temperatura ambiente y optimización de luz).")
+                    contexto_asim_criticas = ", ".join(criticas) if criticas else "Ninguna asimetría crítica."
+                    contexto_asim_cons = ", ".join(considerar) if considerar else "Ninguna asimetría leve."
                     
-                    for r in recomendaciones:
-                        st.info(r)
+                    # 2. Botón para llamar a la IA
+                    if st.button("🤖 Generar Plan Estructurado con IA", use_container_width=True):
+                        with st.spinner(f"Analizando perfil biomecánico y de fuerza de {jug_sel}..."):
+                            try:
+                                from openai import OpenAI
+                                client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+                                
+                                # 3. El Prompt (Las instrucciones para la IA)
+                                prompt_sistema = """
+                                Eres un preparador físico y readaptador de élite de un equipo de fútbol profesional.
+                                Tu objetivo es analizar los datos físicos de un jugador y crear un plan de trabajo correctivo y de rendimiento MUY ESTRUCTURADO, breve y directo.
+                                
+                                Formato obligatorio de tu respuesta:
+                                1. 📋 **Diagnóstico Principal:** (Resumen en 2 líneas del perfil del jugador).
+                                2. 🛡️ **Fase Preventiva / Correctiva:** (Ejercicios específicos agrupando sus asimetrías).
+                                3. ⚡ **Fase de Rendimiento (Fuerza):** (Qué hacer con su ratio de fuerza).
+                                4. 🛌 **Pautas Invisibles:** (Sueño/Nutrición si aplica).
+                                
+                                No repitas frases robóticas. Integra los problemas. Si tiene varias asimetrías en la misma pierna, agrúpalas en una sola rutina.
+                                """
+                                
+                                prompt_usuario = f"""
+                                Analiza a {jug_sel}:
+                                - {contexto_fuerza}
+                                - {contexto_sueno}
+                                - Asimetrías CRÍTICAS (>15%): {contexto_asim_criticas}
+                                - Asimetrías A CONSIDERAR (10-15%): {contexto_asim_cons}
+                                - Molestias: {v_ini.get('Molestias habituales', 'Ninguna') if v_ini else 'Ninguna'}
+                                """
+                                
+                                response = client.chat.completions.create(
+                                    model="gpt-4o-mini", # Usamos el modelo rápido y barato
+                                    messages=[
+                                        {"role": "system", "content": prompt_sistema},
+                                        {"role": "user", "content": prompt_usuario}
+                                    ],
+                                    temperature=0.4
+                                )
+                                
+                                plan_ia = response.choices[0].message.content
+                                
+                                st.success("¡Plan generado con éxito!")
+                                st.markdown(plan_ia)
+                                
+                            except Exception as e:
+                                st.error(f"Error al conectar con la IA. ¿Has configurado tu API Key en los Secrets? Detalle: {e}")
