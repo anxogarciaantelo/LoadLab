@@ -197,7 +197,10 @@ def guardar_datos():
         "plantilla": st.session_state.plantilla,
         "sesiones": st.session_state.sesiones,
         "lesiones": st.session_state.get("lesiones", []),
-        "antropometria": st.session_state.get("antropometria", [])
+        "antropometria": st.session_state.get("antropometria", []),
+        "val_inicial": st.session_state.get("val_inicial", []),
+        "val_rom": st.session_state.get("val_rom", []),
+        "val_1rm": st.session_state.get("val_1rm", [])
     }
     try:
         supabase.table("configuracion_equipo").upsert({"id": 1, "contenido": data}).execute()
