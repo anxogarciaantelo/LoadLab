@@ -3411,12 +3411,14 @@ else:
         
         # --- FUNCIONES MATEMÁTICAS Y DE AYUDA ---
         def calcular_1rm(cargas, velocidades):
-            from scipy.stats import linregress
             valid_idx = [i for i in range(len(cargas)) if pd.notna(cargas[i]) and pd.notna(velocidades[i]) and cargas[i] > 0]
             if len(valid_idx) < 2: return 0.0
             x = [cargas[i] for i in valid_idx]
             y = [velocidades[i] for i in valid_idx]
-            slope, intercept, r, p, se = linregress(x, y)
+            
+            # Usar numpy en lugar de scipy para la regresión lineal
+            slope, intercept = np.polyfit(x, y, 1)
+            
             if slope >= 0: return max(x) # Fallback si no hay relación inversa (mala ejecución)
             # Despejar Carga para y = 0.30 m/s: Carga = (0.30 - intercept) / slope
             rm_est = (0.30 - intercept) / slope
