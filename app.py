@@ -3798,7 +3798,7 @@ else:
                                 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
                                 
                                 # Usamos Gemini 1.5 Flash (súper rápido y perfecto para esto)
-                                model = genai.GenerativeModel('gemini-1.5-flash')
+                                model = genai.GenerativeModel('gemini-1.5-flash-latest')
                                 
                                 # 3. El Prompt (Instrucciones + Datos)
                                 prompt_completo = f"""
