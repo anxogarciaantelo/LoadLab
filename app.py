@@ -3797,21 +3797,6 @@ else:
                                 # Configurar la clave de API
                                 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
                                 
-                                # --- CÓDIGO DINÁMICO A PRUEBA DE BALAS ---
-                                # 1. Preguntamos a Google qué modelos están activos para tu API Key
-                                modelos_validos = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-                                
-                                if not modelos_validos:
-                                    st.error("Tu API Key es válida, pero Google no ha habilitado ningún modelo de texto para esta clave en tu región.")
-                                    st.stop()
-                                
-                                # 2. Elegimos automáticamente el modelo más rápido ('flash') o el primero disponible
-                                modelo_elegido = next((m for m in modelos_validos if 'flash' in m), modelos_validos[0])
-                                
-                                # 3. Inicializamos la IA con el modelo correcto
-                                model = genai.GenerativeModel(modelo_elegido)
-                                # ------------------------------------------
-                                
                                 # 3. El Prompt (Instrucciones + Datos)
                                 prompt_completo = f"""
                                 Eres un preparador físico y readaptador de élite de un equipo de fútbol profesional.
@@ -3832,12 +3817,33 @@ else:
                                 - Asimetrías A CONSIDERAR (10-15%): {contexto_asim_cons}
                                 - Molestias: {v_ini.get('Molestias habituales', 'Ninguna') if v_ini else 'Ninguna'}
                                 """
+
+                                # Obtenemos todos los modelos válidos para generar texto
+                                modelos_validos = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
                                 
-                                # 4. Generar la respuesta
-                                response = model.generate_content(prompt_completo)
+                                plan_generado = None
+                                modelo_exitoso = None
                                 
-                                st.success(f"¡Plan generado con éxito usando {modelo_elegido.replace('models/', '')}!")
-                                st.markdown(response.text)
+                                # BUCLE A PRUEBA DE BALAS: Probamos uno por uno hasta que funcione
+                                for nombre_modelo in modelos_validos:
+                                    # Saltamos el que ya sabemos que te da el error 404 por ser nuevo usuario
+                                    if "2.5-flash" in nombre_modelo:
+                                        continue
+                                        
+                                    try:
+                                        model = genai.GenerativeModel(nombre_modelo)
+                                        response = model.generate_content(prompt_completo)
+                                        plan_generado = response.text
+                                        modelo_exitoso = nombre_modelo
+                                        break # ¡Funcionó! Rompemos el bucle
+                                    except Exception:
+                                        continue # Si da error de permisos o 404, probamos el siguiente de la lista en silencio
+                                
+                                if plan_generado:
+                                    st.success(f"¡Plan generado con éxito usando {modelo_exitoso.replace('models/', '')}!")
+                                    st.markdown(plan_generado)
+                                else:
+                                    st.error("No se ha podido generar el plan. Google no ha devuelto ningún modelo compatible para tu clave en este momento.")
                                 
                             except Exception as e:
-                                st.error(f"Error al conectar con Gemini. Detalle: {e}")
+                                st.error(f"Error general al conectar con la API: {e}")
