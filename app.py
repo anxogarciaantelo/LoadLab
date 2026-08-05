@@ -3411,18 +3411,22 @@ else:
         
         # --- FUNCIONES MATEMÁTICAS Y DE AYUDA ---
         def calcular_1rm(cargas, velocidades):
-            valid_idx = [i for i in range(len(cargas)) if pd.notna(cargas[i]) and pd.notna(velocidades[i]) and cargas[i] > 0]
-            if len(valid_idx) < 2: return 0.0
-            x = [cargas[i] for i in valid_idx]
-            y = [velocidades[i] for i in valid_idx]
+            # Emparejar cargas y velocidades válidas (>0)
+            validos = [(c, v) for c, v in zip(cargas, velocidades) if pd.notna(c) and pd.notna(v) and c > 0 and v > 0]
+            if not validos: return 0.0
             
-            # Usar numpy en lugar de scipy para la regresión lineal
-            slope, intercept = np.polyfit(x, y, 1)
+            # Seleccionar el intento con la carga más alta (el más representativo)
+            carga_max, vel_max = max(validos, key=lambda item: item[0])
             
-            if slope >= 0: return max(x) # Fallback si no hay relación inversa (mala ejecución)
-            # Despejar Carga para y = 0.30 m/s: Carga = (0.30 - intercept) / slope
-            rm_est = (0.30 - intercept) / slope
-            return rm_est if rm_est > 0 else 0.0
+            # Aplicar fórmula normativa (González-Badillo & Sánchez-Medina, 2010)
+            porcentaje_rm = -5.961 * (vel_max**2) - 50.71 * vel_max + 117
+            
+            # Seguridad: evitar divisiones entre cero o negativos por datos atípicos
+            if porcentaje_rm <= 0: return 0.0
+            
+            # Regla de 3 para sacar el 1RM estimado
+            rm_est = carga_max / (porcentaje_rm / 100)
+            return rm_est
 
         def calcular_potencia_max(cargas, velocidades):
             potencias = []
@@ -3449,39 +3453,82 @@ else:
         # PESTAÑA 3: SUBIR DATOS
         # ---------------------------------------------------------
         with tab_val_up:
-            st.markdown("#### 📂 Carga de Archivos Excel")
+            st.markdown("#### 📂 Carga de Archivos Excel y Sincronización")
+            
+            # --- MOTOR DE SINCRONIZACIÓN DE NOMBRES ---
+            import difflib
+            
+            def sincronizar_nombres_df(df, col_jugador):
+                if df.empty or col_jugador not in df.columns:
+                    return df
+                
+                nombres_plantilla = [p["JUGADOR"] for p in st.session_state.plantilla]
+                
+                def emparejar(nombre_excel):
+                    if pd.isna(nombre_excel): return None
+                    n_ex = str(nombre_excel).strip().lower()
+                    
+                    # 1. Coincidencia exacta (ignorando mayúsculas)
+                    for n_app in nombres_plantilla:
+                        if n_ex == n_app.lower(): return n_app
+                        
+                    # 2. Coincidencia parcial (ej. "Pérez" en "Juan Pérez")
+                    for n_app in nombres_plantilla:
+                        if n_ex in n_app.lower() or n_app.lower() in n_ex: return n_app
+                        
+                    # 3. Coincidencia por similitud (Fuzzy matching para errores tipográficos)
+                    matches = difflib.get_close_matches(n_ex, [n.lower() for n in nombres_plantilla], n=1, cutoff=0.7)
+                    if matches:
+                        for n_app in nombres_plantilla:
+                            if n_app.lower() == matches[0]: return n_app
+                            
+                    return None # Si no encuentra a nadie, devuelve None
+                    
+                # Aplicar el emparejamiento y eliminar a los que no estén en la plantilla
+                df[col_jugador] = df[col_jugador].apply(emparejar)
+                df_filtrado = df.dropna(subset=[col_jugador])
+                
+                return df_filtrado
+
             c_up1, c_up2, c_up3 = st.columns(3)
             
             with c_up1:
                 f_inicial = st.file_uploader("1. Valoración Inicial", type=["xlsx"], key="up_val_ini")
                 if st.button("Procesar V. Inicial") and f_inicial:
                     df = pd.read_excel(f_inicial)
+                    df = sincronizar_nombres_df(df, "Jugador") # Sincronizamos
                     st.session_state.val_inicial = df.to_dict('records')
                     guardar_datos()
-                    st.success("✅ Valoración Inicial cargada.")
+                    st.success(f"✅ V. Inicial cargada ({len(df)} jugadores sincronizados).")
                     st.rerun()
                     
             with c_up2:
                 f_rom = st.file_uploader("2. ROM y Fuerza ISO", type=["xlsx"], key="up_val_rom")
                 if st.button("Procesar ROM/ISO") and f_rom:
                     df = pd.read_excel(f_rom)
+                    df = sincronizar_nombres_df(df, "Jugador") # Sincronizamos
                     st.session_state.val_rom = df.to_dict('records')
                     guardar_datos()
-                    st.success("✅ ROM y Fuerza cargados.")
+                    st.success(f"✅ ROM/Fuerza cargados ({len(df)} jugadores sincronizados).")
                     st.rerun()
                     
             with c_up3:
                 f_1rm = st.file_uploader("3. Perfil 1RM (Carga/Vel)", type=["xlsx"], key="up_val_1rm")
                 if st.button("Procesar 1RM") and f_1rm:
                     df = pd.read_excel(f_1rm)
+                    # En tu Excel de 1RM la columna se llamaba JUGADOR (mayúsculas)
+                    col_nombre = "JUGADOR" if "JUGADOR" in df.columns else "Jugador"
+                    df = sincronizar_nombres_df(df, col_nombre) # Sincronizamos
                     st.session_state.val_1rm = df.to_dict('records')
                     guardar_datos()
-                    st.success("✅ Datos 1RM cargados.")
+                    st.success(f"✅ Datos 1RM cargados ({len(df)} jugadores sincronizados).")
                     st.rerun()
                     
+            st.markdown("---")
             if st.button("🗑️ Borrar todas las valoraciones"):
                 st.session_state.val_inicial, st.session_state.val_rom, st.session_state.val_1rm = [], [], []
                 guardar_datos()
+                st.success("Valoraciones borradas correctamente.")
                 st.rerun()
 
         # ---------------------------------------------------------
