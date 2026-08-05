@@ -3797,25 +3797,28 @@ else:
                                 # Configurar la clave de API
                                 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
                                 
-                                # El Prompt directo y con un System Instruction estricto
-                                prompt_sistema = """
-                                Eres un preparador físico y readaptador de élite de un equipo de fútbol profesional. 
-                                Analiza los datos del jugador y genera UNICAMENTE un plan estructurado, breve y directo en ESPAÑOL.
-                                NO muestres razonamientos, NO muestres texto en inglés, NO escribas borradores. Devuelve directamente el formato final con estas 4 secciones exactas:
-                                
-                                📋 **Diagnóstico Principal:** [Resumen de 2 líneas]
-                                🛡️ **Fase Preventiva / Correctiva:** [Ejercicios agrupados por asimetrías y dolencias]
-                                ⚡ **Fase de Rendimiento (Fuerza):** [Plan de acción para el ratio de fuerza]
-                                🛌 **Pautas Invisibles:** [Sueño y nutrición]
-                                """
-                                
-                                prompt_usuario = f"""
-                                Datos de {jug_sel}:
+                                # Prompt compacto y blindado en una sola string limpia
+                                prompt_final = f"""
+                                Actúa estrictamente como preparador físico de élite. Escribe UNICAMENTE el siguiente plan redactado en castellano. No muestres razonamientos, ni pasos previos, ni texto en inglés, ni borradores. Devuelve exactamente este formato:
+
+                                📋 **Diagnóstico Principal:** Desequilibrio neuromuscular severo en cadera, isquiotibiales y aductores con riesgo de pubalgia y déficit de fuerza relativa.
+                                🛡️ **Fase Preventiva / Correctiva:** 
+                                - Cadera: Movilidad dinámica 90/90 y rotaciones controladas.
+                                - Zona Púbica/Aductores: Copenhagen Plank progresivo y estabilidad de core.
+                                - Isquios/Cuádriceps: Curl nórdico y sentadilla búlgara unilateral.
+                                ⚡ **Fase de Rendimiento (Fuerza):** 
+                                - Objetivo Ratio >1.5 con bloque de fuerza máxima (Peso Muerto y Sentadilla).
+                                - Priorizar cargas unilaterales para corregir asimetrías.
+                                🛌 **Pautas Invisibles:** 
+                                - Sueño: Optimizar descanso para alcanzar 4.5/5 y reparar tejidos.
+                                - Nutrición: Aporte proteico elevado y enfoque antiinflamatorio.
+
+                                Adapta ligeramente este texto basándote en los datos reales de este jugador ({jug_sel}):
                                 - Ratio Fuerza/Peso: {ratio_fuerza:.2f} (Objetivo > 1.5)
                                 - Calidad de Sueño: {calidad_sueno}/5
                                 - Asimetrías Críticas (>15%): {contexto_asim_criticas}
-                                - Asimetrías a considerar (10-15%): {contexto_asim_cons}
-                                - Molestias reportadas: {v_ini.get('Molestias habituales', 'Ninguna') if v_ini else 'Ninguna'}
+                                - Asimetrías Moderadas (10-15%): {contexto_asim_cons}
+                                - Molestias: {v_ini.get('Molestias habituales', 'Ninguna') if v_ini else 'Ninguna'}
                                 """
 
                                 modelos_validos = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
@@ -3824,11 +3827,18 @@ else:
                                 for nombre_modelo in modelos_validos:
                                     if "2.5-flash" in nombre_modelo: continue
                                     try:
-                                        # Usamos system_instruction para forzar el comportamiento limpio
-                                        model = genai.GenerativeModel(nombre_modelo, system_instruction=prompt_sistema)
-                                        response = model.generate_content(prompt_usuario)
-                                        plan_generado = response.text
-                                        break
+                                        # Sin system_instruction para evitar confusiones al modelo flash
+                                        model = genai.GenerativeModel(nombre_modelo)
+                                        response = model.generate_content(prompt_final)
+                                        texto_respuesta = response.text
+                                        
+                                        # Filtro de seguridad por si acaso vuelve a soltar el thinking
+                                        if "Diagnóstico Principal" in texto_respuesta:
+                                            # Limpiamos por si escupe texto extra al principio
+                                            if "📋" in texto_respuesta:
+                                                texto_respuesta = texto_respuesta[texto_respuesta.find("📋"):]
+                                            plan_generado = texto_respuesta
+                                            break
                                     except Exception:
                                         continue
                                 
