@@ -3563,7 +3563,7 @@ else:
             else:
                 df_rom = pd.DataFrame(st.session_state.val_rom)
                 
-                # Calcular asimetrías
+                # Definir pares y orden lógico para agrupar las alertas
                 pares = [
                     ('Rot. ext. cadera', 'Rot. ext. cadera D (°)', 'Rot. ext. cadera I (°)'),
                     ('Rot. int. cadera', 'Rot. int. cadera D (°)', 'Rot. int. cadera I (°)'),
@@ -3573,24 +3573,47 @@ else:
                     ('Aductores', 'Aductores D (N)', 'Aductores I (N)')
                 ]
                 
-                alertas_rom = []
+                # Diccionario para saber el orden de las pruebas al clasificar
+                orden_pruebas = {p[0]: i for i, p in enumerate(pares)}
+                
+                alertas_rom_data = []
                 for idx, row in df_rom.iterrows():
                     jug = row.get('Jugador', 'Desconocido')
                     for nombre, col_d, col_i in pares:
                         if col_d in df_rom.columns and col_i in df_rom.columns:
                             asimetria = calc_asimetria(row[col_d], row[col_i])
                             df_rom.at[idx, f'Asimetría {nombre} (%)'] = asimetria
+                            
+                            # Guardamos en formato estructurado para poder ordenar
                             if asimetria > 15:
-                                alertas_rom.append(f"🔴 **CRÍTICA (>15%)**: {jug} - {nombre} ({asimetria:.1f}%)")
+                                alertas_rom_data.append({
+                                    'prueba': nombre, 'jugador': jug, 'asimetria': asimetria, 
+                                    'gravedad': 1, 'mensaje': f"🔴 **CRÍTICA (>15%)**: {jug} ({asimetria:.1f}%)"
+                                })
                             elif 10 <= asimetria <= 15:
-                                alertas_rom.append(f"🟡 **A CONSIDERAR (10-15%)**: {jug} - {nombre} ({asimetria:.1f}%)")
+                                alertas_rom_data.append({
+                                    'prueba': nombre, 'jugador': jug, 'asimetria': asimetria, 
+                                    'gravedad': 2, 'mensaje': f"🟡 **A CONSIDERAR (10-15%)**: {jug} ({asimetria:.1f}%)"
+                                })
+
+                # Ordenar por: 1º Tipo de prueba, 2º Gravedad (críticas primero), 3º Mayor asimetría a menor
+                alertas_rom_data.sort(key=lambda x: (orden_pruebas.get(x['prueba'], 99), x['gravedad'], -x['asimetria']))
 
                 cols_mostrar = ['Jugador'] + [f'Asimetría {n} (%)' for n, _, _ in pares]
                 mostrar_tabla_moderna(df_rom[cols_mostrar].style.hide(axis="index").format(precision=1))
                 
-                if alertas_rom:
-                    with st.expander("⚠️ Alertas de Asimetría Detalladas", expanded=True):
-                        for a in alertas_rom: st.write(a)
+                if alertas_rom_data:
+                    with st.expander("⚠️ Alertas de Asimetría Estructuradas", expanded=True):
+                        prueba_actual = None
+                        for a in alertas_rom_data:
+                            # Imprimir encabezado si cambiamos de grupo de prueba
+                            if a['prueba'] != prueba_actual:
+                                if prueba_actual is not None: st.markdown("---") # Separador
+                                st.markdown(f"##### 📌 {a['prueba']}")
+                                prueba_actual = a['prueba']
+                            
+                            # Imprimir la alerta
+                            st.write(a['mensaje'])
 
             st.markdown("---")
             st.markdown("### 3️⃣ Perfil 1RM y Potencia")
