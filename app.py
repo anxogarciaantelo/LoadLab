@@ -3769,7 +3769,7 @@ else:
                     st.warning("No hay datos de 1RM para este jugador.")
 
                 # ==========================================
-                # RECOMENDACIONES AUTOMÁTICAS E INTELIGENCIA ARTIFICIAL
+                # RECOMENDACIONES AUTOMÁTICAS E INTELIGENCIA ARTIFICIAL (GEMINI)
                 # ==========================================
                 st.markdown("---")
                 st.markdown("### 🎯 Plan de Trabajo Personalizado")
@@ -3789,14 +3789,19 @@ else:
                     contexto_asim_cons = ", ".join(considerar) if considerar else "Ninguna asimetría leve."
                     
                     # 2. Botón para llamar a la IA
-                    if st.button("🤖 Generar Plan Estructurado con IA", use_container_width=True):
-                        with st.spinner(f"Analizando perfil biomecánico y de fuerza de {jug_sel}..."):
+                    if st.button("🤖 Generar Plan Estructurado con Gemini", use_container_width=True):
+                        with st.spinner(f"Gemini está analizando el perfil biomecánico y de fuerza de {jug_sel}..."):
                             try:
-                                from openai import OpenAI
-                                client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+                                import google.generativeai as genai
                                 
-                                # 3. El Prompt (Las instrucciones para la IA)
-                                prompt_sistema = """
+                                # Configurar la clave de API
+                                genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+                                
+                                # Usamos Gemini 1.5 Flash (súper rápido y perfecto para esto)
+                                model = genai.GenerativeModel('gemini-1.5-flash')
+                                
+                                # 3. El Prompt (Instrucciones + Datos)
+                                prompt_completo = f"""
                                 Eres un preparador físico y readaptador de élite de un equipo de fútbol profesional.
                                 Tu objetivo es analizar los datos físicos de un jugador y crear un plan de trabajo correctivo y de rendimiento MUY ESTRUCTURADO, breve y directo.
                                 
@@ -3807,10 +3812,8 @@ else:
                                 4. 🛌 **Pautas Invisibles:** (Sueño/Nutrición si aplica).
                                 
                                 No repitas frases robóticas. Integra los problemas. Si tiene varias asimetrías en la misma pierna, agrúpalas en una sola rutina.
-                                """
                                 
-                                prompt_usuario = f"""
-                                Analiza a {jug_sel}:
+                                DATOS DEL JUGADOR ({jug_sel}):
                                 - {contexto_fuerza}
                                 - {contexto_sueno}
                                 - Asimetrías CRÍTICAS (>15%): {contexto_asim_criticas}
@@ -3818,19 +3821,11 @@ else:
                                 - Molestias: {v_ini.get('Molestias habituales', 'Ninguna') if v_ini else 'Ninguna'}
                                 """
                                 
-                                response = client.chat.completions.create(
-                                    model="gpt-4o-mini", # Usamos el modelo rápido y barato
-                                    messages=[
-                                        {"role": "system", "content": prompt_sistema},
-                                        {"role": "user", "content": prompt_usuario}
-                                    ],
-                                    temperature=0.4
-                                )
+                                # 4. Generar la respuesta
+                                response = model.generate_content(prompt_completo)
                                 
-                                plan_ia = response.choices[0].message.content
-                                
-                                st.success("¡Plan generado con éxito!")
-                                st.markdown(plan_ia)
+                                st.success("¡Plan generado con éxito por Gemini!")
+                                st.markdown(response.text)
                                 
                             except Exception as e:
-                                st.error(f"Error al conectar con la IA. ¿Has configurado tu API Key en los Secrets? Detalle: {e}")
+                                st.error(f"Error al conectar con Gemini. ¿Has configurado tu API Key en los Secrets y añadido google-generativeai al requirements.txt? Detalle: {e}")
