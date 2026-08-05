@@ -3396,9 +3396,316 @@ else:
                 except Exception as e:
                     st.error(f"Error al leer el archivo. Asegúrate de que el formato es correcto. Detalle técnico: {e}")
 
-    # ==========================================
+# ==========================================
     # VALORACIONES
     # ==========================================
     elif seccion_principal == "📊 Valoraciones":
         st.subheader("📊 Valoraciones Físicas y Tests")
-        st.info("⚙️ Espacio reservado para el seguimiento de tests físicos (saltos, CMJ, fuerza, velocidad) y perfiles neuromusculares.")
+        
+        # Inicializar memoria para valoraciones si no existe
+        if "val_inicial" not in st.session_state: st.session_state.val_inicial = []
+        if "val_rom" not in st.session_state: st.session_state.val_rom = []
+        if "val_1rm" not in st.session_state: st.session_state.val_1rm = []
+        
+        tab_val_res, tab_val_jug, tab_val_up = st.tabs(["📊 Resumen", "👤 Jugadores", "📂 Subir datos"])
+        
+        # --- FUNCIONES MATEMÁTICAS Y DE AYUDA ---
+        def calcular_1rm(cargas, velocidades):
+            from scipy.stats import linregress
+            valid_idx = [i for i in range(len(cargas)) if pd.notna(cargas[i]) and pd.notna(velocidades[i]) and cargas[i] > 0]
+            if len(valid_idx) < 2: return 0.0
+            x = [cargas[i] for i in valid_idx]
+            y = [velocidades[i] for i in valid_idx]
+            slope, intercept, r, p, se = linregress(x, y)
+            if slope >= 0: return max(x) # Fallback si no hay relación inversa (mala ejecución)
+            # Despejar Carga para y = 0.30 m/s: Carga = (0.30 - intercept) / slope
+            rm_est = (0.30 - intercept) / slope
+            return rm_est if rm_est > 0 else 0.0
+
+        def calcular_potencia_max(cargas, velocidades):
+            potencias = []
+            for c, v in zip(cargas, velocidades):
+                if pd.notna(c) and pd.notna(v) and c > 0:
+                    pot_val = (c * 9.81) * v
+                    potencias.append(pot_val)
+            return max(potencias) if potencias else 0.0
+
+        def calc_asimetria(der, izq):
+            d, i = safe_float(der), safe_float(izq)
+            if max(d, i) == 0: return 0.0
+            return (abs(d - i) / max(d, i)) * 100
+            
+        def procesar_textos(lista_dicts, columna):
+            items = []
+            for row in lista_dicts:
+                texto = str(row.get(columna, ""))
+                if texto and texto.lower() != 'nan':
+                    items.extend([t.strip().capitalize() for t in texto.split(',')])
+            return Counter(items).most_common(5)
+
+        # ---------------------------------------------------------
+        # PESTAÑA 3: SUBIR DATOS
+        # ---------------------------------------------------------
+        with tab_val_up:
+            st.markdown("#### 📂 Carga de Archivos Excel")
+            c_up1, c_up2, c_up3 = st.columns(3)
+            
+            with c_up1:
+                f_inicial = st.file_uploader("1. Valoración Inicial", type=["xlsx"], key="up_val_ini")
+                if st.button("Procesar V. Inicial") and f_inicial:
+                    df = pd.read_excel(f_inicial)
+                    st.session_state.val_inicial = df.to_dict('records')
+                    guardar_datos()
+                    st.success("✅ Valoración Inicial cargada.")
+                    st.rerun()
+                    
+            with c_up2:
+                f_rom = st.file_uploader("2. ROM y Fuerza ISO", type=["xlsx"], key="up_val_rom")
+                if st.button("Procesar ROM/ISO") and f_rom:
+                    df = pd.read_excel(f_rom)
+                    st.session_state.val_rom = df.to_dict('records')
+                    guardar_datos()
+                    st.success("✅ ROM y Fuerza cargados.")
+                    st.rerun()
+                    
+            with c_up3:
+                f_1rm = st.file_uploader("3. Perfil 1RM (Carga/Vel)", type=["xlsx"], key="up_val_1rm")
+                if st.button("Procesar 1RM") and f_1rm:
+                    df = pd.read_excel(f_1rm)
+                    st.session_state.val_1rm = df.to_dict('records')
+                    guardar_datos()
+                    st.success("✅ Datos 1RM cargados.")
+                    st.rerun()
+                    
+            if st.button("🗑️ Borrar todas las valoraciones"):
+                st.session_state.val_inicial, st.session_state.val_rom, st.session_state.val_1rm = [], [], []
+                guardar_datos()
+                st.rerun()
+
+        # ---------------------------------------------------------
+        # PESTAÑA 1: RESUMEN
+        # ---------------------------------------------------------
+        with tab_val_res:
+            st.markdown("### 1️⃣ Valoración Inicial (Tendencias del Equipo)")
+            if not st.session_state.val_inicial:
+                st.info("Sube el archivo de Valoración Inicial para ver el resumen.")
+            else:
+                c_vi1, c_vi2 = st.columns(2)
+                with c_vi1:
+                    st.markdown("**🤕 Principales Molestias Habituales:**")
+                    for mol, count in procesar_textos(st.session_state.val_inicial, 'Molestias habituales'): st.write(f"- {mol} ({count} jugadores)")
+                    
+                    st.markdown("**🛡️ Aspectos Fuertes (Top 5):**")
+                    for af, count in procesar_textos(st.session_state.val_inicial, 'Aspectos fuertes'): st.write(f"- {af} ({count} jugadores)")
+                with c_vi2:
+                    df_ini = pd.DataFrame(st.session_state.val_inicial)
+                    if 'Calidad del sueño' in df_ini.columns and 'Calidad de nutrición' in df_ini.columns:
+                        sueno_m = pd.to_numeric(df_ini['Calidad del sueño'], errors='coerce').mean()
+                        nutri_m = pd.to_numeric(df_ini['Calidad de nutrición'], errors='coerce').mean()
+                        st.metric("Calidad de Sueño (Promedio / 5)", f"{sueno_m:.1f}")
+                        st.metric("Calidad de Nutrición (Promedio / 5)", f"{nutri_m:.1f}")
+                    st.markdown("**📈 Aspectos a Mejorar (Top 5):**")
+                    for am, count in procesar_textos(st.session_state.val_inicial, 'Aspectos a mejorar'): st.write(f"- {am} ({count} jugadores)")
+
+            st.markdown("---")
+            st.markdown("### 2️⃣ ROM y Fuerza Máxima Isométrica")
+            if not st.session_state.val_rom:
+                st.info("Sube el archivo de ROM y Fuerza ISO para ver el resumen.")
+            else:
+                df_rom = pd.DataFrame(st.session_state.val_rom)
+                
+                # Calcular asimetrías
+                pares = [
+                    ('Rot. ext. cadera', 'Rot. ext. cadera D (°)', 'Rot. ext. cadera I (°)'),
+                    ('Rot. int. cadera', 'Rot. int. cadera D (°)', 'Rot. int. cadera I (°)'),
+                    ('Dorsiflexión', 'Dorsiflexión D (°)', 'Dorsiflexión I (°)'),
+                    ('Isquios', 'Isquios D (N)', 'Isquios I (N)'),
+                    ('Cuádriceps', 'Cuádriceps D (N)', 'Cuádriceps I (N)'),
+                    ('Aductores', 'Aductores D (N)', 'Aductores I (N)')
+                ]
+                
+                alertas_rom = []
+                for idx, row in df_rom.iterrows():
+                    jug = row.get('Jugador', 'Desconocido')
+                    for nombre, col_d, col_i in pares:
+                        if col_d in df_rom.columns and col_i in df_rom.columns:
+                            asimetria = calc_asimetria(row[col_d], row[col_i])
+                            df_rom.at[idx, f'Asimetría {nombre} (%)'] = asimetria
+                            if asimetria > 15:
+                                alertas_rom.append(f"🔴 **CRÍTICA (>15%)**: {jug} - {nombre} ({asimetria:.1f}%)")
+                            elif 10 <= asimetria <= 15:
+                                alertas_rom.append(f"🟡 **A CONSIDERAR (10-15%)**: {jug} - {nombre} ({asimetria:.1f}%)")
+
+                cols_mostrar = ['Jugador'] + [f'Asimetría {n} (%)' for n, _, _ in pares]
+                mostrar_tabla_moderna(df_rom[cols_mostrar].style.hide(axis="index").format(precision=1))
+                
+                if alertas_rom:
+                    with st.expander("⚠️ Alertas de Asimetría Detalladas", expanded=True):
+                        for a in alertas_rom: st.write(a)
+
+            st.markdown("---")
+            st.markdown("### 3️⃣ Perfil 1RM y Potencia")
+            if not st.session_state.val_1rm:
+                st.info("Sube el archivo de 1RM para ver el resumen.")
+            else:
+                df_1rm = pd.DataFrame(st.session_state.val_1rm)
+                resultados_1rm = []
+                for _, row in df_1rm.iterrows():
+                    cargas = [row.get(f'PESO{i}') for i in range(1, 5)]
+                    vels = [row.get(f'VELOCIDAD{i}') for i in range(1, 5)]
+                    
+                    rm_est = calcular_1rm(cargas, vels)
+                    pot_max = calcular_potencia_max(cargas, vels)
+                    
+                    resultados_1rm.append({
+                        "Jugador": row.get("JUGADOR", "Desconocido"),
+                        "1RM Sentadilla (kg)": rm_est,
+                        "Potencia Máxima (W)": pot_max
+                    })
+                    
+                df_res_1rm = pd.DataFrame(resultados_1rm)
+                mostrar_tabla_moderna(df_res_1rm.style.hide(axis="index").format(precision=1))
+                
+                st.markdown("#### 🏋️‍♂️ Grupos de Fuerza (Márgenes de 10 kg)")
+                
+                bins = range(0, 300, 10)
+                labels = [f"{i}-{i+9} kg" for i in bins[:-1]]
+                df_res_1rm['Rango'] = pd.cut(df_res_1rm['1RM Sentadilla (kg)'], bins=bins, labels=labels, right=False)
+                
+                agrupado = df_res_1rm[df_res_1rm['1RM Sentadilla (kg)'] > 0].groupby('Rango', observed=True)['Jugador'].apply(list)
+                for rango, jugs in agrupado.items():
+                    if jugs:
+                        st.write(f"**{rango}:** {', '.join(jugs)}")
+
+        # ---------------------------------------------------------
+        # PESTAÑA 2: JUGADORES (PERFIL INDIVIDUAL Y RECOMENDACIONES)
+        # ---------------------------------------------------------
+        with tab_val_jug:
+            if not st.session_state.plantilla:
+                st.info("Añade jugadores en la plantilla primero.")
+            else:
+                nombres_plantilla = sorted([j["JUGADOR"] for j in st.session_state.plantilla])
+                jug_sel = st.selectbox("Selecciona un jugador:", nombres_plantilla, key="sel_val_jug")
+                
+                st.markdown("---")
+                
+                # Buscar peso del jugador en antropometría para ratio de fuerza
+                peso_jugador = 75.0 # Valor por defecto
+                ant_jug = [a for a in st.session_state.get("antropometria", []) if limpiar_nombre(a['jugador']) == limpiar_nombre(jug_sel)]
+                if ant_jug:
+                    df_aj = pd.DataFrame(ant_jug).sort_values('fecha', ascending=False)
+                    peso_jugador = float(df_aj.iloc[0]['Peso'])
+
+                # 1. VALORACIÓN INICIAL INDIVIDUAL
+                st.markdown("#### 1️⃣ Valoración Inicial")
+                v_ini = next((row for row in st.session_state.val_inicial if limpiar_nombre(row.get('Jugador', '')) == limpiar_nombre(jug_sel)), None)
+                calidad_sueno = 3 # Defecto
+                if v_ini:
+                    calidad_sueno = safe_float(v_ini.get('Calidad del sueño', 3))
+                    c1, c2 = st.columns(2)
+                    c1.write(f"**Lesiones graves:** {v_ini.get('Lesiones graves', '-')}")
+                    c1.write(f"**Lesiones recientes:** {v_ini.get('Lesiones recientes', '-')}")
+                    c1.write(f"**Molestias habituales:** {v_ini.get('Molestias habituales', '-')}")
+                    c2.write(f"**Aspectos fuertes:** {v_ini.get('Aspectos fuertes', '-')}")
+                    c2.write(f"**Aspectos a mejorar:** {v_ini.get('Aspectos a mejorar', '-')}")
+                    c2.write(f"**Sueño (1-5):** {calidad_sueno} | **Nutrición (1-5):** {v_ini.get('Calidad de nutrición', '-')}")
+                else:
+                    st.warning("No hay datos de valoración inicial para este jugador.")
+
+                # 2. ROM Y FUERZA ISO INDIVIDUAL
+                st.markdown("---")
+                st.markdown("#### 2️⃣ ROM y Fuerza Máxima Isométrica")
+                v_rom = next((row for row in st.session_state.val_rom if limpiar_nombre(row.get('Jugador', '')) == limpiar_nombre(jug_sel)), None)
+                alertas_asimetria_jugador = []
+                
+                if v_rom:
+                    datos_rom_ind = []
+                    for nombre, col_d, col_i in pares:
+                        d, i = safe_float(v_rom.get(col_d, 0)), safe_float(v_rom.get(col_i, 0))
+                        asim = calc_asimetria(d, i)
+                        datos_rom_ind.append({"Prueba": nombre, "Derecha": d, "Izquierda": i, "Asimetría (%)": asim})
+                        if asim > 15: alertas_asimetria_jugador.append((nombre, asim, "Crítica"))
+                        elif 10 <= asim <= 15: alertas_asimetria_jugador.append((nombre, asim, "A considerar"))
+                        
+                    df_rom_ind = pd.DataFrame(datos_rom_ind)
+                    # Colorear columna de asimetría
+                    def color_asim(val):
+                        if val > 15: return 'color: red; font-weight: bold;'
+                        elif val >= 10: return 'color: orange; font-weight: bold;'
+                        return 'color: green;'
+                    
+                    mostrar_tabla_moderna(df_rom_ind.style.hide(axis="index").map(color_asim, subset=['Asimetría (%)']).format(precision=1))
+                else:
+                    st.warning("No hay datos de ROM y Fuerza ISO para este jugador.")
+
+                # 3. 1RM INDIVIDUAL
+                st.markdown("---")
+                st.markdown("#### 3️⃣ Perfil 1RM (Fuerza y Potencia)")
+                v_1rm = next((row for row in st.session_state.val_1rm if limpiar_nombre(row.get('JUGADOR', '')) == limpiar_nombre(jug_sel)), None)
+                ratio_fuerza = 0.0
+                
+                if v_1rm:
+                    cargas = [safe_float(v_1rm.get(f'PESO{i}')) for i in range(1, 5)]
+                    vels = [safe_float(v_1rm.get(f'VELOCIDAD{i}')) for i in range(1, 5)]
+                    
+                    rm_sq = calcular_1rm(cargas, vels)
+                    pot_max = calcular_potencia_max(cargas, vels)
+                    ratio_fuerza = rm_sq / peso_jugador if peso_jugador > 0 else 0
+                    
+                    rm_pm = rm_sq * 1.15
+                    rm_ht = rm_sq * 1.30
+                    
+                    c1, c2, c3 = st.columns(3)
+                    c1.metric("1RM Sentadilla", f"{rm_sq:.1f} kg", help="Estimado con VMP de 0.30 m/s")
+                    c2.metric("Potencia Máxima", f"{pot_max:.0f} W")
+                    c3.metric("Fuerza Relativa (1RM/Peso)", f"{ratio_fuerza:.2f}", help=f"Peso utilizado: {peso_jugador:.1f} kg")
+                    
+                    # Tabla de zonas e intensidad
+                    zonas_1rm = pd.DataFrame({
+                        "Ejercicio": ["Sentadilla", "Peso Muerto (Extrapolado)", "Hip Thrust (Extrapolado)"],
+                        "100% (1RM)": [rm_sq, rm_pm, rm_ht],
+                        "90%": [rm_sq*0.9, rm_pm*0.9, rm_ht*0.9],
+                        "80%": [rm_sq*0.8, rm_pm*0.8, rm_ht*0.8],
+                        "70%": [rm_sq*0.7, rm_pm*0.7, rm_ht*0.7],
+                        "60%": [rm_sq*0.6, rm_pm*0.6, rm_ht*0.6]
+                    })
+                    mostrar_tabla_moderna(zonas_1rm.style.hide(axis="index").format(precision=1))
+                else:
+                    st.warning("No hay datos de 1RM para este jugador.")
+
+                # ==========================================
+                # RECOMENDACIONES AUTOMÁTICAS
+                # ==========================================
+                st.markdown("---")
+                st.markdown("### 🎯 Recomendaciones y Estructura de Trabajo")
+                
+                tiene_datos = v_ini or v_rom or v_1rm
+                if not tiene_datos:
+                    st.info("Se necesitan cargar datos de las valoraciones para generar recomendaciones.")
+                else:
+                    recomendaciones = []
+                    
+                    # 1. Reglas de Fuerza Relativa
+                    if v_1rm:
+                        if ratio_fuerza < 1.5 and ratio_fuerza > 0:
+                            recomendaciones.append("🏋️‍♂️ **Fuerza Máxima:** Ratio Fuerza/Peso < 1.5. Iniciar bloque prioritario de Fuerza Máxima (Intensidad 80-90% 1RM, 3-5 repeticiones, VMP < 0.50 m/s).")
+                        elif ratio_fuerza >= 1.5:
+                            recomendaciones.append("⚡ **Potencia / RFD:** Nivel de fuerza óptimo (Ratio > 1.5). Priorizar bloque de Potencia y RFD (Entrenamiento basado en velocidad, cargas 30-60% 1RM, pliometría).")
+                    
+                    # 2. Reglas de Asimetría
+                    if v_rom:
+                        for nombre, asim, nivel in alertas_asimetria_jugador:
+                            if nivel == "Crítica":
+                                recomendaciones.append(f"🚨 **Alerta Crítica ({nombre}):** Asimetría del {asim:.1f}%. Iniciar sesión con trabajo excéntrico/isométrico unilateral de la extremidad débil. Reducir carga bilateral temporalmente.")
+                            else:
+                                recomendaciones.append(f"⚠️ **Descompensación ({nombre}):** Asimetría del {asim:.1f}%. Añadir 1-2 series de trabajo accesorio unilateral al final de la sesión.")
+                        if not alertas_asimetria_jugador:
+                            recomendaciones.append("✅ **Equilibrio Estructural:** El jugador no presenta descompensaciones o asimetrías de fuerza significativas (>10%).")
+
+                    # 3. Reglas de Recuperación / Estilo de vida
+                    if v_ini:
+                        if calidad_sueno <= 2:
+                            recomendaciones.append("🛌 **Higiene de Sueño:** Puntuación crítica en descanso. Aplicar protocolo de higiene del sueño (limitar pantallas pre-descanso, ajuste de temperatura ambiente y optimización de luz).")
+                    
+                    for r in recomendaciones:
+                        st.info(r)
