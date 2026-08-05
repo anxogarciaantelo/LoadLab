@@ -3795,25 +3795,29 @@ else:
                                 import google.generativeai as genai
                                 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
                                 
-                                # Extraer datos específicos para inyectarlos limpiamente
-                                criticas_str = ", ".join([f"{a[0]} ({a[1]:.1f}%)" for a in alertas_asimetria_jugador if a[2] == "Crítica"]) if criticas else "Ninguna"
-                                moderadas_str = ", ".join([f"{a[0]} ({a[1]:.1f}%)" for a in alertas_asimetria_jugador if a[2] == "A considerar"]) if considerar else "Ninguna"
-                                molestias_str = v_ini.get('Molestias habituales', 'Ninguna') if v_ini else 'Ninguna'
+                                # 1. Preparamos listas limpias en Python para que la IA no tenga que parsear datos feos
+                                asim_criticas_nombres = [a[0] for a in alertas_asimetria_jugador if a[2] == "Crítica"]
+                                asim_mod_nombres = [a[0] for a in alertas_asimetria_jugador if a[2] == "A considerar"]
                                 
-                                prompt_estricto = f"""
-                                Rellena esta plantilla exacta basándote en los datos del jugador. No escribas nada más, ni introducciones, ni explicaciones, ni notas en inglés. Devuelve únicamente el texto con este formato:
+                                criticas_txt = ", ".join(asim_criticas_nombres) if asim_criticas_nombres else "Ninguna"
+                                mod_txt = ", ".join(asim_mod_nombres) if asim_mod_nombres else "Ninguna"
+                                molestias_txt = v_ini.get('Molestias habituales', 'Ninguna') if v_ini else 'Ninguna'
+                                
+                                # 2. Prompt ultracorto y directo (imposible que falle)
+                                prompt_directo = f"""
+                                Eres un preparador físico de élite. Redacta UNICAMENTE un plan de entrenamiento individualizado y limpio para el jugador {jug_sel} siguiendo estrictamente este formato de 4 líneas y sin añadir ningún texto adicional ni explicaciones previas:
 
-                                📋 **Diagnóstico Principal:** Desequilibrio neuromuscular severo en cadera, isquiotibiales y aductores con riesgo de pubalgia y déficit de fuerza relativa (Ratio actual: {ratio_fuerza:.2f}).
+                                📋 **Diagnóstico Principal:** Desequilibrio neuromuscular severo en {criticas_txt} con déficit de fuerza relativa (Ratio actual: {ratio_fuerza:.2f}) y alerta por molestias en {molestias_txt}.
                                 🛡️ **Fase Preventiva / Correctiva:** 
-                                - Cadera: Movilidad dinámica 90/90 y corrección de asimetrías críticas en rotaciones ({criticas_str}).
-                                - Zona Púbica/Aductores: Copenhagen Plank progresivo y estabilidad de core para tratar la molestia ({molestias_str}).
-                                - Isquios/Cuádriceps: Curl nórdico y sentadilla búlgara unilateral para corregir asimetrías ({criticas_str} y {moderadas_str}).
+                                - Cadera: Movilidad dinámica 90/90 y trabajo corrector para las asimetrías críticas en {criticas_txt}.
+                                - Zona Púbica/Aductores: Copenhagen Plank progresivo y estabilidad de core para manejo de {molestias_txt}.
+                                - Isquios/Cuádriceps: Curl nórdico y sentadilla búlgara unilateral para equilibrar las diferencias detectadas en {criticas_txt} y {mod_txt}.
                                 ⚡ **Fase de Rendimiento (Fuerza):** 
                                 - Objetivo superar el Ratio >1.5 mediante bloque de fuerza máxima (Peso Muerto y Sentadilla).
-                                - Priorizar cargas unilaterales para corregir asimetrías críticas (>15%).
+                                - Priorizar cargas unilaterales en los patrones afectados para reducir asimetrías (>15%).
                                 🛌 **Pautas Invisibles:** 
-                                - Sueño: Optimizar descanso (actual: {calidad_sueno}/5) para favorecer la recuperación tisular.
-                                - Nutrición: Aporte proteico elevado y enfoque antiinflamatorio para el manejo de la zona púbica.
+                                - Sueño: Optimizar descanso (actual: {calidad_sueno}/5) para favorecer la recuperación tisular y la regeneración de la zona afectada.
+                                - Nutricion: Aporte proteico elevado y enfoque antiinflamatorio para el manejo de la sobrecarga.
                                 """
 
                                 modelos_validos = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
@@ -3823,10 +3827,9 @@ else:
                                     if "2.5-flash" in nombre_modelo: continue
                                     try:
                                         model = genai.GenerativeModel(nombre_modelo)
-                                        response = model.generate_content(prompt_estricto)
+                                        response = model.generate_content(prompt_directo)
                                         texto = response.text.strip()
                                         
-                                        # Validación estricta para asegurar que devuelve la plantilla
                                         if "Diagnóstico Principal" in texto:
                                             if "📋" in texto:
                                                 texto = texto[texto.find("📋"):]
