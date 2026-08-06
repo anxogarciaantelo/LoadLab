@@ -1767,6 +1767,17 @@ if seccion_principal == "📅 Entrenamiento":
                 if sesion.get("informe_generado", False) and sesion.get("datos_informe"):
                     df_informe = pd.DataFrame(sesion["datos_informe"])
                     
+                    # --- 1. FORZAR CONVERSIÓN NUMÉRICA ESTRICTA ---
+                    cols_metricas = [
+                        'TQR', 'WELLNESS', 'W_Humor', 'W_Sueño', 'W_Fatiga', 'W_Dolor', 'W_Estres', 
+                        'RPE', 'MIN', 'CARGA', 'DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC', 'VMAX',
+                        'HID >21', 'SPR >24', 'ACC >3', 'DCC >3', 'V_Max'
+                    ]
+                    for c in cols_metricas:
+                        if c in df_informe.columns:
+                            df_informe[c] = pd.to_numeric(df_informe[c], errors='coerce').fillna(0.0)
+                    # ---------------------------------------------
+                    
                     # MAPEO ESTRICTO PARA EL INFORME: Que use los nombres de las columnas detalladas si existen
                     if 'HID >21' in df_informe.columns: df_informe['DIS AI'] = df_informe['HID >21']
                     if 'SPR >24' in df_informe.columns: df_informe['Nº SPR'] = df_informe['SPR >24']
@@ -1794,7 +1805,7 @@ if seccion_principal == "📅 Entrenamiento":
                             filtro_rol = st.radio("Rol:", ["TODOS", "Titular", "Suplente"], horizontal=True, key=f"rr_{idx_real}")
                             if filtro_rol != "TODOS": df_informe = df_informe[df_informe["ESTADO"] == filtro_rol]
 
-                 # FILTRO ESTRICTO DE MEDIAS PARA EL EQUIPO (Sin Porteros)
+                    # FILTRO ESTRICTO DE MEDIAS PARA EL EQUIPO (Sin Porteros)
                     estados_validos_medias = ["Disponible", "Titular", "Suplente"]
                     df_para_medias = df_informe[(df_informe['ESTADO'].isin(estados_validos_medias)) & (df_informe['POS'] != "POR")].copy()
                     
@@ -1805,25 +1816,33 @@ if seccion_principal == "📅 Entrenamiento":
                     # FILTRO ESTRICTO DE MEDIAS GPS (Solo si tienen distancia > 0)
                     df_para_medias_gps = df_para_medias[df_para_medias['DIS'] > 0].copy()
                     
-                    # TABLAS Y GRÁFICOS MOSTRARÁN A TODOS LOS JUGADORES (Para ver a los lesionados individualmente)
+                    # TABLAS Y GRÁFICOS MOSTRARÁN A TODOS LOS JUGADORES
                     df_graficos = df_informe[df_informe['JUGADOR'] != ""].copy()
                     fig_well = fig_tqr = fig2 = fig3 = fig5 = fig4 = None
 
                     if not df_informe.empty:
+                        # --- 2. CÁLCULO SEGURO DE MEDIAS GLOBALES ---
+                        tqr_m = df_para_medias['TQR'].mean()
+                        tqr_m = tqr_m if pd.notna(tqr_m) else 0.0
+                        
+                        well_m = df_para_medias['WELLNESS'].mean()
+                        well_m = well_m if pd.notna(well_m) else 0.0
+                        
+                        rpe_m = df_para_medias['RPE'].mean()
+                        rpe_m = rpe_m if pd.notna(rpe_m) else 0.0
+                        
+                        carga_m = df_para_medias['CARGA'].mean()
+                        carga_m = carga_m if pd.notna(carga_m) else 0.0
+                        
+                        min_m = df_para_medias['MIN'].mean()
+                        min_m = min_m if pd.notna(min_m) else 0.0
+
                         # --- KPIs GLOBALES SUPERIORES DE LA SESIÓN ---
                         kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-                        with kpi1:
-                            tqr_m = df_para_medias['TQR'].mean() if not df_para_medias.empty else 0
-                            st.metric("TQR Medio (Recuperación)", f"{tqr_m:.1f} / 10")
-                        with kpi2:
-                            well_m = df_para_medias['WELLNESS'].mean() if not df_para_medias.empty else 0
-                            st.metric("Wellness Medio (Fatiga)", f"{well_m:.1f} pts")
-                        with kpi3:
-                            rpe_m = df_para_medias['RPE'].mean() if not df_para_medias.empty else 0
-                            st.metric("RPE Medio (Esfuerzo)", f"{rpe_m:.1f} / 10")
-                        with kpi4:
-                            carga_m = df_para_medias['CARGA'].mean() if not df_para_medias.empty else 0
-                            st.metric("Carga Media Sesión", f"{carga_m:.0f} UA")
+                        kpi1.metric("TQR Medio (Recuperación)", f"{tqr_m:.1f} / 10")
+                        kpi2.metric("Wellness Medio (Fatiga)", f"{well_m:.1f} pts")
+                        kpi3.metric("RPE Medio (Esfuerzo)", f"{rpe_m:.1f} / 10")
+                        kpi4.metric("Carga Media Sesión", f"{carga_m:.0f} UA")
 
                         st.markdown("---")
 
@@ -1878,9 +1897,9 @@ if seccion_principal == "📅 Entrenamiento":
                         # --- SECCIÓN 2: CARGA INTERNA ---
                         st.markdown("#### 🔥 2. Carga Interna")
                         ci1, ci2, ci3 = st.columns(3)
-                        ci1.metric("Minutos Sesión (Media)", f"{df_para_medias['MIN'].mean():.1f}" if not df_para_medias.empty else "0.0")
-                        ci2.metric("RPE Medio", f"{df_para_medias['RPE'].mean():.1f}" if not df_para_medias['RPE'].dropna().empty else "0.0")
-                        ci3.metric("Carga Media (UA)", f"{df_para_medias['CARGA'].mean():.0f}" if not df_para_medias.empty else "0")
+                        ci1.metric("Minutos Sesión (Media)", f"{min_m:.1f}")
+                        ci2.metric("RPE Medio", f"{rpe_m:.1f}")
+                        ci3.metric("Carga Media (UA)", f"{carga_m:.0f}")
                         
                         cols_ver_ci = ['JUGADOR', 'POS', 'ESTADO', 'MIN', 'RPE', 'CARGA', 'EWMA AGUDA', 'EWMA CRÓNICA', 'RATIO A/C']
                         
@@ -1933,13 +1952,29 @@ if seccion_principal == "📅 Entrenamiento":
                         st.markdown("---")
                         
                         # --- SECCIÓN 3: CARGA EXTERNA ---
-                        st.markdown("#### 🏃‍♂️ 3. Carga Externa")
+                        st.markdown("#### 🏃‍♂️ 3. Carga Externa (GPS) - Solo jugadores con GPS > 0m")
+                        
+                        dis_m = df_para_medias_gps['DIS'].mean()
+                        dis_m = dis_m if pd.notna(dis_m) else 0.0
+                        
+                        hsr_m = df_para_medias_gps['DIS AI'].mean()
+                        hsr_m = hsr_m if pd.notna(hsr_m) else 0.0
+                        
+                        spr_m = df_para_medias_gps['Nº SPR'].mean()
+                        spr_m = spr_m if pd.notna(spr_m) else 0.0
+                        
+                        acc_m = df_para_medias_gps['ACC'].mean()
+                        acc_m = acc_m if pd.notna(acc_m) else 0.0
+                        
+                        dcc_m = df_para_medias_gps['DCC'].mean()
+                        dcc_m = dcc_m if pd.notna(dcc_m) else 0.0
+                        
                         ce1, ce2, ce3, ce4, ce5 = st.columns(5)
-                        ce1.metric("Distancia (km)", f"{df_para_medias_gps['DIS'].mean():.2f}" if not df_para_medias_gps.empty else "0.00")
-                        ce2.metric("HSR (>21 km/h)", f"{df_para_medias_gps['DIS AI'].mean():.2f}" if not df_para_medias_gps.empty else "0.00")
-                        ce3.metric("Nº SPRINTS (>24 km/h)", f"{df_para_medias_gps['Nº SPR'].mean():.2f}" if not df_para_medias_gps.empty else "0.00")
-                        ce4.metric("ACC (>3 m/s²)", f"{df_para_medias_gps['ACC'].mean():.0f}" if not df_para_medias_gps.empty else "0")
-                        ce5.metric("DCC (>3 m/s²)", f"{df_para_medias_gps['DCC'].mean():.0f}" if not df_para_medias_gps.empty else "0")
+                        ce1.metric("Distancia (km)", f"{dis_m:.2f}")
+                        ce2.metric("HSR (>21 km/h)", f"{hsr_m:.2f}")
+                        ce3.metric("Nº SPRINTS (>24 km/h)", f"{spr_m:.1f}")
+                        ce4.metric("ACC (>3 m/s²)", f"{acc_m:.0f}")
+                        ce5.metric("DCC (>3 m/s²)", f"{dcc_m:.0f}")
                         
                         if 'HID >21' not in df_informe.columns:
                             df_informe['HID >21'] = df_informe.get('DIS AI', 0.0)
