@@ -799,7 +799,7 @@ def set_login_background(image_path):
         <style>
         .stApp {{
             background-image: url("data:image/jpeg;base64,{encoded_string}");
-            background-size: cover;
+            background-size: 100% 100%;
             background-position: center;
             background-repeat: no-repeat;
             background-attachment: fixed;
