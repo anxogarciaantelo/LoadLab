@@ -907,7 +907,7 @@ if not st.session_state.autenticado:
     set_login_background("fondo_login.jpg")
     
     # Reducimos los saltos de línea para que quede más centrado con la imagen
-    st.markdown("<br><br><br><br><br><br><br><br>", unsafe_allow_html=True)
+    st.markdown("<br><br><br><br><br><br><br><br><br><br><br><br><br>", unsafe_allow_html=True)
     
     col_izq, col_centro, col_der = st.columns([1.5, 2, 1.5])
     
