@@ -926,7 +926,18 @@ with st.sidebar.expander("⚙️ Modificar cuenta", expanded=False):
 
     st.markdown("---")
     if st.button("🔄 Borrar datos y empezar de cero", use_container_width=True):
-        if os.path.exists(DB_FILE): os.remove(DB_FILE)
+        st.session_state.plantilla = []
+        st.session_state.sesiones = []
+        st.session_state.lesiones = []
+        st.session_state.antropometria = []
+        st.session_state.val_inicial = []
+        st.session_state.val_rom = []
+        st.session_state.val_1rm = []
+        guardar_datos()
+        st.success("Datos vaciados. El equipo está limpio.")
+        st.rerun()
+        
+    if st.button("🚪 Cerrar Sesión / Cambiar Equipo", use_container_width=True):
         st.session_state.clear()
         st.rerun()
 sesiones_crono = sorted(st.session_state.sesiones, key=lambda x: x["fecha"])
