@@ -14,25 +14,25 @@ import tempfile
 
 # Configuración inicial de la página
 st.set_page_config(page_title="LoadLab - Football Performance AMS", page_icon="⚽", layout="wide")
-st.markdown("""
+st.markdown(f"""
     <style>
         /* Importar fuente moderna */
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
 
-        html, body, [class*="css"] {
+        html, body, [class*="css"] {{
             font-family: 'Plus Jakarta Sans', sans-serif;
-        }
+        }}
 
         /* Fondo general de la app totalmente blanco */
-        .stApp {
+        .stApp {{
             background-color: #ffffff;
-        }
+        }}
 
-        /* Barra lateral (Sidebar) en azul claro #80d6f7 con texto negro y negrita forzada */
-        [data-testid="stSidebar"] {
-            background-color: #80d6f7;
+        /* Barra lateral (Sidebar) con color dinámico y texto negro en negrita */
+        [data-testid="stSidebar"] {{
+            background-color: {st.session_state.get("color_sidebar", "#f1f5f9")};
             color: #000000;
-        }
+        }}
         
         /* Forzar negrita y color negro en absolutamente todo el texto del sidebar */
         [data-testid="stSidebar"] *, 
@@ -40,52 +40,52 @@ st.markdown("""
         [data-testid="stSidebar"] span, 
         [data-testid="stSidebar"] p, 
         [data-testid="stSidebar"] div,
-        [data-testid="stSidebar"] md {
+        [data-testid="stSidebar"] md {{
             color: #000000 !important;
             font-weight: 800 !important;
-        }
+        }}
 
-        [data-testid="stSidebar"] hr {
+        [data-testid="stSidebar"] hr {{
             border-color: rgba(0, 0, 0, 0.2);
-        }
+        }}
 
         /* Tarjetas de contenedores con diseño flotante y sombra sutil */
-        div[data-testid="stVerticalBlock"] > div[data-testid="stContainer"] {
+        div[data-testid="stVerticalBlock"] > div[data-testid="stContainer"] {{
             background: #ffffff;
             border-radius: 14px;
             padding: 20px;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.1);
             border: 1px solid #e2e8f0;
-        }
+        }}
 
         /* Tarjetas de métricas profesionales tipo Widget */
-        div[data-testid="stMetric"] {
+        div[data-testid="stMetric"] {{
             background: #ffffff;
             border: 1px solid #e2e8f0;
             padding: 16px 20px;
             border-radius: 12px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.02);
             transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-        div[data-testid="stMetric"]:hover {
+        }}
+        div[data-testid="stMetric"]:hover {{
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-        }
-        div[data-testid="stMetric"] label {
+        }}
+        div[data-testid="stMetric"] label {{
             font-size: 0.75rem !important;
             color: #64748b !important;
             text-transform: uppercase;
             font-weight: 700;
             letter-spacing: 0.05em;
-        }
-        div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
+        }}
+        div[data-testid="stMetric"] div[data-testid="stMetricValue"] {{
             font-size: 1.6rem !important;
             color: #0f172a !important;
             font-weight: 700;
-        }
+        }}
 
         /* Botones de acción comerciales */
-        .stButton > button {
+        .stButton > button {{
             background: #ffffff;
             color: #0f172a;
             border-radius: 8px;
@@ -93,31 +93,31 @@ st.markdown("""
             border: 1px solid #cbd5e1;
             box-shadow: 0 1px 2px rgba(0,0,0,0.02);
             transition: all 0.2s ease;
-        }
-        .stButton > button:hover {
+        }}
+        .stButton > button:hover {{
             background: #0f172a;
             color: #ffffff;
             border-color: #0f172a;
-        }
+        }}
 
         /* Estilo para pestañas (Tabs) */
-        .stTabs [data-baseweb="tab-list"] {
+        .stTabs [data-baseweb="tab-list"] {{
             gap: 8px;
             background-color: #f1f5f9;
             padding: 4px;
             border-radius: 10px;
-        }
-        .stTabs [data-baseweb="tab"] {
+        }}
+        .stTabs [data-baseweb="tab"] {{
             border-radius: 8px;
             color: #475569;
             font-weight: 600;
             padding: 8px 16px;
-        }
-        .stTabs [aria-selected="true"] {
+        }}
+        .stTabs [aria-selected="true"] {{
             background-color: #ffffff !important;
             color: #0f172a !important;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
+        }}
     </style>
 """, unsafe_allow_html=True)
 from supabase import create_client
@@ -199,6 +199,7 @@ def cargar_datos_equipo(equipo_id):
             st.session_state.division_equipo = eq.get("division", "")
             st.session_state.temporada_equipo = eq.get("temporada", "")
             st.session_state.escudo_equipo = eq.get("escudo_base64", None)
+            st.session_state.color_sidebar = eq.get("color_sidebar", "#f1f5f9") # Gris claro por defecto
             
             st.session_state.plantilla = dat.get("plantilla", [])
             st.session_state.sesiones = dat.get("sesiones", [])
@@ -229,7 +230,8 @@ def guardar_datos():
             "categoria": st.session_state.categoria_equipo,
             "division": st.session_state.division_equipo,
             "temporada": st.session_state.temporada_equipo,
-            "escudo_base64": st.session_state.get("escudo_equipo", None)
+            "escudo_base64": st.session_state.get("escudo_equipo", None),
+            "color_sidebar": st.session_state.get("color_sidebar", "#f1f5f9") # <--- AÑADIR ESTA LÍNEA
         }).eq("id", eq_id).execute()
         
         # Guardar arrays
@@ -805,7 +807,9 @@ if "plantilla" not in st.session_state:
     st.session_state.plantilla = []
 if "sesiones" not in st.session_state: 
     st.session_state.sesiones = []
-
+if "color_sidebar" not in st.session_state:
+    st.session_state.color_sidebar = "#f1f5f9"
+    
 # ==========================================
 # 1. PANTALLA DE LOGIN
 # ==========================================
@@ -949,6 +953,10 @@ with st.sidebar.expander("⚙️ Modificar cuenta", expanded=False):
         nueva_categoria = st.selectbox("Categoría:", ["Senior", "Juvenil", "Cadete", "Infantil", "Alevín", "Benjamín", "Prebenjamín", "Biberón"], index=["Senior", "Juvenil", "Cadete", "Infantil", "Alevín", "Benjamín", "Prebenjamín", "Biberón"].index(st.session_state.categoria_equipo) if st.session_state.categoria_equipo in ["Senior", "Juvenil", "Cadete", "Infantil", "Alevín", "Benjamín", "Prebenjamín", "Biberón"] else 0)
         nueva_division = st.text_input("División / Liga:", value=st.session_state.division_equipo)
         nueva_temporada = st.text_input("Temporada:", value=st.session_state.temporada_equipo)
+        
+        # --- AÑADIR ESTA LÍNEA PARA EL SELECTOR DE COLOR ---
+        nuevo_color = st.color_picker("Color de la barra lateral:", value=st.session_state.get("color_sidebar", "#f1f5f9"))
+        
         nuevo_escudo_up = st.file_uploader("Escudo del Equipo (Imagen):", type=["jpg", "png", "jpeg"])
         
         btn_guardar_cuenta = st.form_submit_button("💾 Guardar Cambios")
@@ -957,6 +965,7 @@ with st.sidebar.expander("⚙️ Modificar cuenta", expanded=False):
             st.session_state.categoria_equipo = nueva_categoria
             st.session_state.division_equipo = nueva_division
             st.session_state.temporada_equipo = nueva_temporada
+            st.session_state.color_sidebar = nuevo_color # <--- ACTUALIZAR ESTADO
             if nuevo_escudo_up:
                 st.session_state.escudo_equipo = get_base64_of_bin_file(nuevo_escudo_up)
             guardar_datos()
