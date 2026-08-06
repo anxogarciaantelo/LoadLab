@@ -814,7 +814,7 @@ if not st.session_state.autenticado:
     with st.container():
         email = st.text_input("Correo electrónico")
         password = st.text_input("Contraseña", type="password")
-if st.button("Entrar"):
+        if st.button("Entrar"):
             try:
                 res = supabase.auth.sign_in_with_password({"email": email, "password": password})
                 st.session_state.usuario_id = res.user.id
@@ -825,7 +825,7 @@ if st.button("Entrar"):
                 st.rerun()
             except Exception as e:
                 st.error("Credenciales incorrectas o error de conexión.")
-st.stop()
+    st.stop()
 
 # ==========================================
 # 2. SELECCIÓN DE EQUIPO
