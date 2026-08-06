@@ -791,6 +791,34 @@ def mostrar_tabla_moderna(styler_obj):
 
     css_personalizado = "<style>.modern-table { width: 100%; border-collapse: collapse; font-family: sans-serif; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); background-color: white; margin-bottom: 20px; } .modern-table thead tr { background-color: #000000; color: #ffffff; } .modern-table th { padding: 12px 15px; font-weight: bold; text-align: center !important; border-bottom: 2px solid #333333; } .modern-table td { padding: 10px 15px; text-align: center !important; border-bottom: 1px solid #eeeeee; } .modern-table tbody tr:hover td { filter: brightness(0.95); }</style>"
     st.markdown(css_personalizado + html_tabla, unsafe_allow_html=True)
+def set_login_background(image_path):
+    try:
+        with open(image_path, "rb") as img_file:
+            encoded_string = base64.b64encode(img_file.read()).decode()
+        css = f"""
+        <style>
+        .stApp {{
+            background-image: url("data:image/jpeg;base64,{encoded_string}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }}
+        /* Centrar y darle opacidad a la tarjeta de login para leer textos */
+        div[data-testid="stVerticalBlock"] {{
+            align-items: center;
+        }}
+        div[data-testid="stVerticalBlock"] > div[data-testid="stContainer"] {{
+            background: rgba(255, 255, 255, 0.92) !important;
+            padding: 40px !important;
+            max-width: 400px !important;
+            margin-top: 15vh !important;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3) !important;
+        }}
+        </style>
+        """
+        st.markdown(css, unsafe_allow_html=True)
+    except FileNotFoundError:
+        pass
 
 # --- INICIALIZACIÓN DE ESTADOS CLAVE ---
 if "autenticado" not in st.session_state:
@@ -814,15 +842,19 @@ if "color_sidebar" not in st.session_state:
 # 1. PANTALLA DE LOGIN
 # ==========================================
 if not st.session_state.autenticado:
-    st.markdown("<h1 style='text-align: center;'>⚡ LoadLab - Iniciar Sesión</h1>", unsafe_allow_html=True)
+    set_login_background("fondo_login.jpg")
+    
     with st.container():
+        st.markdown("<h1 style='text-align: center;'>⚡ LoadLab</h1>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: gray;'>Iniciar Sesión</p>", unsafe_allow_html=True)
+        
         email = st.text_input("Correo electrónico")
         password = st.text_input("Contraseña", type="password")
-        if st.button("Entrar"):
+        
+        if st.button("Entrar", use_container_width=True):
             try:
                 res = supabase.auth.sign_in_with_password({"email": email, "password": password})
                 st.session_state.usuario_id = res.user.id
-                # Guardar tokens en memoria
                 st.session_state.access_token = res.session.access_token
                 st.session_state.refresh_token = res.session.refresh_token
                 st.session_state.autenticado = True
