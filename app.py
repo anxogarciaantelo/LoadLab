@@ -825,7 +825,7 @@ if st.button("Entrar"):
                 st.rerun()
             except Exception as e:
                 st.error("Credenciales incorrectas o error de conexión.")
-    st.stop()
+st.stop()
 
 # ==========================================
 # 2. SELECCIÓN DE EQUIPO
