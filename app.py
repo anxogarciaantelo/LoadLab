@@ -834,8 +834,37 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
                     st.session_state.equipo_seleccionado = True
                     st.rerun()
     else:
-        st.info("No tienes equipos asignados.")
+        st.info("No tienes equipos asignados actualmente.")
         
+    st.markdown("---")
+    with st.expander("➕ Crear Nuevo Equipo"):
+        with st.form("form_nuevo_equipo"):
+            n_nombre = st.text_input("Nombre del Club / Equipo:")
+            n_categoria = st.selectbox("Categoría:", ["Senior", "Juvenil", "Cadete", "Infantil", "Alevín", "Benjamín", "Prebenjamín", "Biberón"])
+            n_division = st.text_input("División / Liga:")
+            n_temporada = st.text_input("Temporada:", value="2026/2027")
+            
+            if st.form_submit_button("🚀 Crear y Acceder") and n_nombre:
+                # 1. Crear el equipo en DB
+                res_insert = supabase.table("equipos").insert({
+                    "nombre": n_nombre, "categoria": n_categoria, 
+                    "division": n_division, "temporada": n_temporada,
+                    "created_by": st.session_state.usuario_id
+                }).execute()
+                
+                nuevo_id = res_insert.data[0]['id']
+                
+                # 2. Vincular usuario como owner
+                supabase.table("equipo_usuarios").insert({
+                    "equipo_id": nuevo_id, "usuario_id": st.session_state.usuario_id, "rol": "owner"
+                }).execute()
+                
+                # 3. Inicializar fila vacía en datos_equipo
+                supabase.table("datos_equipo").insert({"equipo_id": nuevo_id}).execute()
+                
+                st.success("Equipo creado.")
+                st.rerun()
+
     st.stop()
 
 # ==========================================
