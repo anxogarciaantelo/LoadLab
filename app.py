@@ -1330,27 +1330,45 @@ if seccion_principal == "📅 Entrenamiento":
                         fig_tqr.update_yaxes(range=[1, 10])
                         st.plotly_chart(fig_tqr, use_container_width=True, key="temp_tqr_bar")
                     with cg_b2:
-                        # --- NUEVO CÁLCULO APILADO TEMPORADA ---
+                        # Extraer los componentes de wellness directamente del DataFrame de temporada o recalculando con los datos filtrados válidos del microciclo
                         datos_w_temp = []
-                        for m_id in df_temporada['Microciclo']:
-                            # Obtenemos sesiones del microciclo
-                            num_sem = int(m_id.split()[1])
-                            ses_sem = [s for s in st.session_state.sesiones if obtener_numero_semana(s["fecha"]) == num_sem and s.get("informe_generado", False)]
+                        for i, row in df_temporada.iterrows():
+                            m_id = row["Microciclo"]
+                            num_sem = [s for s in st.session_state.sesiones if obtener_numero_semana(s["fecha"]) == row.get("num_semana", obtener_numero_semana(st.session_state.sesiones[0]["fecha"]))] # fallback seguro
+                            # Buscamos las sesiones de esta semana directamente por el número de semana guardado en el bucle principal de temporada
+                            num_sem_val = None
+                            # Recuperamos el num_semana correcto de df_m original
+                            for m_item in lista_micro:
+                                # Relacionamos por índice o nombre
+                                pass
                             
-                            f, s, d, e, h = [], [], [], [], []
+                            # Forma más directa y robusta usando las fechas del microciclo acumuladas:
+                            ses_sem = [s for s in st.session_state.sesiones if f"Microciclo {i+1}" == m_id and s.get("informe_generado", False)]
+                            # Si no coincide exactamente por el texto, filtramos por el número de semana de df_m correspondiente a este índice i:
+                            num_sem_real = df_m.iloc[i]["num_semana"]
+                            ses_sem = [s for s in st.session_state.sesiones if obtener_numero_semana(s["fecha"]) == num_sem_real and s.get("informe_generado", False)]
+                            
+                            f, s_lista, d_lista, e, h = [], [], [], [], []
                             for ses in ses_sem:
+                                disp_s = ses.get("disponibilidad", {})
+                                disp_s_clean = {limpiar_nombre(k): v for k, v in disp_s.items()}
                                 for d_jug in ses["datos_informe"]:
-                                    if safe_float(d_jug.get("WELLNESS")) > 0:
+                                    jug_name = d_jug["JUGADOR"]
+                                    est_jug = disp_s_clean.get(limpiar_nombre(jug_name), "Disponible")
+                                    # Mismo filtro estricto de exclusión que en las tablas y métricas
+                                    if est_jug in ["Disponible", "Titular", "Suplente"] and safe_float(d_jug.get("WELLNESS")) > 0:
                                         f.append(safe_float(d_jug.get("W_Fatiga")))
-                                        s.append(safe_float(d_jug.get("W_Sueño")))
-                                        d.append(safe_float(d_jug.get("W_Dolor")))
+                                        s_lista.append(safe_float(d_jug.get("W_Sueño")))
+                                        d_lista.append(safe_float(d_jug.get("W_Dolor")))
                                         e.append(safe_float(d_jug.get("W_Estres")))
                                         h.append(safe_float(d_jug.get("W_Humor")))
                             
                             datos_w_temp.append({
                                 "Microciclo": m_id, 
-                                "Fatiga": np.mean(f) if f else 0, "Sueño": np.mean(s) if s else 0, 
-                                "Dolor": np.mean(d) if d else 0, "Estrés": np.mean(e) if e else 0, 
+                                "Fatiga": np.mean(f) if f else 0, 
+                                "Sueño": np.mean(s_lista) if s_lista else 0, 
+                                "Dolor": np.mean(d_lista) if d_lista else 0, 
+                                "Estrés": np.mean(e) if e else 0, 
                                 "Humor": np.mean(h) if h else 0
                             })
                         
@@ -1358,11 +1376,12 @@ if seccion_principal == "📅 Entrenamiento":
                         
                         fig_well = px.bar(
                             df_well_temp, x='Microciclo', y=['Fatiga', 'Sueño', 'Dolor', 'Estrés', 'Humor'],
-                            title="Evolución Wellness por Componentes", color_discrete_sequence=px.colors.qualitative.Set2
+                            title="Evolución Wellness por Componentes", color_discrete_sequence=px.colors.qualitative.Set2,
+                            labels={'value': 'Puntos', 'variable': 'Factor', 'Microciclo': ''}
                         )
                         fig_well.update_layout(barmode='stack', yaxis_range=[5, 35])
-                        fig_well.add_hline(y=18, line_dash="dot", line_color="black")
-                        fig_well.add_hline(y=24, line_dash="dash", line_color="red")
+                        fig_well.add_hline(y=18, line_dash="dot", line_color="orange", annotation_text="Moderado (18)", annotation_position="bottom right")
+                        fig_well.add_hline(y=24, line_dash="dash", line_color="red", annotation_text="Crítico (24)", annotation_position="top right")
                         st.plotly_chart(fig_well, use_container_width=True, key="temp_well_bar")
 
                     st.markdown("---")
