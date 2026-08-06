@@ -1874,13 +1874,17 @@ if seccion_principal == "📅 Entrenamiento":
 
                                 fig_well.add_hline(y=18, line_dash="dot", line_color="orange", annotation_text="Moderado (18)", annotation_position="bottom right")
                                 fig_well.add_hline(y=24, line_dash="dash", line_color="red", annotation_text="Crítico (24)", annotation_position="top right")
+                                
+                                # MODIFICACIÓN: Fijar el eje Y de 5 a 35 obligatoriamente
+                                fig_well.update_yaxes(range=[5, 35])
+                                
                                 fig_well.update_traces(hovertemplate="%{y}")
                                 fig_well.update_layout(
                                     barmode='stack',
                                     xaxis_tickangle=-45,
                                     plot_bgcolor='rgba(0,0,0,0)',
                                     paper_bgcolor='rgba(0,0,0,0)',
-                                    margin=dict(t=40, b=120, l=40, r=40), # <-- Ajuste de 'b' a 120
+                                    margin=dict(t=40, b=120, l=40, r=40),
                                     legend_title_text='Factores',
                                     hovermode="x unified"
                                 )
