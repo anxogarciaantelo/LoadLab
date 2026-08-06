@@ -3600,7 +3600,8 @@ elif seccion_principal == "📊 Valoraciones":
             f_inicial = st.file_uploader("1. Valoración Inicial", type=["xlsx"], key="up_val_ini")
             if st.button("Procesar V. Inicial") and f_inicial:
                 df = pd.read_excel(f_inicial)
-                df = sincronizar_nombres_df(df, "Jugador") # Sincronizamos
+                df = sincronizar_nombres_df(df, "Jugador")
+                df = df.fillna("") # Limpieza de nulos para Supabase
                 st.session_state.val_inicial = df.to_dict('records')
                 guardar_datos()
                 st.success(f"✅ V. Inicial cargada ({len(df)} jugadores sincronizados).")
@@ -3610,7 +3611,8 @@ elif seccion_principal == "📊 Valoraciones":
             f_rom = st.file_uploader("2. ROM y Fuerza ISO", type=["xlsx"], key="up_val_rom")
             if st.button("Procesar ROM/ISO") and f_rom:
                 df = pd.read_excel(f_rom)
-                df = sincronizar_nombres_df(df, "Jugador") # Sincronizamos
+                df = sincronizar_nombres_df(df, "Jugador")
+                df = df.fillna("") # Limpieza de nulos para Supabase
                 st.session_state.val_rom = df.to_dict('records')
                 guardar_datos()
                 st.success(f"✅ ROM/Fuerza cargados ({len(df)} jugadores sincronizados).")
@@ -3620,9 +3622,9 @@ elif seccion_principal == "📊 Valoraciones":
             f_1rm = st.file_uploader("3. Perfil 1RM (Carga/Vel)", type=["xlsx"], key="up_val_1rm")
             if st.button("Procesar 1RM") and f_1rm:
                 df = pd.read_excel(f_1rm)
-                # En tu Excel de 1RM la columna se llamaba JUGADOR (mayúsculas)
                 col_nombre = "JUGADOR" if "JUGADOR" in df.columns else "Jugador"
-                df = sincronizar_nombres_df(df, col_nombre) # Sincronizamos
+                df = sincronizar_nombres_df(df, col_nombre)
+                df = df.fillna("") # Limpieza de nulos para Supabase
                 st.session_state.val_1rm = df.to_dict('records')
                 guardar_datos()
                 st.success(f"✅ Datos 1RM cargados ({len(df)} jugadores sincronizados).")
