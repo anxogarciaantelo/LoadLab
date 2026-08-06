@@ -1330,14 +1330,39 @@ if seccion_principal == "📅 Entrenamiento":
                         fig_tqr.update_yaxes(range=[1, 10])
                         st.plotly_chart(fig_tqr, use_container_width=True, key="temp_tqr_bar")
                     with cg_b2:
-                        # Nota: Los valores absolutos de wellness medio por microciclo rondan la escala de suma de componentes (5-35)
+                        # --- NUEVO CÁLCULO APILADO TEMPORADA ---
+                        datos_w_temp = []
+                        for m_id in df_temporada['Microciclo']:
+                            # Obtenemos sesiones del microciclo
+                            num_sem = int(m_id.split()[1])
+                            ses_sem = [s for s in st.session_state.sesiones if obtener_numero_semana(s["fecha"]) == num_sem and s.get("informe_generado", False)]
+                            
+                            f, s, d, e, h = [], [], [], [], []
+                            for ses in ses_sem:
+                                for d_jug in ses["datos_informe"]:
+                                    if safe_float(d_jug.get("WELLNESS")) > 0:
+                                        f.append(safe_float(d_jug.get("W_Fatiga")))
+                                        s.append(safe_float(d_jug.get("W_Sueño")))
+                                        d.append(safe_float(d_jug.get("W_Dolor")))
+                                        e.append(safe_float(d_jug.get("W_Estres")))
+                                        h.append(safe_float(d_jug.get("W_Humor")))
+                            
+                            datos_w_temp.append({
+                                "Microciclo": m_id, 
+                                "Fatiga": np.mean(f) if f else 0, "Sueño": np.mean(s) if s else 0, 
+                                "Dolor": np.mean(d) if d else 0, "Estrés": np.mean(e) if e else 0, 
+                                "Humor": np.mean(h) if h else 0
+                            })
+                        
+                        df_well_temp = pd.DataFrame(datos_w_temp)
+                        
                         fig_well = px.bar(
-                            df_temporada, x='Microciclo', y='Wellness', 
-                            title="Evolución Wellness", color_discrete_sequence=["orange"]
+                            df_well_temp, x='Microciclo', y=['Fatiga', 'Sueño', 'Dolor', 'Estrés', 'Humor'],
+                            title="Evolución Wellness por Componentes", color_discrete_sequence=px.colors.qualitative.Set2
                         )
-                        fig_well.update_yaxes(range=[5, 35])
-                        fig_well.add_hline(y=18, line_dash="dot", line_color="orange", annotation_text="Moderado (18)", annotation_position="bottom right")
-                        fig_well.add_hline(y=24, line_dash="dash", line_color="red", annotation_text="Crítico (24)", annotation_position="top right")
+                        fig_well.update_layout(barmode='stack', yaxis_range=[5, 35])
+                        fig_well.add_hline(y=18, line_dash="dot", line_color="black")
+                        fig_well.add_hline(y=24, line_dash="dash", line_color="red")
                         st.plotly_chart(fig_well, use_container_width=True, key="temp_well_bar")
 
                     st.markdown("---")
