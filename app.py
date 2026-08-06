@@ -798,7 +798,7 @@ def set_login_background(image_path):
             encoded_string = base64.b64encode(img_file.read()).decode()
         css = f"""
         <style>
-        /* 1. Fondo de pantalla */
+        /* 1. Fondo general de la app */
         .stApp {{
             background-image: url("data:image/jpeg;base64,{encoded_string}");
             background-size: cover;
@@ -807,40 +807,74 @@ def set_login_background(image_path):
             background-attachment: fixed;
         }}
         
-        /* 2. Limpiar cabecera */
-        header[data-testid="stHeader"] {{ background: transparent !important; }}
-        
-        /* 3. Estilo del recuadro carbón */
-        .login-wrapper {{
-            background-color: rgba(20, 20, 20, 0.7) !important;
-            padding: 40px !important;
-            border-radius: 20px !important;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            margin-top: 150px; /* <--- Aumenta este número para bajarlo más */
+        /* 2. Eliminar la barra blanca superior que corta el logo */
+        header[data-testid="stHeader"] {{
+            background-color: transparent !important;
+            box-shadow: none !important;
         }}
         
-        /* 4. Estilo de textos y labels */
-        .login-wrapper label {{
+        /* Ajustar el espaciado superior general */
+        .block-container {{
+            padding-top: 1rem !important;
+        }}
+        
+        /* 3. Crear el recuadro color carbón transparente SOLAMENTE en la columna central */
+        div[data-testid="column"]:nth-child(2) > div[data-testid="stVerticalBlock"] {{
+            background-color: rgba(20, 20, 20, 0.75) !important; /* Color carbón con 75% de opacidad */
+            padding: 40px 30px !important;
+            border-radius: 16px !important;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8) !important;
+            border: 1px solid rgba(255, 255, 255, 0.08); /* Borde sutil blanquecino */
+            backdrop-filter: blur(4px); /* Efecto cristal oscuro */
+        }}
+        
+        /* Modificar el texto de los labels (Correo y Contraseña) a blanco y negrita */
+        div[data-testid="stVerticalBlock"] label {{
             color: #ffffff !important;
             font-weight: 800 !important;
+            font-size: 0.95rem !important;
+            letter-spacing: 0.5px;
         }}
         
-        /* Cajones de texto */
+        /* Estilo moderno para los cajones de texto */
         div[data-testid="stTextInput"] input {{
             background-color: rgba(255, 255, 255, 0.9) !important;
+            border: 2px solid transparent !important;
             border-radius: 8px !important;
             color: #000000 !important;
+            padding: 12px !important;
+            font-weight: 600 !important;
+            transition: all 0.3s ease;
         }}
         
-        /* Botón */
+        /* Efecto al hacer clic en los cajones (borde rojo) */
+        div[data-testid="stTextInput"] input:focus {{
+            border: 2px solid #e60000 !important;
+            background-color: #ffffff !important;
+            box-shadow: 0 0 10px rgba(230, 0, 0, 0.4) !important;
+        }}
+        
+        /* Estilo moderno y agresivo para el botón Entrar */
         div[data-testid="stButton"] button {{
             background: linear-gradient(90deg, #8a0000, #e60000) !important;
             color: #ffffff !important;
+            border: none !important;
             border-radius: 8px !important;
             font-weight: 800 !important;
-            width: 100% !important;
+            padding: 10px !important;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5) !important;
+            transition: all 0.3s ease;
+            margin-top: 15px;
+        }}
+        
+        /* Efecto al pasar el ratón por el botón */
+        div[data-testid="stButton"] button:hover {{
+            background: linear-gradient(90deg, #e60000, #8a0000) !important;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(230, 0, 0, 0.6) !important;
+            color: #ffffff !important;
         }}
         </style>
         """
@@ -872,30 +906,27 @@ if "color_sidebar" not in st.session_state:
 if not st.session_state.autenticado:
     set_login_background("fondo_login.jpg")
     
-    # Abrimos el contenedor personalizado
-    st.markdown('<div class="login-wrapper">', unsafe_allow_html=True)
+    # Reducimos los saltos de línea para que quede más centrado con la imagen
+    st.markdown("<br><br><br><br>", unsafe_allow_html=True)
     
-    # Título
-    st.markdown("<h2 style='text-align: center; color: #ffffff; font-weight: 800; margin-bottom: 20px;'>Iniciar Sesión</h2>", unsafe_allow_html=True)
+    col_izq, col_centro, col_der = st.columns([1.5, 2, 1.5])
     
-    # Formulario
-    email = st.text_input("Correo electrónico")
-    password = st.text_input("Contraseña", type="password")
-    
-    if st.button("Entrar"):
-        try:
-            res = supabase.auth.sign_in_with_password({"email": email, "password": password})
-            st.session_state.usuario_id = res.user.id
-            st.session_state.access_token = res.session.access_token
-            st.session_state.refresh_token = res.session.refresh_token
-            st.session_state.autenticado = True
-            st.rerun()
-        except Exception as e:
-            st.error("Credenciales incorrectas o error de conexión.")
-            
-    # Cerramos el contenedor
-    st.markdown('</div>', unsafe_allow_html=True)
-    
+    with col_centro:
+        st.markdown("<h2 style='text-align: center; color: #ffffff; font-weight: 800; margin-bottom: 10px;'>Iniciar Sesión</h2>", unsafe_allow_html=True)
+        
+        email = st.text_input("Correo electrónico")
+        password = st.text_input("Contraseña", type="password")
+        
+        if st.button("Entrar", use_container_width=True):
+            try:
+                res = supabase.auth.sign_in_with_password({"email": email, "password": password})
+                st.session_state.usuario_id = res.user.id
+                st.session_state.access_token = res.session.access_token
+                st.session_state.refresh_token = res.session.refresh_token
+                st.session_state.autenticado = True
+                st.rerun()
+            except Exception as e:
+                st.error("Credenciales incorrectas o error de conexión.")
     st.stop()
 # ==========================================
 # 2. SELECCIÓN DE EQUIPO
