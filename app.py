@@ -802,6 +802,7 @@ def set_login_background(image_path):
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
+            background-attachment: fixed;
         }}
         /* Centrar y darle opacidad a la tarjeta de login para leer textos */
         div[data-testid="stVerticalBlock"] {{
