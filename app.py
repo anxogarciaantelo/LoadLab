@@ -798,7 +798,7 @@ def set_login_background(image_path):
             encoded_string = base64.b64encode(img_file.read()).decode()
         css = f"""
         <style>
-        /* Fondo general */
+        /* 1. Fondo general de la app */
         .stApp {{
             background-image: url("data:image/jpeg;base64,{encoded_string}");
             background-size: cover;
@@ -807,32 +807,51 @@ def set_login_background(image_path):
             background-attachment: fixed;
         }}
         
-        /* Modificar el texto de los labels (Correo y Contraseña) a blanco, negrita y con sombra */
+        /* 2. Eliminar la barra blanca superior que corta el logo */
+        header[data-testid="stHeader"] {{
+            background-color: transparent !important;
+            box-shadow: none !important;
+        }}
+        
+        /* Ajustar el espaciado superior general */
+        .block-container {{
+            padding-top: 1rem !important;
+        }}
+        
+        /* 3. Crear el recuadro color carbón transparente SOLAMENTE en la columna central */
+        div[data-testid="column"]:nth-child(2) > div[data-testid="stVerticalBlock"] {{
+            background-color: rgba(20, 20, 20, 0.75) !important; /* Color carbón con 75% de opacidad */
+            padding: 40px 30px !important;
+            border-radius: 16px !important;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8) !important;
+            border: 1px solid rgba(255, 255, 255, 0.08); /* Borde sutil blanquecino */
+            backdrop-filter: blur(4px); /* Efecto cristal oscuro */
+        }}
+        
+        /* Modificar el texto de los labels (Correo y Contraseña) a blanco y negrita */
         div[data-testid="stVerticalBlock"] label {{
             color: #ffffff !important;
             font-weight: 800 !important;
-            font-size: 1rem !important;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            font-size: 0.95rem !important;
             letter-spacing: 0.5px;
         }}
         
         /* Estilo moderno para los cajones de texto */
         div[data-testid="stTextInput"] input {{
-            background-color: rgba(255, 255, 255, 0.85) !important;
+            background-color: rgba(255, 255, 255, 0.9) !important;
             border: 2px solid transparent !important;
             border-radius: 8px !important;
             color: #000000 !important;
             padding: 12px !important;
             font-weight: 600 !important;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3) !important;
         }}
         
-        /* Efecto al hacer clic en los cajones (borde rojo estilo LoadLab) */
+        /* Efecto al hacer clic en los cajones (borde rojo) */
         div[data-testid="stTextInput"] input:focus {{
             border: 2px solid #e60000 !important;
             background-color: #ffffff !important;
-            box-shadow: 0 0 15px rgba(230, 0, 0, 0.5) !important;
+            box-shadow: 0 0 10px rgba(230, 0, 0, 0.4) !important;
         }}
         
         /* Estilo moderno y agresivo para el botón Entrar */
@@ -887,15 +906,13 @@ if "color_sidebar" not in st.session_state:
 if not st.session_state.autenticado:
     set_login_background("fondo_login.jpg")
     
-    # Añadimos unos saltos de línea para bajar el formulario y no tapar el logo de la imagen
-    st.markdown("<br><br><br><br><br><br><br>", unsafe_allow_html=True)
+    # Reducimos los saltos de línea para que quede más centrado con la imagen
+    st.markdown("<br><br><br><br>", unsafe_allow_html=True)
     
-    # Creamos 3 columnas. La col_centro es la que contendrá el login (más estrecha)
     col_izq, col_centro, col_der = st.columns([1.5, 2, 1.5])
     
     with col_centro:
-        # Título en blanco, negrita y con sombra
-        st.markdown("<h2 style='text-align: center; color: #ffffff; font-weight: 800; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); margin-bottom: 20px;'>Iniciar Sesión</h2>", unsafe_allow_html=True)
+        st.markdown("<h2 style='text-align: center; color: #ffffff; font-weight: 800; margin-bottom: 10px;'>Iniciar Sesión</h2>", unsafe_allow_html=True)
         
         email = st.text_input("Correo electrónico")
         password = st.text_input("Contraseña", type="password")
