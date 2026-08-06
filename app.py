@@ -3515,8 +3515,8 @@ elif seccion_principal == "📊 Valoraciones":
     
     # --- FUNCIONES MATEMÁTICAS Y DE AYUDA ---
     def calcular_1rm(cargas, velocidades):
-        # Emparejar cargas y velocidades válidas (>0)
-        validos = [(c, v) for c, v in zip(cargas, velocidades) if pd.notna(c) and pd.notna(v) and c > 0 and v > 0]
+        # Emparejar cargas y velocidades válidas (>0) forzando formato numérico
+        validos = [(safe_float(c), safe_float(v)) for c, v in zip(cargas, velocidades) if safe_float(c) > 0 and safe_float(v) > 0]
         if not validos: return 0.0
         
         # Seleccionar el intento con la carga más alta (el más representativo)
@@ -3535,8 +3535,9 @@ elif seccion_principal == "📊 Valoraciones":
     def calcular_potencia_max(cargas, velocidades):
         potencias = []
         for c, v in zip(cargas, velocidades):
-            if pd.notna(c) and pd.notna(v) and c > 0:
-                pot_val = (c * 9.81) * v
+            c_val, v_val = safe_float(c), safe_float(v)
+            if c_val > 0 and v_val > 0:
+                pot_val = (c_val * 9.81) * v_val
                 potencias.append(pot_val)
         return max(potencias) if potencias else 0.0
 
