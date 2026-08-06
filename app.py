@@ -127,6 +127,13 @@ url = st.secrets["SUPABASE_URL"]
 key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
 
+# RESTAURAR SESIÓN PARA RLS
+if "access_token" in st.session_state and "refresh_token" in st.session_state:
+    try:
+        supabase.auth.set_session(st.session_state.access_token, st.session_state.refresh_token)
+    except:
+        pass
+
 # Configuración global para forzar negrita y color negro en todos los gráficos de Plotly
 import plotly.io as pio
 pio.templates["loadlab_bold"] = {
@@ -807,10 +814,13 @@ if not st.session_state.autenticado:
     with st.container():
         email = st.text_input("Correo electrónico")
         password = st.text_input("Contraseña", type="password")
-        if st.button("Entrar"):
+if st.button("Entrar"):
             try:
                 res = supabase.auth.sign_in_with_password({"email": email, "password": password})
                 st.session_state.usuario_id = res.user.id
+                # Guardar tokens en memoria
+                st.session_state.access_token = res.session.access_token
+                st.session_state.refresh_token = res.session.refresh_token
                 st.session_state.autenticado = True
                 st.rerun()
             except Exception as e:
@@ -967,6 +977,10 @@ with st.sidebar.expander("⚙️ Modificar cuenta", expanded=False):
         st.rerun()
         
     if st.button("🚪 Cerrar Sesión / Cambiar Equipo", use_container_width=True):
+        try:
+            supabase.auth.sign_out()
+        except:
+            pass
         st.session_state.clear()
         st.rerun()
 sesiones_crono = sorted(st.session_state.sesiones, key=lambda x: x["fecha"])
