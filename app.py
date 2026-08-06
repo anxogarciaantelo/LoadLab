@@ -3602,7 +3602,7 @@ elif seccion_principal == "📊 Valoraciones":
             if st.button("Procesar V. Inicial") and f_inicial:
                 df = pd.read_excel(f_inicial)
                 df = sincronizar_nombres_df(df, "Jugador")
-                df = df.fillna("") # Limpieza de nulos para Supabase
+                df = df.where(pd.notnull(df), None) # Solución de nulos para JSONB
                 st.session_state.val_inicial = df.to_dict('records')
                 guardar_datos()
                 st.success(f"✅ V. Inicial cargada ({len(df)} jugadores sincronizados).")
@@ -3613,7 +3613,7 @@ elif seccion_principal == "📊 Valoraciones":
             if st.button("Procesar ROM/ISO") and f_rom:
                 df = pd.read_excel(f_rom)
                 df = sincronizar_nombres_df(df, "Jugador")
-                df = df.fillna("") # Limpieza de nulos para Supabase
+                df = df.where(pd.notnull(df), None) # Solución de nulos para JSONB
                 st.session_state.val_rom = df.to_dict('records')
                 guardar_datos()
                 st.success(f"✅ ROM/Fuerza cargados ({len(df)} jugadores sincronizados).")
@@ -3625,7 +3625,7 @@ elif seccion_principal == "📊 Valoraciones":
                 df = pd.read_excel(f_1rm)
                 col_nombre = "JUGADOR" if "JUGADOR" in df.columns else "Jugador"
                 df = sincronizar_nombres_df(df, col_nombre)
-                df = df.fillna("") # Limpieza de nulos para Supabase
+                df = df.where(pd.notnull(df), None) # Solución de nulos para JSONB
                 st.session_state.val_1rm = df.to_dict('records')
                 guardar_datos()
                 st.success(f"✅ Datos 1RM cargados ({len(df)} jugadores sincronizados).")
