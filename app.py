@@ -793,27 +793,33 @@ def mostrar_tabla_moderna(styler_obj):
     st.markdown(css_personalizado + html_tabla, unsafe_allow_html=True)
 def set_login_background(image_path):
     try:
+        import base64
         with open(image_path, "rb") as img_file:
             encoded_string = base64.b64encode(img_file.read()).decode()
         css = f"""
         <style>
-        .stApp {{
+        /* 1. Ajustar el fondo para que cubra toda la pantalla perfectamente */
+        [data-testid="stAppViewContainer"] {{
             background-image: url("data:image/jpeg;base64,{encoded_string}");
-            background-size: 100% 100%;
+            background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
-            background-attachment: fixed;
         }}
-        /* Centrar y darle opacidad a la tarjeta de login para leer textos */
-        div[data-testid="stVerticalBlock"] {{
-            align-items: center;
+        
+        /* 2. Hacer transparente la barra superior por defecto de Streamlit */
+        [data-testid="stHeader"] {{
+            background: transparent;
         }}
-        div[data-testid="stVerticalBlock"] > div[data-testid="stContainer"] {{
-            background: rgba(255, 255, 255, 0.92) !important;
-            padding: 40px !important;
-            max-width: 400px !important;
-            margin-top: 15vh !important;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3) !important;
+        
+        /* 3. Crear la tarjeta flotante para el formulario (fondo blanco semitransparente) */
+        [data-testid="block-container"] {{
+            max-width: 450px !important;
+            background-color: rgba(255, 255, 255, 0.95) !important;
+            padding: 3rem !important;
+            border-radius: 20px !important;
+            margin-top: 10vh !important;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5) !important;
+            z-index: 10;
         }}
         </style>
         """
