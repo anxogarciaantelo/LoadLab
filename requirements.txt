@@ -9,3 +9,4 @@ supabase
 matplotlib
 google-generativeai
 starlette<0.40.0
+pillow
