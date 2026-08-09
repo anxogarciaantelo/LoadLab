@@ -181,16 +181,18 @@ def get_col(row, possible_names):
                     pass
     return 0.0
 
+@st.cache_data(ttl=3600)
+def fetch_datos_equipo_supabase(equipo_id):
+    res_eq = supabase.table("equipos").select("*").eq("id", equipo_id).execute()
+    res_dat = supabase.table("datos_equipo").select("*").eq("equipo_id", equipo_id).execute()
+    return res_eq.data, res_dat.data
+
 def cargar_datos_equipo(equipo_id):
     try:
-        # Extraer metadatos del equipo
-        res_eq = supabase.table("equipos").select("*").eq("id", equipo_id).execute()
-        # Extraer arrays de datos
-        res_dat = supabase.table("datos_equipo").select("*").eq("equipo_id", equipo_id).execute()
-
-        if res_eq.data and res_dat.data:
-            eq = res_eq.data[0]
-            dat = res_dat.data[0]
+        eq_data, dat_data = fetch_datos_equipo_supabase(equipo_id)
+        if eq_data and dat_data:
+            eq = eq_data[0]
+            dat = dat_data[0]
             
             st.session_state.equipo_creado = True
             st.session_state.equipo_id = equipo_id
@@ -199,7 +201,7 @@ def cargar_datos_equipo(equipo_id):
             st.session_state.division_equipo = eq.get("division", "")
             st.session_state.temporada_equipo = eq.get("temporada", "")
             st.session_state.escudo_equipo = eq.get("escudo_base64", None)
-            st.session_state.color_sidebar = eq.get("color_sidebar", "#f1f5f9") # Gris claro por defecto
+            st.session_state.color_sidebar = eq.get("color_sidebar", "#f1f5f9")
             
             st.session_state.plantilla = dat.get("plantilla", [])
             st.session_state.sesiones = dat.get("sesiones", [])
@@ -247,6 +249,7 @@ def guardar_datos():
             }
         }
         supabase.table("datos_equipo").update(data_json).eq("equipo_id", eq_id).execute()
+        fetch_datos_equipo_supabase.clear()
     except Exception as e:
         st.error(f"Error al guardar en Supabase: {e}")
 
@@ -271,6 +274,7 @@ def obtener_rango_fechas_semana(fecha_str):
     domingo = lunes + timedelta(days=6)
     return lunes.strftime("%d/%m"), domingo.strftime("%d/%m"), lunes, domingo
 
+@st.cache_data
 def calcular_ewma_historico(sesiones, fecha_objetivo):
     registros = []
     for s in sesiones:
@@ -337,6 +341,7 @@ def categorizar_duracion(dias):
     if dias <= 7: return "Leve (4-7d)"
     if dias <= 28: return "Moderada (8-28d)"
     return "Grave (>28d)"
+@st.cache_data
 def calcular_monotonia_7d(sesiones, jugador, fecha_objetivo):
     fecha_fin = datetime.strptime(fecha_objetivo, "%Y-%m-%d")
     fecha_ini = fecha_fin - timedelta(days=6)
