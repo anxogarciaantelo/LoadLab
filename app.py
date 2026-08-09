@@ -9,6 +9,8 @@ from collections import Counter
 import plotly.express as px
 import plotly.graph_objects as go
 import base64
+from PIL import Image
+import io
 from fpdf import FPDF
 import tempfile
 
@@ -329,7 +331,27 @@ def color_ratio_ac(valor):
 
 def get_base64_of_bin_file(bin_file):
     if bin_file:
-        return base64.b64encode(bin_file.read()).decode()
+        try:
+            # 1. Abrir la imagen subida
+            img = Image.open(bin_file)
+            
+            # 2. Convertir a RGB (Evita errores con PNGs transparentes al guardar como JPEG)
+            if img.mode in ("RGBA", "P"):
+                img = img.convert("RGB")
+                
+            # 3. Redimensionar manteniendo la proporción (máximo 200x200)
+            img.thumbnail((200, 200))
+            
+            # 4. Guardar temporalmente en memoria con compresión
+            buffered = io.BytesIO()
+            img.save(buffered, format="JPEG", quality=70)
+            
+            # 5. Convertir a Base64 el archivo ya comprimido
+            return base64.b64encode(buffered.getvalue()).decode()
+        except Exception:
+            # Fallback de seguridad por si falla la lectura de la imagen
+            bin_file.seek(0)
+            return base64.b64encode(bin_file.read()).decode()
     return None
 
 meses_esp = {1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril", 5: "Mayo", 6: "Junio", 7: "Julio", 8: "Agosto", 9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre"}
