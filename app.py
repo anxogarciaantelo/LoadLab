@@ -18,6 +18,7 @@ import tempfile
 from utils.math_helpers import *
 from utils.pdf_generator import *
 from database.db_manager import *
+from views.team_settings import render_panel_principal
 
 # Configuración inicial de la página
 st.set_page_config(page_title="LoadLab - Football Performance AMS", page_icon="⚽", layout="wide")
@@ -501,83 +502,3 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
                     st.rerun()
 
     st.stop()
-
-# ==========================================
-# 5. PANEL PRINCIPAL DEL EQUIPO
-# ==========================================
-
-# --- GESTIÓN DEL ESCUDO Y DATOS DE CUENTA EN SESSION STATE ---
-if "escudo_equipo" not in st.session_state:
-    st.session_state.escudo_equipo = None
-
-# Renderizar escudo y nombre en la barra lateral
-st.sidebar.markdown('<div style="display: flex; align-items: center; gap: 12px; margin-bottom: 5px;">', unsafe_allow_html=True)
-if st.session_state.escudo_equipo:
-    st.sidebar.markdown(f'<img src="data:image/jpeg;base64,{st.session_state.escudo_equipo}" style="width: 36px; height: 36px; object-fit: cover; border-radius: 50%;">', unsafe_allow_html=True)
-else:
-    st.sidebar.markdown('<span style="font-size: 28px;">🛡️</span>', unsafe_allow_html=True)
-
-st.sidebar.markdown(f"<h2 style='margin: 0; font-size: 1.4rem;'>{st.session_state.nombre_equipo}</h2>", unsafe_allow_html=True)
-st.sidebar.markdown('</div>', unsafe_allow_html=True)
-
-st.sidebar.caption(f"{st.session_state.categoria_equipo} | {st.session_state.division_equipo}")
-st.sidebar.caption(f"Temp. {st.session_state.temporada_equipo}")
-st.sidebar.markdown("---")
-
-seccion_principal = st.sidebar.radio("Secciones:", [
-    "📅 Entrenamiento", 
-    "👥 Plantilla",
-    "🚑 Lesiones",
-    "📡 GPS",
-    "⚖️ Antropometría",
-    "📊 Valoraciones"
-])
-
-st.sidebar.markdown("---")
-
-# --- BOTÓN Y EXPANDER DE MODIFICAR CUENTA ---
-with st.sidebar.expander("⚙️ Modificar cuenta", expanded=False):
-    with st.form("form_modificar_cuenta"):
-        nuevo_nombre = st.text_input("Nombre del Club / Equipo:", value=st.session_state.nombre_equipo)
-        nueva_categoria = st.selectbox("Categoría:", ["Senior", "Juvenil", "Cadete", "Infantil", "Alevín", "Benjamín", "Prebenjamín", "Biberón"], index=["Senior", "Juvenil", "Cadete", "Infantil", "Alevín", "Benjamín", "Prebenjamín", "Biberón"].index(st.session_state.categoria_equipo) if st.session_state.categoria_equipo in ["Senior", "Juvenil", "Cadete", "Infantil", "Alevín", "Benjamín", "Prebenjamín", "Biberón"] else 0)
-        nueva_division = st.text_input("División / Liga:", value=st.session_state.division_equipo)
-        nueva_temporada = st.text_input("Temporada:", value=st.session_state.temporada_equipo)
-        
-        # --- AÑADIR ESTA LÍNEA PARA EL SELECTOR DE COLOR ---
-        nuevo_color = st.color_picker("Color de la barra lateral:", value=st.session_state.get("color_sidebar", "#f1f5f9"))
-        
-        nuevo_escudo_up = st.file_uploader("Escudo del Equipo (Imagen):", type=["jpg", "png", "jpeg"])
-        
-        btn_guardar_cuenta = st.form_submit_button("💾 Guardar Cambios")
-        if btn_guardar_cuenta:
-            st.session_state.nombre_equipo = nuevo_nombre
-            st.session_state.categoria_equipo = nueva_categoria
-            st.session_state.division_equipo = nueva_division
-            st.session_state.temporada_equipo = nueva_temporada
-            st.session_state.color_sidebar = nuevo_color # <--- ACTUALIZAR ESTADO
-            if nuevo_escudo_up:
-                st.session_state.escudo_equipo = get_base64_of_bin_file(nuevo_escudo_up)
-            guardar_datos()
-            st.success("¡Datos de cuenta actualizados!")
-            st.rerun()
-
-    st.markdown("---")
-    if st.button("🔄 Borrar datos y empezar de cero", use_container_width=True):
-        st.session_state.plantilla = []
-        st.session_state.sesiones = []
-        st.session_state.lesiones = []
-        st.session_state.antropometria = []
-        st.session_state.val_inicial = []
-        st.session_state.val_rom = []
-        st.session_state.val_1rm = []
-        guardar_datos()
-        st.success("Datos vaciados. El equipo está limpio.")
-        st.rerun()
-        
-    if st.button("🚪 Cerrar Sesión / Cambiar Equipo", use_container_width=True):
-        try:
-            supabase.auth.sign_out()
-        except:
-            pass
-        st.session_state.clear()
-        st.rerun()
