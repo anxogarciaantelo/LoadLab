@@ -11,6 +11,11 @@ from utils.math_helpers import *
 from utils.pdf_generator import *
 from database.db_manager import *
 
+# --- COMPROBACIÓN DE SEGURIDAD ---
+if not st.session_state.get("autenticado", False) or not st.session_state.get("equipo_seleccionado", False):
+    st.warning("Por favor, inicia sesión y selecciona un equipo primero.")
+    st.stop()
+
     st.subheader("⚖️ Antropometría y Composición Corporal")
     
     tab_antro_res, tab_antro_jug, tab_antro_up = st.tabs(["📊 Resumen Analítico", "👤 Jugadores", "📂 Cargar Datos"])
