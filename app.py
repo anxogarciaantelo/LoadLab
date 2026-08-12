@@ -982,21 +982,25 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
             background-color: transparent !important;
         }}
         
-        /* 2. Tarjetas de equipo con fondo BLANCO 100% y bordes sutiles */
-        div[data-testid="column"] div[data-testid="stVerticalBlockBorderWrapper"] {{
+        /* SELECTORES INFALIBLES PARA LA TARJETA BLANCA */
+        div[data-testid="column"] [data-testid="stVerticalBlockBorderWrapper"],
+        div[data-testid="column"] [data-testid="stContainer"],
+        div[data-testid="column"] > div > div > div > div > div {{
             background-color: #ffffff !important;
-            border: 2px solid #e2e8f0 !important;
+            background: #ffffff !important;
+            border: 1px solid #e2e8f0 !important;
             border-radius: 16px !important;
             box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
         }}
         
         /* Botones dentro de las tarjetas (Acceder) */
-        div[data-testid="column"] div[data-testid="stVerticalBlockBorderWrapper"] button {{
+        div[data-testid="column"] button {{
             background-color: #f8fafc !important;
             border: 1px solid #cbd5e1 !important;
             color: #0f172a !important;
+            font-weight: 800 !important;
         }}
-        div[data-testid="column"] div[data-testid="stVerticalBlockBorderWrapper"] button:hover {{
+        div[data-testid="column"] button:hover {{
             background-color: #e2e8f0 !important;
         }}
         
@@ -1065,7 +1069,7 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
     
     # 4. BOTÓN "CREAR NUEVO EQUIPO" CENTRADO, ESTRECHO Y BLANCO
     # Las proporciones [1, 1.5, 1] hacen que el bloque central sea estrecho y quede en el medio
-    col_exp_izq, col_exp_cen, col_exp_der = st.columns([1, 1.5, 1])
+    col_exp_izq, col_exp_cen, col_exp_der = st.columns([2, 1.5, 2])
     
     with col_exp_cen:
         with st.expander("➕ Crear Nuevo Equipo"):
