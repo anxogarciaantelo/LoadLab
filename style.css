@@ -1,1 +1,12 @@
+/* Estilo general para la barra lateral y asegurar visibilidad */
+[data-testid="stSidebar"] {
+    background-color: #f1f5f9;
+    color: #000000;
+}
 
+[data-testid="stSidebar"] h2, 
+[data-testid="stSidebar"] label, 
+[data-testid="stSidebar"] p {
+    color: #000000 !important;
+    font-weight: 800 !important;
+}
