@@ -982,29 +982,13 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
             background-color: transparent !important;
         }}
         
-        /* 🔥 OPCIÓN NUCLEAR PARA LAS TARJETAS 🔥 */
-        /* Apunta al contenedor con borde directamente, sin importar la versión de Streamlit */
-        div[data-testid="stVerticalBlockBorderWrapper"],
-        [data-testid="stColumn"] [data-testid="stVerticalBlockBorderWrapper"],
-        div[data-testid="column"] [data-testid="stVerticalBlockBorderWrapper"] {{
-            background-color: #ffffff !important;
-            background: #ffffff !important;
-            border: 1px solid #e2e8f0 !important;
-            border-radius: 16px !important;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
-        }}
-        
-        /* Botones dentro de las tarjetas (Acceder) */
-        div[data-testid="stVerticalBlockBorderWrapper"] button,
-        [data-testid="stColumn"] button,
+        /* Asegurar que los botones de acceder tengan el estilo correcto */
         div[data-testid="column"] button {{
             background-color: #f8fafc !important;
             border: 1px solid #cbd5e1 !important;
             color: #0f172a !important;
             font-weight: 800 !important;
         }}
-        div[data-testid="stVerticalBlockBorderWrapper"] button:hover,
-        [data-testid="stColumn"] button:hover,
         div[data-testid="column"] button:hover {{
             background-color: #e2e8f0 !important;
         }}
@@ -1013,6 +997,7 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
         div[data-testid="stExpander"] details {{
             background-color: rgba(255, 255, 255, 0.95) !important;
             border-radius: 10px !important;
+            border: 1px solid #cbd5e1 !important;
         }}
         div[data-testid="stExpander"] summary p {{
             color: #0f172a !important;
@@ -1044,36 +1029,37 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
                     eq_id = equipos_lista[idx_global]["equipo_id"]
                     
                     with cols[j]:
-                        with st.container(border=True):
-                            # Imagen del escudo
-                            escudo = eq_info.get("escudo_base64")
-                            if escudo:
-                                try:
-                                    st.markdown(f'<div style="text-align: center;"><img src="data:image/jpeg;base64,{escudo}" style="width:90px; height:90px; object-fit: cover; border-radius:50%; margin-bottom: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"></div>', unsafe_allow_html=True)
-                                except:
-                                    st.markdown('<div style="text-align: center; font-size: 50px; margin-bottom: 10px;">🛡️</div>', unsafe_allow_html=True)
-                            else:
-                                st.markdown('<div style="text-align: center; font-size: 50px; margin-bottom: 10px;">🛡️</div>', unsafe_allow_html=True)
+                        # 🌟 SOLUCIÓN DEFINITIVA: Cajas HTML nativas con estilos inline. 
+                        # ¡Es imposible que Streamlit las vuelva transparentes!
+                        escudo = eq_info.get("escudo_base64")
+                        if escudo:
+                            img_html = f'<img src="data:image/jpeg;base64,{escudo}" style="width:90px; height:90px; object-fit: cover; border-radius:50%; margin-bottom: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">'
+                        else:
+                            img_html = '<div style="font-size: 50px; margin-bottom: 10px;">🛡️</div>'
                             
-                            # Nombre del equipo en color OSCURO (#0f172a)
-                            st.markdown(f"<h3 style='text-align: center; color: #0f172a !important; font-weight: 800; margin-bottom: 0px; font-size: 1.25rem;'>{eq_info.get('nombre', 'Equipo')}</h3>", unsafe_allow_html=True)
-                            
-                            # Categoría y división en color gris oscuro (#475569)
-                            division = eq_info.get('division') or "Sin división"
-                            categoria = eq_info.get('categoria') or ""
-                            st.markdown(f"<p style='text-align: center; color: #475569 !important; font-size: 0.85rem; margin-top: 2px;'>{categoria} | {division}</p>", unsafe_allow_html=True)
-                            
-                            if st.button("🚀 Acceder", key=f"btn_{eq_id}", use_container_width=True):
-                                if cargar_datos_equipo(eq_id):
-                                    st.session_state.equipo_seleccionado = True
-                                    st.rerun()
+                        nombre = eq_info.get('nombre', 'Equipo')
+                        division = eq_info.get('division') or "Sin división"
+                        categoria = eq_info.get('categoria') or ""
+                        
+                        tarjeta_html = f"""
+                        <div style="background-color: #ffffff; padding: 25px 20px 15px 20px; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 10px 30px rgba(0,0,0,0.15); text-align: center; margin-bottom: 15px;">
+                            {img_html}
+                            <h3 style="color: #0f172a; font-weight: 800; margin-bottom: 0px; font-size: 1.25rem;">{nombre}</h3>
+                            <p style="color: #475569; font-size: 0.85rem; margin-top: 2px;">{categoria} | {division}</p>
+                        </div>
+                        """
+                        st.markdown(tarjeta_html, unsafe_allow_html=True)
+                        
+                        if st.button("🚀 Acceder", key=f"btn_{eq_id}", use_container_width=True):
+                            if cargar_datos_equipo(eq_id):
+                                st.session_state.equipo_seleccionado = True
+                                st.rerun()
     else:
         st.info("No tienes equipos asignados actualmente.")
         
     st.markdown("---")
     
     # 4. BOTÓN "CREAR NUEVO EQUIPO" CENTRADO, ESTRECHO Y BLANCO
-    # Las proporciones [1, 1.5, 1] hacen que el bloque central sea estrecho y quede en el medio
     col_exp_izq, col_exp_cen, col_exp_der = st.columns([2, 1.5, 2])
     
     with col_exp_cen:
