@@ -16,6 +16,31 @@ if not st.session_state.get("autenticado", False) or not st.session_state.get("e
     st.warning("Por favor, inicia sesión y selecciona un equipo primero.")
     st.stop()
 
+sesiones_crono = sorted(st.session_state.sesiones, key=lambda x: x["fecha"])
+conteo_entrenos = 0
+conteo_amistosos = 0
+conteo_liga = 0
+conteo_copa = 0
+
+for s in sesiones_crono:
+    if s["tipo"] == "Entrenamiento":
+        conteo_entrenos += 1
+        s["nombre_dinamico"] = f"Sesión {conteo_entrenos}"
+        s["subtitulo_dinamico"] = s.get("descripcion", "")
+    elif s["tipo"] == "Partido Amistoso":
+        conteo_amistosos += 1
+        s["nombre_dinamico"] = f"Partido Amistoso {conteo_amistosos}"
+        s["subtitulo_dinamico"] = f"vs {s.get('rival', 'Rival')}"
+    elif s["tipo"] == "Partido Oficial":
+        comp = s.get("competicion", "Liga")
+        if comp == "Liga":
+            conteo_liga += 1
+            s["nombre_dinamico"] = f"Jornada {conteo_liga}"
+        elif comp == "Copa":
+            conteo_copa += 1
+            s["nombre_dinamico"] = f"Ronda {conteo_copa}"
+        s["subtitulo_dinamico"] = f"vs {s.get('rival', 'Rival')}"
+ 
     st.subheader("📅 Entrenamiento")
     
     tab_cal, tab_temp, tab_micro, tab_ses = st.tabs(["🗓️ Calendario", "🏆 Temporada", "🔄 Microciclos", "📋 Sesiones"])
