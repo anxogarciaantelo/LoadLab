@@ -35,26 +35,24 @@ st.markdown(f"""
             background-color: #ffffff;
         }}
 
-        /* Barra lateral (Sidebar) con color dinámico y texto negro en negrita */
-        [data-testid="stSidebar"] {{
+        /* Barra lateral (Sidebar) con color dinámico */
+        [data-testid="stSidebar"] {
             background-color: {st.session_state.get("color_sidebar", "#f1f5f9")};
             color: #000000;
-        }}
+        }
         
-        /* Forzar negrita y color negro en absolutamente todo el texto del sidebar */
-        [data-testid="stSidebar"] *, 
+        /* Estilizar únicamente los títulos y textos de tus widgets de cuenta, 
+           respetando la navegación nativa de Streamlit para las páginas */
+        [data-testid="stSidebar"] h2, 
         [data-testid="stSidebar"] label, 
-        [data-testid="stSidebar"] span, 
-        [data-testid="stSidebar"] p, 
-        [data-testid="stSidebar"] div,
-        [data-testid="stSidebar"] md {{
+        [data-testid="stSidebar"] p {
             color: #000000 !important;
             font-weight: 800 !important;
-        }}
+        }
 
-        [data-testid="stSidebar"] hr {{
+        [data-testid="stSidebar"] hr {
             border-color: rgba(0, 0, 0, 0.2);
-        }}
+        }
 
         /* Tarjetas de contenedores con diseño flotante y sombra sutil */
         div[data-testid="stVerticalBlock"] > div[data-testid="stContainer"] {{
