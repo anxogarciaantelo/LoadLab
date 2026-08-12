@@ -11,10 +11,7 @@ from utils.math_helpers import *
 from utils.pdf_generator import *
 from database.db_manager import *
 
-# ==========================================
-# ENTRENAMIENTO
-# ==========================================
-if seccion_principal == "📅 Entrenamiento":
+
     st.subheader("📅 Entrenamiento")
     
     tab_cal, tab_temp, tab_micro, tab_ses = st.tabs(["🗓️ Calendario", "🏆 Temporada", "🔄 Microciclos", "📋 Sesiones"])
