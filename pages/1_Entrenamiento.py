@@ -56,10 +56,6 @@ for s in sesiones_crono:
             dias_trad = {0: "lunes", 1: "martes", 2: "miércoles", 3: "jueves", 4: "viernes", 5: "sábado", 6: "domingo"}
             
             dia_clicado = st.date_input("Selecciona un día del calendario:", date.today())
-                "Selecciona un día del calendario:", 
-                date.today(), 
-                key="input_fecha_calendario_entrenamiento"
-            )
             
             # Formateamos la fecha seleccionada a Día-Mes-Año en texto para los mensajes
             fecha_formateada = dia_clicado.strftime("%d-%m-%Y")
