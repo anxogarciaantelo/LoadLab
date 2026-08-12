@@ -982,13 +982,13 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
             background-color: transparent !important;
         }}
         /* Estilizar las tarjetas (contenedores) para que tengan fondo oscuro transparente */
-        div[data-testid="stVerticalBlock"] > div[data-testid="stContainer"] {{
-            background-color: rgba(20, 20, 20, 0.8) !important;
-            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        div[data-testid="stVerticalBlock"] > div[data-testid="stContainer"] {
+            background-color: rgba(255, 255, 255, 0.95) !important;
+            border: 1px solid #e2e8f0 !important;
             backdrop-filter: blur(8px);
             border-radius: 16px !important;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5) !important;
-        }}
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1) !important;
+        }
         </style>
         """
         st.markdown(css_fondo_equipos, unsafe_allow_html=True)
@@ -1028,13 +1028,13 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
                             else:
                                 st.markdown('<div style="text-align: center; font-size: 50px; margin-bottom: 10px;">🛡️</div>', unsafe_allow_html=True)
                             
-                            # Nombre del equipo en negrita y color blanco
-                            st.markdown(f"<h3 style='text-align: center; color: #ffffff; font-weight: 800; margin-bottom: 0px; font-size: 1.25rem;'>{eq_info.get('nombre', 'Equipo')}</h3>", unsafe_allow_html=True)
+                            # Nombre del equipo en negrita y color OSCURO
+                            st.markdown(f"<h3 style='text-align: center; color: #0f172a; font-weight: 800; margin-bottom: 0px; font-size: 1.25rem;'>{eq_info.get('nombre', 'Equipo')}</h3>", unsafe_allow_html=True)
                             
                             # Categoría y división en texto normal, más sutil
                             division = eq_info.get('division') or "Sin división"
                             categoria = eq_info.get('categoria') or ""
-                            st.markdown(f"<p style='text-align: center; color: #d1d5db; font-size: 0.85rem; margin-top: 2px;'>{categoria} | {division}</p>", unsafe_allow_html=True)
+                            st.markdown(f"<p style='text-align: center; color: #475569; font-size: 0.85rem; margin-top: 2px;'>{categoria} | {division}</p>", unsafe_allow_html=True)
                             
                             # Botón de acceso integrado en la tarjeta
                             if st.button("🚀 Acceder", key=f"btn_{eq_id}", use_container_width=True):
@@ -1045,15 +1045,35 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
         st.info("No tienes equipos asignados actualmente.")
         
     st.markdown("---")
-    with st.expander("➕ Crear Nuevo Equipo"):
-        with st.form("form_nuevo_equipo"):
-            n_nombre = st.text_input("Nombre del Club / Equipo:")
-            n_categoria = st.selectbox("Categoría:", ["Senior", "Juvenil", "Cadete", "Infantil", "Alevín", "Benjamín", "Prebenjamín", "Biberón"])
-            n_division = st.text_input("División / Liga:")
-            n_temporada = st.text_input("Temporada:", value="2026/2027")
-            
-            if st.form_submit_button("🚀 Crear y Acceder") and n_nombre:
-                # 1. Crear el equipo en DB
+    # 1. Envolvemos el expansor en columnas para que sea mucho más estrecho (ocupa la mitad central)
+    col_exp_izq, col_exp_cen, col_exp_der = st.columns([1, 2, 1])
+    
+    with col_exp_cen:
+        with st.expander("➕ Crear Nuevo Equipo"):
+            with st.form("form_nuevo_equipo"):
+                n_nombre = st.text_input("Nombre del Club / Equipo:")
+                n_categoria = st.selectbox("Categoría:", ["Senior", "Juvenil", "Cadete", "Infantil", "Alevín", "Benjamín", "Prebenjamín", "Biberón"])
+                n_division = st.text_input("División / Liga:")
+                n_temporada = st.text_input("Temporada:", value="2026/2027")
+                
+                # 2. Inyectamos CSS rápido para forzar el fondo blanco en este botón
+                st.markdown("""
+                    <style>
+                    [data-testid="stFormSubmitButton"] button {
+                        background-color: #ffffff !important;
+                        color: #000000 !important;
+                        border: 1px solid #cbd5e1 !important;
+                    }
+                    </style>
+                """, unsafe_allow_html=True)
+                
+                # 3. Hacemos el botón interior aún más pequeño
+                c_btn1, c_btn2, c_btn3 = st.columns([1, 2, 1])
+                with c_btn2:
+                    btn_crear = st.form_submit_button("🚀 Crear y Acceder", use_container_width=True)
+                
+                if btn_crear and n_nombre:
+                    # 1. Crear el equipo en DB
                 res_insert = supabase.table("equipos").insert({
                     "nombre": n_nombre, "categoria": n_categoria, 
                     "division": n_division, "temporada": n_temporada,
