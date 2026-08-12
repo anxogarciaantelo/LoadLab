@@ -158,3 +158,28 @@ def sincronizar_plantilla_sesiones():
                     if jug_limpio in dict_pos:
                         d["POS"] = dict_pos[jug_limpio]
                         d["JUGADOR"] = dict_nombres[jug_limpio]
+
+def get_base64_of_bin_file(bin_file):
+    if bin_file:
+        try:
+            # 1. Abrir la imagen subida
+            img = Image.open(bin_file)
+            
+            # 2. Convertir a RGB (Evita errores con PNGs transparentes al guardar como JPEG)
+            if img.mode in ("RGBA", "P"):
+                img = img.convert("RGB")
+                
+            # 3. Redimensionar manteniendo la proporción (máximo 200x200)
+            img.thumbnail((200, 200))
+            
+            # 4. Guardar temporalmente en memoria con compresión
+            buffered = io.BytesIO()
+            img.save(buffered, format="JPEG", quality=70)
+            
+            # 5. Convertir a Base64 el archivo ya comprimido
+            return base64.b64encode(buffered.getvalue()).decode()
+        except Exception:
+            # Fallback de seguridad por si falla la lectura de la imagen
+            bin_file.seek(0)
+            return base64.b64encode(bin_file.read()).decode()
+    return None
