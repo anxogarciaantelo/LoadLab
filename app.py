@@ -982,13 +982,32 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
             background-color: transparent !important;
         }}
         
-        /* 2. Tarjetas de equipo con fondo BLANCO y borde sutil */
-        div[data-testid="column"] div[data-testid="stContainer"] {{
-            background-color: rgba(255, 255, 255, 0.95) !important;
-            border: 1px solid #e2e8f0 !important;
-            backdrop-filter: blur(8px);
+        /* 2. Tarjetas de equipo con fondo BLANCO 100% y bordes sutiles */
+        div[data-testid="column"] div[data-testid="stVerticalBlockBorderWrapper"] {{
+            background-color: #ffffff !important;
+            border: 2px solid #e2e8f0 !important;
             border-radius: 16px !important;
             box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
+        }}
+        
+        /* Botones dentro de las tarjetas (Acceder) */
+        div[data-testid="column"] div[data-testid="stVerticalBlockBorderWrapper"] button {{
+            background-color: #f8fafc !important;
+            border: 1px solid #cbd5e1 !important;
+            color: #0f172a !important;
+        }}
+        div[data-testid="column"] div[data-testid="stVerticalBlockBorderWrapper"] button:hover {{
+            background-color: #e2e8f0 !important;
+        }}
+        
+        /* Fondo blanco para el desplegable de Crear Equipo */
+        div[data-testid="stExpander"] details {{
+            background-color: rgba(255, 255, 255, 0.95) !important;
+            border-radius: 10px !important;
+        }}
+        div[data-testid="stExpander"] summary p {{
+            color: #0f172a !important;
+            font-weight: 800 !important;
         }}
         </style>
         """
@@ -996,7 +1015,7 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
     except FileNotFoundError:
         pass
 
-    # Un poco de espacio superior y título con algo de sombra para que resalte sobre cualquier fondo
+    # Un poco de espacio superior y título centrado
     st.markdown("<br><br>", unsafe_allow_html=True)
     st.markdown("<h2 style='text-align: center; color: #ffffff; font-weight: 800; margin-bottom: 40px; text-shadow: 0px 4px 10px rgba(0,0,0,0.6);'>📋 Selecciona tu Equipo</h2>", unsafe_allow_html=True)
     
@@ -1027,7 +1046,7 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
                             else:
                                 st.markdown('<div style="text-align: center; font-size: 50px; margin-bottom: 10px;">🛡️</div>', unsafe_allow_html=True)
                             
-                            # 3. Nombre del equipo en color OSCURO (#0f172a)
+                            # Nombre del equipo en color OSCURO (#0f172a)
                             st.markdown(f"<h3 style='text-align: center; color: #0f172a !important; font-weight: 800; margin-bottom: 0px; font-size: 1.25rem;'>{eq_info.get('nombre', 'Equipo')}</h3>", unsafe_allow_html=True)
                             
                             # Categoría y división en color gris oscuro (#475569)
@@ -1045,7 +1064,8 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
     st.markdown("---")
     
     # 4. BOTÓN "CREAR NUEVO EQUIPO" CENTRADO, ESTRECHO Y BLANCO
-    col_exp_izq, col_exp_cen, col_exp_der = st.columns([1, 2, 1])
+    # Las proporciones [1, 1.5, 1] hacen que el bloque central sea estrecho y quede en el medio
+    col_exp_izq, col_exp_cen, col_exp_der = st.columns([1, 1.5, 1])
     
     with col_exp_cen:
         with st.expander("➕ Crear Nuevo Equipo"):
@@ -1055,7 +1075,7 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
                 n_division = st.text_input("División / Liga:")
                 n_temporada = st.text_input("Temporada:", value="2026/2027")
                 
-                # Inyectar CSS solo para el botón de este formulario
+                # Inyectar CSS solo para el botón de este formulario específico
                 st.markdown("""
                     <style>
                     [data-testid="stForm"] [data-testid="stFormSubmitButton"] button {
@@ -1067,8 +1087,8 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
                     </style>
                 """, unsafe_allow_html=True)
                 
-                # Hacemos el botón interno más pequeño
-                c_btn1, c_btn2, c_btn3 = st.columns([1, 2, 1])
+                # Columnas internas para hacer el botón en sí aún más pequeño dentro del formulario
+                c_btn1, c_btn2, c_btn3 = st.columns([1, 1.5, 1])
                 with c_btn2:
                     btn_crear = st.form_submit_button("🚀 Crear y Acceder", use_container_width=True)
                 
