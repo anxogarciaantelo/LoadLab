@@ -2070,7 +2070,13 @@ if seccion_principal == "📅 Entrenamiento":
                         with cg2:
                             if df_graficos['TQR'].sum() > 0:
                                 df_tqr = df_graficos[df_graficos['TQR'] > 0].sort_values('TQR')
-                                fig_tqr = px.bar(df_tqr, x='JUGADOR', y='TQR', color='TQR', color_continuous_scale="RdYlGn", range_color=[1, 10], title="Calidad de Recuperación (TQR)")
+                                fig_tqr = px.bar(
+                                    df_tqr, x='JUGADOR', y='TQR', 
+                                    color='TQR', color_continuous_scale="RdYlGn", range_color=[1, 10], 
+                                    title="Calidad de Recuperación (TQR)"
+                                )
+                                # AÑADIDO: Fijamos el eje Y de 1 a 10 estrictamente
+                                fig_tqr.update_yaxes(range=[1, 10])
                                 st.plotly_chart(fig_tqr, use_container_width=True, key=f"ses_tqr_grafico_{idx_real}")
                         
                         st.markdown("---")
@@ -2193,10 +2199,14 @@ if seccion_principal == "📅 Entrenamiento":
                                 fig4 = px.scatter(
                                     df_accdcc, x='DCC', y='ACC', color='POS', 
                                     hover_name='JUGADOR', 
+                                    text='JUGADOR', # <--- AÑADIDO: Muestra el nombre en el punto
                                     title="ACC vs DCC",
                                     color_discrete_map={"POR": "gray", "DEF": "#00b4d8", "MED": "#28a745", "ATA": "#ff4b4b"}
                                 )
-                                fig4.update_traces(marker=dict(size=12, opacity=0.8))
+                                fig4.update_traces(
+                                    textposition='top center', # <--- AÑADIDO: Coloca el texto arriba del punto
+                                    marker=dict(size=12, opacity=0.8, line=dict(width=1, color='DarkSlateGrey')) # Añadimos el borde oscuro para igualarlo al otro gráfico
+                                )
                                 fig4.add_shape(type="line", x0=0, y0=0, x1=max_val, y1=max_val, line=dict(color="gray", dash="dot"))
                                 fig4.update_layout(yaxis=dict(scaleanchor="x", scaleratio=1))
                                 st.plotly_chart(fig4, use_container_width=True, key=f"ses_accdcc_grafico_{idx_real}")
@@ -2572,75 +2582,103 @@ if seccion_principal == "📅 Entrenamiento":
                                 no_encontrados_en_app.update(df_g_up[df_g_up['JUGADOR_MATCH'].isna()]['Player Name'].dropna().tolist())
                                 df_g_up = df_g_up.dropna(subset=['JUGADOR_MATCH'])
 
+                            # 1. RECUPERAR DATOS EXISTENTES PARA NO SOBREESCRIBIRLOS
+                            datos_actuales = {d["JUGADOR"]: d for d in sesion.get("datos_informe", [])}
+                            
                             registros_sesion = []
                             for nombre_final in sorted(nombres_plantilla):
                                 match_p = next((p for p in st.session_state.plantilla if p['JUGADOR'] == nombre_final), None)
-                                pos_jug = match_p['POS']
+                                pos_jug = match_p['POS'] if match_p else "DEF"
 
-                                rpe_val = 0.0
+                                # 2. OBTENER REGISTRO PREVIO O CREAR UNO NUEVO A CERO
+                                reg = datos_actuales.get(nombre_final, {
+                                    "JUGADOR": nombre_final, "POS": pos_jug,
+                                    "TQR": 0.0, "WELLNESS": 0.0,
+                                    "W_Humor": 0.0, "W_Sueño": 0.0, "W_Fatiga": 0.0, "W_Dolor": 0.0, "W_Estres": 0.0,
+                                    "RPE": 0.0, "MIN": 0.0, "MIN_GPS": 0.0, "CARGA": 0.0,
+                                    "DIS": 0.0, "DIS AI": 0.0, "Nº SPR": 0.0, "ACC": 0.0, "DCC": 0.0, "VMAX": 0.0,
+                                    "Z1": 0.0, "Z2": 0.0, "Z3": 0.0, "Z4": 0.0, "Z5": 0.0, "Z6": 0.0,
+                                    "HID >21": 0.0, "HID >24": 0.0, "SPR >24": 0.0, "SPR >27": 0.0,
+                                    "V_Med": 0.0, "V_Max": 0.0, "ACC_Max": 0.0, "ACC >2": 0.0, "ACC >3": 0.0, "ACC >4": 0.0,
+                                    "DCC >2": 0.0, "DCC >3": 0.0, "DCC >4": 0.0, "R_0_7": 0.0, "R_7_14": 0.0,
+                                    "R_14_21": 0.0, "R_21_24": 0.0, "R_24_27": 0.0, "R_27_30": 0.0, "R_30_45": 0.0
+                                })
+
+                                # 3. ACTUALIZAR SÓLO LOS MÓDULOS QUE SE HAYAN SUBIDO EN ESTA TANDA
+                                
+                                # --- RPE ---
                                 if not df_r_up.empty:
                                     match_r = df_r_up[df_r_up['JUGADOR_MATCH'] == nombre_final]
-                                    if not match_r.empty: rpe_val = safe_float(match_r.iloc[0].get('Índice de Esfuerzo Percibido', 0))
+                                    if not match_r.empty: 
+                                        reg["RPE"] = safe_float(match_r.iloc[0].get('Índice de Esfuerzo Percibido', 0))
+                                        # Si sube RPE y el tiempo de sesión está vacío, asumimos 90 mins por defecto
+                                        if reg["MIN"] == 0: reg["MIN"] = 90.0
 
-                                tqr_val = fatiga = sueño = dolor = estres = humor = well_sum = 0.0
+                                # --- WELLNESS ---
                                 if not df_w_up.empty:
                                     match_w = df_w_up[df_w_up['JUGADOR_MATCH'] == nombre_final]
                                     if not match_w.empty:
                                         r_w = match_w.iloc[0]
-                                        tqr_val = safe_float(r_w.get('Índice de Calidad de Recuperación', 0))
-                                        fatiga = safe_float(r_w.get('Fatiga:', 0))
-                                        sueño = safe_float(r_w.get('Calidad del sueño:', 0))
-                                        dolor = safe_float(r_w.get('Dolor muscular:', 0))
-                                        estres = safe_float(r_w.get('Nivel de estrés:', 0))
-                                        humor = safe_float(r_w.get('Humor:', 0))
-                                        well_sum = fatiga + sueño + dolor + estres + humor
+                                        reg["TQR"] = safe_float(r_w.get('Índice de Calidad de Recuperación', 0))
+                                        reg["W_Fatiga"] = safe_float(r_w.get('Fatiga:', 0))
+                                        reg["W_Sueño"] = safe_float(r_w.get('Calidad del sueño:', 0))
+                                        reg["W_Dolor"] = safe_float(r_w.get('Dolor muscular:', 0))
+                                        reg["W_Estres"] = safe_float(r_w.get('Nivel de estrés:', 0))
+                                        reg["W_Humor"] = safe_float(r_w.get('Humor:', 0))
+                                        reg["WELLNESS"] = reg["W_Fatiga"] + reg["W_Sueño"] + reg["W_Dolor"] + reg["W_Estres"] + reg["W_Humor"]
 
-                                min_sesion = 90.0 if rpe_val > 0 else 0.0
-                                carga_calc = min_sesion * rpe_val
-
-                                dis = dis_ai_21 = dis_ai_24 = spr_24 = spr_30 = v_med = v_max = 0.0
-                                acc_2 = acc_3 = acc_4 = dcc_2 = dcc_3 = dcc_4 = 0.0
-                                r_0_7 = r_7_14 = r_14_21 = r_21_24 = r_24_27 = r_27_30 = 0.0
-
+                                # --- GPS ---
                                 if not df_g_up.empty:
                                     match_g = df_g_up[df_g_up['JUGADOR_MATCH'] == nombre_final]
                                     if not match_g.empty:
                                         row_g = match_g.iloc[0]
-                                        min_sesion = extraer_minutos(str(row_g.get('Time Played', '0'))) or 90.0
-                                        carga_calc = min_sesion * rpe_val
                                         dis = safe_float(row_g.get('Distance (km)', 0))
                                         if dis > 0:
-                                            dis_ai_21 = safe_float(row_g.get('HID distance (> 21.00 km/h)', 0))
-                                            dis_ai_24 = safe_float(row_g.get('HID distance (> 24.00 km/h)', 0))
-                                            spr_24 = safe_float(row_g.get('# of Sprints (> 24.00 km/h)', 0))
-                                            spr_30 = safe_float(row_g.get('# of Sprints (> 30.00 km/h)', 0))
-                                            v_med = safe_float(row_g.get('Avg Speed (km/h)', 0))
-                                            v_max = safe_float(row_g.get('Max Speed (km/h)', 0))
-                                            acc_2 = safe_float(row_g.get('# of Accelerations (> 2.00 m/s²)', 0))
-                                            acc_3 = safe_float(row_g.get('# of Accelerations (> 3.00 m/s²)', 0))
-                                            acc_4 = safe_float(row_g.get('# of Accelerations (> 4.00 m/s²)', 0))
-                                            dcc_2 = safe_float(row_g.get('# of Decelerations (> 2.00 m/s²)', 0))
-                                            dcc_3 = safe_float(row_g.get('# of Decelerations (> 3.00 m/s²)', 0))
-                                            dcc_4 = safe_float(row_g.get('# of Decelerations (> 4.00 m/s²)', 0))
-                                            r_0_7 = safe_float(row_g.get('Distance Speed Range (0 - 7 km)', 0))
-                                            r_7_14 = safe_float(row_g.get('Distance Speed Range (7 - 14 km)', 0))
-                                            r_14_21 = safe_float(row_g.get('Distance Speed Range (14 - 21 km)', 0))
-                                            r_21_24 = safe_float(row_g.get('Distance Speed Range (21 - 24 km)', 0))
-                                            r_24_27 = safe_float(row_g.get('Distance Speed Range (24 - 27 km)', 0))
-                                            r_27_30 = safe_float(row_g.get('Distance Speed Range (27 - 30 km)', 0))
+                                            min_gps_excel = extraer_minutos(str(row_g.get('Time Played', '0')))
+                                            reg["MIN_GPS"] = min_gps_excel if min_gps_excel > 0 else 90.0
+                                            reg["MIN"] = reg["MIN_GPS"] # El GPS manda sobre el tiempo global de sesión
+                                            
+                                            reg["DIS"] = dis
+                                            reg["HID >21"] = safe_float(row_g.get('HID distance (> 21.00 km/h)', 0))
+                                            reg["DIS AI"] = reg["HID >21"]
+                                            reg["HID >24"] = safe_float(row_g.get('HID distance (> 24.00 km/h)', 0))
+                                            
+                                            reg["SPR >24"] = safe_float(row_g.get('# of Sprints (> 24.00 km/h)', 0))
+                                            reg["Nº SPR"] = reg["SPR >24"]
+                                            reg["SPR >27"] = safe_float(row_g.get('# of Sprints (> 30.00 km/h)', 0))
+                                            
+                                            reg["V_Med"] = safe_float(row_g.get('Avg Speed (km/h)', 0))
+                                            reg["VMAX"] = safe_float(row_g.get('Max Speed (km/h)', 0))
+                                            reg["V_Max"] = reg["VMAX"]
+                                            
+                                            reg["ACC >2"] = safe_float(row_g.get('# of Accelerations (> 2.00 m/s²)', 0))
+                                            reg["ACC >3"] = safe_float(row_g.get('# of Accelerations (> 3.00 m/s²)', 0))
+                                            reg["ACC"] = reg["ACC >3"]
+                                            reg["ACC >4"] = safe_float(row_g.get('# of Accelerations (> 4.00 m/s²)', 0))
+                                            
+                                            reg["DCC >2"] = safe_float(row_g.get('# of Decelerations (> 2.00 m/s²)', 0))
+                                            reg["DCC >3"] = safe_float(row_g.get('# of Decelerations (> 3.00 m/s²)', 0))
+                                            reg["DCC"] = reg["DCC >3"]
+                                            reg["DCC >4"] = safe_float(row_g.get('# of Decelerations (> 4.00 m/s²)', 0))
+                                            
+                                            reg["R_0_7"] = safe_float(row_g.get('Distance Speed Range (0 - 7 km)', 0))
+                                            reg["R_7_14"] = safe_float(row_g.get('Distance Speed Range (7 - 14 km)', 0))
+                                            reg["R_14_21"] = safe_float(row_g.get('Distance Speed Range (14 - 21 km)', 0))
+                                            reg["R_21_24"] = safe_float(row_g.get('Distance Speed Range (21 - 24 km)', 0))
+                                            reg["R_24_27"] = safe_float(row_g.get('Distance Speed Range (24 - 27 km)', 0))
+                                            reg["R_27_30"] = safe_float(row_g.get('Distance Speed Range (27 - 30 km)', 0))
+                                            reg["R_30_45"] = safe_float(row_g.get('# of Sprints (> 30.00 km/h)', 0)) 
+                                            
+                                            reg["Z1"] = reg["R_0_7"] + reg["R_7_14"]
+                                            reg["Z2"] = reg["R_14_21"]
+                                            reg["Z3"] = reg["R_21_24"]
+                                            reg["Z4"] = reg["R_24_27"]
+                                            reg["Z5"] = reg["R_27_30"]
 
-                                registros_sesion.append({
-                                    "JUGADOR": nombre_final, "POS": pos_jug,
-                                    "TQR": tqr_val, "WELLNESS": well_sum,
-                                    "W_Humor": humor, "W_Sueño": sueño, "W_Fatiga": fatiga, "W_Dolor": dolor, "W_Estres": estres,
-                                    "RPE": rpe_val, "MIN": min_sesion, "MIN_GPS": min_sesion if dis > 0 else 0.0, "CARGA": carga_calc,
-                                    "DIS": dis, "DIS AI": dis_ai_21, "Nº SPR": spr_24, "ACC": acc_3, "DCC": dcc_3, "VMAX": v_max,
-                                    "Z1": r_0_7 + r_7_14, "Z2": r_14_21, "Z3": r_21_24, "Z4": r_24_27, "Z5": r_27_30, "Z6": 0.0,
-                                    "HID >21": dis_ai_21, "HID >24": dis_ai_24, "SPR >24": spr_24, "SPR >27": spr_30,
-                                    "V_Med": v_med, "V_Max": v_max, "ACC_Max": 0.0, "ACC >2": acc_2, "ACC >3": acc_3, "ACC >4": acc_4,
-                                    "DCC >2": dcc_2, "DCC >3": dcc_3, "DCC >4": dcc_4, "R_0_7": r_0_7, "R_7_14": r_7_14,
-                                    "R_14_21": r_14_21, "R_21_24": r_21_24, "R_24_27": r_24_27, "R_27_30": r_27_30, "R_30_45": spr_30
-                                })
+                                # 4. RECALCULAR CARGA FINAL SEGÚN LAS ACTUALIZACIONES
+                                reg["CARGA"] = reg["MIN"] * reg["RPE"]
+                                
+                                registros_sesion.append(reg)
                                 
                             st.session_state.sesiones[idx_real]['datos_informe'] = registros_sesion
                             st.session_state.sesiones[idx_real]['informe_generado'] = True
