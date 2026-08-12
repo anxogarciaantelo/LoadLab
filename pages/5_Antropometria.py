@@ -11,9 +11,12 @@ from utils.math_helpers import *
 from utils.pdf_generator import *
 from database.db_manager import *
 
-# --- COMPROBACIÓN DE SEGURIDAD ---
+# --- COMPROBACIÓN DE SEGURIDAD Y SESIÓN ---
 if not st.session_state.get("autenticado", False) or not st.session_state.get("equipo_seleccionado", False):
-    st.warning("Por favor, inicia sesión y selecciona un equipo primero.")
+    st.warning("⚠️ La sesión ha expirado o no se ha seleccionado un equipo. Por favor, vuelve a iniciar sesión.")
+    if st.button("Ir al Login principal"):
+        st.session_state.clear()
+        st.rerun()
     st.stop()
 
     st.subheader("⚖️ Antropometría y Composición Corporal")
