@@ -475,3 +475,24 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
                     st.rerun()
 
     st.stop()
+
+# ==========================================
+# 4. PANTALLA PRINCIPAL (CUANDO EL EQUIPO ESTÁ SELECCIONADO)
+# ==========================================
+if st.session_state.get("equipo_seleccionado", False):
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    col_w1, col_w2, col_w3 = st.columns([1, 2, 1])
+    with col_w2:
+        st.markdown(f"""
+            <div style="background-color: #f8fafc; padding: 40px; border-radius: 16px; border: 1px solid #cbd5e1; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+                <h1 style="color: #0f172a; font-weight: 800; margin-bottom: 10px;">⚽ {st.session_state.get('nombre_equipo', 'LoadLab')}</h1>
+                <p style="color: #475569; font-size: 1.1rem; margin-bottom: 20px;">
+                    <b>{st.session_state.get('categoria_equipo', '')}</b> | {st.session_state.get('division_equipo', '')} <br>
+                    Temporada {st.session_state.get('temporada_equipo', '')}
+                </p>
+                <hr style="border-color: #cbd5e1; margin: 20px 0;">
+                <p style="color: #0f172a; font-weight: 600;">
+                    👈 Usa el <b>menú de navegación lateral izquierdo</b> para acceder a Entrenamientos, Plantilla, Lesiones, GPS y Valoraciones.
+                </p>
+            </div>
+        """, unsafe_allow_html=True)
