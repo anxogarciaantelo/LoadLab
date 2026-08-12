@@ -130,3 +130,18 @@ def calcular_monotonia_7d(sesiones, jugador, fecha_objetivo):
         return 10.0
     return 0.0
 import tempfile
+
+def validar_estructuras_memoria():
+    for p in st.session_state.get("plantilla", []):
+        if "lateralidad" not in p: p["lateralidad"] = "Diestro"
+        if "foto" not in p: p["foto"] = None
+
+    for les in st.session_state.get("lesiones", []):
+        if "dias_baja" not in les: les["dias_baja"] = None
+        if "estado" not in les: les["estado"] = "Activa"
+
+    for s in st.session_state.get("sesiones", []):
+        if s.get("informe_generado"):
+            for d in s.get("datos_informe", []):
+                for z in ['Z1', 'Z2', 'Z3', 'Z4', 'Z5', 'Z6', 'W_Fatiga', 'W_Sueño', 'W_Dolor', 'W_Estres', 'W_Humor', 'MIN_GPS']:
+                    if z not in d: d[z] = 0.0
