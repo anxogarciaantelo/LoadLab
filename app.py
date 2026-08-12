@@ -37,10 +37,10 @@ st.markdown(f"""
         }}
 
         /* Barra lateral (Sidebar) con color dinámico */
-        [data-testid="stSidebar"] {
+        [data-testid="stSidebar"] {{
             background-color: {st.session_state.get("color_sidebar", "#f1f5f9")};
             color: #000000;
-        }
+        }}
         
         /* Estilizar únicamente los títulos y textos de tus widgets de cuenta, 
            respetando la navegación nativa de Streamlit para las páginas */
