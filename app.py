@@ -610,28 +610,3 @@ with st.sidebar.expander("⚙️ Modificar cuenta", expanded=False):
             pass
         st.session_state.clear()
         st.rerun()
-sesiones_crono = sorted(st.session_state.sesiones, key=lambda x: x["fecha"])
-conteo_entrenos = 0
-conteo_amistosos = 0
-conteo_liga = 0
-conteo_copa = 0
-
-for s in sesiones_crono:
-    if s["tipo"] == "Entrenamiento":
-        conteo_entrenos += 1
-        s["nombre_dinamico"] = f"Sesión {conteo_entrenos}"
-        s["subtitulo_dinamico"] = s.get("descripcion", "")
-    elif s["tipo"] == "Partido Amistoso":
-        conteo_amistosos += 1
-        s["nombre_dinamico"] = f"Partido Amistoso {conteo_amistosos}"
-        s["subtitulo_dinamico"] = f"vs {s.get('rival', 'Rival')}"
-    elif s["tipo"] == "Partido Oficial":
-        comp = s.get("competicion", "Liga")
-        if comp == "Liga":
-            conteo_liga += 1
-            s["nombre_dinamico"] = f"Jornada {conteo_liga}"
-        elif comp == "Copa":
-            conteo_copa += 1
-            s["nombre_dinamico"] = f"Ronda {conteo_copa}"
-        s["subtitulo_dinamico"] = f"vs {s.get('rival', 'Rival')}"
-
