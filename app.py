@@ -936,7 +936,7 @@ if not st.session_state.autenticado:
     # Reducimos los saltos de línea para que quede más centrado con la imagen
     st.markdown("<br><br><br><br><br><br><br><br><br><br><br><br>", unsafe_allow_html=True)
     
-    col_izq, col_centro, col_der = st.columns([1.5, 1, 1.5]) # <--- 1. Proporciones ajustadas para estrechar el centro
+    col_izq, col_centro, col_der = st.columns([3, 1, 3]) # <--- 1. Proporciones ajustadas para estrechar el centro
     
     with col_centro:
         st.markdown("<h2 style='text-align: center; color: #ffffff; font-weight: 800; margin-bottom: 10px;'>Iniciar Sesión</h2>", unsafe_allow_html=True)
