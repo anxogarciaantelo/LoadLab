@@ -442,6 +442,8 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
                         
                         if st.button("🚀 Acceder", key=f"btn_{eq_id}", use_container_width=True):
                             if cargar_datos_equipo(eq_id):
+                                validar_estructuras_memoria()
+                                sincronizar_plantilla_sesiones()
                                 st.session_state.equipo_seleccionado = True
                                 st.rerun()
     else:
@@ -492,42 +494,13 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
                     
                     supabase.table("datos_equipo").insert({"equipo_id": nuevo_id}).execute()
                     
+                    validar_estructuras_memoria()
+                    sincronizar_plantilla_sesiones()
+                    
                     st.success("Equipo creado.")
                     st.rerun()
 
     st.stop()
-
-# ==========================================
-# 3. VALIDACIÓN DE ESTRUCTURAS EN MEMORIA
-# ==========================================
-for p in st.session_state.plantilla:
-    if "lateralidad" not in p: p["lateralidad"] = "Diestro"
-    if "foto" not in p: p["foto"] = None
-
-for les in st.session_state.lesiones:
-    if "dias_baja" not in les: les["dias_baja"] = None
-    if "estado" not in les: les["estado"] = "Activa"
-
-for s in st.session_state.sesiones:
-    if s.get("informe_generado"):
-        for d in s["datos_informe"]:
-            for z in ['Z1', 'Z2', 'Z3', 'Z4', 'Z5', 'Z6', 'W_Fatiga', 'W_Sueño', 'W_Dolor', 'W_Estres', 'W_Humor', 'MIN_GPS']:
-                if z not in d: d[z] = 0.0
-
-# ==========================================
-# 4. SINCRONIZADOR DINÁMICO DE PLANTILLA
-# ==========================================
-if "plantilla" in st.session_state and st.session_state.plantilla:
-    dict_pos = {limpiar_nombre(p["JUGADOR"]): p["POS"] for p in st.session_state.plantilla}
-    dict_nombres = {limpiar_nombre(p["JUGADOR"]): p["JUGADOR"] for p in st.session_state.plantilla}
-    
-    for s in st.session_state.sesiones:
-        if s.get("datos_informe"):
-            for d in s["datos_informe"]:
-                jug_limpio = limpiar_nombre(d.get("JUGADOR", ""))
-                if jug_limpio in dict_pos:
-                    d["POS"] = dict_pos[jug_limpio]
-                    d["JUGADOR"] = dict_nombres[jug_limpio]
 
 # ==========================================
 # 5. PANEL PRINCIPAL DEL EQUIPO
