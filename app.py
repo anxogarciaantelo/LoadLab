@@ -419,7 +419,6 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
                                 validar_estructuras_memoria()
                                 sincronizar_plantilla_sesiones()
                                 st.session_state.equipo_seleccionado = True
-                                st.switch_page("pages/1_Entrenamiento.py")
                                 st.rerun()
     else:
         st.info("No tienes equipos asignados actualmente.")
