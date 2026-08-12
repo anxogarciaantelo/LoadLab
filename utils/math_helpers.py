@@ -145,3 +145,16 @@ def validar_estructuras_memoria():
             for d in s.get("datos_informe", []):
                 for z in ['Z1', 'Z2', 'Z3', 'Z4', 'Z5', 'Z6', 'W_Fatiga', 'W_Sueño', 'W_Dolor', 'W_Estres', 'W_Humor', 'MIN_GPS']:
                     if z not in d: d[z] = 0.0
+
+def sincronizar_plantilla_sesiones():
+    if "plantilla" in st.session_state and st.session_state.plantilla:
+        dict_pos = {limpiar_nombre(p["JUGADOR"]): p["POS"] for p in st.session_state.plantilla}
+        dict_nombres = {limpiar_nombre(p["JUGADOR"]): p["JUGADOR"] for p in st.session_state.plantilla}
+
+        for s in st.session_state.get("sesiones", []):
+            if s.get("datos_informe"):
+                for d in s["datos_informe"]:
+                    jug_limpio = limpiar_nombre(d.get("JUGADOR", ""))
+                    if jug_limpio in dict_pos:
+                        d["POS"] = dict_pos[jug_limpio]
+                        d["JUGADOR"] = dict_nombres[jug_limpio]
