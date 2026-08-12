@@ -982,10 +982,11 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
             background-color: transparent !important;
         }}
         
-        /* SELECTORES INFALIBLES PARA LA TARJETA BLANCA */
-        div[data-testid="column"] [data-testid="stVerticalBlockBorderWrapper"],
-        div[data-testid="column"] [data-testid="stContainer"],
-        div[data-testid="column"] > div > div > div > div > div {{
+        /* 🔥 OPCIÓN NUCLEAR PARA LAS TARJETAS 🔥 */
+        /* Apunta al contenedor con borde directamente, sin importar la versión de Streamlit */
+        div[data-testid="stVerticalBlockBorderWrapper"],
+        [data-testid="stColumn"] [data-testid="stVerticalBlockBorderWrapper"],
+        div[data-testid="column"] [data-testid="stVerticalBlockBorderWrapper"] {{
             background-color: #ffffff !important;
             background: #ffffff !important;
             border: 1px solid #e2e8f0 !important;
@@ -994,12 +995,16 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
         }}
         
         /* Botones dentro de las tarjetas (Acceder) */
+        div[data-testid="stVerticalBlockBorderWrapper"] button,
+        [data-testid="stColumn"] button,
         div[data-testid="column"] button {{
             background-color: #f8fafc !important;
             border: 1px solid #cbd5e1 !important;
             color: #0f172a !important;
             font-weight: 800 !important;
         }}
+        div[data-testid="stVerticalBlockBorderWrapper"] button:hover,
+        [data-testid="stColumn"] button:hover,
         div[data-testid="column"] button:hover {{
             background-color: #e2e8f0 !important;
         }}
