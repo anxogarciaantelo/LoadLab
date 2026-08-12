@@ -964,18 +964,83 @@ if not st.session_state.autenticado:
 # 2. SELECCIÓN DE EQUIPO
 # ==========================================
 if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
-    st.markdown("### 📋 Selecciona tu Equipo")
+    # 1. Aplicamos el fondo de imagen igual que en el login
+    try:
+        import base64
+        with open("fondo_login.jpg", "rb") as img_file:
+            encoded_string = base64.b64encode(img_file.read()).decode()
+        css_fondo_equipos = f"""
+        <style>
+        .stApp {{
+            background-image: url("data:image/jpeg;base64,{encoded_string}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }}
+        header[data-testid="stHeader"] {{
+            background-color: transparent !important;
+        }}
+        /* Estilizar las tarjetas (contenedores) para que tengan fondo oscuro transparente */
+        div[data-testid="stVerticalBlock"] > div[data-testid="stContainer"] {{
+            background-color: rgba(20, 20, 20, 0.8) !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+            backdrop-filter: blur(8px);
+            border-radius: 16px !important;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5) !important;
+        }}
+        </style>
+        """
+        st.markdown(css_fondo_equipos, unsafe_allow_html=True)
+    except FileNotFoundError:
+        pass
+
+    # Un poco de espacio superior
+    st.markdown("<br><br>", unsafe_allow_html=True)
     
-    res_equipos = supabase.table("equipo_usuarios").select("equipo_id, equipos(nombre, categoria)").eq("usuario_id", st.session_state.usuario_id).execute()
+    # 2. Título en blanco para que resalte sobre el fondo
+    st.markdown("<h2 style='text-align: center; color: #ffffff; font-weight: 800; margin-bottom: 40px;'>📋 Selecciona tu Equipo</h2>", unsafe_allow_html=True)
+    
+    # 3. Modificamos la consulta para traer también la división y el escudo_base64
+    res_equipos = supabase.table("equipo_usuarios").select("equipo_id, equipos(nombre, categoria, division, escudo_base64)").eq("usuario_id", st.session_state.usuario_id).execute()
     
     if res_equipos.data:
-        for relacion in res_equipos.data:
-            eq_info = relacion["equipos"]
-            eq_id = relacion["equipo_id"]
-            if st.button(f"⚽ {eq_info['nombre']} ({eq_info['categoria']})", key=f"btn_{eq_id}"):
-                if cargar_datos_equipo(eq_id):
-                    st.session_state.equipo_seleccionado = True
-                    st.rerun()
+        equipos_lista = res_equipos.data
+        
+        # Generar las tarjetas en una cuadrícula de 3 columnas (similar a la Plantilla)
+        for i in range(0, len(equipos_lista), 3):
+            cols = st.columns(3)
+            for j in range(3):
+                idx_global = i + j
+                if idx_global < len(equipos_lista):
+                    eq_info = equipos_lista[idx_global]["equipos"]
+                    eq_id = equipos_lista[idx_global]["equipo_id"]
+                    
+                    with cols[j]:
+                        with st.container(border=True):
+                            # Imagen del escudo (o emoji si no hay)
+                            escudo = eq_info.get("escudo_base64")
+                            if escudo:
+                                try:
+                                    st.markdown(f'<div style="text-align: center;"><img src="data:image/jpeg;base64,{escudo}" style="width:90px; height:90px; object-fit: cover; border-radius:50%; margin-bottom: 10px;"></div>', unsafe_allow_html=True)
+                                except:
+                                    st.markdown('<div style="text-align: center; font-size: 50px; margin-bottom: 10px;">🛡️</div>', unsafe_allow_html=True)
+                            else:
+                                st.markdown('<div style="text-align: center; font-size: 50px; margin-bottom: 10px;">🛡️</div>', unsafe_allow_html=True)
+                            
+                            # Nombre del equipo en negrita y color blanco
+                            st.markdown(f"<h3 style='text-align: center; color: #ffffff; font-weight: 800; margin-bottom: 0px; font-size: 1.25rem;'>{eq_info.get('nombre', 'Equipo')}</h3>", unsafe_allow_html=True)
+                            
+                            # Categoría y división en texto normal, más sutil
+                            division = eq_info.get('division') or "Sin división"
+                            categoria = eq_info.get('categoria') or ""
+                            st.markdown(f"<p style='text-align: center; color: #d1d5db; font-size: 0.85rem; margin-top: 2px;'>{categoria} | {division}</p>", unsafe_allow_html=True)
+                            
+                            # Botón de acceso integrado en la tarjeta
+                            if st.button("🚀 Acceder", key=f"btn_{eq_id}", use_container_width=True):
+                                if cargar_datos_equipo(eq_id):
+                                    st.session_state.equipo_seleccionado = True
+                                    st.rerun()
     else:
         st.info("No tienes equipos asignados actualmente.")
         
