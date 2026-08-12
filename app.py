@@ -964,7 +964,7 @@ if not st.session_state.autenticado:
 # 2. SELECCIÓN DE EQUIPO
 # ==========================================
 if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
-    # 1. Aplicamos el fondo de imagen igual que en el login
+    # 1. Aplicamos el fondo de imagen
     try:
         import base64
         with open("fondo_login.jpg", "rb") as img_file:
@@ -981,33 +981,32 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
         header[data-testid="stHeader"] {{
             background-color: transparent !important;
         }}
-        /* Estilizar las tarjetas (contenedores) para que tengan fondo oscuro transparente */
-        div[data-testid="stVerticalBlock"] > div[data-testid="stContainer"] {
+        
+        /* 2. Tarjetas de equipo con fondo BLANCO y borde sutil */
+        div[data-testid="column"] div[data-testid="stContainer"] {{
             background-color: rgba(255, 255, 255, 0.95) !important;
             border: 1px solid #e2e8f0 !important;
             backdrop-filter: blur(8px);
             border-radius: 16px !important;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1) !important;
-        }
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
+        }}
         </style>
         """
         st.markdown(css_fondo_equipos, unsafe_allow_html=True)
     except FileNotFoundError:
         pass
 
-    # Un poco de espacio superior
+    # Un poco de espacio superior y título con algo de sombra para que resalte sobre cualquier fondo
     st.markdown("<br><br>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center; color: #ffffff; font-weight: 800; margin-bottom: 40px; text-shadow: 0px 4px 10px rgba(0,0,0,0.6);'>📋 Selecciona tu Equipo</h2>", unsafe_allow_html=True)
     
-    # 2. Título en blanco para que resalte sobre el fondo
-    st.markdown("<h2 style='text-align: center; color: #ffffff; font-weight: 800; margin-bottom: 40px;'>📋 Selecciona tu Equipo</h2>", unsafe_allow_html=True)
-    
-    # 3. Modificamos la consulta para traer también la división y el escudo_base64
+    # Consulta a Supabase
     res_equipos = supabase.table("equipo_usuarios").select("equipo_id, equipos(nombre, categoria, division, escudo_base64)").eq("usuario_id", st.session_state.usuario_id).execute()
     
     if res_equipos.data:
         equipos_lista = res_equipos.data
         
-        # Generar las tarjetas en una cuadrícula de 3 columnas (similar a la Plantilla)
+        # Generar las tarjetas en una cuadrícula de 3 columnas
         for i in range(0, len(equipos_lista), 3):
             cols = st.columns(3)
             for j in range(3):
@@ -1018,25 +1017,24 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
                     
                     with cols[j]:
                         with st.container(border=True):
-                            # Imagen del escudo (o emoji si no hay)
+                            # Imagen del escudo
                             escudo = eq_info.get("escudo_base64")
                             if escudo:
                                 try:
-                                    st.markdown(f'<div style="text-align: center;"><img src="data:image/jpeg;base64,{escudo}" style="width:90px; height:90px; object-fit: cover; border-radius:50%; margin-bottom: 10px;"></div>', unsafe_allow_html=True)
+                                    st.markdown(f'<div style="text-align: center;"><img src="data:image/jpeg;base64,{escudo}" style="width:90px; height:90px; object-fit: cover; border-radius:50%; margin-bottom: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"></div>', unsafe_allow_html=True)
                                 except:
                                     st.markdown('<div style="text-align: center; font-size: 50px; margin-bottom: 10px;">🛡️</div>', unsafe_allow_html=True)
                             else:
                                 st.markdown('<div style="text-align: center; font-size: 50px; margin-bottom: 10px;">🛡️</div>', unsafe_allow_html=True)
                             
-                            # Nombre del equipo en negrita y color OSCURO
-                            st.markdown(f"<h3 style='text-align: center; color: #0f172a; font-weight: 800; margin-bottom: 0px; font-size: 1.25rem;'>{eq_info.get('nombre', 'Equipo')}</h3>", unsafe_allow_html=True)
+                            # 3. Nombre del equipo en color OSCURO (#0f172a)
+                            st.markdown(f"<h3 style='text-align: center; color: #0f172a !important; font-weight: 800; margin-bottom: 0px; font-size: 1.25rem;'>{eq_info.get('nombre', 'Equipo')}</h3>", unsafe_allow_html=True)
                             
-                            # Categoría y división en texto normal, más sutil
+                            # Categoría y división en color gris oscuro (#475569)
                             division = eq_info.get('division') or "Sin división"
                             categoria = eq_info.get('categoria') or ""
-                            st.markdown(f"<p style='text-align: center; color: #475569; font-size: 0.85rem; margin-top: 2px;'>{categoria} | {division}</p>", unsafe_allow_html=True)
+                            st.markdown(f"<p style='text-align: center; color: #475569 !important; font-size: 0.85rem; margin-top: 2px;'>{categoria} | {division}</p>", unsafe_allow_html=True)
                             
-                            # Botón de acceso integrado en la tarjeta
                             if st.button("🚀 Acceder", key=f"btn_{eq_id}", use_container_width=True):
                                 if cargar_datos_equipo(eq_id):
                                     st.session_state.equipo_seleccionado = True
@@ -1045,7 +1043,8 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
         st.info("No tienes equipos asignados actualmente.")
         
     st.markdown("---")
-    # 1. Envolvemos el expansor en columnas para que sea mucho más estrecho (ocupa la mitad central)
+    
+    # 4. BOTÓN "CREAR NUEVO EQUIPO" CENTRADO, ESTRECHO Y BLANCO
     col_exp_izq, col_exp_cen, col_exp_der = st.columns([1, 2, 1])
     
     with col_exp_cen:
@@ -1056,42 +1055,40 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
                 n_division = st.text_input("División / Liga:")
                 n_temporada = st.text_input("Temporada:", value="2026/2027")
                 
-                # 2. Inyectamos CSS rápido para forzar el fondo blanco en este botón
+                # Inyectar CSS solo para el botón de este formulario
                 st.markdown("""
                     <style>
-                    [data-testid="stFormSubmitButton"] button {
+                    [data-testid="stForm"] [data-testid="stFormSubmitButton"] button {
                         background-color: #ffffff !important;
                         color: #000000 !important;
                         border: 1px solid #cbd5e1 !important;
+                        font-weight: 800 !important;
                     }
                     </style>
                 """, unsafe_allow_html=True)
                 
-                # 3. Hacemos el botón interior aún más pequeño
+                # Hacemos el botón interno más pequeño
                 c_btn1, c_btn2, c_btn3 = st.columns([1, 2, 1])
                 with c_btn2:
                     btn_crear = st.form_submit_button("🚀 Crear y Acceder", use_container_width=True)
                 
                 if btn_crear and n_nombre:
-                    # 1. Crear el equipo en DB
-                res_insert = supabase.table("equipos").insert({
-                    "nombre": n_nombre, "categoria": n_categoria, 
-                    "division": n_division, "temporada": n_temporada,
-                    "created_by": st.session_state.usuario_id
-                }).execute()
-                
-                nuevo_id = res_insert.data[0]['id']
-                
-                # 2. Vincular usuario como owner
-                supabase.table("equipo_usuarios").insert({
-                    "equipo_id": nuevo_id, "usuario_id": st.session_state.usuario_id, "rol": "owner"
-                }).execute()
-                
-                # 3. Inicializar fila vacía en datos_equipo
-                supabase.table("datos_equipo").insert({"equipo_id": nuevo_id}).execute()
-                
-                st.success("Equipo creado.")
-                st.rerun()
+                    res_insert = supabase.table("equipos").insert({
+                        "nombre": n_nombre, "categoria": n_categoria, 
+                        "division": n_division, "temporada": n_temporada,
+                        "created_by": st.session_state.usuario_id
+                    }).execute()
+                    
+                    nuevo_id = res_insert.data[0]['id']
+                    
+                    supabase.table("equipo_usuarios").insert({
+                        "equipo_id": nuevo_id, "usuario_id": st.session_state.usuario_id, "rol": "owner"
+                    }).execute()
+                    
+                    supabase.table("datos_equipo").insert({"equipo_id": nuevo_id}).execute()
+                    
+                    st.success("Equipo creado.")
+                    st.rerun()
 
     st.stop()
 
