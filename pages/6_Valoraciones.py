@@ -4,7 +4,7 @@ import numpy as np
 from datetime import date, datetime, timedelta
 import plotly.express as px
 import plotly.graph_objects as go
-from collections].Counter
+from collections import Counter
 
 # Importar nuestras herramientas y base de datos compartida
 from utils.math_helpers import *
