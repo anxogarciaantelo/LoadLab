@@ -183,5 +183,5 @@ else:
                     st.session_state.lesiones[real_idx]["comentarios"] = nuevo_com
                     guardar_datos()
                     st.success("¡Comentario actualizado correctamente!")
-                        st.rerun()
+                    st.rerun()
 
