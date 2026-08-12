@@ -936,24 +936,29 @@ if not st.session_state.autenticado:
     # Reducimos los saltos de línea para que quede más centrado con la imagen
     st.markdown("<br><br><br><br><br><br><br><br><br><br><br><br>", unsafe_allow_html=True)
     
-    col_izq, col_centro, col_der = st.columns([1.5, 2, 1.5])
+    col_izq, col_centro, col_der = st.columns([1.5, 1, 1.5]) # <--- 1. Proporciones ajustadas para estrechar el centro
     
     with col_centro:
         st.markdown("<h2 style='text-align: center; color: #ffffff; font-weight: 800; margin-bottom: 10px;'>Iniciar Sesión</h2>", unsafe_allow_html=True)
         
-        email = st.text_input("Correo electrónico")
-        password = st.text_input("Contraseña", type="password")
-        
-        if st.button("Entrar", use_container_width=True):
-            try:
-                res = supabase.auth.sign_in_with_password({"email": email, "password": password})
-                st.session_state.usuario_id = res.user.id
-                st.session_state.access_token = res.session.access_token
-                st.session_state.refresh_token = res.session.refresh_token
-                st.session_state.autenticado = True
-                st.rerun()
-            except Exception as e:
-                st.error("Credenciales incorrectas o error de conexión.")
+        # <--- 2. Envolvemos en un formulario para habilitar la tecla "Enter"
+        with st.form(key="login_form", clear_on_submit=False):
+            email = st.text_input("Correo electrónico")
+            password = st.text_input("Contraseña", type="password")
+            
+            # El botón ahora es un form_submit_button
+            submit_btn = st.form_submit_button("Entrar", use_container_width=True)
+            
+            if submit_btn:
+                try:
+                    res = supabase.auth.sign_in_with_password({"email": email, "password": password})
+                    st.session_state.usuario_id = res.user.id
+                    st.session_state.access_token = res.session.access_token
+                    st.session_state.refresh_token = res.session.refresh_token
+                    st.session_state.autenticado = True
+                    st.rerun()
+                except Exception as e:
+                    st.error("Credenciales incorrectas o error de conexión.")
     st.stop()
 # ==========================================
 # 2. SELECCIÓN DE EQUIPO
@@ -2167,7 +2172,10 @@ if seccion_principal == "📅 Entrenamiento":
                             df_informe['HID >21'] = df_informe.get('DIS AI', 0.0)
                         
                         cols_ver_ce = ['JUGADOR', 'POS', 'ESTADO', 'DIS', 'HID >21', 'Nº SPR', 'ACC', 'DCC', 'VMAX']
-                        mostrar_tabla_moderna(df_informe[cols_ver_ce].style.hide(axis="index").format(precision=2))
+                        
+                        # AÑADIDO: Filtramos el DataFrame para quedarnos solo con los jugadores que llevaron GPS (Distancia > 0)
+                        df_tabla_ce = df_informe[df_informe['DIS'] > 0]
+                        mostrar_tabla_moderna(df_tabla_ce[cols_ver_ce].style.hide(axis="index").format(precision=2))
                         
                         cg5, cg6 = st.columns(2)
                         with cg5:
