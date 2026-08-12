@@ -46,14 +46,14 @@ st.markdown(f"""
            respetando la navegación nativa de Streamlit para las páginas */
         [data-testid="stSidebar"] h2, 
         [data-testid="stSidebar"] label, 
-        [data-testid="stSidebar"] p {
+        [data-testid="stSidebar"] p {{
             color: #000000 !important;
             font-weight: 800 !important;
-        }
+        }}
 
-        [data-testid="stSidebar"] hr {
+        [data-testid="stSidebar"] hr {{
             border-color: rgba(0, 0, 0, 0.2);
-        }
+        }}
 
         /* Tarjetas de contenedores con diseño flotante y sombra sutil */
         div[data-testid="stVerticalBlock"] > div[data-testid="stContainer"] {{
