@@ -150,7 +150,7 @@ with tab_antro_jug:
             st.plotly_chart(fig_evo_jug, use_container_width=True, key=f"antro_jug_evo_{jugador_seleccionado}")
             
             st.markdown("#### 📋 Historial Completo")
-            columnas_mostrar = ['Fecha', 'Peso', '% Graso', 'Peso magro', 'Sumatorio', 'Perímetro de Pecho', 'Perímetro de Cintura', 'Perímetro de Cadera']
+            columnas_mostrar = ['fecha', 'Peso', '% Graso', 'Kg Magros', 'Suma_Pliegues', 'Per_Pecho', 'Per_Cintura', 'Per_Cadera']
             mostrar_tabla_moderna(df_jug_antro[columnas_mostrar].style.hide(axis="index").format(precision=2))
 
 with tab_antro_up:
