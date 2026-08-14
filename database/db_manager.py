@@ -14,7 +14,7 @@ if "access_token" in st.session_state and "refresh_token" in st.session_state:
     except:
         pass
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=3600, show_spinner=False)
 def fetch_datos_equipo_supabase(equipo_id):
     res_eq = supabase.table("equipos").select("*").eq("id", equipo_id).execute()
     res_dat = supabase.table("datos_equipo").select("*").eq("equipo_id", equipo_id).execute()
