@@ -169,7 +169,25 @@ if "sesiones" not in st.session_state:
     st.session_state.sesiones = []
 if "color_sidebar" not in st.session_state:
     st.session_state.color_sidebar = "#f1f5f9"
-    
+
+# ==========================================
+# 0. CONTROL DE VISIBILIDAD DEL MENÚ LATERAL
+# ==========================================
+# Si el usuario no ha seleccionado un equipo, ocultamos el menú lateral con CSS
+if not st.session_state.get("equipo_seleccionado", False):
+    st.markdown("""
+        <style>
+            /* Ocultar el contenedor de la barra lateral */
+            [data-testid="stSidebar"] {
+                display: none !important;
+            }
+            /* Ocultar el botón/flecha superior izquierda que despliega la barra */
+            [data-testid="collapsedControl"] {
+                display: none !important;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+
 # ==========================================
 # 1. PANTALLA DE LOGIN
 # ==========================================
