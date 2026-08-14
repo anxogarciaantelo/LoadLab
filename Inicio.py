@@ -377,19 +377,71 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
 # 4. PANTALLA PRINCIPAL (CUANDO EL EQUIPO ESTÁ SELECCIONADO)
 # ==========================================
 if st.session_state.get("equipo_seleccionado", False):
-    st.markdown("<br><br>", unsafe_allow_html=True)
-    col_w1, col_w2, col_w3 = st.columns([1, 2, 1])
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # --- 1. PREPARAR EL ESCUDO ---
+    escudo = st.session_state.get("escudo_equipo")
+    if escudo:
+        img_html = f'<img src="data:image/jpeg;base64,{escudo}" style="width:140px; height:140px; object-fit: cover; border-radius:50%; margin-bottom: 15px; box-shadow: 0 8px 20px rgba(0,0,0,0.15);">'
+    else:
+        img_html = '<div style="font-size: 70px; margin-bottom: 15px;">🛡️</div>'
+
+    # --- 2. CABECERA DEL EQUIPO ---
+    col_w1, col_w2, col_w3 = st.columns([1, 2.5, 1])
     with col_w2:
         st.markdown(f"""
-            <div style="background-color: #f8fafc; padding: 40px; border-radius: 16px; border: 1px solid #cbd5e1; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
-                <h1 style="color: #0f172a; font-weight: 800; margin-bottom: 10px;">⚽ {st.session_state.get('nombre_equipo', 'LoadLab')}</h1>
-                <p style="color: #475569; font-size: 1.1rem; margin-bottom: 20px;">
-                    <b>{st.session_state.get('categoria_equipo', '')}</b> | {st.session_state.get('division_equipo', '')} <br>
-                    Temporada {st.session_state.get('temporada_equipo', '')}
-                </p>
-                <hr style="border-color: #cbd5e1; margin: 20px 0;">
-                <p style="color: #0f172a; font-weight: 600;">
-                    👈 Usa el <b>menú de navegación lateral izquierdo</b> para acceder a Entrenamientos, Plantilla, Lesiones, GPS y Valoraciones.
+            <div style="background-color: #ffffff; padding: 40px; border-radius: 16px; border: 1px solid #e2e8f0; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.05); margin-bottom: 40px;">
+                {img_html}
+                <h1 style="color: #0f172a; font-weight: 800; margin-bottom: 5px; font-size: 2.2rem;">{st.session_state.get('nombre_equipo', 'LoadLab')}</h1>
+                <p style="color: #64748b; font-size: 1.1rem; margin-top: 0;">
+                    <b>{st.session_state.get('categoria_equipo', '')}</b> | {st.session_state.get('division_equipo', '')} &bull; Temp: {st.session_state.get('temporada_equipo', '')}
                 </p>
             </div>
         """, unsafe_allow_html=True)
+        
+    # --- 3. TARJETAS DE NAVEGACIÓN (ACCESOS RÁPIDOS) ---
+    st.markdown("<h3 style='text-align: center; color: #0f172a; font-weight: 800; margin-bottom: 25px;'>🚀 Accesos Rápidos</h3>", unsafe_allow_html=True)
+    
+    # CSS inyectado para que los botones parezcan tarjetas grandes y clickeables
+    st.markdown("""
+        <style>
+        div.stButton > button {
+            height: 90px;
+            font-size: 1.15rem !important;
+            font-weight: 700 !important;
+            border-radius: 14px !important;
+            border: 1px solid #e2e8f0 !important;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02) !important;
+            transition: all 0.2s ease !important;
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+        }
+        div.stButton > button:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 20px rgba(0,0,0,0.08) !important;
+            border-color: #cbd5e1 !important;
+            background-color: #f8fafc !important;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # Crear una cuadrícula (grid) con 3 columnas para los 6 botones
+    c1, c2, c3 = st.columns(3)
+    
+    with c1:
+        if st.button("📅 Entrenamientos", use_container_width=True):
+            st.switch_page("pages/1_Entrenamiento.py")
+        if st.button("📡 GPS", use_container_width=True):
+            st.switch_page("pages/4_GPS.py")
+            
+    with c2:
+        if st.button("👥 Plantilla", use_container_width=True):
+            st.switch_page("pages/2_Plantilla.py")
+        if st.button("⚖️ Antropometría", use_container_width=True):
+            st.switch_page("pages/5_Antropometria.py")
+            
+    with c3:
+        if st.button("🚑 Lesiones", use_container_width=True):
+            st.switch_page("pages/3_Lesiones.py")
+        if st.button("📊 Valoraciones", use_container_width=True):
+            st.switch_page("pages/6_Valoraciones.py")
