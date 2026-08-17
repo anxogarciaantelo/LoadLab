@@ -557,7 +557,16 @@ def generar_pdf_antropometria_jugador(jugador_nombre, jugador_info, fecha_pesaje
             
         for i, col in enumerate(cols):
             val = row.get(col, "-")
-            val_str = str(val) if pd.notna(val) else "-"
+            
+            # Lógica para forzar 1 decimal en el PDF sin tocar la fecha ni los guiones
+            if pd.isna(val) or val == "-":
+                val_str = "-"
+            else:
+                try:
+                    val_str = f"{float(val):.1f}"
+                except ValueError:
+                    val_str = str(val)
+                    
             pdf.cell(widths[i], 6, clean_txt(val_str), border=1, align='C', fill=True)
         pdf.ln()
 
