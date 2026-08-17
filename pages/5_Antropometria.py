@@ -175,6 +175,26 @@ with tab_antro_jug:
         nombres_plantilla = sorted([j["JUGADOR"] for j in st.session_state.plantilla])
         jugador_seleccionado = st.selectbox("Selecciona un jugador para ver su perfil antropométrico:", nombres_plantilla)
         
+        # --- NUEVO: FOTO Y ENCABEZADO DEL JUGADOR ---
+        jugador_datos = next((j for j in st.session_state.plantilla if j["JUGADOR"] == jugador_seleccionado), None)
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        col_img, col_info = st.columns([1, 4])
+        with col_img:
+            if jugador_datos and jugador_datos.get("foto"):
+                try:
+                    st.markdown(f'<img src="data:image/jpeg;base64,{jugador_datos["foto"]}" style="width:100%; max-width:130px; border-radius:12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">', unsafe_allow_html=True)
+                except:
+                    st.markdown('<div style="font-size: 70px; text-align: center;">👤</div>', unsafe_allow_html=True)
+            else:
+                st.markdown('<div style="font-size: 70px; text-align: center;">👤</div>', unsafe_allow_html=True)
+        with col_info:
+            st.markdown(f"<h2 style='margin-bottom: 0px;'>{jugador_seleccionado}</h2>", unsafe_allow_html=True)
+            if jugador_datos:
+                st.caption(f"**{jugador_datos.get('pos_1', jugador_datos.get('POS', ''))}** | Edad: {jugador_datos.get('edad', '-')} | Altura: {jugador_datos.get('altura', '-')} cm")
+        
+        st.markdown("---")
+        
         df_antro = pd.DataFrame(antro_data)
         df_antro['fecha_dt'] = pd.to_datetime(df_antro['fecha'])
         df_jug_antro = df_antro[df_antro['jugador'] == jugador_seleccionado].sort_values('fecha_dt', ascending=False)
@@ -188,45 +208,49 @@ with tab_antro_jug:
             
             ultimo_pesaje = df_jug_antro.iloc[0]
             
-            st.markdown(f"#### ⚖️ Pesaje Actual ({ultimo_pesaje['fecha']})")
-            c1, c2, c3, c4 = st.columns(4)
-            c1.metric("Peso", f"{ultimo_pesaje['Peso']:.1f} kg")
-            c2.metric("% Graso (Yuhasz)", f"{ultimo_pesaje['% Graso']:.2f} %")
-            c3.metric("Masa Magra", f"{ultimo_pesaje['Kg Magros']:.1f} kg")
-            c4.metric("∑ 4 Pliegues", f"{ultimo_pesaje['Suma_Pliegues']:.1f} mm")
+            # --- NUEVO: KPIs EN TARJETAS Y TÍTULOS MODIFICADOS ---
+            with st.container(border=True):
+                st.markdown(f"#### ⚖️ Pesaje ({ultimo_pesaje['fecha']})")
+                c1, c2, c3, c4 = st.columns(4)
+                c1.metric("Peso", f"{ultimo_pesaje['Peso']:.1f} kg")
+                c2.metric("% Graso (Yuhasz)", f"{ultimo_pesaje['% Graso']:.2f} %")
+                c3.metric("Masa Magra", f"{ultimo_pesaje['Kg Magros']:.1f} kg")
+                c4.metric("∑ 4 Pliegues", f"{ultimo_pesaje['Suma_Pliegues']:.1f} mm")
             
-            st.markdown("#### 📏 Perímetros (Última medición válida)")
-            ultimo_valido = {}
-            para_buscar = ['Per_Pecho', 'Per_Cintura', 'Per_Cadera', 'Per_Muslo_D', 'Per_Muslo_I', 'Per_Pierna_D', 'Per_Pierna_I', 'Per_Biceps_D', 'Per_Biceps_I']
-            for col in para_buscar:
-                serie_valida = df_jug_antro[df_jug_antro[col] > 0]
-                ultimo_valido[col] = serie_valida.iloc[0][col] if not serie_valida.empty else 0.0
+            with st.container(border=True):
+                st.markdown("#### 📏 Perímetros")
+                ultimo_valido = {}
+                para_buscar = ['Per_Pecho', 'Per_Cintura', 'Per_Cadera', 'Per_Muslo_D', 'Per_Muslo_I', 'Per_Pierna_D', 'Per_Pierna_I', 'Per_Biceps_D', 'Per_Biceps_I']
+                for col in para_buscar:
+                    serie_valida = df_jug_antro[df_jug_antro[col] > 0]
+                    ultimo_valido[col] = serie_valida.iloc[0][col] if not serie_valida.empty else 0.0
 
-            p1, p2, p3, p4, p5, p6 = st.columns(6)
-            prom_muslo_jug = (ultimo_valido['Per_Muslo_D'] + ultimo_valido['Per_Muslo_I']) / 2 if (ultimo_valido['Per_Muslo_D']>0 and ultimo_valido['Per_Muslo_I']>0) else ultimo_valido['Per_Muslo_D'] or ultimo_valido['Per_Muslo_I']
-            prom_pierna_jug = (ultimo_valido['Per_Pierna_D'] + ultimo_valido['Per_Pierna_I']) / 2 if (ultimo_valido['Per_Pierna_D']>0 and ultimo_valido['Per_Pierna_I']>0) else ultimo_valido['Per_Pierna_D'] or ultimo_valido['Per_Pierna_I']
-            prom_biceps_jug = (ultimo_valido['Per_Biceps_D'] + ultimo_valido['Per_Biceps_I']) / 2 if (ultimo_valido['Per_Biceps_D']>0 and ultimo_valido['Per_Biceps_I']>0) else ultimo_valido['Per_Biceps_D'] or ultimo_valido['Per_Biceps_I']
+                p1, p2, p3, p4, p5, p6 = st.columns(6)
+                prom_muslo_jug = (ultimo_valido['Per_Muslo_D'] + ultimo_valido['Per_Muslo_I']) / 2 if (ultimo_valido['Per_Muslo_D']>0 and ultimo_valido['Per_Muslo_I']>0) else ultimo_valido['Per_Muslo_D'] or ultimo_valido['Per_Muslo_I']
+                prom_pierna_jug = (ultimo_valido['Per_Pierna_D'] + ultimo_valido['Per_Pierna_I']) / 2 if (ultimo_valido['Per_Pierna_D']>0 and ultimo_valido['Per_Pierna_I']>0) else ultimo_valido['Per_Pierna_D'] or ultimo_valido['Per_Pierna_I']
+                prom_biceps_jug = (ultimo_valido['Per_Biceps_D'] + ultimo_valido['Per_Biceps_I']) / 2 if (ultimo_valido['Per_Biceps_D']>0 and ultimo_valido['Per_Biceps_I']>0) else ultimo_valido['Per_Biceps_D'] or ultimo_valido['Per_Biceps_I']
 
-            p1.metric("Pecho", f"{ultimo_valido['Per_Pecho']:.1f} cm" if ultimo_valido['Per_Pecho'] > 0 else "-")
-            p2.metric("Cintura", f"{ultimo_valido['Per_Cintura']:.1f} cm" if ultimo_valido['Per_Cintura'] > 0 else "-")
-            p3.metric("Cadera", f"{ultimo_valido['Per_Cadera']:.1f} cm" if ultimo_valido['Per_Cadera'] > 0 else "-")
-            p4.metric("Muslo", f"{prom_muslo_jug:.1f} cm" if prom_muslo_jug > 0 else "-")
-            p5.metric("Pierna", f"{prom_pierna_jug:.1f} cm" if prom_pierna_jug > 0 else "-")
-            p6.metric("Bíceps", f"{prom_biceps_jug:.1f} cm" if prom_biceps_jug > 0 else "-")
+                p1.metric("Pecho", f"{ultimo_valido['Per_Pecho']:.1f} cm" if ultimo_valido['Per_Pecho'] > 0 else "-")
+                p2.metric("Cintura", f"{ultimo_valido['Per_Cintura']:.1f} cm" if ultimo_valido['Per_Cintura'] > 0 else "-")
+                p3.metric("Cadera", f"{ultimo_valido['Per_Cadera']:.1f} cm" if ultimo_valido['Per_Cadera'] > 0 else "-")
+                p4.metric("Muslo", f"{prom_muslo_jug:.1f} cm" if prom_muslo_jug > 0 else "-")
+                p5.metric("Pierna", f"{prom_pierna_jug:.1f} cm" if prom_pierna_jug > 0 else "-")
+                p6.metric("Bíceps", f"{prom_biceps_jug:.1f} cm" if prom_biceps_jug > 0 else "-")
 
-            st.markdown("#### ⚖️ Asimetrías Perimetrales (Última medición válida)")
-            st.caption("Diferencia entre lados (Derecha - Izquierda) y porcentaje de asimetría.")
-            ca1, ca2, ca3 = st.columns(3)
-            
-            def calc_asim_str_jug(d, i):
-                if d == 0 or i == 0: return "-"
-                dif = d - i
-                pct = (abs(dif) / max(d, i)) * 100
-                return f"{dif:+.1f} cm ({pct:.1f}%)"
+            with st.container(border=True):
+                st.markdown("#### ⚖️ Asimetrías Perimetrales")
+                st.caption("Diferencia entre lados (Derecha - Izquierda) y porcentaje de asimetría.")
+                ca1, ca2, ca3 = st.columns(3)
+                
+                def calc_asim_str_jug(d, i):
+                    if d == 0 or i == 0: return "-"
+                    dif = d - i
+                    pct = (abs(dif) / max(d, i)) * 100
+                    return f"{dif:+.1f} cm ({pct:.1f}%)"
 
-            ca1.metric("Muslo (D - I)", calc_asim_str_jug(ultimo_valido['Per_Muslo_D'], ultimo_valido['Per_Muslo_I']))
-            ca2.metric("Pierna (D - I)", calc_asim_str_jug(ultimo_valido['Per_Pierna_D'], ultimo_valido['Per_Pierna_I']))
-            ca3.metric("Bíceps (D - I)", calc_asim_str_jug(ultimo_valido['Per_Biceps_D'], ultimo_valido['Per_Biceps_I']))
+                ca1.metric("Muslo (D - I)", calc_asim_str_jug(ultimo_valido['Per_Muslo_D'], ultimo_valido['Per_Muslo_I']))
+                ca2.metric("Pierna (D - I)", calc_asim_str_jug(ultimo_valido['Per_Pierna_D'], ultimo_valido['Per_Pierna_I']))
+                ca3.metric("Bíceps (D - I)", calc_asim_str_jug(ultimo_valido['Per_Biceps_D'], ultimo_valido['Per_Biceps_I']))
             
             st.markdown("---")
             st.markdown("#### 📈 Evolución Histórica: Peso y % Graso")
@@ -287,8 +311,47 @@ with tab_antro_jug:
                 st.plotly_chart(fig_p4_j, use_container_width=True, key=f"jug_per4_{jugador_seleccionado}")
 
             st.markdown("#### 📋 Historial Completo")
-            columnas_mostrar = ['fecha', 'Peso', '% Graso', 'Kg Magros', 'Suma_Pliegues', 'Per_Pecho', 'Per_Cintura', 'Per_Cadera']
-            mostrar_tabla_moderna(df_jug_antro[columnas_mostrar].style.hide(axis="index").format(precision=2))
+            
+            # Calcular asimetrías porcentuales para la tabla
+            for part, col_d, col_i in [('Bíceps', 'Per_Biceps_D', 'Per_Biceps_I'), 
+                                       ('Muslo', 'Per_Muslo_D', 'Per_Muslo_I'), 
+                                       ('Pierna', 'Per_Pierna_D', 'Per_Pierna_I')]:
+                max_vals = df_jug_antro[[col_d, col_i]].max(axis=1)
+                # Si no hay medición (max_vals == 0), asignamos NaN para que quede vacío
+                df_jug_antro[f'Asimetría {part}'] = np.where(
+                    max_vals > 0, 
+                    (abs(df_jug_antro[col_d] - df_jug_antro[col_i]) / max_vals) * 100, 
+                    np.nan
+                )
+            
+            columnas_mostrar = [
+                'fecha', 'Peso', '% Graso', 'Kg Magros', 'Suma_Pliegues', 
+                'Per_Pecho', 'Per_Cintura', 'Per_Cadera', 
+                'Per_Biceps_D', 'Per_Biceps_I', 'Asimetría Bíceps', 
+                'Per_Muslo_D', 'Per_Muslo_I', 'Asimetría Muslo', 
+                'Per_Pierna_D', 'Per_Pierna_I', 'Asimetría Pierna'
+            ]
+            
+            nombres_columnas = {
+                'fecha': 'Fecha',
+                'Kg Magros': 'Peso magro',
+                'Suma_Pliegues': 'Sumatorio pliegues',
+                'Per_Pecho': 'Perímetro pecho',
+                'Per_Cintura': 'Perímetro Cintura',
+                'Per_Cadera': 'Perímetro cadera',
+                'Per_Biceps_D': 'Perímetro Bíceps D',
+                'Per_Biceps_I': 'Perímetro Bíceps I',
+                'Per_Muslo_D': 'Perímetro Muslo D',
+                'Per_Muslo_I': 'Perímetro Muslo I',
+                'Per_Pierna_D': 'Perímetro Pierna D',
+                'Per_Pierna_I': 'Perímetro Pierna I'
+            }
+            
+            # Renombramos las columnas y preparamos el DataFrame final
+            df_historial = df_jug_antro[columnas_mostrar].rename(columns=nombres_columnas)
+            
+            # Mostramos la tabla moderna con precisión de 2 decimales
+            mostrar_tabla_moderna(df_historial.style.hide(axis="index").format(precision=2))
 
 with tab_antro_up:
     st.info("Prepara un archivo Excel (.xlsx) con los pesajes. El sistema leerá automáticamente las 15 primeras columnas en el orden exacto indicado abajo.")
