@@ -385,8 +385,9 @@ with tab_antro_jug:
                 'per1': fig_p1_j, 'per2': fig_p2_j,
                 'per3': fig_p3_j, 'per4': fig_p4_j
             }
-
-            # --- RENDERIZADO DEL BOTÓN GENERADOR DE PDF ---
+            # ==========================================
+            # 1. DESCARGA INDIVIDUAL
+            # ==========================================
             st.markdown("---")
             pdf_key = f"pdf_antro_{jugador_seleccionado}"
             
@@ -412,7 +413,7 @@ with tab_antro_jug:
                     st.download_button(
                         label="📥 Descargar PDF",
                         data=st.session_state[pdf_key],
-                        file_name=f"Antropometría {jugador_seleccionado}.pdf", # <-- SIN GUIONES
+                        file_name=f"Antropometría {jugador_seleccionado}.pdf",
                         mime="application/pdf",
                         use_container_width=True
                     )
@@ -420,6 +421,115 @@ with tab_antro_jug:
                     if st.button("🗑️ Descartar PDF", use_container_width=True):
                         del st.session_state[pdf_key]
                         st.rerun()
+
+            # ==========================================
+            # 2. DESCARGA MASIVA (TODA LA PLANTILLA EN ZIP)
+            # ==========================================
+            st.markdown("---")
+            st.markdown("#### 🗂️ Descarga Masiva (Toda la Plantilla)")
+            st.caption("Genera un archivo ZIP que contendrá los informes individuales en PDF de todos los jugadores.")
+            
+            if st.button("📦 Generar ZIP con todos los informes", use_container_width=True):
+                import zipfile
+                import io
+                
+                with st.status("Generando informes para toda la plantilla...", expanded=True) as status:
+                    zip_buffer = io.BytesIO()
+                    
+                    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+                        for p in st.session_state.plantilla:
+                            jug_masivo = p["JUGADOR"]
+                            st.write(f"Procesando datos de {jug_masivo}...")
+                            
+                            df_jug_masivo = df_antro[df_antro['jugador'] == jug_masivo].sort_values('fecha_dt', ascending=False)
+                            
+                            if not df_jug_masivo.empty:
+                                df_jug_masivo['Suma_Pliegues'] = df_jug_masivo['P_Tricipital'] + df_jug_masivo['P_Subescapular'] + df_jug_masivo['P_Suprailiaco'] + df_jug_masivo['P_Abdominal']
+                                df_jug_masivo['% Graso'] = (df_jug_masivo['Suma_Pliegues'] * 0.1537) + 5.783
+                                df_jug_masivo['Kg Magros'] = df_jug_masivo['Peso'] - (df_jug_masivo['Peso'] * (df_jug_masivo['% Graso'] / 100))
+                                
+                                ult_pesaje = df_jug_masivo.iloc[0]
+                                
+                                ult_valido = {}
+                                for col in para_buscar:
+                                    serie_val = df_jug_masivo[df_jug_masivo[col] > 0]
+                                    ult_valido[col] = serie_val.iloc[0][col] if not serie_val.empty else 0.0
+                                
+                                p_muslo = (ult_valido['Per_Muslo_D'] + ult_valido['Per_Muslo_I']) / 2 if (ult_valido['Per_Muslo_D']>0 and ult_valido['Per_Muslo_I']>0) else ult_valido['Per_Muslo_D'] or ult_valido['Per_Muslo_I']
+                                p_pierna = (ult_valido['Per_Pierna_D'] + ult_valido['Per_Pierna_I']) / 2 if (ult_valido['Per_Pierna_D']>0 and ult_valido['Per_Pierna_I']>0) else ult_valido['Per_Pierna_D'] or ult_valido['Per_Pierna_I']
+                                p_biceps = (ult_valido['Per_Biceps_D'] + ult_valido['Per_Biceps_I']) / 2 if (ult_valido['Per_Biceps_D']>0 and ult_valido['Per_Biceps_I']>0) else ult_valido['Per_Biceps_D'] or ult_valido['Per_Biceps_I']
+
+                                kpis_pes_m = {'Peso': f"{ult_pesaje['Peso']:.1f} kg", 'Grasa': f"{ult_pesaje['% Graso']:.2f} %", 'Magra': f"{ult_pesaje['Kg Magros']:.1f} kg", 'Pliegues': f"{ult_pesaje['Suma_Pliegues']:.1f} mm"}
+                                kpis_per_m = {
+                                    'Pecho': f"{ult_valido['Per_Pecho']:.1f} cm" if ult_valido['Per_Pecho'] > 0 else "-",
+                                    'Cintura': f"{ult_valido['Per_Cintura']:.1f} cm" if ult_valido['Per_Cintura'] > 0 else "-",
+                                    'Cadera': f"{ult_valido['Per_Cadera']:.1f} cm" if ult_valido['Per_Cadera'] > 0 else "-",
+                                    'Muslo': f"{p_muslo:.1f} cm" if p_muslo > 0 else "-",
+                                    'Pierna': f"{p_pierna:.1f} cm" if p_pierna > 0 else "-",
+                                    'Biceps': f"{p_biceps:.1f} cm" if p_biceps > 0 else "-"
+                                }
+                                kpis_asim_m = {
+                                    'Muslo': calc_asim_str_jug(ult_valido['Per_Muslo_D'], ult_valido['Per_Muslo_I']),
+                                    'Pierna': calc_asim_str_jug(ult_valido['Per_Pierna_D'], ult_valido['Per_Pierna_I']),
+                                    'Biceps': calc_asim_str_jug(ult_valido['Per_Biceps_D'], ult_valido['Per_Biceps_I'])
+                                }
+                                
+                                df_cl = df_jug_masivo.replace({'Suma_Pliegues': 0, 'Per_Pecho': 0, 'Per_Cintura': 0, 'Per_Cadera': 0, 'Per_Muslo_D': 0, 'Per_Muslo_I': 0, 'Per_Pierna_D': 0, 'Per_Pierna_I': 0, 'Per_Biceps_D': 0, 'Per_Biceps_I': 0}, np.nan)
+                                df_cl['Mes_Num'] = df_cl['fecha_dt'].dt.month
+                                df_cl['Mes'] = df_cl['Mes_Num'].map(meses_esp)
+                                df_evo_m = df_cl.groupby('Mes')[['Peso', '% Graso']].mean().reindex(meses_temporada).reset_index()
+                                df_per_m = df_cl.groupby('Mes')[['Per_Pecho', 'Per_Cintura', 'Per_Cadera', 'Per_Muslo_D', 'Per_Muslo_I', 'Per_Pierna_D', 'Per_Pierna_I', 'Per_Biceps_D', 'Per_Biceps_I']].mean().reindex(meses_temporada).reset_index()
+                                
+                                fig_pm = px.bar(df_evo_m, x='Mes', y='Peso', title="Evolución Peso (kg)", color_discrete_sequence=['#00b4d8']).update_yaxes(range=[60, 100])
+                                fig_gm = px.bar(df_evo_m, x='Mes', y='% Graso', title="Evolución % Graso", color_discrete_sequence=['#ff4b4b']).update_yaxes(range=[7, 15])
+                                
+                                fig_per1_m = go.Figure().add_trace(go.Scatter(x=df_per_m['Mes'], y=df_per_m['Per_Pecho'], name='Pecho')).add_trace(go.Scatter(x=df_per_m['Mes'], y=df_per_m['Per_Biceps_D'], name='Bíceps D')).add_trace(go.Scatter(x=df_per_m['Mes'], y=df_per_m['Per_Biceps_I'], name='Bíceps I', line=dict(dash='dash'))).update_layout(title="Pecho y Bíceps")
+                                fig_per2_m = go.Figure().add_trace(go.Scatter(x=df_per_m['Mes'], y=df_per_m['Per_Cintura'], name='Cintura')).add_trace(go.Scatter(x=df_per_m['Mes'], y=df_per_m['Per_Cadera'], name='Cadera')).update_layout(title="Cintura y Cadera")
+                                fig_per3_m = go.Figure().add_trace(go.Scatter(x=df_per_m['Mes'], y=df_per_m['Per_Muslo_D'], name='Muslo D')).add_trace(go.Scatter(x=df_per_m['Mes'], y=df_per_m['Per_Muslo_I'], name='Muslo I', line=dict(dash='dash'))).update_layout(title="Muslo (D/I)")
+                                fig_per4_m = go.Figure().add_trace(go.Scatter(x=df_per_m['Mes'], y=df_per_m['Per_Pierna_D'], name='Pierna D')).add_trace(go.Scatter(x=df_per_m['Mes'], y=df_per_m['Per_Pierna_I'], name='Pierna I', line=dict(dash='dash'))).update_layout(title="Pierna (D/I)")
+
+                                dict_figs_m = {'peso': fig_pm, 'grasa': fig_gm, 'per1': fig_per1_m, 'per2': fig_per2_m, 'per3': fig_per3_m, 'per4': fig_per4_m}
+                                
+                                for part, col_d, col_i in [('Bíceps', 'Per_Biceps_D', 'Per_Biceps_I'), ('Muslo', 'Per_Muslo_D', 'Per_Muslo_I'), ('Pierna', 'Per_Pierna_D', 'Per_Pierna_I')]:
+                                    mx = df_jug_masivo[[col_d, col_i]].max(axis=1)
+                                    df_jug_masivo[f'Asimetría {part}'] = np.where(mx > 0, (abs(df_jug_masivo[col_d] - df_jug_masivo[col_i]) / mx) * 100, np.nan)
+                                
+                                df_hist_m = df_jug_masivo[columnas_mostrar].rename(columns=nombres_columnas)
+                                
+                                cols_numericas_m = ['Peso', '% Graso', 'Peso magro', 'Σ pliegues'] + cols_perimetros + cols_asimetrias
+                                for col in cols_numericas_m:
+                                    df_hist_m[col] = pd.to_numeric(df_hist_m[col], errors='coerce')
+                                    df_hist_m[col] = df_hist_m[col].apply(lambda x: f"{float(x):.1f}" if pd.notna(x) else "-")
+
+                                j_info_m = f"{p.get('pos_1', p.get('POS', ''))} | Edad: {p.get('edad', '-')} | Altura: {p.get('altura', '-')} cm"
+                                
+                                pdf_bytes_m = generar_pdf_antropometria_jugador(
+                                    jug_masivo, j_info_m, ult_pesaje['fecha'],
+                                    kpis_pes_m, kpis_per_m, kpis_asim_m, dict_figs_m,
+                                    df_hist_m, st.session_state.get("escudo_equipo"), p.get("foto")
+                                )
+                                
+                                zip_file.writestr(f"Antropometría {jug_masivo}.pdf", pdf_bytes_m)
+
+                    st.session_state["zip_antro_all"] = zip_buffer.getvalue()
+                    status.update(label="¡ZIP generado con éxito!", state="complete", expanded=False)
+                    st.rerun()
+                    
+            if "zip_antro_all" in st.session_state:
+                c_z1, c_z2 = st.columns(2)
+                with c_z1:
+                    st.download_button(
+                        label="📥 Descargar archivo ZIP",
+                        data=st.session_state["zip_antro_all"],
+                        file_name="Informes_Antropometria_Equipo.zip",
+                        mime="application/zip",
+                        use_container_width=True
+                    )
+                with c_z2:
+                    if st.button("🗑️ Descartar ZIP", use_container_width=True):
+                        del st.session_state["zip_antro_all"]
+                        st.rerun()
+
 with tab_antro_up:
     st.info("Prepara un archivo Excel (.xlsx) con los pesajes. El sistema leerá automáticamente las 15 primeras columnas en el orden exacto indicado abajo.")
     st.markdown("""
