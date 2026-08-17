@@ -438,8 +438,13 @@ def generar_pdf_antropometria_jugador(jugador_nombre, jugador_info, fecha_pesaje
         
     for name, fig in dict_figs.items():
         if fig is not None:
-            # Ajustamos márgenes del gráfico para que queden más estirados y ocupen menos alto
-            fig.update_layout(paper_bgcolor="white", plot_bgcolor="white", font=dict(color="black"), margin=dict(l=20, r=20, t=30, b=20))
+            # Aumentamos márgenes (Izquierdo 'l' e Inferior 'b') para evitar superposiciones y recortes
+            fig.update_layout(
+                paper_bgcolor="white", 
+                plot_bgcolor="white", 
+                font=dict(color="black"), 
+                margin=dict(l=70, r=20, t=40, b=70)
+            )
             tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
             tmp.close()  
             fig.write_image(tmp.name, engine="kaleido", width=800, height=350, format="jpg")
