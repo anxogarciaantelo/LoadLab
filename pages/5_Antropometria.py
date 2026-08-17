@@ -73,14 +73,21 @@ with tab_antro_res:
             prom_pecho = df_filt_clean['Per_Pecho'].mean()
             prom_cintura = df_filt_clean['Per_Cintura'].mean()
             prom_cadera = df_filt_clean['Per_Cadera'].mean()
-            prom_muslo = df_filt_clean[['Per_Muslo_D', 'Per_Muslo_I']].mean().mean() # Media de ambos muslos
+            prom_muslo_d = df_filt_clean['Per_Muslo_D'].mean()
+            prom_muslo_i = df_filt_clean['Per_Muslo_I'].mean()
+            prom_pierna_d = df_filt_clean['Per_Pierna_D'].mean()
+            prom_pierna_i = df_filt_clean['Per_Pierna_I'].mean()
+            prom_biceps_d = df_filt_clean['Per_Biceps_D'].mean()
+            prom_biceps_i = df_filt_clean['Per_Biceps_I'].mean()
+            
+            prom_muslo = df_filt_clean[['Per_Muslo_D', 'Per_Muslo_I']].mean().mean()
             prom_pierna = df_filt_clean[['Per_Pierna_D', 'Per_Pierna_I']].mean().mean()
             prom_biceps = df_filt_clean[['Per_Biceps_D', 'Per_Biceps_I']].mean().mean()
             
             st.markdown("#### 🎯 Promedios del Filtro")
             k1, k2, k3, k4 = st.columns(4)
             k1.metric("Peso Medio", f"{kpi_peso:.1f} kg" if pd.notna(kpi_peso) else "0.0 kg")
-            k2.metric("% Graso Medio", f"{kpi_grasa:.2f} %" if pd.notna(kpi_grasa) else "0.00 %")
+            k2.metric("% Graso Medio (Yuhasz)", f"{kpi_grasa:.2f} %" if pd.notna(kpi_grasa) else "0.00 %")
             k3.metric("Masa Magra Media", f"{kpi_magro:.1f} kg" if pd.notna(kpi_magro) else "0.0 kg")
             k4.metric("∑ Pliegues Medio", f"{kpi_pliegues:.1f} mm" if pd.notna(kpi_pliegues) else "0.0 mm")
             
@@ -93,26 +100,71 @@ with tab_antro_res:
             p5.metric("Pierna", f"{prom_pierna:.1f} cm" if pd.notna(prom_pierna) else "-")
             p6.metric("Bíceps", f"{prom_biceps:.1f} cm" if pd.notna(prom_biceps) else "-")
             
+            st.markdown("##### ⚖️ Asimetrías Medias (Derecha - Izquierda)")
+            def calc_asim_str(d, i):
+                if pd.isna(d) or pd.isna(i) or d==0 or i==0: return "-"
+                dif = d - i
+                pct = (abs(dif) / max(d, i)) * 100
+                return f"{dif:+.1f} cm ({pct:.1f}%)"
+
+            a1, a2, a3 = st.columns(3)
+            a1.metric("Muslo (D - I)", calc_asim_str(prom_muslo_d, prom_muslo_i))
+            a2.metric("Pierna (D - I)", calc_asim_str(prom_pierna_d, prom_pierna_i))
+            a3.metric("Bíceps (D - I)", calc_asim_str(prom_biceps_d, prom_biceps_i))
+            
             st.markdown("---")
-            st.markdown("#### 📈 Evolución Mensual")
+            st.markdown("#### 📈 Evolución Mensual: Peso y % Graso")
             
             meses_temporada = ["Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio"]
-            df_evo = df_filt.groupby('Mes')[['Peso', '% Graso', 'Kg Magros']].mean().reindex(meses_temporada).reset_index()
+            df_evo = df_filt_clean.groupby('Mes')[['Peso', '% Graso', 'Kg Magros']].mean().reindex(meses_temporada).reset_index()
             
-            fig_evo = go.Figure()
-            fig_evo.add_trace(go.Bar(x=df_evo['Mes'], y=df_evo['Peso'], name="Peso (kg)", marker_color='#00b4d8'))
-            fig_evo.add_trace(go.Scatter(x=df_evo['Mes'], y=df_evo['% Graso'], name="% Graso", yaxis="y2", mode="lines+markers", line=dict(color="#ff4b4b", width=3)))
+            cg_peso, cg_grasa = st.columns(2)
+            with cg_peso:
+                fig_peso = px.bar(df_evo, x='Mes', y='Peso', title="Evolución Peso (kg)", color_discrete_sequence=['#00b4d8'])
+                fig_peso.update_yaxes(range=[60, 100])
+                fig_peso.update_xaxes(categoryorder='array', categoryarray=meses_temporada)
+                st.plotly_chart(fig_peso, use_container_width=True, key="res_peso")
             
-            # 2. Modificación de los ejes Y
-            fig_evo.update_layout(
-                title="Evolución: Peso vs % Graso", 
-                yaxis_title="Peso (kg)", 
-                yaxis=dict(range=[60, 100]), 
-                yaxis2=dict(title="% Grasa", overlaying="y", side="right", range=[8, 13]), 
-                xaxis=dict(categoryorder='array', categoryarray=meses_temporada)
-            )
-            
-            st.plotly_chart(fig_evo, use_container_width=True, key="antro_resumen_evo")
+            with cg_grasa:
+                fig_grasa = px.bar(df_evo, x='Mes', y='% Graso', title="Evolución % Graso", color_discrete_sequence=['#ff4b4b'])
+                fig_grasa.update_yaxes(range=[8, 13])
+                fig_grasa.update_xaxes(categoryorder='array', categoryarray=meses_temporada)
+                st.plotly_chart(fig_grasa, use_container_width=True, key="res_grasa")
+
+            st.markdown("---")
+            st.markdown("#### 📏 Evolución de Perímetros")
+            df_evo_per = df_filt_clean.groupby('Mes')[['Per_Pecho', 'Per_Cintura', 'Per_Cadera', 'Per_Muslo_D', 'Per_Muslo_I', 'Per_Pierna_D', 'Per_Pierna_I', 'Per_Biceps_D', 'Per_Biceps_I']].mean().reindex(meses_temporada).reset_index()
+
+            cp1, cp2 = st.columns(2)
+            with cp1:
+                fig_p1 = go.Figure()
+                fig_p1.add_trace(go.Scatter(x=df_evo_per['Mes'], y=df_evo_per['Per_Pecho'], name='Pecho', mode='lines+markers'))
+                fig_p1.add_trace(go.Scatter(x=df_evo_per['Mes'], y=df_evo_per['Per_Biceps_D'], name='Bíceps D', mode='lines+markers'))
+                fig_p1.add_trace(go.Scatter(x=df_evo_per['Mes'], y=df_evo_per['Per_Biceps_I'], name='Bíceps I', mode='lines+markers', line=dict(dash='dash')))
+                fig_p1.update_layout(title="Pecho y Bíceps", xaxis=dict(categoryorder='array', categoryarray=meses_temporada))
+                st.plotly_chart(fig_p1, use_container_width=True, key="res_per_1")
+                
+            with cp2:
+                fig_p2 = go.Figure()
+                fig_p2.add_trace(go.Scatter(x=df_evo_per['Mes'], y=df_evo_per['Per_Cintura'], name='Cintura', mode='lines+markers'))
+                fig_p2.add_trace(go.Scatter(x=df_evo_per['Mes'], y=df_evo_per['Per_Cadera'], name='Cadera', mode='lines+markers'))
+                fig_p2.update_layout(title="Cintura y Cadera", xaxis=dict(categoryorder='array', categoryarray=meses_temporada))
+                st.plotly_chart(fig_p2, use_container_width=True, key="res_per_2")
+
+            cp3, cp4 = st.columns(2)
+            with cp3:
+                fig_p3 = go.Figure()
+                fig_p3.add_trace(go.Scatter(x=df_evo_per['Mes'], y=df_evo_per['Per_Muslo_D'], name='Muslo D', mode='lines+markers'))
+                fig_p3.add_trace(go.Scatter(x=df_evo_per['Mes'], y=df_evo_per['Per_Muslo_I'], name='Muslo I', mode='lines+markers', line=dict(dash='dash')))
+                fig_p3.update_layout(title="Muslo (D/I)", xaxis=dict(categoryorder='array', categoryarray=meses_temporada))
+                st.plotly_chart(fig_p3, use_container_width=True, key="res_per_3")
+                
+            with cp4:
+                fig_p4 = go.Figure()
+                fig_p4.add_trace(go.Scatter(x=df_evo_per['Mes'], y=df_evo_per['Per_Pierna_D'], name='Pierna D', mode='lines+markers'))
+                fig_p4.add_trace(go.Scatter(x=df_evo_per['Mes'], y=df_evo_per['Per_Pierna_I'], name='Pierna I', mode='lines+markers', line=dict(dash='dash')))
+                fig_p4.update_layout(title="Pierna (D/I)", xaxis=dict(categoryorder='array', categoryarray=meses_temporada))
+                st.plotly_chart(fig_p4, use_container_width=True, key="res_per_4")
 
 with tab_antro_jug:
     if not st.session_state.plantilla:
@@ -143,46 +195,97 @@ with tab_antro_jug:
             c3.metric("Masa Magra", f"{ultimo_pesaje['Kg Magros']:.1f} kg")
             c4.metric("∑ 4 Pliegues", f"{ultimo_pesaje['Suma_Pliegues']:.1f} mm")
             
-            st.markdown("#### 📏 Asimetrías Perimetrales (Última medición válida)")
-            st.caption("Valores extraídos de la última sesión en la que se registraron perímetros (>0).")
-            ca1, ca2, ca3 = st.columns(3)
-            
-            # Lógica para buscar el último valor válido de los perímetros hacia atrás
+            st.markdown("#### 📏 Perímetros (Última medición válida)")
             ultimo_valido = {}
-            para_buscar = ['Per_Muslo_D', 'Per_Muslo_I', 'Per_Pierna_D', 'Per_Pierna_I', 'Per_Biceps_D', 'Per_Biceps_I']
+            para_buscar = ['Per_Pecho', 'Per_Cintura', 'Per_Cadera', 'Per_Muslo_D', 'Per_Muslo_I', 'Per_Pierna_D', 'Per_Pierna_I', 'Per_Biceps_D', 'Per_Biceps_I']
             for col in para_buscar:
                 serie_valida = df_jug_antro[df_jug_antro[col] > 0]
                 ultimo_valido[col] = serie_valida.iloc[0][col] if not serie_valida.empty else 0.0
 
-            dif_muslo = ultimo_valido['Per_Muslo_D'] - ultimo_valido['Per_Muslo_I']
-            dif_pierna = ultimo_valido['Per_Pierna_D'] - ultimo_valido['Per_Pierna_I']
-            dif_biceps = ultimo_valido['Per_Biceps_D'] - ultimo_valido['Per_Biceps_I']
+            p1, p2, p3, p4, p5, p6 = st.columns(6)
+            prom_muslo_jug = (ultimo_valido['Per_Muslo_D'] + ultimo_valido['Per_Muslo_I']) / 2 if (ultimo_valido['Per_Muslo_D']>0 and ultimo_valido['Per_Muslo_I']>0) else ultimo_valido['Per_Muslo_D'] or ultimo_valido['Per_Muslo_I']
+            prom_pierna_jug = (ultimo_valido['Per_Pierna_D'] + ultimo_valido['Per_Pierna_I']) / 2 if (ultimo_valido['Per_Pierna_D']>0 and ultimo_valido['Per_Pierna_I']>0) else ultimo_valido['Per_Pierna_D'] or ultimo_valido['Per_Pierna_I']
+            prom_biceps_jug = (ultimo_valido['Per_Biceps_D'] + ultimo_valido['Per_Biceps_I']) / 2 if (ultimo_valido['Per_Biceps_D']>0 and ultimo_valido['Per_Biceps_I']>0) else ultimo_valido['Per_Biceps_D'] or ultimo_valido['Per_Biceps_I']
+
+            p1.metric("Pecho", f"{ultimo_valido['Per_Pecho']:.1f} cm" if ultimo_valido['Per_Pecho'] > 0 else "-")
+            p2.metric("Cintura", f"{ultimo_valido['Per_Cintura']:.1f} cm" if ultimo_valido['Per_Cintura'] > 0 else "-")
+            p3.metric("Cadera", f"{ultimo_valido['Per_Cadera']:.1f} cm" if ultimo_valido['Per_Cadera'] > 0 else "-")
+            p4.metric("Muslo", f"{prom_muslo_jug:.1f} cm" if prom_muslo_jug > 0 else "-")
+            p5.metric("Pierna", f"{prom_pierna_jug:.1f} cm" if prom_pierna_jug > 0 else "-")
+            p6.metric("Bíceps", f"{prom_biceps_jug:.1f} cm" if prom_biceps_jug > 0 else "-")
+
+            st.markdown("#### ⚖️ Asimetrías Perimetrales (Última medición válida)")
+            st.caption("Diferencia entre lados (Derecha - Izquierda) y porcentaje de asimetría.")
+            ca1, ca2, ca3 = st.columns(3)
             
-            ca1.metric("Muslo (D - I)", f"{dif_muslo:+.1f} cm")
-            ca2.metric("Pierna (D - I)", f"{dif_pierna:+.1f} cm")
-            ca3.metric("Bíceps (D - I)", f"{dif_biceps:+.1f} cm")
+            def calc_asim_str_jug(d, i):
+                if d == 0 or i == 0: return "-"
+                dif = d - i
+                pct = (abs(dif) / max(d, i)) * 100
+                return f"{dif:+.1f} cm ({pct:.1f}%)"
+
+            ca1.metric("Muslo (D - I)", calc_asim_str_jug(ultimo_valido['Per_Muslo_D'], ultimo_valido['Per_Muslo_I']))
+            ca2.metric("Pierna (D - I)", calc_asim_str_jug(ultimo_valido['Per_Pierna_D'], ultimo_valido['Per_Pierna_I']))
+            ca3.metric("Bíceps (D - I)", calc_asim_str_jug(ultimo_valido['Per_Biceps_D'], ultimo_valido['Per_Biceps_I']))
             
             st.markdown("---")
-            st.markdown("#### 📈 Evolución Histórica")
+            st.markdown("#### 📈 Evolución Histórica: Peso y % Graso")
             
-            df_jug_antro['Mes_Num'] = df_jug_antro['fecha_dt'].dt.month
-            df_jug_antro['Mes'] = df_jug_antro['Mes_Num'].map(meses_esp)
+            df_jug_antro_clean = df_jug_antro.replace({'Suma_Pliegues': 0, 'Per_Pecho': 0, 'Per_Cintura': 0, 'Per_Cadera': 0, 'Per_Muslo_D': 0, 'Per_Muslo_I': 0, 'Per_Pierna_D': 0, 'Per_Pierna_I': 0, 'Per_Biceps_D': 0, 'Per_Biceps_I': 0}, np.nan)
+            df_jug_antro_clean['Mes_Num'] = df_jug_antro_clean['fecha_dt'].dt.month
+            df_jug_antro_clean['Mes'] = df_jug_antro_clean['Mes_Num'].map(meses_esp)
             
             meses_temporada = ["Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio"]
-            df_evo_jug = df_jug_antro.groupby('Mes')[['Peso', '% Graso']].mean().reindex(meses_temporada).reset_index()
+            df_evo_jug = df_jug_antro_clean.groupby('Mes')[['Peso', '% Graso']].mean().reindex(meses_temporada).reset_index()
             
-            fig_evo_jug = go.Figure()
-            fig_evo_jug.add_trace(go.Bar(x=df_evo_jug['Mes'], y=df_evo_jug['Peso'], name="Peso (kg)", marker_color='#00b4d8'))
-            fig_evo_jug.add_trace(go.Scatter(x=df_evo_jug['Mes'], y=df_evo_jug['% Graso'], name="% Graso", yaxis="y2", mode="lines+markers", line=dict(color="#ff4b4b", width=3)))
-            fig_evo_jug.update_layout(
-                title=f"Evolución: {jugador_seleccionado}", 
-                yaxis_title="Peso (kg)", 
-                yaxis=dict(range=[60, 100]), 
-                yaxis2=dict(title="% Grasa", overlaying="y", side="right", range=[7, 15]),
-                xaxis=dict(categoryorder='array', categoryarray=meses_temporada)
-            )
-            st.plotly_chart(fig_evo_jug, use_container_width=True, key=f"antro_jug_evo_{jugador_seleccionado}")
-            
+            cg_peso_j, cg_grasa_j = st.columns(2)
+            with cg_peso_j:
+                fig_peso_j = px.bar(df_evo_jug, x='Mes', y='Peso', title="Evolución Peso (kg)", color_discrete_sequence=['#00b4d8'])
+                fig_peso_j.update_yaxes(range=[60, 100])
+                fig_peso_j.update_xaxes(categoryorder='array', categoryarray=meses_temporada)
+                st.plotly_chart(fig_peso_j, use_container_width=True, key=f"jug_peso_{jugador_seleccionado}")
+                
+            with cg_grasa_j:
+                fig_grasa_j = px.bar(df_evo_jug, x='Mes', y='% Graso', title="Evolución % Graso", color_discrete_sequence=['#ff4b4b'])
+                fig_grasa_j.update_yaxes(range=[7, 15])
+                fig_grasa_j.update_xaxes(categoryorder='array', categoryarray=meses_temporada)
+                st.plotly_chart(fig_grasa_j, use_container_width=True, key=f"jug_grasa_{jugador_seleccionado}")
+
+            st.markdown("---")
+            st.markdown("#### 📏 Evolución Histórica de Perímetros")
+            df_evo_per_j = df_jug_antro_clean.groupby('Mes')[['Per_Pecho', 'Per_Cintura', 'Per_Cadera', 'Per_Muslo_D', 'Per_Muslo_I', 'Per_Pierna_D', 'Per_Pierna_I', 'Per_Biceps_D', 'Per_Biceps_I']].mean().reindex(meses_temporada).reset_index()
+
+            cp1_j, cp2_j = st.columns(2)
+            with cp1_j:
+                fig_p1_j = go.Figure()
+                fig_p1_j.add_trace(go.Scatter(x=df_evo_per_j['Mes'], y=df_evo_per_j['Per_Pecho'], name='Pecho', mode='lines+markers'))
+                fig_p1_j.add_trace(go.Scatter(x=df_evo_per_j['Mes'], y=df_evo_per_j['Per_Biceps_D'], name='Bíceps D', mode='lines+markers'))
+                fig_p1_j.add_trace(go.Scatter(x=df_evo_per_j['Mes'], y=df_evo_per_j['Per_Biceps_I'], name='Bíceps I', mode='lines+markers', line=dict(dash='dash')))
+                fig_p1_j.update_layout(title="Pecho y Bíceps", xaxis=dict(categoryorder='array', categoryarray=meses_temporada))
+                st.plotly_chart(fig_p1_j, use_container_width=True, key=f"jug_per1_{jugador_seleccionado}")
+                
+            with cp2_j:
+                fig_p2_j = go.Figure()
+                fig_p2_j.add_trace(go.Scatter(x=df_evo_per_j['Mes'], y=df_evo_per_j['Per_Cintura'], name='Cintura', mode='lines+markers'))
+                fig_p2_j.add_trace(go.Scatter(x=df_evo_per_j['Mes'], y=df_evo_per_j['Per_Cadera'], name='Cadera', mode='lines+markers'))
+                fig_p2_j.update_layout(title="Cintura y Cadera", xaxis=dict(categoryorder='array', categoryarray=meses_temporada))
+                st.plotly_chart(fig_p2_j, use_container_width=True, key=f"jug_per2_{jugador_seleccionado}")
+
+            cp3_j, cp4_j = st.columns(2)
+            with cp3_j:
+                fig_p3_j = go.Figure()
+                fig_p3_j.add_trace(go.Scatter(x=df_evo_per_j['Mes'], y=df_evo_per_j['Per_Muslo_D'], name='Muslo D', mode='lines+markers'))
+                fig_p3_j.add_trace(go.Scatter(x=df_evo_per_j['Mes'], y=df_evo_per_j['Per_Muslo_I'], name='Muslo I', mode='lines+markers', line=dict(dash='dash')))
+                fig_p3_j.update_layout(title="Muslo (D/I)", xaxis=dict(categoryorder='array', categoryarray=meses_temporada))
+                st.plotly_chart(fig_p3_j, use_container_width=True, key=f"jug_per3_{jugador_seleccionado}")
+                
+            with cp4_j:
+                fig_p4_j = go.Figure()
+                fig_p4_j.add_trace(go.Scatter(x=df_evo_per_j['Mes'], y=df_evo_per_j['Per_Pierna_D'], name='Pierna D', mode='lines+markers'))
+                fig_p4_j.add_trace(go.Scatter(x=df_evo_per_j['Mes'], y=df_evo_per_j['Per_Pierna_I'], name='Pierna I', mode='lines+markers', line=dict(dash='dash')))
+                fig_p4_j.update_layout(title="Pierna (D/I)", xaxis=dict(categoryorder='array', categoryarray=meses_temporada))
+                st.plotly_chart(fig_p4_j, use_container_width=True, key=f"jug_per4_{jugador_seleccionado}")
+
             st.markdown("#### 📋 Historial Completo")
             columnas_mostrar = ['fecha', 'Peso', '% Graso', 'Kg Magros', 'Suma_Pliegues', 'Per_Pecho', 'Per_Cintura', 'Per_Cadera']
             mostrar_tabla_moderna(df_jug_antro[columnas_mostrar].style.hide(axis="index").format(precision=2))
