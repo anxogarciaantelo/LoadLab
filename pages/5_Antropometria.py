@@ -412,7 +412,7 @@ with tab_antro_jug:
                     st.download_button(
                         label="📥 Descargar PDF",
                         data=st.session_state[pdf_key],
-                        file_name=f"Antropometria_{jugador_seleccionado}.pdf",
+                        file_name=f"Antropometría {jugador_seleccionado}.pdf", # <-- SIN GUIONES
                         mime="application/pdf",
                         use_container_width=True
                     )
