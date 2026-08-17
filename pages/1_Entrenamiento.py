@@ -411,7 +411,7 @@ with tab_temp:
                         title="Evolución Wellness por Componentes", color_discrete_sequence=px.colors.qualitative.Set2,
                         labels={'value': 'Puntos', 'variable': 'Factor', 'Microciclo': ''}
                     )
-                    fig_well.update_layout(barmode='stack', yaxis_range=[5, 35])
+                    fig_well.update_layout(barmode='stack', yaxis_range=[0, 35])
                     fig_well.add_hline(y=18, line_dash="dot", line_color="orange", annotation_text="Moderado (18)", annotation_position="bottom right")
                     fig_well.add_hline(y=24, line_dash="dash", line_color="red", annotation_text="Crítico (24)", annotation_position="top right")
                     st.plotly_chart(fig_well, use_container_width=True, key="temp_well_bar")
@@ -611,7 +611,7 @@ with tab_micro:
                                 labels={'value': 'Puntos', 'variable': 'Factor', 'DIA': ''}
                             )
                             fig_well.update_xaxes(categoryorder='array', categoryarray=["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"])
-                            fig_well.update_yaxes(range=[5, 35])
+                            fig_well.update_yaxes(range=[0, 35])
                             fig_well.add_hline(y=18, line_dash="dot", line_color="orange", annotation_text="Moderado (18)", annotation_position="bottom right")
                             fig_well.add_hline(y=24, line_dash="dash", line_color="red", annotation_text="Crítico (24)", annotation_position="top right")
                             fig_well.update_traces(hovertemplate="%{variable}: %{y:.1f} pts")
@@ -951,8 +951,8 @@ with tab_ses:
                             fig_well.add_hline(y=18, line_dash="dot", line_color="orange", annotation_text="Moderado (18)", annotation_position="bottom right")
                             fig_well.add_hline(y=24, line_dash="dash", line_color="red", annotation_text="Crítico (24)", annotation_position="top right")
                             
-                            # MODIFICACIÓN: Fijar el eje Y de 5 a 35 obligatoriamente
-                            fig_well.update_yaxes(range=[5, 35])
+                            # MODIFICACIÓN: Fijar el eje Y de 0 a 35 obligatoriamente
+                            fig_well.update_yaxes(range=[0, 35])
                             
                             fig_well.update_traces(hovertemplate="%{y}")
                             fig_well.update_layout(
