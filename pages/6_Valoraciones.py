@@ -383,21 +383,21 @@ with tab_val_jug:
                         import google.generativeai as genai
                         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
                         
-                        prompt_directo = f"""
-                        Actúa como un preparador físico y readaptador deportivo de élite. Redacta un plan de entrenamiento individualizado para el jugador {jug_sel} basándote estrictamente en los siguientes datos de su última valoración:
+                        prompt_directo = f"""Eres un readaptador y preparador físico de élite. Tu única tarea es redactar el plan de entrenamiento final para el jugador {jug_sel}, basándote exclusivamente en los datos clínicos proporcionados.
 
+                        DATOS:
                         - Asimetrías críticas (>15%): {criticas_txt}
                         - Asimetrías a considerar (10-15%): {mod_txt}
                         - Ratio de Fuerza Relativa (1RM/Peso): {ratio_fuerza:.2f}
                         - Molestias actuales: {molestias_txt}
                         - Calidad del sueño: {calidad_sueno}/5
 
-                        Instrucciones obligatorias de redacción:
-                        1. Genera el informe libremente, con rigor clínico y científico, proponiendo ejercicios y protocolos reales adaptados a estos datos.
-                        2. Estructura el plan en bloques lógicos y visuales usando emojis y negritas (Ejemplo sugerido: Diagnóstico, Prevención/Readaptación, Rendimiento/Fuerza, Entrenamiento Invisible).
-                        3. Si algún dato indica "Ninguna" o valores normales, no inventes patologías. Reconoce el buen estado de ese parámetro y enfoca el plan en optimizar el rendimiento.
-                        4. DEVUELVE ÚNICAMENTE EL INFORME FINAL. Está terminantemente prohibido incluir razonamientos previos, reflexiones internas, borradores, introducciones o despedidas. Empieza directamente con el texto del informe.
-                        """
+                        REGLAS ESTRICTAS:
+                        1. No escribas ningún saludo, confirmación, razonamiento interno ni despedida. 
+                        2. Si un dato indica "Ninguna", significa que está sano en ese aspecto. No inventes patologías, enfócate en la optimización y el rendimiento.
+                        3. Inicia tu respuesta OBLIGATORIAMENTE con el encabezado "📋 **DIAGNÓSTICO**".
+                        
+                        Escribe tu informe a partir de aquí:"""
 
                         modelos_validos = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
                         plan_generado = None
@@ -409,7 +409,10 @@ with tab_val_jug:
                                 response = model.generate_content(prompt_directo)
                                 texto = response.text.strip()
                                 
+                                # Si el modelo empezó a escribir directamente sin el icono, se lo añadimos por limpieza
                                 if texto:
+                                    if not texto.startswith("📋"):
+                                        texto = "📋 **DIAGNÓSTICO**\n" + texto
                                     plan_generado = texto
                                     break
                             except Exception:
