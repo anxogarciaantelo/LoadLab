@@ -335,16 +335,16 @@ with tab_antro_jug:
             nombres_columnas = {
                 'fecha': 'Fecha',
                 'Kg Magros': 'Peso magro',
-                'Suma_Pliegues': 'Sumatorio pliegues',
-                'Per_Pecho': 'Perímetro pecho',
-                'Per_Cintura': 'Perímetro Cintura',
-                'Per_Cadera': 'Perímetro cadera',
-                'Per_Biceps_D': 'Perímetro Bíceps D',
-                'Per_Biceps_I': 'Perímetro Bíceps I',
-                'Per_Muslo_D': 'Perímetro Muslo D',
-                'Per_Muslo_I': 'Perímetro Muslo I',
-                'Per_Pierna_D': 'Perímetro Pierna D',
-                'Per_Pierna_I': 'Perímetro Pierna I'
+                'Suma_Pliegues': 'Σ pliegues',
+                'Per_Pecho': 'P. Pecho',
+                'Per_Cintura': 'P. Cintura',
+                'Per_Cadera': 'P. Cadera',
+                'Per_Biceps_D': 'P. Bíceps D',
+                'Per_Biceps_I': 'P. Bíceps I',
+                'Per_Muslo_D': 'P. Muslo D',
+                'Per_Muslo_I': 'P. Muslo I',
+                'Per_Pierna_D': 'P. Pierna D',
+                'Per_Pierna_I': 'P. Pierna I'
             }
             
             # Renombramos las columnas y preparamos el DataFrame final
