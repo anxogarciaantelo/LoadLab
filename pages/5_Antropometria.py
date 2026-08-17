@@ -61,15 +61,37 @@ with tab_antro_res:
         if df_filt.empty:
             st.warning("No hay datos para esta combinación.")
         else:
-            kpi_peso = df_filt['Peso'].mean()
-            kpi_grasa = df_filt['% Graso'].mean()
-            kpi_magro = df_filt['Kg Magros'].mean()
+            # 1. Ignorar ceros convirtiéndolos a NaN para que las medias sean reales
+            df_filt_clean = df_filt.replace({'Suma_Pliegues': 0, 'Per_Pecho': 0, 'Per_Cintura': 0, 'Per_Cadera': 0, 'Per_Muslo_D': 0, 'Per_Muslo_I': 0, 'Per_Pierna_D': 0, 'Per_Pierna_I': 0, 'Per_Biceps_D': 0, 'Per_Biceps_I': 0}, np.nan)
+
+            kpi_peso = df_filt_clean['Peso'].mean()
+            kpi_grasa = df_filt_clean['% Graso'].mean()
+            kpi_magro = df_filt_clean['Kg Magros'].mean()
+            kpi_pliegues = df_filt_clean['Suma_Pliegues'].mean()
+            
+            # Promedios de perímetros (ignorando ceros)
+            prom_pecho = df_filt_clean['Per_Pecho'].mean()
+            prom_cintura = df_filt_clean['Per_Cintura'].mean()
+            prom_cadera = df_filt_clean['Per_Cadera'].mean()
+            prom_muslo = df_filt_clean[['Per_Muslo_D', 'Per_Muslo_I']].mean().mean() # Media de ambos muslos
+            prom_pierna = df_filt_clean[['Per_Pierna_D', 'Per_Pierna_I']].mean().mean()
+            prom_biceps = df_filt_clean[['Per_Biceps_D', 'Per_Biceps_I']].mean().mean()
             
             st.markdown("#### 🎯 Promedios del Filtro")
-            k1, k2, k3 = st.columns(3)
-            k1.metric("Peso Medio", f"{kpi_peso:.1f} kg")
-            k2.metric("% Graso Medio (Yuhasz)", f"{kpi_grasa:.2f} %")
-            k3.metric("Masa Magra Media", f"{kpi_magro:.1f} kg")
+            k1, k2, k3, k4 = st.columns(4)
+            k1.metric("Peso Medio", f"{kpi_peso:.1f} kg" if pd.notna(kpi_peso) else "0.0 kg")
+            k2.metric("% Graso Medio", f"{kpi_grasa:.2f} %" if pd.notna(kpi_grasa) else "0.00 %")
+            k3.metric("Masa Magra Media", f"{kpi_magro:.1f} kg" if pd.notna(kpi_magro) else "0.0 kg")
+            k4.metric("∑ Pliegues Medio", f"{kpi_pliegues:.1f} mm" if pd.notna(kpi_pliegues) else "0.0 mm")
+            
+            st.markdown("##### 📏 Promedios de Perímetros (excluyendo sin medición)")
+            p1, p2, p3, p4, p5, p6 = st.columns(6)
+            p1.metric("Pecho", f"{prom_pecho:.1f} cm" if pd.notna(prom_pecho) else "-")
+            p2.metric("Cintura", f"{prom_cintura:.1f} cm" if pd.notna(prom_cintura) else "-")
+            p3.metric("Cadera", f"{prom_cadera:.1f} cm" if pd.notna(prom_cadera) else "-")
+            p4.metric("Muslo", f"{prom_muslo:.1f} cm" if pd.notna(prom_muslo) else "-")
+            p5.metric("Pierna", f"{prom_pierna:.1f} cm" if pd.notna(prom_pierna) else "-")
+            p6.metric("Bíceps", f"{prom_biceps:.1f} cm" if pd.notna(prom_biceps) else "-")
             
             st.markdown("---")
             st.markdown("#### 📈 Evolución Mensual")
@@ -80,10 +102,13 @@ with tab_antro_res:
             fig_evo = go.Figure()
             fig_evo.add_trace(go.Bar(x=df_evo['Mes'], y=df_evo['Peso'], name="Peso (kg)", marker_color='#00b4d8'))
             fig_evo.add_trace(go.Scatter(x=df_evo['Mes'], y=df_evo['% Graso'], name="% Graso", yaxis="y2", mode="lines+markers", line=dict(color="#ff4b4b", width=3)))
+            
+            # 2. Modificación de los ejes Y
             fig_evo.update_layout(
                 title="Evolución: Peso vs % Graso", 
                 yaxis_title="Peso (kg)", 
-                yaxis2=dict(title="% Grasa", overlaying="y", side="right"),
+                yaxis=dict(range=[60, 100]), 
+                yaxis2=dict(title="% Grasa", overlaying="y", side="right", range=[8, 13]), 
                 xaxis=dict(categoryorder='array', categoryarray=meses_temporada)
             )
             
@@ -118,12 +143,20 @@ with tab_antro_jug:
             c3.metric("Masa Magra", f"{ultimo_pesaje['Kg Magros']:.1f} kg")
             c4.metric("∑ 4 Pliegues", f"{ultimo_pesaje['Suma_Pliegues']:.1f} mm")
             
-            st.markdown("#### 📏 Asimetrías Perimetrales (Actual)")
-            st.caption("Valores en cm. Un número positivo indica que el lado Derecho es mayor; negativo, el Izquierdo.")
+            st.markdown("#### 📏 Asimetrías Perimetrales (Última medición válida)")
+            st.caption("Valores extraídos de la última sesión en la que se registraron perímetros (>0).")
             ca1, ca2, ca3 = st.columns(3)
-            dif_muslo = ultimo_pesaje['Per_Muslo_D'] - ultimo_pesaje['Per_Muslo_I']
-            dif_pierna = ultimo_pesaje['Per_Pierna_D'] - ultimo_pesaje['Per_Pierna_I']
-            dif_biceps = ultimo_pesaje['Per_Biceps_D'] - ultimo_pesaje['Per_Biceps_I']
+            
+            # Lógica para buscar el último valor válido de los perímetros hacia atrás
+            ultimo_valido = {}
+            para_buscar = ['Per_Muslo_D', 'Per_Muslo_I', 'Per_Pierna_D', 'Per_Pierna_I', 'Per_Biceps_D', 'Per_Biceps_I']
+            for col in para_buscar:
+                serie_valida = df_jug_antro[df_jug_antro[col] > 0]
+                ultimo_valido[col] = serie_valida.iloc[0][col] if not serie_valida.empty else 0.0
+
+            dif_muslo = ultimo_valido['Per_Muslo_D'] - ultimo_valido['Per_Muslo_I']
+            dif_pierna = ultimo_valido['Per_Pierna_D'] - ultimo_valido['Per_Pierna_I']
+            dif_biceps = ultimo_valido['Per_Biceps_D'] - ultimo_valido['Per_Biceps_I']
             
             ca1.metric("Muslo (D - I)", f"{dif_muslo:+.1f} cm")
             ca2.metric("Pierna (D - I)", f"{dif_pierna:+.1f} cm")
@@ -144,7 +177,8 @@ with tab_antro_jug:
             fig_evo_jug.update_layout(
                 title=f"Evolución: {jugador_seleccionado}", 
                 yaxis_title="Peso (kg)", 
-                yaxis2=dict(title="% Grasa", overlaying="y", side="right"),
+                yaxis=dict(range=[60, 100]), 
+                yaxis2=dict(title="% Grasa", overlaying="y", side="right", range=[7, 15]),
                 xaxis=dict(categoryorder='array', categoryarray=meses_temporada)
             )
             st.plotly_chart(fig_evo_jug, use_container_width=True, key=f"antro_jug_evo_{jugador_seleccionado}")
