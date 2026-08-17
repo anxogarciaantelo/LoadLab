@@ -409,9 +409,16 @@ with tab_val_jug:
                                 response = model.generate_content(prompt_directo)
                                 texto = response.text.strip()
                                 
-                                # Nos quedamos con la respuesta directa sin exigir que tenga un título forzado
                                 if texto:
                                     plan_generado = texto
                                     break
                             except Exception:
                                 continue
+                        
+                        if plan_generado:
+                            st.success(f"¡Plan generado con éxito para {jug_sel}!")
+                            st.markdown(plan_generado)
+                        else:
+                            st.error("No se ha podido conectar con el modelo o generar el informe. Prueba de nuevo.")
+                    except Exception as e:
+                        st.error(f"Error general al conectar con la API: {e}")
