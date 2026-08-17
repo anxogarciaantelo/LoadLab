@@ -364,6 +364,62 @@ with tab_antro_jug:
             # Mostramos la tabla moderna (el formato de las demás columnas lo maneja la función global)
             mostrar_tabla_moderna(df_historial.style.hide(axis="index"))
 
+            # --- PREPARACIÓN DE DICCIONARIOS PARA EL PDF ---
+            kpis_perimetros = {
+                'Pecho': f"{ultimo_valido['Per_Pecho']:.1f} cm" if ultimo_valido['Per_Pecho'] > 0 else "-",
+                'Cintura': f"{ultimo_valido['Per_Cintura']:.1f} cm" if ultimo_valido['Per_Cintura'] > 0 else "-",
+                'Cadera': f"{ultimo_valido['Per_Cadera']:.1f} cm" if ultimo_valido['Per_Cadera'] > 0 else "-",
+                'Muslo': f"{prom_muslo_jug:.1f} cm" if prom_muslo_jug > 0 else "-",
+                'Pierna': f"{prom_pierna_jug:.1f} cm" if prom_pierna_jug > 0 else "-",
+                'Biceps': f"{prom_biceps_jug:.1f} cm" if prom_biceps_jug > 0 else "-"
+            }
+            
+            kpis_asimetrias = {
+                'Muslo': calc_asim_str_jug(ultimo_valido['Per_Muslo_D'], ultimo_valido['Per_Muslo_I']),
+                'Pierna': calc_asim_str_jug(ultimo_valido['Per_Pierna_D'], ultimo_valido['Per_Pierna_I']),
+                'Biceps': calc_asim_str_jug(ultimo_valido['Per_Biceps_D'], ultimo_valido['Per_Biceps_I'])
+            }
+            
+            dict_figs_jug = {
+                'peso': fig_peso_j, 'grasa': fig_grasa_j,
+                'per1': fig_p1_j, 'per2': fig_p2_j,
+                'per3': fig_p3_j, 'per4': fig_p4_j
+            }
+
+            # --- RENDERIZADO DEL BOTÓN GENERADOR DE PDF ---
+            st.markdown("---")
+            pdf_key = f"pdf_antro_{jugador_seleccionado}"
+            
+            if pdf_key not in st.session_state:
+                if st.button("⚙️ Generar PDF Antropométrico", use_container_width=True):
+                    with st.spinner("Procesando gráficos y compilando PDF..."):
+                        jugador_info = f"{jugador_datos.get('pos_1', jugador_datos.get('POS', ''))} | Edad: {jugador_datos.get('edad', '-')} | Altura: {jugador_datos.get('altura', '-')} cm" if jugador_datos else ""
+                        kpis_pes = {'Peso': f"{ultimo_pesaje['Peso']:.1f} kg", 'Grasa': f"{ultimo_pesaje['% Graso']:.2f} %", 'Magra': f"{ultimo_pesaje['Kg Magros']:.1f} kg", 'Pliegues': f"{ultimo_pesaje['Suma_Pliegues']:.1f} mm"}
+                        
+                        escudo_b64 = st.session_state.get("escudo_equipo")
+                        foto_b64 = jugador_datos.get("foto") if jugador_datos else None
+                        
+                        pdf_bytes = generar_pdf_antropometria_jugador(
+                            jugador_seleccionado, jugador_info, ultimo_pesaje['fecha'],
+                            kpis_pes, kpis_perimetros, kpis_asimetrias, dict_figs_jug,
+                            df_historial, escudo_b64, foto_b64
+                        )
+                        st.session_state[pdf_key] = pdf_bytes
+                    st.rerun()
+            else:
+                c_down1, c_down2 = st.columns(2)
+                with c_down1:
+                    st.download_button(
+                        label="📥 Descargar PDF",
+                        data=st.session_state[pdf_key],
+                        file_name=f"Antropometria_{jugador_seleccionado}.pdf",
+                        mime="application/pdf",
+                        use_container_width=True
+                    )
+                with c_down2:
+                    if st.button("🗑️ Descartar PDF", use_container_width=True):
+                        del st.session_state[pdf_key]
+                        st.rerun()
 with tab_antro_up:
     st.info("Prepara un archivo Excel (.xlsx) con los pesajes. El sistema leerá automáticamente las 15 primeras columnas en el orden exacto indicado abajo.")
     st.markdown("""
