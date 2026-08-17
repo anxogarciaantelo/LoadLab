@@ -383,21 +383,26 @@ with tab_val_jug:
                         import google.generativeai as genai
                         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
                         
-                        prompt_directo = f"""Eres un readaptador y preparador físico de élite. Tu única tarea es redactar el plan de entrenamiento final para el jugador {jug_sel}, basándote exclusivamente en los datos clínicos proporcionados.
-
-                        DATOS:
+                        prompt_directo = f"""Eres un preparador físico de élite. Tu ÚNICA tarea es rellenar la plantilla inferior para {jug_sel} usando estos datos:
                         - Asimetrías críticas (>15%): {criticas_txt}
                         - Asimetrías a considerar (10-15%): {mod_txt}
-                        - Ratio de Fuerza Relativa (1RM/Peso): {ratio_fuerza:.2f}
-                        - Molestias actuales: {molestias_txt}
-                        - Calidad del sueño: {calidad_sueno}/5
+                        - Ratio de Fuerza: {ratio_fuerza:.2f}
+                        - Molestias: {molestias_txt}
+                        - Sueño: {calidad_sueno}/5
 
-                        REGLAS ESTRICTAS:
-                        1. No escribas ningún saludo, confirmación, razonamiento interno ni despedida. 
-                        2. Si un dato indica "Ninguna", significa que está sano en ese aspecto. No inventes patologías, enfócate en la optimización y el rendimiento.
-                        3. Inicia tu respuesta OBLIGATORIAMENTE con el encabezado "📋 **DIAGNÓSTICO**".
-                        
-                        Escribe tu informe a partir de aquí:"""
+                        REGLA ABSOLUTA: Devuelve ÚNICAMENTE la plantilla completada. Cero razonamientos, cero análisis en inglés, cero "Role:". Si un dato es "Ninguna", indica que está en estado óptimo.
+
+                        📋 **DIAGNÓSTICO CLÍNICO Y FUNCIONAL**
+                        [Redacta aquí tu análisis directo de la situación]
+
+                        🛡️ **FASE 1: PREVENCIÓN Y READAPTACIÓN**
+                        [Enumera aquí 3 ejercicios clave]
+
+                        ⚡ **FASE 2: DESARROLLO DE FUERZA Y RENDIMIENTO**
+                        [Enumera aquí 3 directrices de fuerza]
+
+                        🛌 **ENTRENAMIENTO INVISIBLE**
+                        [Pautas sobre su recuperación y sueño]"""
 
                         modelos_validos = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
                         plan_generado = None
@@ -409,10 +414,11 @@ with tab_val_jug:
                                 response = model.generate_content(prompt_directo)
                                 texto = response.text.strip()
                                 
-                                # Si el modelo empezó a escribir directamente sin el icono, se lo añadimos por limpieza
                                 if texto:
-                                    if not texto.startswith("📋"):
-                                        texto = "📋 **DIAGNÓSTICO**\n" + texto
+                                    # GUILLOTINA PROGRAMÁTICA: Busca el ÚLTIMO 📋 y borra todo el monólogo anterior
+                                    if "📋" in texto:
+                                        texto = texto[texto.rfind("📋"):]
+                                        
                                     plan_generado = texto
                                     break
                             except Exception:
@@ -422,6 +428,6 @@ with tab_val_jug:
                             st.success(f"¡Plan generado con éxito para {jug_sel}!")
                             st.markdown(plan_generado)
                         else:
-                            st.error("No se ha podido conectar con el modelo o generar el informe. Prueba de nuevo.")
+                            st.error("No se ha podido conectar con el modelo. Prueba de nuevo.")
                     except Exception as e:
                         st.error(f"Error general al conectar con la API: {e}")
