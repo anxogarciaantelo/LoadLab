@@ -407,3 +407,168 @@ def generar_pdf_microciclo(nombre_micro, df_diario, df_indiv, kpis_globales, dic
 
     out = pdf.output(dest='S')
     return out.encode('latin-1') if isinstance(out, str) else bytes(out)
+
+import base64
+
+def generar_pdf_antropometria_jugador(jugador_nombre, jugador_info, fecha_pesaje, kpis_pesaje, kpis_perimetros, kpis_asimetrias, dict_figs, df_historial, escudo_b64, foto_b64):
+    pdf = FPDF(orientation='L', unit='mm', format='A4')
+    pdf.set_auto_page_break(auto=True, margin=15)
+    def clean_txt(t): return str(t).encode('latin-1', 'ignore').decode('latin-1').strip()
+    
+    C_PRIMARY = (41, 128, 185)
+    C_BG_TAB_H = (0, 0, 0) # Fondo negro para cabecera de tabla
+    C_BG_TAB_R = (248, 248, 248)
+    
+    img_paths = {}
+    
+    # Procesar imágenes en base64
+    if escudo_b64:
+        tmp_esc = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
+        tmp_esc.write(base64.b64decode(escudo_b64))
+        tmp_esc.close()
+        img_paths['escudo'] = tmp_esc.name
+        
+    if foto_b64:
+        tmp_foto = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
+        tmp_foto.write(base64.b64decode(foto_b64))
+        tmp_foto.close()
+        img_paths['foto'] = tmp_foto.name
+        
+    for name, fig in dict_figs.items():
+        if fig is not None:
+            fig.update_layout(paper_bgcolor="white", plot_bgcolor="white", font=dict(color="black"))
+            tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
+            tmp.close()  
+            fig.write_image(tmp.name, engine="kaleido", width=750, height=450, format="jpg")
+            img_paths[name] = tmp.name
+            
+    pdf.add_page()
+    
+    # --- ESCUDO ---
+    if 'escudo' in img_paths:
+        pdf.image(img_paths['escudo'], x=135, y=10, w=25)
+        pdf.ln(35)
+    else:
+        pdf.ln(25)
+        
+    # --- FOTO Y PERFIL DEL JUGADOR ---
+    y_foto = pdf.get_y()
+    if 'foto' in img_paths:
+        pdf.image(img_paths['foto'], x=15, y=y_foto, w=25)
+    
+    pdf.set_xy(45, y_foto + 5)
+    pdf.set_font("Arial", 'B', 20)
+    pdf.cell(0, 10, clean_txt(jugador_nombre), ln=True)
+    pdf.set_xy(45, y_foto + 15)
+    pdf.set_font("Arial", '', 10)
+    pdf.set_text_color(100, 100, 100)
+    pdf.cell(0, 6, clean_txt(jugador_info), ln=True)
+    pdf.set_text_color(0, 0, 0)
+    
+    pdf.set_y(y_foto + 35)
+    
+    # --- KPIs PESAJE ---
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(0, 8, clean_txt(f"Pesaje ({fecha_pesaje})"), ln=True)
+    pdf.set_font("Arial", 'B', 8)
+    pdf.set_text_color(120, 120, 120)
+    pdf.cell(40, 5, "Peso", ln=0)
+    pdf.cell(40, 5, "% Graso (Yuhasz)", ln=0)
+    pdf.cell(40, 5, "Masa Magra", ln=0)
+    pdf.cell(40, 5, "Sumatorio Pliegues", ln=1)
+    pdf.set_font("Arial", '', 14)
+    pdf.set_text_color(0, 0, 0)
+    pdf.cell(40, 8, clean_txt(kpis_pesaje.get('Peso', '-')), ln=0)
+    pdf.cell(40, 8, clean_txt(kpis_pesaje.get('Grasa', '-')), ln=0)
+    pdf.cell(40, 8, clean_txt(kpis_pesaje.get('Magra', '-')), ln=0)
+    pdf.cell(40, 8, clean_txt(kpis_pesaje.get('Pliegues', '-')), ln=1)
+    pdf.ln(5)
+    
+    # --- KPIs PERÍMETROS ---
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(0, 8, clean_txt("Perimetros"), ln=True)
+    pdf.set_font("Arial", 'B', 8)
+    pdf.set_text_color(120, 120, 120)
+    cols_per = ["Pecho", "Cintura", "Cadera", "Muslo", "Pierna", "Biceps"]
+    for c in cols_per: pdf.cell(35, 5, clean_txt(c), ln=0)
+    pdf.ln()
+    pdf.set_font("Arial", '', 14)
+    pdf.set_text_color(0, 0, 0)
+    for c in cols_per: pdf.cell(35, 8, clean_txt(kpis_perimetros.get(c, '-')), ln=0)
+    pdf.ln(10)
+    
+    # --- KPIs ASIMETRÍAS ---
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(0, 8, clean_txt("Asimetrias Perimetrales"), ln=True)
+    pdf.set_font("Arial", 'B', 8)
+    pdf.set_text_color(120, 120, 120)
+    cols_asim = ["Muslo (D - I)", "Pierna (D - I)", "Biceps (D - I)"]
+    for c in cols_asim: pdf.cell(60, 5, clean_txt(c), ln=0)
+    pdf.ln()
+    pdf.set_font("Arial", '', 14)
+    pdf.set_text_color(0, 0, 0)
+    pdf.cell(60, 8, clean_txt(kpis_asimetrias.get('Muslo', '-')), ln=0)
+    pdf.cell(60, 8, clean_txt(kpis_asimetrias.get('Pierna', '-')), ln=0)
+    pdf.cell(60, 8, clean_txt(kpis_asimetrias.get('Biceps', '-')), ln=1)
+    
+    # --- GRÁFICOS PÁGINA 2 ---
+    pdf.add_page()
+    pdf.set_font("Arial", 'B', 14)
+    pdf.cell(0, 10, clean_txt("Evolucion Historica: Peso y % Graso"), ln=True)
+    y_img = pdf.get_y()
+    if 'peso' in img_paths: pdf.image(img_paths['peso'], x=10, y=y_img, w=135)
+    if 'grasa' in img_paths: pdf.image(img_paths['grasa'], x=150, y=y_img, w=135)
+    
+    # --- GRÁFICOS PÁGINA 3 ---
+    pdf.add_page()
+    pdf.set_font("Arial", 'B', 14)
+    pdf.cell(0, 10, clean_txt("Evolucion Historica de Perimetros"), ln=True)
+    y_img = pdf.get_y()
+    if 'per1' in img_paths: pdf.image(img_paths['per1'], x=10, y=y_img, w=135)
+    if 'per2' in img_paths: pdf.image(img_paths['per2'], x=150, y=y_img, w=135)
+    
+    pdf.add_page()
+    y_img = 20
+    if 'per3' in img_paths: pdf.image(img_paths['per3'], x=10, y=y_img, w=135)
+    if 'per4' in img_paths: pdf.image(img_paths['per4'], x=150, y=y_img, w=135)
+    
+    # --- TABLA HISTORIAL PÁGINA 4 ---
+    pdf.add_page()
+    pdf.set_font("Arial", 'B', 14)
+    pdf.cell(0, 10, clean_txt("Historial Completo"), ln=True)
+    
+    pdf.set_font("Arial", 'B', 7)
+    pdf.set_fill_color(*C_BG_TAB_H)
+    pdf.set_text_color(255, 255, 255) # Texto cabecera blanco
+    
+    widths = [18, 12, 14, 16, 16, 14, 16, 16, 16, 16, 20, 16, 16, 20, 16, 16, 20]
+    cols = list(df_historial.columns)
+    
+    offset_x = (297 - sum(widths)) / 2
+    pdf.set_x(offset_x)
+    
+    for i, col in enumerate(cols):
+        clean_c = clean_txt(col.replace('Σ', 'Sum.'))
+        pdf.cell(widths[i], 8, clean_c, border=1, fill=True, align='C')
+    pdf.ln()
+    
+    pdf.set_font("Arial", '', 7)
+    pdf.set_text_color(0, 0, 0)
+    for r_idx, row in df_historial.iterrows():
+        pdf.set_x(offset_x)
+        if r_idx % 2 == 0:
+            pdf.set_fill_color(*C_BG_TAB_R)
+        else:
+            pdf.set_fill_color(255, 255, 255)
+            
+        for i, col in enumerate(cols):
+            val = row.get(col, "-")
+            val_str = str(val) if pd.notna(val) else "-"
+            pdf.cell(widths[i], 6, clean_txt(val_str), border=1, align='C', fill=True)
+        pdf.ln()
+        
+    for path in img_paths.values():
+        if os.path.exists(path): os.unlink(path)
+        
+    out = pdf.output(dest='S')
+    return out.encode('latin-1') if isinstance(out, str) else bytes(out)
