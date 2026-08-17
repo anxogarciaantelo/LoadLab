@@ -350,8 +350,19 @@ with tab_antro_jug:
             # Renombramos las columnas y preparamos el DataFrame final
             df_historial = df_jug_antro[columnas_mostrar].rename(columns=nombres_columnas)
             
-            # Mostramos la tabla moderna con precisión de 2 decimales
-            mostrar_tabla_moderna(df_historial.style.hide(axis="index").format(precision=2))
+            # --- NUEVO: Formateo condicional para ausencias de datos ("-") ---
+            cols_perimetros = ['P. Pecho', 'P. Cintura', 'P. Cadera', 'P. Bíceps D', 'P. Bíceps I', 'P. Muslo D', 'P. Muslo I', 'P. Pierna D', 'P. Pierna I']
+            cols_asimetrias = ['Asimetría Bíceps', 'Asimetría Muslo', 'Asimetría Pierna']
+            
+            # 1. Los 0.0 en perímetros significan que no se midió, los pasamos a NaN
+            df_historial[cols_perimetros] = df_historial[cols_perimetros].replace(0.0, np.nan)
+            
+            # 2. Formateamos a 2 decimales. Si es NaN (nulo), ponemos el guion.
+            for col in cols_perimetros + cols_asimetrias:
+                df_historial[col] = df_historial[col].apply(lambda x: f"{x:.2f}" if pd.notna(x) else "-")
+            
+            # Mostramos la tabla moderna (el formato de las demás columnas lo maneja la función global)
+            mostrar_tabla_moderna(df_historial.style.hide(axis="index"))
 
 with tab_antro_up:
     st.info("Prepara un archivo Excel (.xlsx) con los pesajes. El sistema leerá automáticamente las 15 primeras columnas en el orden exacto indicado abajo.")
