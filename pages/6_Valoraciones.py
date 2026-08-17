@@ -384,19 +384,19 @@ with tab_val_jug:
                         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
                         
                         prompt_directo = f"""
-                        Eres un preparador físico de élite. Redacta UNICAMENTE un plan de entrenamiento individualizado y limpio para el jugador {jug_sel} siguiendo estrictamente este formato de 4 líneas y sin añadir ningún texto adicional ni explicaciones previas:
+                        Actúa como un preparador físico y readaptador deportivo de élite. Redacta un plan de entrenamiento individualizado para el jugador {jug_sel} basándote estrictamente en los siguientes datos de su última valoración:
 
-                        📋 **Diagnóstico Principal:** Desequilibrio neuromuscular severo en {criticas_txt} con déficit de fuerza relativa (Ratio actual: {ratio_fuerza:.2f}) y alerta por molestias en {molestias_txt}.
-                        🛡️ **Fase Preventiva / Correctiva:** 
-                        - Cadera: Movilidad dinámica 90/90 y trabajo corrector para las asimetrías críticas en {criticas_txt}.
-                        - Zona Púbica/Aductores: Copenhagen Plank progresivo y estabilidad de core para manejo de {molestias_txt}.
-                        - Isquios/Cuádriceps: Curl nórdico y sentadilla búlgara unilateral para equilibrar las diferencias detectadas en {criticas_txt} y {mod_txt}.
-                        ⚡ **Fase de Rendimiento (Fuerza):** 
-                        - Objetivo superar el Ratio >1.5 mediante bloque de fuerza máxima (Peso Muerto y Sentadilla).
-                        - Priorizar cargas unilaterales en los patrones afectados para reducir asimetrías (>15%).
-                        🛌 **Pautas Invisibles:** 
-                        - Sueño: Optimizar descanso (actual: {calidad_sueno}/5) para favorecer la recuperación tisular y la regeneración de la zona afectada.
-                        - Nutricion: Aporte proteico elevado y enfoque antiinflamatorio para el manejo de la sobrecarga.
+                        - Asimetrías críticas (>15%): {criticas_txt}
+                        - Asimetrías a considerar (10-15%): {mod_txt}
+                        - Ratio de Fuerza Relativa (1RM/Peso): {ratio_fuerza:.2f}
+                        - Molestias actuales: {molestias_txt}
+                        - Calidad del sueño: {calidad_sueno}/5
+
+                        Instrucciones obligatorias de redacción:
+                        1. Genera el informe libremente, con rigor clínico y científico, proponiendo ejercicios y protocolos reales adaptados a estos datos.
+                        2. Estructura el plan en bloques lógicos y visuales usando emojis y negritas (Ejemplo sugerido: Diagnóstico, Prevención/Readaptación, Rendimiento/Fuerza, Entrenamiento Invisible).
+                        3. Si algún dato indica "Ninguna" o valores normales, no inventes patologías. Reconoce el buen estado de ese parámetro y enfoca el plan en optimizar el rendimiento.
+                        4. DEVUELVE ÚNICAMENTE EL INFORME FINAL. Está terminantemente prohibido incluir razonamientos previos, reflexiones internas, borradores, introducciones o despedidas. Empieza directamente con el texto del informe.
                         """
 
                         modelos_validos = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
@@ -408,17 +408,10 @@ with tab_val_jug:
                                 model = genai.GenerativeModel(nombre_modelo)
                                 response = model.generate_content(prompt_directo)
                                 texto = response.text.strip()
-                                if "Diagnóstico Principal" in texto:
-                                    if "📋" in texto: texto = texto[texto.find("📋"):]
+                                
+                                # Nos quedamos con la respuesta directa sin exigir que tenga un título forzado
+                                if texto:
                                     plan_generado = texto
                                     break
                             except Exception:
                                 continue
-                        
-                        if plan_generado:
-                            st.success(f"¡Plan generado con éxito para {jug_sel}!")
-                            st.markdown(plan_generado)
-                        else:
-                            st.error("No se ha podido conectar con el modelo. Revisa la clave API.")
-                    except Exception as e:
-                        st.error(f"Error general al conectar con la API: {e}")
