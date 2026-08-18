@@ -22,7 +22,10 @@ if not st.session_state.get("autenticado", False) or not st.session_state.get("e
 if "vista_plantilla" not in st.session_state:
     st.session_state.vista_plantilla = "📋 Plantilla"
 
-nombres_jugadores = [j["JUGADOR"] for j in st.session_state.plantilla]
+# Ordenamos la plantilla globalmente por dorsal (si no tiene dorsal, lo mandamos al final con 99)
+plantilla_ordenada = sorted(st.session_state.plantilla, key=lambda x: int(x.get("dorsal", 99)))
+
+nombres_jugadores = [j["JUGADOR"] for j in plantilla_ordenada]
 opciones_vista = ["📋 Plantilla", "⚙️ Modificar Plantilla"] + [f"👤 {nombre}" for nombre in nombres_jugadores]
 
 # Prevenir errores si se elimina un jugador que estaba seleccionado
@@ -56,7 +59,9 @@ if st.session_state.vista_plantilla == "📋 Plantilla":
         if "index_pestana_activa" not in st.session_state:
             st.session_state.index_pestana_activa = 0
 
-        jugadores_lista = st.session_state.plantilla
+        # Usamos la plantilla_ordenada que creamos arriba en lugar de la lista en bruto
+        jugadores_lista = plantilla_ordenada
+        
         for i in range(0, len(jugadores_lista), 4):
             cols = st.columns(4)
             for j in range(4):
@@ -193,43 +198,63 @@ else:
                 if df_j.empty or 'TQR' not in df_j.columns:
                     st.info("No hay datos de bienestar registrados para este jugador.")
                 else:
-                    df_w = df_j[df_j['TQR'] > 0].copy()
-                    if df_w.empty:
-                        st.info("No hay encuestas de bienestar para este jugador.")
-                    else:
-                        st.markdown("#### 🧠 Promedios de Bienestar")
-                        cw1, cw2, cw3, cw4, cw5, cw6, cw7 = st.columns(7)
-                        cw1.metric("TQR Medio", f"{df_w['TQR'].mean():.1f}")
-                        cw2.metric("Wellness (Tot)", f"{df_w['WELLNESS'].mean():.1f}")
-                        cw3.metric("Fatiga", f"{df_w.get('W_Fatiga', pd.Series([0])).mean():.1f}")
-                        cw4.metric("Sueño", f"{df_w.get('W_Sueño', pd.Series([0])).mean():.1f}")
-                        cw5.metric("Dolor", f"{df_w.get('W_Dolor', pd.Series([0])).mean():.1f}")
-                        cw6.metric("Estrés", f"{df_w.get('W_Estres', pd.Series([0])).mean():.1f}")
-                        cw7.metric("Humor", f"{df_w.get('W_Humor', pd.Series([0])).mean():.1f}")
-                        
-                        u_tqr = safe_float(df_w.iloc[-1]['TQR'])
-                        u_well = safe_float(df_w.iloc[-1]['WELLNESS'])
-                        
-                        alertas_w = []
-                        if u_tqr > 0:
-                            if u_tqr <= 3:
-                                alertas_w.append(f"🔴 Recuperación Crítica ({u_tqr:.1f})")
-                            elif u_tqr == 4:
-                                alertas_w.append(f"🟡 Recuperación Moderada ({u_tqr:.1f})")
-                                
-                        if u_well > 0:
-                            if u_well >= 24:
-                                alertas_w.append(f"🔴 Wellness Crítico ({u_well:.1f})")
-                            elif 18 <= u_well <= 23:
-                                alertas_w.append(f"🟡 Wellness Moderado ({u_well:.1f})")
-                        
-                        if alertas_w:
-                            for al in alertas_w: st.warning(al)
-                        else:
-                            st.success("✅ Valores de bienestar en rangos óptimos.")
+                    # --- NUEVO: KPIs del Último Registro (Estado Actual) ---
+                    df_w_sorted = df_w.sort_values("FECHA", ascending=True)
+                    ultimo_w = df_w_sorted.iloc[-1]
+                    
+                    st.markdown("#### ⚡ Estado Actual (Último Registro)")
+                    cu1, cu2, cu3, cu4, cu5, cu6, cu7 = st.columns(7)
+                    cu1.metric("TQR", f"{safe_float(ultimo_w['TQR']):.1f}")
+                    cu2.metric("Wellness", f"{safe_float(ultimo_w['WELLNESS']):.1f}")
+                    cu3.metric("Fatiga", f"{safe_float(ultimo_w.get('W_Fatiga', 0)):.1f}")
+                    cu4.metric("Sueño", f"{safe_float(ultimo_w.get('W_Sueño', 0)):.1f}")
+                    cu5.metric("Dolor", f"{safe_float(ultimo_w.get('W_Dolor', 0)):.1f}")
+                    cu6.metric("Estrés", f"{safe_float(ultimo_w.get('W_Estres', 0)):.1f}")
+                    cu7.metric("Humor", f"{safe_float(ultimo_w.get('W_Humor', 0)):.1f}")
+                    
+                    # --- KPIs Promedio Originales ---
+                    st.markdown("#### 🧠 Promedios de Bienestar")
+                    cw1, cw2, cw3, cw4, cw5, cw6, cw7 = st.columns(7)
+                    cw1.metric("TQR Medio", f"{df_w['TQR'].mean():.1f}")
+                    cw2.metric("Wellness (Tot)", f"{df_w['WELLNESS'].mean():.1f}")
+                    cw3.metric("Fatiga", f"{df_w.get('W_Fatiga', pd.Series([0])).mean():.1f}")
+                    cw4.metric("Sueño", f"{df_w.get('W_Sueño', pd.Series([0])).mean():.1f}")
+                    cw5.metric("Dolor", f"{df_w.get('W_Dolor', pd.Series([0])).mean():.1f}")
+                    cw6.metric("Estrés", f"{df_w.get('W_Estres', pd.Series([0])).mean():.1f}")
+                    cw7.metric("Humor", f"{df_w.get('W_Humor', pd.Series([0])).mean():.1f}")
+                    
+                    u_tqr = safe_float(df_w.iloc[-1]['TQR'])
+                    u_well = safe_float(df_w.iloc[-1]['WELLNESS'])
+                    
+                    alertas_w = []
+                    if u_tqr > 0:
+                        if u_tqr <= 3:
+                            alertas_w.append(f"🔴 Recuperación Crítica ({u_tqr:.1f})")
+                        elif u_tqr == 4:
+                            alertas_w.append(f"🟡 Recuperación Moderada ({u_tqr:.1f})")
                             
-                        st.markdown("#### Últimos Registros")
-                        mostrar_tabla_moderna(df_w[['FECHA', 'TIPO', 'TQR', 'WELLNESS', 'W_Fatiga', 'W_Sueño', 'W_Dolor', 'W_Estres', 'W_Humor']].tail(5).sort_values("FECHA", ascending=False).style.hide(axis="index").format(precision=0))
+                    if u_well > 0:
+                        if u_well >= 24:
+                            alertas_w.append(f"🔴 Wellness Crítico ({u_well:.1f})")
+                        elif 18 <= u_well <= 23:
+                            alertas_w.append(f"🟡 Wellness Moderado ({u_well:.1f})")
+                    
+                    if alertas_w:
+                        for al in alertas_w: st.warning(al)
+                    else:
+                        st.success("✅ Valores de bienestar en rangos óptimos.")
+                        
+                    st.markdown("#### Últimos Registros")
+                    # --- NUEVO: Renombrar columnas de la tabla ---
+                    df_w_show = df_w[['FECHA', 'TIPO', 'TQR', 'WELLNESS', 'W_Fatiga', 'W_Sueño', 'W_Dolor', 'W_Estres', 'W_Humor']].tail(5).sort_values("FECHA", ascending=False)
+                    df_w_show = df_w_show.rename(columns={
+                        'W_Fatiga': 'FATIGA',
+                        'W_Sueño': 'SUEÑO',
+                        'W_Dolor': 'DOLOR',
+                        'W_Estres': 'ESTRES',
+                        'W_Humor': 'HUMOR'
+                    })
+                    mostrar_tabla_moderna(df_w_show.style.hide(axis="index").format(precision=0))
 
             with sub_tabs[1]:
                 if df_j.empty or 'CARGA' not in df_j.columns:
@@ -238,7 +263,23 @@ else:
                     ewma_dict = calcular_ewma_historico(st.session_state.sesiones, str(date.today()))
                     j_ewma = ewma_dict.get(jugador["JUGADOR"], {"EWMA AGUDA": 0, "EWMA CRÓNICA": 0, "RATIO A/C": 0})
                     
-                    st.markdown("#### 🔥 Carga Interna")
+                    # --- NUEVO: KPIs del Último Registro de Carga ---
+                    df_ci_sorted = df_j[df_j['MIN'] > 0].sort_values("FECHA", ascending=True)
+                    if not df_ci_sorted.empty:
+                        ultimo_ci = df_ci_sorted.iloc[-1]
+                        
+                        # Calculamos la carga aguda exacta de ese día para el KPI individual
+                        dict_historico_ultimo = calcular_ewma_historico(st.session_state.sesiones, ultimo_ci['FECHA'])
+                        carga_aguda_ultima = dict_historico_ultimo.get(jugador["JUGADOR"], {}).get("EWMA AGUDA", 0.0)
+                        
+                        st.markdown("#### ⚡ Estado Actual (Última Sesión)")
+                        cu_ci1, cu_ci2, cu_ci3, cu_ci4 = st.columns(4)
+                        cu_ci1.metric("Tipo de Sesión", ultimo_ci['TIPO'])
+                        cu_ci2.metric("Minutos", f"{ultimo_ci['MIN']:.0f}'")
+                        cu_ci3.metric("RPE", f"{ultimo_ci['RPE']:.1f}")
+                        cu_ci4.metric("Carga Aguda", f"{carga_aguda_ultima:.0f} UA")
+                    
+                    st.markdown("#### 🔥 Carga Interna (Acumulados y Promedios)")
                     cc1, cc2, cc3, cc4, cc5 = st.columns(5)
                     cc1.metric("Total Minutos", f"{df_j['MIN'].sum():.0f}'")
                     cc2.metric("RPE Promedio", f"{df_j[df_j['RPE']>0]['RPE'].mean():.1f}")
@@ -330,16 +371,42 @@ else:
                     df_l = pd.DataFrame(les_jug)
                     conteo_zonas = Counter([l['zona'] for l in les_jug])
                     
+                    # --- NUEVO: Cálculos para los KPIs extendidos ---
+                    total_lesiones = len(les_jug)
+                    dias_totales = df_l['dias_baja'].fillna(0).sum()
+                    promedio_dias = dias_totales / total_lesiones if total_lesiones > 0 else 0
+                    
+                    zona_mas_frec = conteo_zonas.most_common(1)[0] if conteo_zonas else ("N/A", 0)
+                    zona_str = f"{zona_mas_frec[0]} ({zona_mas_frec[1]})" if zona_mas_frec[0] != "N/A" else "N/A"
+                    
+                    # Cálculo de incidencia lesional (/1000h)
+                    minutos_totales = df_j['MIN'].sum() if not df_j.empty else 0
+                    horas_exposicion = minutos_totales / 60.0
+                    incidencia = (total_lesiones / horas_exposicion * 1000) if horas_exposicion > 0 else 0
+                    
                     st.markdown("#### 🚑 Historial Médico")
-                    cm1, cm2 = st.columns(2)
-                    cm1.metric("Total de Lesiones", len(les_jug))
-                    cm2.metric("Días de Baja Acumulados", df_l['dias_baja'].fillna(0).sum())
+                    cm1, cm2, cm3, cm4, cm5 = st.columns(5)
+                    cm1.metric("Total Lesiones", total_lesiones)
+                    cm2.metric("Días Baja (Tot.)", f"{dias_totales:.0f}")
+                    cm3.metric("Días Baja (Prom.)", f"{promedio_dias:.1f}")
+                    cm4.metric("Incidencia (/1000h)", f"{incidencia:.1f}")
+                    cm5.metric("Zona +Frecuente", zona_str)
                     
                     alertas_med = [zona for zona, count in conteo_zonas.items() if count >= 2]
                     if alertas_med:
                         st.error(f"🔴 **Riesgo Crónico:** El jugador ha sufrido múltiples lesiones en: {', '.join(alertas_med)}. Considerar protocolo preventivo específico.")
                     
-                    mostrar_tabla_moderna(df_l[['id_sesion', 'tipo', 'zona', 'lado', 'estado', 'dias_baja']].sort_values('id_sesion', ascending=False).style.hide(axis="index"))
+                    # --- NUEVO: Renombrar columnas para la tabla visual ---
+                    df_mostrar_med = df_l[['id_sesion', 'tipo', 'zona', 'lado', 'estado', 'dias_baja']].sort_values('id_sesion', ascending=False)
+                    df_mostrar_med = df_mostrar_med.rename(columns={
+                        'id_sesion': 'FECHA',
+                        'tipo': 'TIPO DE LESIÓN',
+                        'zona': 'ZONA',
+                        'lado': 'LADO',
+                        'estado': 'ESTADO',
+                        'dias_baja': 'DÍAS DE BAJA'
+                    })
+                    mostrar_tabla_moderna(df_mostrar_med.style.hide(axis="index"))
 
             with sub_tabs[4]:
                 ant_jug = [a for a in st.session_state.antropometria if a['jugador'] == jugador['JUGADOR']]
