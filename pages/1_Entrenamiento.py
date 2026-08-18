@@ -770,7 +770,7 @@ with tab_ses:
         detalle_ev = sesion.get("subtitulo_dinamico", sesion.get("descripcion", ""))
         
         with st.container():
-            col_s1, col_s2, col_s3, col_s4, col_s5, col_s6 = st.columns([1.5, 2.5, 1.5, 1.5, 1.5, 1.5])
+            col_s1, col_s2, col_s3, col_s4, col_s5, col_s6, col_s7 = st.columns([1.5, 2.2, 1.2, 1.2, 1.2, 1.2, 1.2])
             fecha_formateada = datetime.strptime(sesion['fecha'], "%Y-%m-%d").strftime("%d-%m-%Y")
             col_s1.write(f"📅 **{fecha_formateada}**")
             col_s2.write(f"⚽ **{nombre_ev}**\n\n<small>{detalle_ev}</small>", unsafe_allow_html=True)
@@ -780,29 +780,38 @@ with tab_ses:
                 st.session_state[f"mostrar_informe_{idx_real}"] = False
                 st.session_state[f"mostrar_datos_{idx_real}"] = False
                 st.session_state[f"mostrar_lesion_{idx_real}"] = False
+                st.session_state[f"mostrar_stats_partido_{idx_real}"] = False
             
             if col_s4.button("📊 Informe", key=f"btn_inf_{idx_real}"):
                 st.session_state[f"mostrar_informe_{idx_real}"] = not st.session_state.get(f"mostrar_informe_{idx_real}", False)
                 st.session_state[f"mostrar_disp_{idx_real}"] = False
                 st.session_state[f"mostrar_datos_{idx_real}"] = False
                 st.session_state[f"mostrar_lesion_{idx_real}"] = False
+                st.session_state[f"mostrar_stats_partido_{idx_real}"] = False
                 
             if col_s5.button("📂 Cargar Datos", key=f"btn_datos_{idx_real}"):
                 st.session_state[f"mostrar_datos_{idx_real}"] = not st.session_state.get(f"mostrar_datos_{idx_real}", False)
                 st.session_state[f"mostrar_informe_{idx_real}"] = False
                 st.session_state[f"mostrar_disp_{idx_real}"] = False
                 st.session_state[f"mostrar_lesion_{idx_real}"] = False
+                st.session_state[f"mostrar_stats_partido_{idx_real}"] = False
 
             if col_s6.button("🚑 Lesión", key=f"btn_lesion_{idx_real}"):
                 st.session_state[f"mostrar_lesion_{idx_real}"] = not st.session_state.get(f"mostrar_lesion_{idx_real}", False)
                 st.session_state[f"mostrar_informe_{idx_real}"] = False
                 st.session_state[f"mostrar_disp_{idx_real}"] = False
                 st.session_state[f"mostrar_datos_{idx_real}"] = False
+                st.session_state[f"mostrar_stats_partido_{idx_real}"] = False
+                
             if es_partido:
-                    if col_s7.button("⚡ Stats Partido", key=f"btn_stats_{idx_real}"):
-                        st.session_state[f"mostrar_stats_partido_{idx_real}"] = not st.session_state.get(f"mostrar_stats_partido_{idx_real}", False)
-                else:
-                    col_s7.write("") # Espacio vacío si es entrenamiento
+                if col_s7.button("⚡ Stats Partido", key=f"btn_stats_{idx_real}"):
+                    st.session_state[f"mostrar_stats_partido_{idx_real}"] = not st.session_state.get(f"mostrar_stats_partido_{idx_real}", False)
+                    st.session_state[f"mostrar_informe_{idx_real}"] = False
+                    st.session_state[f"mostrar_disp_{idx_real}"] = False
+                    st.session_state[f"mostrar_datos_{idx_real}"] = False
+                    st.session_state[f"mostrar_lesion_{idx_real}"] = False
+            else:
+                col_s7.write("")
                 
         if st.session_state.get(f"mostrar_disp_{idx_real}", False):
             st.markdown("---")
