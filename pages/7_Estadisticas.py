@@ -429,51 +429,67 @@ with tab_jugadores:
 # ==========================================
 with tab_rivales:
     st.markdown("### 🆚 Análisis de Equipos Rival (LaPreferente)")
-    st.caption("Selecciona el equipo rival de la competición para consultar su plantilla y estadísticas oficiales al instante.")
-    
-    # Diccionario o selector rápido de equipos rivales frecuentes de la competición actual
-    # (Puedes añadir aquí los nombres y sus respectivos IDequipo de LaPreferente de tu grupo)
-    rivales_frecuentes = {
-        "Selecciona un rival...": "",
-        "Coruxo F.C.": "6938",
-        "Club Portugalete": "6939",
-        "Atlético Astorga": "6940",
-        "S.D. Amorebieta": "6941",
-        # Puedes añadir más equipos de tu grupo aquí fácilmente
-    }
-    
-    col_r1, col_r2 = st.columns([2, 2])
-    with col_r1:
-        rival_seleccionado = st.selectbox("Selecciona un rival guardado:", list(rivales_frecuentes.keys()))
-        
-    with col_r2:
-        # Opción para añadir un rival nuevo introduciendo el ID solo una vez si no está en la lista
-        id_personalizado = st.text_input("O introduce el ID de LaPreferente del rival:", value="")
-    
-    # Determinar qué ID usar
-    id_equipo_final = ""
-    if rival_seleccionado != "Selecciona un rival...":
-        id_equipo_final = rivales_frecuentes[rival_seleccionado]
-    elif id_personalizado:
-        id_equipo_final = id_personalizado
-        
-    comp_id_actual = st.session_state.get("lapreferente_comp_id", "26710")
-    
-    if id_equipo_final:
-        st.markdown("---")
-        st.markdown(f"#### 📋 Plantilla y Datos del Rival")
-        
-        url_widget_rival = f"https://www.lapreferente.com/widgetEquipo.php?tipo=plantilla&comp={comp_id_actual}&colorFondo=FFFFFF&colorFondoCabecera=&colorTextoCabecera=FFFFFF&anchoEscudos=25&fontSize=11&favorito=&IDequipo={id_equipo_final}"
-        
-        st.components.v1.html(
-            f'<iframe style="border:0px; width:100%;" height="850" src="{url_widget_rival}" scrolling="yes"></iframe>', 
-            height=870,
-            scrolling=True
-        )
+    st.caption("Añade los equipos rivales de tu competición introduciendo su nombre y su ID de LaPreferente una sola vez. Se quedarán guardados para toda la temporada.")
+
+    # Inicializar la lista de rivales guardados en session_state si no existe
+    if "rivales_guardados" not in st.session_state:
+        st.session_state["rivales_guardados"] = {} # Formato: {"Nombre del Equipo": "ID_preferente"}
+
+    # ==========================================
+    # SECCIÓN 1: GESTIÓN / AÑADIR RIVAL A MANO
+    # ==========================================
+    with st.expander("➕ Añadir o Registrar un Nuevo Equipo Rival"):
+        with st.form("form_nuevo_rival"):
+            col_fn1, col_fn2, col_fn3 = st.columns([2, 2, 1])
+            with col_fn1:
+                nombre_nuevo_rival = st.text_input("Nombre del Equipo Rival:")
+            with col_fn2:
+                id_nuevo_rival = st.text_input("ID de LaPreferente (ej: 6938):")
+            with col_fn3:
+                st.markdown("<br>", unsafe_allow_html=True)
+                submit_rival = st.form_submit_button("💾 Guardar Rival")
+            
+            if submit_rival:
+                if nombre_nuevo_rival and id_nuevo_rival:
+                    st.session_state["rivales_guardados"][nombre_nuevo_rival.strip()] = id_nuevo_rival.strip()
+                    st.success(f"✅ ¡Rival '{nombre_nuevo_rival}' guardado correctamente!")
+                    st.rerun()
+                else:
+                    st.warning("⚠️ Debes rellenar tanto el nombre como el ID.")
+
+    st.markdown("---")
+
+    # ==========================================
+    # SECCIÓN 2: CONSULTA DEL RIVAL SELECCIONADO
+    # ==========================================
+    rivales_disponibles = list(st.session_state["rivales_guardados"].keys())
+
+    if not rivales_disponibles:
+        st.info("💡 Aún no hay ningún equipo rival registrado. Utiliza el desplegable de arriba para añadir el primero.")
     else:
-        st.info("💡 Selecciona un equipo del desplegable o introduce su ID de LaPreferente para cargar su información completa.")
-
-
+        col_sel1, col_sel2 = st.columns([2, 2])
+        with col_sel1:
+            rival_elegido = st.selectbox("Selecciona un rival guardado:", ["Selecciona un equipo..."] + rivales_disponibles)
+            
+        if rival_elegido != "Selecciona un equipo...":
+            id_equipo_final = st.session_state["rivales_guardados"][rival_elegido]
+            comp_id_actual = st.session_state.get("lapreferente_comp_id", "26710")
+            
+            st.markdown(f"#### 📋 Plantilla y Estadísticas de: **{rival_elegido}**")
+            
+            url_widget_rival = f"https://www.lapreferente.com/widgetEquipo.php?tipo=plantilla&comp={comp_id_actual}&colorFondo=FFFFFF&colorFondoCabecera=&colorTextoCabecera=FFFFFF&anchoEscudos=25&fontSize=11&favorito=&IDequipo={id_equipo_final}"
+            
+            st.components.v1.html(
+                f'<iframe style="border:0px; width:100%;" height="850" src="{url_widget_rival}" scrolling="yes"></iframe>', 
+                height=870,
+                scrolling=True
+            )
+            
+            # Botón opcional para eliminar un rival mal introducido
+            if st.button(f"🗑️ Eliminar a {rival_elegido} de la lista"):
+                del st.session_state["rivales_guardados"][rival_elegido]
+                st.success(f"Equipo {rival_elegido} eliminado.")
+                st.rerun()
 # ==========================================
 # ⚙️ CONFIGURACIÓN ABAJO DE TODO EN PANTALLA
 # ==========================================
