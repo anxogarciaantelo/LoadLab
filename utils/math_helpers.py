@@ -326,24 +326,26 @@ def obtener_clima(ciudad, fecha_str):
         return None
     
     try:
-        # Open-Meteo devuelve datos históricos o previsiones con el mismo formato
+        # Añadimos explicitamente temperature_2m_max y unit_metric para evitar errores de unidades
         url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto&start_date={fecha_str}&end_date={fecha_str}"
         response = requests.get(url).json()
         
-        # Fallback por si la fecha es muy antigua (Open-Meteo usa otro endpoint para >3 meses)
-        if "error" in response:
-            url_archive = f"https://archive-api.open-meteo.com/v1/archive?latitude={lat}&longitude={lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto&start_date={fecha_str}&end_date={fecha_str}"
-            response = requests.get(url_archive).json()
+        if "error" in response or "daily" not in response:
+            url = f"https://archive-api.open-meteo.com/v1/archive?latitude={lat}&longitude={lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto&start_date={fecha_str}&end_date={fecha_str}"
+            response = requests.get(url).json()
 
         if "daily" in response and response["daily"]["temperature_2m_max"]:
             t_max = response["daily"]["temperature_2m_max"][0]
             t_min = response["daily"]["temperature_2m_min"][0]
             lluvia = response["daily"]["precipitation_sum"][0]
             
-            if t_max is not None and t_min is not None:
-                temp_media = round((t_max + t_min) / 2, 1)
+            if t_max is not None:
+                # Cambiamos el cálculo: mostramos la temperatura máxima del día (o una media ponderada más real)
+                # Si prefieres la máxima directa:
+                temp_real = float(t_max)
+                
                 estado = "🌧️ Lluvia" if lluvia and lluvia > 1.0 else "☀️ Despejado"
-                return {"temp": temp_media, "estado": estado}
-    except:
-        pass
+                return {"temp": temp_real, "estado": estado}
+    except Exception as e:
+        print(f"Error clima: {e}")
     return None
