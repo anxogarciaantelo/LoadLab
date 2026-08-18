@@ -71,8 +71,9 @@ with tab_cal:
                 desc_nuevo = ""
                 comp_nuevo = ""
                 rival_nuevo = ""
-                condicion_nuevo = "Casa" # Por defecto
-                                
+                condicion_nuevo = "Casa"
+                ciudad_manual_nuevo = ""
+                
                 if tipo_nuevo == "Entrenamiento":
                     desc_nuevo = st.selectbox("Match Day:", ["MD-6", "MD-5", "MD-4", "MD-3", "MD-2", "MD-1", "MD+1", "MD+2", "TD"])
                 else:
@@ -83,21 +84,30 @@ with tab_cal:
                     rival_nuevo = col_r1.text_input("Rival:")
                     condicion_nuevo = col_r2.radio("Condición:", ["Casa", "Fuera"], horizontal=True)
                     
+                    # --- NUEVA LÓGICA: SI ES FUERA Y EL RIVAL NO ESTÁ GUARDADO ---
+                    if condicion_nuevo == "Fuera":
+                        rivales_db = st.session_state.get("rivales_guardados", {})
+                        if rival_nuevo and rival_nuevo not in rivales_db:
+                            st.info("ℹ️ Este rival no está en tu base de datos.")
+                            ciudad_manual_nuevo = st.text_input("Ciudad del partido (Obligatorio para calcular el clima):")
+                    
                 if st.button("Guardar Sesión"):
-                    # 1. Determinar la ciudad objetivo
-                    ciudad_objetivo = st.session_state.get("ubicacion_local", "Santiago de Compostela")
+                    ciudad_objetivo = st.session_state.get("ubicacion_local", "")
                     
                     if tipo_nuevo != "Entrenamiento" and condicion_nuevo == "Fuera":
                         rival_info = st.session_state.get("rivales_guardados", {}).get(rival_nuevo, {})
-                        # Compatibilidad por si el rival antiguo era solo un string
                         if isinstance(rival_info, dict) and rival_info.get("ciudad"):
                             ciudad_objetivo = rival_info.get("ciudad")
+                        elif ciudad_manual_nuevo:
+                            ciudad_objetivo = ciudad_manual_nuevo
                     
-                    # 2. Llamada a la API
-                    with st.spinner(f"Sincronizando clima para {ciudad_objetivo}..."):
-                        clima_data = obtener_clima(ciudad_objetivo, str(dia_clicado))
-                
-                    # 3. Guardar todo
+                    # Llamada a la API
+                    clima_data = None
+                    if ciudad_objetivo:
+                        with st.spinner(f"Sincronizando clima para {ciudad_objetivo}..."):
+                            from utils.math_helpers import obtener_clima
+                            clima_data = obtener_clima(ciudad_objetivo, str(dia_clicado))
+
                     st.session_state.sesiones.append({
                         "fecha": str(dia_clicado), 
                         "tipo": tipo_nuevo, 
@@ -105,7 +115,8 @@ with tab_cal:
                         "competicion": comp_nuevo,
                         "rival": rival_nuevo,
                         "condicion": condicion_nuevo,
-                        "clima": clima_data, # <--- DATO CLIMÁTICO AÑADIDO
+                        "ciudad_manual": ciudad_manual_nuevo,
+                        "clima": clima_data,
                         "disponibilidad": {},
                         "informe_generado": False, 
                         "datos_informe": []
