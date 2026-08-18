@@ -105,7 +105,7 @@ with tab_equipo:
         mostrar_tabla_moderna(df_fuera.style.hide(axis="index").format({"GF/P": "{:.2f}", "GC/P": "{:.2f}"}))
 
     # ==========================================
-    # WIDGETS DE LIGA (Clasificación + Resultados actuales y próxima jornada)
+    # WIDGETS DE LIGA
     # ==========================================
     if filtro_competicion == "Liga":
         comp_id = st.session_state.get("lapreferente_comp_id", "26710")
@@ -130,17 +130,17 @@ with tab_equipo:
             
             st.components.v1.html(
                 f'<iframe style="border:0px; width:100%; margin-bottom: -15px;" height="340" src="{url_res_actual}" scrolling="no"></iframe>', 
-                height=300,
+                height=345,
                 scrolling=False
             )
             st.components.v1.html(
                 f'<iframe style="border:0px; width:100%;" height="340" src="{url_res_prox}" scrolling="no"></iframe>', 
-                height=300,
+                height=345,
                 scrolling=False
             )
 
     # ==========================================
-    # WIDGETS DE COPA (Permite añadir otro ID diferente)
+    # WIDGETS DE COPA
     # ==========================================
     if filtro_competicion == "Copa":
         copa_comp_id = st.session_state.get("lapreferente_copa_id", "")
@@ -283,6 +283,78 @@ with tab_jugadores:
     if not df_jugadores.empty:
         df_jugadores = df_jugadores.sort_values(by="MIN", ascending=False)
         
+        # ==========================================
+        # 👑 RANKING TOP 3 MVP & ESTADÍSTICAS DESTACADAS
+        # ==========================================
+        st.markdown("#### 👑 Top 3 Destacados (MVP)")
+        c_mvp1, c_mvp2, c_mvp3 = st.columns(3)
+        
+        # Top 3 Goleadores
+        df_goles = df_jugadores[df_jugadores["G"] > 0].sort_values(by="G", ascending=False).head(3)
+        with c_mvp1:
+            st.markdown("##### ⚽ Máximos Goleadores")
+            if not df_goles.empty:
+                for idx, row in df_goles.reset_index(drop=True).iterrows():
+                    min_gol_str = f"({row['Min_Gol']:.1f}'/gol)" if row['Min_Gol'] > 0 else "(Sin goles)"
+                    st.markdown(f"**{idx+1}. {row['JUGADOR']}** — {row['G']} goles {min_gol_str}")
+            else:
+                st.caption("Sin datos de goles.")
+
+        # Top 3 Asistentes
+        df_asist = df_jugadores[df_jugadores["A"] > 0].sort_values(by="A", ascending=False).head(3)
+        with c_mvp2:
+            st.markdown("##### 🎯 Máximos Asistentes")
+            if not df_asist.empty:
+                for idx, row in df_asist.reset_index(drop=True).iterrows():
+                    min_asist_str = f"({row['Min/Asist']:.1f}'/asist)" if row['Min/Asist'] > 0 else "(Sin asistencias)"
+                    st.markdown(f"**{idx+1}. {row['JUGADOR']}** — {row['A']} asist. {min_asist_str}")
+            else:
+                st.caption("Sin datos de asistencias.")
+
+        # Top 3 Minutos Jugados
+        df_mins = df_jugadores.sort_values(by="MIN", ascending=False).head(3)
+        with c_mvp3:
+            st.markdown("##### ⏱️ Más Minutos (Fetiches)")
+            for idx, row in df_mins.reset_index(drop=True).iterrows():
+                st.markdown(f"**{idx+1}. {row['JUGADOR']}** — {int(row['MIN'])} mins ({row['% MIN']:.1f}%)")
+
+        st.markdown("---")
+
+        # ==========================================
+        # 📊 GRÁFICO: MINUTOS ACUMULADOS DE LA PLANTILLA
+        # ==========================================
+        st.markdown("#### 📊 Gráfico de Minutos Acumulados por Jugador")
+        fig_mins = px.bar(
+            df_jugadores.sort_values(by="MIN", ascending=True),
+            x="MIN",
+            y="JUGADOR",
+            color="POS",
+            orientation="h",
+            labels={"MIN": "Minutos Jugados", "JUGADOR": "Jugador", "POS": "Posición"},
+            title="Participación de la Plantilla (Minutos totales)"
+        )
+        fig_mins.update_layout(height=400, margin=dict(l=20, r=20, t=40, b=20))
+        st.plotly_chart(fig_mins, use_container_width=True)
+
+        # ==========================================
+        # 🗺️ MAPA DE DISTRIBUCIÓN DE MINUTOS POR LÍNEA
+        # ==========================================
+        st.markdown("#### 🗺️ Distribución de Minutos por Demarcación")
+        df_pos = df_jugadores.groupby("POS")["MIN"].sum().reset_index()
+        if not df_pos.empty and df_pos["MIN"].sum() > 0:
+            fig_pie = px.pie(
+                df_pos,
+                names="POS",
+                values="MIN",
+                title="Porcentaje de Minutos Jugados por Línea del Campo",
+                hole=0.4
+            )
+            fig_pie.update_layout(height=350, margin=dict(l=20, r=20, t=40, b=20))
+            st.plotly_chart(fig_pie, use_container_width=True)
+        else:
+            st.info("Registra minutos en los partidos para ver la distribución por demarcación.")
+
+        st.markdown("---")
         c_f1, c_f2 = st.columns(2)
         filtro_pos = c_f1.selectbox("Filtro Rápido (Posición):", ["TODOS", "POR", "DEF", "MED", "ATA", "CANTERA"])
         
@@ -291,7 +363,7 @@ with tab_jugadores:
         else:
             df_mostrar = df_jugadores
             
-        st.markdown("##### Rendimiento y Minutos")
+        st.markdown("##### Tabla Detallada de Rendimiento e Individuales")
         estilo_jugadores = (df_mostrar.style
                             .hide(axis="index")
                             .format({
@@ -305,10 +377,10 @@ with tab_jugadores:
                            )
                            
         mostrar_tabla_moderna(estilo_jugadores)
-        st.caption("Acrónimos: Conv. (Convocatorias) | PJ (Partidos Jugados) | MIN (Minutos) | G (Goles) | A (Asistencias) | Min/Gol (Minutos por gol) | GE (Goles Encajados porteros).")
+        st.caption("Acrónimos: Conv. (Convocatorias) | PJ (Partidos Jugados) | MIN (Minutos) | G (Goles) | A (Asistencias) | Min/Gol (Minutos necesarios por gol) | GE (Goles Encajados porteros).")
 
 # ==========================================
-# ⚙️ CONFIGURACIÓN ABAJO DE TODO EN PANTALLA (Solo si estamos en Liga o Copa)
+# ⚙️ CONFIGURACIÓN ABAJO DE TODO EN PANTALLA
 # ==========================================
 if filtro_competicion in ["Liga", "Copa"]:
     st.markdown("---")
