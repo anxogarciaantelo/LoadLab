@@ -46,7 +46,6 @@ def cargar_datos_equipo(equipo_id):
             st.session_state.val_inicial = vals.get("val_inicial", [])
             st.session_state.val_rom = vals.get("val_rom", [])
             st.session_state.val_1rm = vals.get("val_1rm", [])
-            st.session_state.config_mapeo = vals.get("config_mapeo", {})
             
             # --- AQUÍ CARGAMOS NUESTROS AJUSTES ---
             st.session_state.ubicacion_local = vals.get("ubicacion_local", "Santiago de Compostela")
