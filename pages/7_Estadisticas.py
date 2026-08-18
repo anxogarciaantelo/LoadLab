@@ -130,17 +130,18 @@ with tab_equipo:
             st.markdown("#### 📋 Clasificación")
             url_clasif = f"https://www.lapreferente.com/widgetClasificacion.php?comp={comp_id}&colorFondo=FFFFFF&colorFondoCabecera=&colorTextoCabecera=FFFFFF&anchoEscudos=25&fontSize=12&favorito=&ocultaEvolucion=1&ocultaPosicionAnterior=0"
             st.components.v1.html(
-                f'<iframe style="border:0px; width:100%;" height="550" src="{url_clasif}"></iframe>', 
-                height=570,
+                f'<iframe style="border:0px; width:100%;" height="570" src="{url_clasif}"></iframe>', 
+                height=590,
                 scrolling=True
             )
             
         with col_widget2:
-            st.markdown("#### ⚽ Resultados de la Jornada")
-            url_res = f"https://www.lapreferente.com/widgetResultados.php?comp={comp_id}&colorFondo=FFFFFF&colorFondoCabecera=FFFFFF&colorTextoCabecera=000000&anchoEscudos=25&fontSize=12&favorito="
+            st.markdown("#### ⚽ Resultados y Próxima Jornada")
+            # Widget con resultados de la jornada actual y espacio para la próxima jornada
+            url_res = f"https://www.lapreferente.com/widgetResultados.php?comp={comp_id}&proximaJornada=1&colorFondo=FFFFFF&colorFondoCabecera=FFFFFF&colorTextoCabecera=000000&anchoEscudos=25&fontSize=12&favorito="
             st.components.v1.html(
-                f'<iframe style="border:0px; width:100%;" height="550" src="{url_res}"></iframe>', 
-                height=570,
+                f'<iframe style="border:0px; width:100%;" height="570" src="{url_res}"></iframe>', 
+                height=590,
                 scrolling=True
             )
 
