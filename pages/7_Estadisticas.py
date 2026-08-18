@@ -295,7 +295,7 @@ with tab_jugadores:
             st.markdown("##### ⚽ Máximos Goleadores")
             if not df_goles.empty:
                 for idx, row in df_goles.reset_index(drop=True).iterrows():
-                    min_gol_str = f"({row['Min_Gol']:.1f}'/gol)" if row['Min_Gol'] > 0 else "(Sin goles)"
+                    min_gol_str = f"({row['Min/Gol']:.1f}'/gol)" if row['Min/Gol'] > 0 else "(Sin goles)"
                     st.markdown(f"**{idx+1}. {row['JUGADOR']}** — {row['G']} goles {min_gol_str}")
             else:
                 st.caption("Sin datos de goles.")
