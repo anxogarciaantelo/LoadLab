@@ -307,43 +307,42 @@ def set_login_background(image_path):
 
 import requests
 from geopy.geocoders import Nominatim
+import streamlit as st
 
+@st.cache_data(show_spinner=False)
 def obtener_coordenadas(ciudad):
     if not ciudad: return None, None
     try:
-        # User_agent es obligatorio para Nominatim
         geolocator = Nominatim(user_agent="loadlab_sports_app") 
-        location = geolocator.geocode(ciudad, timeout=3)
+        location = geolocator.geocode(ciudad, timeout=5)
         if location:
             return location.latitude, location.longitude
     except:
         pass
     return None, None
 
+@st.cache_data(show_spinner=False)
 def obtener_clima(ciudad, fecha_str):
     lat, lon = obtener_coordenadas(ciudad)
     if not lat or not lon:
         return None
     
     try:
-        # Añadimos explicitamente temperature_2m_max y unit_metric para evitar errores de unidades
-        url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto&start_date={fecha_str}&end_date={fecha_str}"
-        response = requests.get(url).json()
+        # 1. Primero intentamos con el archivo histórico (Ideal para sesiones de semanas pasadas)
+        url_archive = f"https://archive-api.open-meteo.com/v1/archive?latitude={lat}&longitude={lon}&daily=temperature_2m_max,precipitation_sum&timezone=auto&start_date={fecha_str}&end_date={fecha_str}"
+        response = requests.get(url_archive).json()
         
+        # 2. Si da error (porque la fecha es de hoy o de hace solo 2 días), usamos el pronóstico actual
         if "error" in response or "daily" not in response:
-            url = f"https://archive-api.open-meteo.com/v1/archive?latitude={lat}&longitude={lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto&start_date={fecha_str}&end_date={fecha_str}"
-            response = requests.get(url).json()
+            url_forecast = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&daily=temperature_2m_max,precipitation_sum&timezone=auto&start_date={fecha_str}&end_date={fecha_str}"
+            response = requests.get(url_forecast).json()
 
-        if "daily" in response and response["daily"]["temperature_2m_max"]:
+        if "daily" in response and response["daily"].get("temperature_2m_max"):
             t_max = response["daily"]["temperature_2m_max"][0]
-            t_min = response["daily"]["temperature_2m_min"][0]
             lluvia = response["daily"]["precipitation_sum"][0]
             
             if t_max is not None:
-                # Cambiamos el cálculo: mostramos la temperatura máxima del día (o una media ponderada más real)
-                # Si prefieres la máxima directa:
                 temp_real = float(t_max)
-                
                 estado = "🌧️ Lluvia" if lluvia and lluvia > 1.0 else "☀️ Despejado"
                 return {"temp": temp_real, "estado": estado}
     except Exception as e:
