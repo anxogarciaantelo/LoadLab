@@ -40,8 +40,14 @@ def cargar_datos_equipo(equipo_id):
             st.session_state.sesiones = dat.get("sesiones", [])
             st.session_state.lesiones = dat.get("lesiones", [])
             st.session_state.antropometria = dat.get("antropometria", [])
-            # Cargar config de mapeo con valores por defecto seguros
-            config_guardada = dat.get("config_mapeo", {})
+            
+            vals = dat.get("valoraciones", {})
+            st.session_state.val_inicial = vals.get("val_inicial", [])
+            st.session_state.val_rom = vals.get("val_rom", [])
+            st.session_state.val_1rm = vals.get("val_1rm", [])
+            
+            # Cargar config de mapeo desde 'valoraciones' con valores por defecto seguros
+            config_guardada = vals.get("config_mapeo", {})
             if not config_guardada:
                 config_guardada = {
                     "wellness": {"nombre": "Nombre", "fecha": "Marca temporal", "tqr": "TQR", "fatiga": "W_Fatiga", "sueno": "W_Sueño", "dolor": "W_Dolor", "estres": "W_Estres", "humor": "W_Humor"},
@@ -93,11 +99,11 @@ def guardar_datos():
             "sesiones": st.session_state.sesiones,
             "lesiones": st.session_state.get("lesiones", []),
             "antropometria": st.session_state.get("antropometria", []),
-            "config_mapeo": st.session_state.get("config_mapeo", {}),
             "valoraciones": {
                 "val_inicial": st.session_state.get("val_inicial", []),
                 "val_rom": st.session_state.get("val_rom", []),
-                "val_1rm": st.session_state.get("val_1rm", [])
+                "val_1rm": st.session_state.get("val_1rm", []),
+                "config_mapeo": st.session_state.get("config_mapeo", {})
             }
         }
         supabase.table("datos_equipo").update(data_json).eq("equipo_id", eq_id).execute()
