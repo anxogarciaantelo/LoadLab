@@ -13,7 +13,7 @@ def render_panel_principal():
             nueva_categoria = st.text_input("Categoría", value=st.session_state.get("categoria_equipo", ""))
             nueva_division = st.text_input("División", value=st.session_state.get("division_equipo", ""))
             nueva_temporada = st.text_input("Temporada", value=st.session_state.get("temporada_equipo", ""))
-            nueva_ubicacion = st.text_input("Ciudad del Equipo (Para clima automático):", value=st.session_state.get("ubicacion_local", "Santiago de Compostela"))
+            nueva_ubicacion = st.text_input("Ciudad del Equipo (Para clima automático):", value=st.session_state.get("ubicacion_local", ""))
             
             # Selector de color para la barra lateral
             nuevo_color = st.color_picker("Color de la Barra Lateral", value=st.session_state.get("color_sidebar", "#f1f5f9"))
@@ -27,7 +27,7 @@ def render_panel_principal():
                 st.session_state.categoria_equipo = nueva_categoria
                 st.session_state.division_equipo = nueva_division
                 st.session_state.temporada_equipo = nueva_temporada
-                st.session_state.color_sidebar = nuevo_color # <--- ACTUALIZAR ESTADO
+                st.session_state.color_sidebar = nuevo_color 
                 st.session_state.ubicacion_local = nueva_ubicacion
                 if nuevo_escudo_up:
                     st.session_state.escudo_equipo = get_base64_of_bin_file(nuevo_escudo_up)
