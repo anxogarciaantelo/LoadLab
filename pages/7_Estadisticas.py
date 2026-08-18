@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-# Importar las herramientas visuales (la tabla moderna)
+# Importar las herramientas visuales
 from utils.math_helpers import *
 
 # --- COMPROBACIÓN DE SEGURIDAD ---
@@ -20,7 +20,7 @@ if not partidos_totales:
     st.stop()
 
 # ==========================================
-# 0. SELECTOR DE COMPETICIÓN (Requisito 1)
+# 0. SELECTOR DE COMPETICIÓN
 # ==========================================
 col_comp1, col_comp2 = st.columns([1, 3])
 filtro_competicion = col_comp1.selectbox(
@@ -28,7 +28,6 @@ filtro_competicion = col_comp1.selectbox(
     ["Global (Todas)", "Liga", "Copa", "Amistosos"]
 )
 
-# Filtrar la lista de partidos según la selección
 if filtro_competicion == "Global (Todas)":
     partidos = partidos_totales
 elif filtro_competicion == "Amistosos":
@@ -68,7 +67,6 @@ with tab_equipo:
         elif gf == gc: totales[cond]["E"] += 1
         else: totales[cond]["D"] += 1
         
-    # Agrupación Global
     pj = totales["Casa"]["P"] + totales["Fuera"]["P"]
     v = totales["Casa"]["V"] + totales["Fuera"]["V"]
     e = totales["Casa"]["E"] + totales["Fuera"]["E"]
@@ -77,11 +75,6 @@ with tab_equipo:
     gc = totales["Casa"]["GC"] + totales["Fuera"]["GC"]
     dif = gf - gc
     
-    # Cálculos por partido (Requisito 3)
-    gf_pp_global = (gf / pj) if pj > 0 else 0
-    gc_pp_global = (gc / pj) if pj > 0 else 0
-    
-    # Métricas Globales
     c1, c2, c3, c4, c5 = st.columns(5)
     c1.metric("Partidos Jugados", pj)
     c2.metric("Victorias", v)
@@ -91,7 +84,6 @@ with tab_equipo:
     
     st.markdown("---")
     
-    # Desglose Local / Visitante con Requisito 3 (Goles/Partido)
     col_t1, col_t2 = st.columns(2)
     with col_t1:
         st.markdown("#### 🏠 Rendimiento como Local")
@@ -104,7 +96,6 @@ with tab_equipo:
             "GF": totales["Casa"]["GF"], "GC": totales["Casa"]["GC"], 
             "GF/P": gf_pp_casa, "GC/P": gc_pp_casa
         }])
-        # Requisito 5: Tabla Visual
         mostrar_tabla_moderna(df_casa.style.hide(axis="index").format({"GF/P": "{:.2f}", "GC/P": "{:.2f}"}))
         
     with col_t2:
@@ -118,26 +109,25 @@ with tab_equipo:
             "GF": totales["Fuera"]["GF"], "GC": totales["Fuera"]["GC"],
             "GF/P": gf_pp_fuera, "GC/P": gc_pp_fuera
         }])
-        # Requisito 5: Tabla Visual
         mostrar_tabla_moderna(df_fuera.style.hide(axis="index").format({"GF/P": "{:.2f}", "GC/P": "{:.2f}"}))
 
     # ==========================================
-    # CLASIFICACIÓN EN VIVO (Requisito 2)
+    # CLASIFICACIÓN (Enlace directo seguro)
     # ==========================================
     if filtro_competicion in ["Global (Todas)", "Liga"]:
         st.markdown("---")
-        st.markdown("### 📊 Clasificación de Liga (En Vivo)")
+        st.markdown("### 📊 Enlace a la Clasificación de Liga")
         
         link_clasificacion = st.text_input(
-            "🔗 Pega el enlace de la web de clasificación (ej. BeSoccer, RFEF...):", 
+            "🔗 Pega el enlace de la web de clasificación (BeSoccer, Marca, RFEF...):", 
             value=st.session_state.get("link_clasificacion", "")
         )
         if link_clasificacion:
             st.session_state["link_clasificacion"] = link_clasificacion
-            # Incrusta la web interactiva dentro de la app
-            st.components.v1.iframe(link_clasificacion, height=600, scrolling=True)
+            st.markdown(f"👉 **[Haz clic aquí para abrir la clasificación en una pestaña nueva]({link_clasificacion})**", unsafe_allow_html=True)
+            st.caption("Nota: Páginas como BeSoccer o RFEF bloquean la vista interna por seguridad, por lo que se abrirá de forma óptima en tu navegador.")
         else:
-            st.info("💡 Pega un enlace web para ver la clasificación en vivo sin salir de la app.")
+            st.info("💡 Pega un enlace web para tener el acceso directo siempre disponible.")
 
 # ==========================================
 # 👤 PESTAÑA 2: ESTADÍSTICAS DE JUGADORES
@@ -195,7 +185,7 @@ with tab_jugadores:
             if mins > 0: datos_jugadores[n_inv]["Partidos Jugados"] += 1
 
     # ==========================================
-    # ALERTAS DE TARJETAS (Requisito 4)
+    # ALERTAS DE TARJETAS
     # ==========================================
     if filtro_competicion in ["Liga", "Global (Todas)"]:
         apercibidos = []
@@ -223,7 +213,7 @@ with tab_jugadores:
                     st.info("✅ Ningún jugador apercibido.")
             st.markdown("---")
 
-    # Crear tabla de datos
+    # Crear tabla de datos con Minutos por Gol / Asistencia
     lista_stats = []
     minutos_posibles = pj * 90 if pj > 0 else 0
     
@@ -232,8 +222,10 @@ with tab_jugadores:
         goles = d["Goles"]
         asistencias = d["Asistencias"]
         
-        goles_90 = (goles / mins * 90) if mins > 0 else 0
-        asist_90 = (asistencias / mins * 90) if mins > 0 else 0
+        # Minutos necesarios por gol o asistencia (Invertido)
+        min_por_gol = (mins / goles) if goles > 0 else 0
+        min_por_asist = (mins / asistencias) if asistencias > 0 else 0
+        
         porc_mins = (mins / minutos_posibles * 100) if minutos_posibles > 0 else 0
         
         lista_stats.append({
@@ -245,8 +237,8 @@ with tab_jugadores:
             "% MIN": porc_mins,
             "G": goles,
             "A": asistencias,
-            "G/90": goles_90,
-            "A/90": asist_90,
+            "Min/Gol": min_por_gol,
+            "Min/Asist": min_por_asist,
             "GE": d["Goles Encajados"],
             "🟨 TA": d["Amarillas"],
             "🟥 TR": d["Rojas"]
@@ -265,15 +257,18 @@ with tab_jugadores:
         else:
             df_mostrar = df_jugadores
             
-        # Requisito 5: Tablas Visuales como en el resto de la App
         st.markdown("##### Rendimiento y Minutos")
         estilo_jugadores = (df_mostrar.style
                             .hide(axis="index")
-                            .format({"% MIN": "{:.1f}%", "G/90": "{:.2f}", "A/90": "{:.2f}"})
+                            .format({
+                                "% MIN": "{:.1f}%", 
+                                "Min/Gol": lambda x: f"{x:.1f}'" if x > 0 else "-", 
+                                "Min/Asist": lambda x: f"{x:.1f}'" if x > 0 else "-"
+                            })
                             .background_gradient(subset=["MIN"], cmap="Blues")
                             .background_gradient(subset=["G"], cmap="Greens")
                             .background_gradient(subset=["🟨 TA"], cmap="YlOrBr")
                            )
                            
         mostrar_tabla_moderna(estilo_jugadores)
-        st.caption("Acrónimos: Conv. (Convocatorias) | PJ (Partidos Jugados) | MIN (Minutos) | G (Goles) | A (Asistencias) | G/90 (Goles cada 90') | GE (Goles Encajados porteros).")
+        st.caption("Acrónimos: Conv. (Convocatorias) | PJ (Partidos Jugados) | MIN (Minutos) | G (Goles) | A (Asistencias) | Min/Gol (Minutos por gol) | GE (Goles Encajados porteros).")
