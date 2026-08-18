@@ -153,11 +153,16 @@ def render_panel_principal():
     
     if st.button("☁️ Sincronizar Clima en Sesiones Pasadas", use_container_width=True):
         from utils.math_helpers import obtener_clima 
+        import streamlit as st
+        
+        # 1. Vaciamos la memoria para obligar a la app a preguntar de nuevo a la API
+        st.cache_data.clear()
         
         sesiones_actualizadas = 0
+        errores = []
+        
         with st.spinner("Conectando con Open-Meteo y sincronizando histórico..."):
             for s in st.session_state.sesiones:
-                # Determinamos la ciudad correspondiente
                 ciudad = st.session_state.get("ubicacion_local", "")
                 
                 if s.get("tipo") != "Entrenamiento" and s.get("condicion") == "Fuera":
@@ -169,18 +174,28 @@ def render_panel_principal():
                     elif s.get("ciudad_manual"):
                         ciudad = s.get("ciudad_manual")
                 
-                # Consultamos y forzamos la actualización
-                if ciudad:
-                    clima_data = obtener_clima(ciudad, s["fecha"])
-                    if clima_data:
-                        s["clima"] = clima_data
-                        sesiones_actualizadas += 1
+                # 2. Comprobamos dónde está el fallo
+                if not ciudad:
+                    errores.append(f"Sesión {s['fecha']}: No hay ciudad definida en la configuración.")
+                    continue
+                    
+                clima_data = obtener_clima(ciudad, s["fecha"])
+                if clima_data:
+                    s["clima"] = clima_data
+                    sesiones_actualizadas += 1
+                else:
+                    errores.append(f"Sesión {s['fecha']}: La API falló al buscar el clima de '{ciudad}'.")
                             
             if sesiones_actualizadas > 0:
                 guardar_datos()
                 st.success(f"✅ ¡Éxito! Se ha actualizado el clima para {sesiones_actualizadas} sesiones.")
             else:
-                st.info("No se han podido actualizar las sesiones. Revisa que la ciudad local esté bien escrita.")
+                st.error("No se han podido actualizar las sesiones. Revisa el registro de errores:")
+                # 3. Mostramos los errores exactos en pantalla
+                if errores:
+                    with st.expander("🔍 Ver detalles del error"):
+                        for e in errores[:10]:  # Mostramos los 10 primeros para no saturar
+                            st.write(e)
 
     if st.button("🔄 Borrar datos y empezar de cero", use_container_width=True):
         st.session_state.plantilla = []
