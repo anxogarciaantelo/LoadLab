@@ -195,8 +195,12 @@ else:
             df_j = pd.DataFrame(datos_sesiones_jug)
             
             with sub_tabs[0]:
-                if df_j.empty or 'TQR' not in df_j.columns:
-                    st.info("No hay datos de bienestar registrados para este jugador.")
+            if df_j.empty or 'TQR' not in df_j.columns:
+                st.info("No hay datos de bienestar registrados para este jugador.")
+            else:
+                df_w = df_j[df_j['TQR'] > 0].copy()
+                if df_w.empty:
+                    st.info("No hay encuestas de bienestar para este jugador.")
                 else:
                     # --- NUEVO: KPIs del Último Registro (Estado Actual) ---
                     df_w_sorted = df_w.sort_values("FECHA", ascending=True)
@@ -251,7 +255,7 @@ else:
                         'W_Fatiga': 'FATIGA',
                         'W_Sueño': 'SUEÑO',
                         'W_Dolor': 'DOLOR',
-                        'W_Estres': 'ESTRES',
+                        'W_Estres': 'ESTRÉS',
                         'W_Humor': 'HUMOR'
                     })
                     mostrar_tabla_moderna(df_w_show.style.hide(axis="index").format(precision=0))
