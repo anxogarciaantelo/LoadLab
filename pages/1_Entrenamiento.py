@@ -1681,7 +1681,7 @@ with tab_ses:
             
         if st.session_state.get(f"mostrar_stats_partido_{idx_real}", False):
             st.markdown("---")
-            st.markdown(f"#### ⚡ ESTADÍSTICAS DE PARTIDO | vs {sesion.get('rival', 'Rival')} ({sesion['fecha'])})")
+            st.markdown(f"#### ⚡ ESTADÍSTICAS DE PARTIDO | vs {sesion.get('rival', 'Rival')} ({sesion['fecha']})")
             
             # 1. Datos globales del partido
             col_g1, col_g2, col_g3 = st.columns(3)
@@ -1697,7 +1697,7 @@ with tab_ses:
             sesion["goles_favor"] = nuevo_gf
             sesion["goles_contra"] = nuevo_gc
 
-            st.markdown("##### 📋 Rendimiento de Jugadores Convocados (Titulares y Suplentes)")
+            st.markdown("##### 📋 Rendimiento de Jugadores Convocados")
             
             # Filtrar solo jugadores convocados según la disponibilidad guardada
             disp_s = sesion.get("disponibilidad", {})
@@ -1721,7 +1721,7 @@ with tab_ses:
                     })
             
             if not jugadores_convocados:
-                st.warning("⚠️ No hay jugadores convocados (Titulares o Suplentes) en el control de disponibilidad de este partido. Configura la disponibilidad primero.")
+                st.warning("⚠️ No hay jugadores convocados en el control de disponibilidad de este partido. Configura la disponibilidad primero.")
             else:
                 df_stats_base = pd.DataFrame(jugadores_convocados)
                 
