@@ -1508,68 +1508,72 @@ with tab_ses:
 
                             # 3. ACTUALIZAR SÓLO LOS MÓDULOS QUE SE HAYAN SUBIDO EN ESTA TANDA
                             
+                            # Recuperamos la configuración del mapeador dinámico
+                            cfg_w = st.session_state.get("config_mapeo", {}).get("wellness", {})
+                            cfg_r = st.session_state.get("config_mapeo", {}).get("rpe", {})
+                            cfg_g = st.session_state.get("config_mapeo", {}).get("gps", {})
+                            
                             # --- RPE ---
-                            if not df_r_up.empty:
+                            if not df_r_up.empty and cfg_r:
                                 match_r = df_r_up[df_r_up['JUGADOR_MATCH'] == nombre_final]
                                 if not match_r.empty: 
-                                    reg["RPE"] = safe_float(match_r.iloc[0].get('Índice de Esfuerzo Percibido', 0))
-                                    # Si sube RPE y el tiempo de sesión está vacío, asumimos 90 mins por defecto
+                                    reg["RPE"] = safe_float(match_r.iloc[0].get(cfg_r.get("rpe", "RPE"), 0))
                                     if reg["MIN"] == 0: reg["MIN"] = 90.0
 
                             # --- WELLNESS ---
-                            if not df_w_up.empty:
+                            if not df_w_up.empty and cfg_w:
                                 match_w = df_w_up[df_w_up['JUGADOR_MATCH'] == nombre_final]
                                 if not match_w.empty:
                                     r_w = match_w.iloc[0]
-                                    reg["TQR"] = safe_float(r_w.get('Índice de Calidad de Recuperación', 0))
-                                    reg["W_Fatiga"] = safe_float(r_w.get('Fatiga:', 0))
-                                    reg["W_Sueño"] = safe_float(r_w.get('Calidad del sueño:', 0))
-                                    reg["W_Dolor"] = safe_float(r_w.get('Dolor muscular:', 0))
-                                    reg["W_Estres"] = safe_float(r_w.get('Nivel de estrés:', 0))
-                                    reg["W_Humor"] = safe_float(r_w.get('Humor:', 0))
+                                    reg["TQR"] = safe_float(r_w.get(cfg_w.get("tqr", "TQR"), 0))
+                                    reg["W_Fatiga"] = safe_float(r_w.get(cfg_w.get("fatiga", "W_Fatiga"), 0))
+                                    reg["W_Sueño"] = safe_float(r_w.get(cfg_w.get("sueno", "W_Sueño"), 0))
+                                    reg["W_Dolor"] = safe_float(r_w.get(cfg_w.get("dolor", "W_Dolor"), 0))
+                                    reg["W_Estres"] = safe_float(r_w.get(cfg_w.get("estres", "W_Estres"), 0))
+                                    reg["W_Humor"] = safe_float(r_w.get(cfg_w.get("humor", "W_Humor"), 0))
                                     reg["WELLNESS"] = reg["W_Fatiga"] + reg["W_Sueño"] + reg["W_Dolor"] + reg["W_Estres"] + reg["W_Humor"]
 
                             # --- GPS ---
-                            if not df_g_up.empty:
+                            if not df_g_up.empty and cfg_g:
                                 match_g = df_g_up[df_g_up['JUGADOR_MATCH'] == nombre_final]
                                 if not match_g.empty:
                                     row_g = match_g.iloc[0]
-                                    dis = safe_float(row_g.get('Distance (km)', 0))
+                                    dis = safe_float(row_g.get(cfg_g.get("dis", "Distance (km)"), 0))
                                     if dis > 0:
-                                        min_gps_excel = extraer_minutos(str(row_g.get('Time Played', '0')))
+                                        min_gps_excel = extraer_minutos(str(row_g.get(cfg_g.get("min_gps", "Time Played"), '0')))
                                         reg["MIN_GPS"] = min_gps_excel if min_gps_excel > 0 else 90.0
-                                        reg["MIN"] = reg["MIN_GPS"] # El GPS manda sobre el tiempo global de sesión
+                                        reg["MIN"] = reg["MIN_GPS"]
                                         
                                         reg["DIS"] = dis
-                                        reg["HID >21"] = safe_float(row_g.get('HID distance (> 21.00 km/h)', 0))
+                                        reg["HID >21"] = safe_float(row_g.get(cfg_g.get("hid_21", ""), 0))
                                         reg["DIS AI"] = reg["HID >21"]
-                                        reg["HID >24"] = safe_float(row_g.get('HID distance (> 24.00 km/h)', 0))
+                                        reg["HID >24"] = safe_float(row_g.get(cfg_g.get("hid_24", ""), 0))
                                         
-                                        reg["SPR >24"] = safe_float(row_g.get('# of Sprints (> 24.00 km/h)', 0))
+                                        reg["SPR >24"] = safe_float(row_g.get(cfg_g.get("spr_24", ""), 0))
                                         reg["Nº SPR"] = reg["SPR >24"]
-                                        reg["SPR >27"] = safe_float(row_g.get('# of Sprints (> 30.00 km/h)', 0))
+                                        reg["SPR >27"] = safe_float(row_g.get(cfg_g.get("spr_27", ""), 0))
                                         
-                                        reg["V_Med"] = safe_float(row_g.get('Avg Speed (km/h)', 0))
-                                        reg["VMAX"] = safe_float(row_g.get('Max Speed (km/h)', 0))
+                                        reg["V_Med"] = safe_float(row_g.get(cfg_g.get("v_med", ""), 0))
+                                        reg["VMAX"] = safe_float(row_g.get(cfg_g.get("v_max", ""), 0))
                                         reg["V_Max"] = reg["VMAX"]
                                         
-                                        reg["ACC >2"] = safe_float(row_g.get('# of Accelerations (> 2.00 m/s²)', 0))
-                                        reg["ACC >3"] = safe_float(row_g.get('# of Accelerations (> 3.00 m/s²)', 0))
+                                        reg["ACC >2"] = safe_float(row_g.get(cfg_g.get("acc_2", ""), 0))
+                                        reg["ACC >3"] = safe_float(row_g.get(cfg_g.get("acc_3", ""), 0))
                                         reg["ACC"] = reg["ACC >3"]
-                                        reg["ACC >4"] = safe_float(row_g.get('# of Accelerations (> 4.00 m/s²)', 0))
+                                        reg["ACC >4"] = safe_float(row_g.get(cfg_g.get("acc_4", ""), 0))
                                         
-                                        reg["DCC >2"] = safe_float(row_g.get('# of Decelerations (> 2.00 m/s²)', 0))
-                                        reg["DCC >3"] = safe_float(row_g.get('# of Decelerations (> 3.00 m/s²)', 0))
+                                        reg["DCC >2"] = safe_float(row_g.get(cfg_g.get("dcc_2", ""), 0))
+                                        reg["DCC >3"] = safe_float(row_g.get(cfg_g.get("dcc_3", ""), 0))
                                         reg["DCC"] = reg["DCC >3"]
-                                        reg["DCC >4"] = safe_float(row_g.get('# of Decelerations (> 4.00 m/s²)', 0))
+                                        reg["DCC >4"] = safe_float(row_g.get(cfg_g.get("dcc_4", ""), 0))
                                         
-                                        reg["R_0_7"] = safe_float(row_g.get('Distance Speed Range (0 - 7 km)', 0))
-                                        reg["R_7_14"] = safe_float(row_g.get('Distance Speed Range (7 - 14 km)', 0))
-                                        reg["R_14_21"] = safe_float(row_g.get('Distance Speed Range (14 - 21 km)', 0))
-                                        reg["R_21_24"] = safe_float(row_g.get('Distance Speed Range (21 - 24 km)', 0))
-                                        reg["R_24_27"] = safe_float(row_g.get('Distance Speed Range (24 - 27 km)', 0))
-                                        reg["R_27_30"] = safe_float(row_g.get('Distance Speed Range (27 - 30 km)', 0))
-                                        reg["R_30_45"] = safe_float(row_g.get('# of Sprints (> 30.00 km/h)', 0)) 
+                                        reg["R_0_7"] = safe_float(row_g.get(cfg_g.get("r_0_7", ""), 0))
+                                        reg["R_7_14"] = safe_float(row_g.get(cfg_g.get("r_7_14", ""), 0))
+                                        reg["R_14_21"] = safe_float(row_g.get(cfg_g.get("r_14_21", ""), 0))
+                                        reg["R_21_24"] = safe_float(row_g.get(cfg_g.get("r_21_24", ""), 0))
+                                        reg["R_24_27"] = safe_float(row_g.get(cfg_g.get("r_24_27", ""), 0))
+                                        reg["R_27_30"] = safe_float(row_g.get(cfg_g.get("r_27_30", ""), 0))
+                                        reg["R_30_45"] = safe_float(row_g.get(cfg_g.get("r_30_45", ""), 0)) 
                                         
                                         reg["Z1"] = reg["R_0_7"] + reg["R_7_14"]
                                         reg["Z2"] = reg["R_14_21"]
