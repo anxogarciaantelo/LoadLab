@@ -125,21 +125,17 @@ with tab_equipo:
             
         with col_widget2:
             st.markdown("#### ⚽ Resultados y Próxima Jornada")
-            # Mostramos primero la jornada actual y debajo la próxima jornada en dos iframes en columna dentro de su espacio
             url_res_actual = f"https://www.lapreferente.com/widgetResultados.php?comp={comp_id}&colorFondo=FFFFFF&colorFondoCabecera=FFFFFF&colorTextoCabecera=000000&anchoEscudos=25&fontSize=12&favorito="
             url_res_prox = f"https://www.lapreferente.com/widgetResultados.php?comp={comp_id}&proximaJornada=1&colorFondo=FFFFFF&colorFondoCabecera=FFFFFF&colorTextoCabecera=000000&anchoEscudos=25&fontSize=12&favorito="
             
-            st.caption("Jornada Actual:")
             st.components.v1.html(
-                f'<iframe style="border:0px; width:100%;" height="260" src="{url_res_actual}"></iframe>', 
-                height=270,
+                f'<iframe style="border:0px; width:100%;" height="275" src="{url_res_actual}"></iframe>', 
+                height=280,
                 scrolling=True
             )
-            
-            st.caption("Próxima Jornada:")
             st.components.v1.html(
-                f'<iframe style="border:0px; width:100%;" height="260" src="{url_res_prox}"></iframe>', 
-                height=270,
+                f'<iframe style="border:0px; width:100%;" height="275" src="{url_res_prox}"></iframe>', 
+                height=280,
                 scrolling=True
             )
 
