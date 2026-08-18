@@ -146,7 +146,41 @@ def render_panel_principal():
                 guardar_datos()
                 st.success("✅ Configuración de importación actualizada con éxito.")
                 st.rerun()
-
+st.markdown("---")
+    st.markdown("### 🌦️ Mantenimiento del Clima")
+    st.caption("Si tienes sesiones antiguas sin datos del clima, pulsa este botón para descargar el histórico de Open-Meteo de forma automática.")
+    
+    if st.button("☁️ Sincronizar Clima en Sesiones Pasadas", use_container_width=True):
+        from utils.math_helpers import obtener_clima # Aseguramos la importación
+        
+        sesiones_actualizadas = 0
+        with st.spinner("Conectando con Open-Meteo y sincronizando histórico..."):
+            for s in st.session_state.sesiones:
+                if not s.get("clima"):
+                    # 1. Determinar ciudad de la sesión pasada
+                    ciudad = st.session_state.get("ubicacion_local", "")
+                    
+                    if s.get("condicion") == "Fuera":
+                        rival = s.get("rival", "")
+                        rival_info = st.session_state.get("rivales_guardados", {}).get(rival, {})
+                        
+                        if isinstance(rival_info, dict) and rival_info.get("ciudad"):
+                            ciudad = rival_info.get("ciudad")
+                        elif s.get("ciudad_manual"):
+                            ciudad = s.get("ciudad_manual")
+                    
+                    # 2. Consultar la API
+                    if ciudad:
+                        clima_data = obtener_clima(ciudad, s["fecha"])
+                        if clima_data:
+                            s["clima"] = clima_data
+                            sesiones_actualizadas += 1
+                            
+            if sesiones_actualizadas > 0:
+                guardar_datos()
+                st.success(f"✅ ¡Éxito! Se ha descargado el clima para {sesiones_actualizadas} sesiones antiguas.")
+            else:
+                st.info("Todas las sesiones ya tienen el clima actualizado o faltan ubicaciones.")
 
     
     if st.button("🔄 Borrar datos y empezar de cero", use_container_width=True):
