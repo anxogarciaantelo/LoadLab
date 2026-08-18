@@ -16,20 +16,7 @@ st.title("📈 Estadísticas de Rendimiento")
 partidos_totales = [s for s in st.session_state.sesiones if "Partido" in s.get("tipo", "")]
 
 # ==========================================
-# 0. CONFIGURACIÓN DINÁMICA DE WIDGETS (Requisito 4)
-# ==========================================
-with st.expander("⚙️ Configurar Enlaces de Widgets Externos (LaPreferente / Otros)"):
-    st.caption("Introduce el ID de competición de LaPreferente para que los widgets carguen automáticamente para tu equipo.")
-    comp_id_default = st.session_state.get("lapreferente_comp_id", "26710")
-    nuevo_comp_id = st.text_input("ID de Competición (LaPreferente):", value=comp_id_default)
-    if nuevo_comp_id != comp_id_default:
-        st.session_state["lapreferente_comp_id"] = nuevo_comp_id
-        st.success("✅ ID actualizado correctamente.")
-
-comp_id = st.session_state.get("lapreferente_comp_id", "26710")
-
-# ==========================================
-# 1. SELECTOR DE COMPETICIÓN (Requisito 1)
+# 1. SELECTOR DE COMPETICIÓN
 # ==========================================
 col_comp1, col_comp2 = st.columns([1, 3])
 filtro_competicion = col_comp1.selectbox(
@@ -37,7 +24,7 @@ filtro_competicion = col_comp1.selectbox(
     ["Liga", "Copa", "Amistosos", "Global (Todas)"]
 )
 
-# Filtrar partidos sin bloquear la pantalla si están a cero (Requisito 1)
+# Filtrar partidos sin bloquear la pantalla si están a cero
 if filtro_competicion == "Global (Todas)":
     partidos = partidos_totales
 elif filtro_competicion == "Amistosos":
@@ -118,11 +105,12 @@ with tab_equipo:
         mostrar_tabla_moderna(df_fuera.style.hide(axis="index").format({"GF/P": "{:.2f}", "GC/P": "{:.2f}"}))
 
     # ==========================================
-    # CLASIFICACIÓN Y RESULTADOS (Requisito 2 y 3)
+    # WIDGETS DE LIGA (Clasificación + Resultados actuales y próxima jornada)
     # ==========================================
     if filtro_competicion == "Liga":
+        comp_id = st.session_state.get("lapreferente_comp_id", "26710")
         st.markdown("---")
-        st.markdown("### 📊 Jornada y Clasificación en Vivo")
+        st.markdown("### 📊 Jornada y Clasificación en Vivo (Liga)")
         
         col_widget1, col_widget2 = st.columns(2)
         
@@ -137,13 +125,52 @@ with tab_equipo:
             
         with col_widget2:
             st.markdown("#### ⚽ Resultados y Próxima Jornada")
-            # Widget con resultados de la jornada actual y espacio para la próxima jornada
-            url_res = f"https://www.lapreferente.com/widgetResultados.php?comp={comp_id}&proximaJornada=1&colorFondo=FFFFFF&colorFondoCabecera=FFFFFF&colorTextoCabecera=000000&anchoEscudos=25&fontSize=12&favorito="
+            # Mostramos primero la jornada actual y debajo la próxima jornada en dos iframes en columna dentro de su espacio
+            url_res_actual = f"https://www.lapreferente.com/widgetResultados.php?comp={comp_id}&colorFondo=FFFFFF&colorFondoCabecera=FFFFFF&colorTextoCabecera=000000&anchoEscudos=25&fontSize=12&favorito="
+            url_res_prox = f"https://www.lapreferente.com/widgetResultados.php?comp={comp_id}&proximaJornada=1&colorFondo=FFFFFF&colorFondoCabecera=FFFFFF&colorTextoCabecera=000000&anchoEscudos=25&fontSize=12&favorito="
+            
+            st.caption("Jornada Actual:")
             st.components.v1.html(
-                f'<iframe style="border:0px; width:100%;" height="570" src="{url_res}"></iframe>', 
-                height=590,
+                f'<iframe style="border:0px; width:100%;" height="260" src="{url_res_actual}"></iframe>', 
+                height=270,
                 scrolling=True
             )
+            
+            st.caption("Próxima Jornada:")
+            st.components.v1.html(
+                f'<iframe style="border:0px; width:100%;" height="260" src="{url_res_prox}"></iframe>', 
+                height=270,
+                scrolling=True
+            )
+
+    # ==========================================
+    # WIDGETS DE COPA (Permite añadir otro ID diferente)
+    # ==========================================
+    if filtro_competicion == "Copa":
+        copa_comp_id = st.session_state.get("lapreferente_copa_id", "")
+        st.markdown("---")
+        st.markdown("### 🏆 Información de Copa en Vivo")
+        
+        if not copa_comp_id:
+            st.info("💡 No hay configurado ningún ID de competición para la Copa. Añádelo abajo en la sección de configuración.")
+        else:
+            col_copa1, col_copa2 = st.columns(2)
+            with col_copa1:
+                st.markdown("#### 📋 Cuadro / Clasificación de Copa")
+                url_copa_clasif = f"https://www.lapreferente.com/widgetClasificacion.php?comp={copa_comp_id}&colorFondo=FFFFFF&colorFondoCabecera=&colorTextoCabecera=FFFFFF&anchoEscudos=25&fontSize=12&favorito=&ocultaEvolucion=1&ocultaPosicionAnterior=0"
+                st.components.v1.html(
+                    f'<iframe style="border:0px; width:100%;" height="570" src="{url_copa_clasif}"></iframe>', 
+                    height=590,
+                    scrolling=True
+                )
+            with col_copa2:
+                st.markdown("#### ⚽ Resultados de Copa")
+                url_copa_res = f"https://www.lapreferente.com/widgetResultados.php?comp={copa_comp_id}&colorFondo=FFFFFF&colorFondoCabecera=FFFFFF&colorTextoCabecera=000000&anchoEscudos=25&fontSize=12&favorito="
+                st.components.v1.html(
+                    f'<iframe style="border:0px; width:100%;" height="570" src="{url_copa_res}"></iframe>', 
+                    height=590,
+                    scrolling=True
+                )
 
 # ==========================================
 # 👤 PESTAÑA 2: ESTADÍSTICAS DE JUGADORES
@@ -200,9 +227,7 @@ with tab_jugadores:
             datos_jugadores[n_inv]["Rojas"] += inv.get("Rojas", 0)
             if mins > 0: datos_jugadores[n_inv]["Partidos Jugados"] += 1
 
-    # ==========================================
-    # ALERTAS DE TARJETAS
-    # ==========================================
+    # Alertas de tarjetas
     if filtro_competicion in ["Liga", "Global (Todas)"]:
         apercibidos = []
         sancionados = []
@@ -229,7 +254,6 @@ with tab_jugadores:
                     st.info("✅ Ningún jugador apercibido.")
             st.markdown("---")
 
-    # Crear tabla de datos con Minutos por Gol / Asistencia
     lista_stats = []
     minutos_posibles = pj * 90 if pj > 0 else 0
     
@@ -238,10 +262,8 @@ with tab_jugadores:
         goles = d["Goles"]
         asistencias = d["Asistencias"]
         
-        # Minutos necesarios por gol o asistencia (Invertido)
         min_por_gol = (mins / goles) if goles > 0 else 0
         min_por_asist = (mins / asistencias) if asistencias > 0 else 0
-        
         porc_mins = (mins / minutos_posibles * 100) if minutos_posibles > 0 else 0
         
         lista_stats.append({
@@ -288,3 +310,22 @@ with tab_jugadores:
                            
         mostrar_tabla_moderna(estilo_jugadores)
         st.caption("Acrónimos: Conv. (Convocatorias) | PJ (Partidos Jugados) | MIN (Minutos) | G (Goles) | A (Asistencias) | Min/Gol (Minutos por gol) | GE (Goles Encajados porteros).")
+
+# ==========================================
+# ⚙️ CONFIGURACIÓN ABAJO DE TODO EN PANTALLA (Solo si estamos en Liga o Copa)
+# ==========================================
+if filtro_competicion in ["Liga", "Copa"]:
+    st.markdown("---")
+    with st.expander(f"⚙️ Configurar ID de Competición para: {filtro_competicion}"):
+        if filtro_competicion == "Liga":
+            comp_id_default = st.session_state.get("lapreferente_comp_id", "26710")
+            nuevo_comp_id = st.text_input("ID de Competición de Liga (LaPreferente):", value=comp_id_default)
+            if nuevo_comp_id != comp_id_default:
+                st.session_state["lapreferente_comp_id"] = nuevo_comp_id
+                st.success("✅ ID de Liga actualizado correctamente.")
+        elif filtro_competicion == "Copa":
+            copa_id_default = st.session_state.get("lapreferente_copa_id", "")
+            nuevo_copa_id = st.text_input("ID de Competición de Copa (LaPreferente):", value=copa_id_default)
+            if nuevo_copa_id != copa_id_default:
+                st.session_state["lapreferente_copa_id"] = nuevo_copa_id
+                st.success("✅ ID de Copa actualizado correctamente.")
