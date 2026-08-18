@@ -157,31 +157,30 @@ def render_panel_principal():
         sesiones_actualizadas = 0
         with st.spinner("Conectando con Open-Meteo y sincronizando histórico..."):
             for s in st.session_state.sesiones:
-                if not s.get("clima"):
-                    # 1. Determinar ciudad de la sesión pasada
-                    ciudad = st.session_state.get("ubicacion_local", "")
+                # Determinamos la ciudad correspondiente
+                ciudad = st.session_state.get("ubicacion_local", "")
+                
+                if s.get("tipo") != "Entrenamiento" and s.get("condicion") == "Fuera":
+                    rival = s.get("rival", "")
+                    rival_info = st.session_state.get("rivales_guardados", {}).get(rival, {})
                     
-                    if s.get("condicion") == "Fuera":
-                        rival = s.get("rival", "")
-                        rival_info = st.session_state.get("rivales_guardados", {}).get(rival, {})
-                        
-                        if isinstance(rival_info, dict) and rival_info.get("ciudad"):
-                            ciudad = rival_info.get("ciudad")
-                        elif s.get("ciudad_manual"):
-                            ciudad = s.get("ciudad_manual")
-                    
-                    # 2. Consultar la API
-                    if ciudad:
-                        clima_data = obtener_clima(ciudad, s["fecha"])
-                        if clima_data:
-                            s["clima"] = clima_data
-                            sesiones_actualizadas += 1
+                    if isinstance(rival_info, dict) and rival_info.get("ciudad"):
+                        ciudad = rival_info.get("ciudad")
+                    elif s.get("ciudad_manual"):
+                        ciudad = s.get("ciudad_manual")
+                
+                # Consultamos y forzamos la actualización
+                if ciudad:
+                    clima_data = obtener_clima(ciudad, s["fecha"])
+                    if clima_data:
+                        s["clima"] = clima_data
+                        sesiones_actualizadas += 1
                             
             if sesiones_actualizadas > 0:
                 guardar_datos()
-                st.success(f"✅ ¡Éxito! Se ha descargado el clima para {sesiones_actualizadas} sesiones antiguas.")
+                st.success(f"✅ ¡Éxito! Se ha actualizado el clima para {sesiones_actualizadas} sesiones.")
             else:
-                st.info("Todas las sesiones ya tienen el clima actualizado o faltan ubicaciones.")
+                st.info("No se han podido actualizar las sesiones. Revisa que la ciudad local esté bien escrita.")
 
     if st.button("🔄 Borrar datos y empezar de cero", use_container_width=True):
         st.session_state.plantilla = []
