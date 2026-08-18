@@ -1692,7 +1692,7 @@ with tab_ses:
             st.markdown("---")
             st.markdown(f"#### ⚡ ESTADÍSTICAS DE PARTIDO | vs {sesion.get('rival', 'Rival')} ({sesion['fecha']})")
             
-            # 1. Datos globales del partido (Condición y Goles a Favor globales)
+            # 1. Datos globales del partido
             col_g1, col_g2 = st.columns(2)
             condicion_actual = sesion.get("condicion", "Casa")
             nueva_condicion = col_g1.selectbox("Condición:", ["Casa", "Fuera"], index=["Casa", "Fuera"].index(condicion_actual), key=f"cond_{idx_real}")
@@ -1704,9 +1704,9 @@ with tab_ses:
             sesion["goles_favor"] = nuevo_gf
 
             st.markdown("##### 📋 Rendimiento de Jugadores Convocados")
-            st.caption("Anota los minutos, goles, asistencias y los **goles encajados** (específico para los porteros). Los goles en contra totales del equipo se calcularán solos.")
+            st.caption("Anota los minutos, goles, asistencias y goles encajados. Si ha jugado alguien del filial o juvenil que no está en la plantilla, puedes añadirlo abajo.")
             
-            # Filtrar solo jugadores convocados según la disponibilidad guardada
+            # Filtrar solo jugadores convocados de la plantilla oficial según disponibilidad
             disp_s = sesion.get("disponibilidad", {})
             disp_clean = {limpiar_nombre(k): v for k, v in disp_s.items()}
             
@@ -1728,12 +1728,51 @@ with tab_ses:
                         })
                     })
             
+            # Recuperar también los jugadores invitados que se hubieran guardado previamente en este partido
+            invitados_guardados = sesion.get("estadisticas_invitados", [])
+            for inv in invitados_guardados:
+                jugadores_convocados.append({
+                    "JUGADOR": inv["JUGADOR"],
+                    "POS": inv["POS"],
+                    "Rol": inv["Rol"],
+                    "Minutos": inv["Minutos"],
+                    "Goles": inv["Goles"],
+                    "Goles Encajados": inv["Goles Encajados"],
+                    "Asistencias": inv["Asistencias"],
+                    "Amarillas": inv["Amarillas"],
+                    "Rojas": inv["Rojas"]
+                })
+
+            # Formulario rápido para añadir un jugador invitado/filial sobre la marcha
+            with st.expander("➕ Añadir jugador del filial / juvenil / invitado"):
+                c_inv1, c_inv2, c_inv3, c_inv4 = st.columns([2, 1, 1, 1])
+                nombre_invitado = c_inv1.text_input("Nombre del Jugador Invitado:", key=f"nombre_inv_{idx_real}")
+                pos_invitado = c_inv2.selectbox("Posición:", ["POR", "DEF", "MED", "ATA"], key=f"pos_inv_{idx_real}")
+                rol_invitado = c_inv3.selectbox("Rol:", ["Suplente", "Titular"], key=f"rol_inv_{idx_real}")
+                min_invitado = c_inv4.number_input("Minutos:", min_value=0, max_value=120, value=45, key=f"min_inv_{idx_real}")
+                
+                if st.button("➕ Incluir en la tabla del partido", key=f"btn_add_inv_{idx_real}"):
+                    if nombre_invitado.strip():
+                        if "estadisticas_invitados" not in sesion:
+                            sesion["estadisticas_invitados"] = []
+                        sesion["estadisticas_invitados"].append({
+                            "JUGADOR": nombre_invitado.strip() + " (Cantera)",
+                            "POS": pos_invitado,
+                            "Rol": rol_invitado,
+                            "Minutos": min_invitado,
+                            "Goles": 0, "Goles Encajados": 0, "Asistencias": 0, "Amarillas": 0, "Rojas": 0
+                        })
+                        guardar_datos()
+                        st.success(f"✅ {nombre_invitado} añadido al partido.")
+                        st.rerun()
+                    else:
+                        st.warning("Escribe un nombre válido para el jugador.")
+
             if not jugadores_convocados:
-                st.warning("⚠️ No hay jugadores convocados en el control de disponibilidad de este partido. Configura la disponibilidad primero.")
+                st.warning("⚠️ No hay jugadores convocados ni invitados en este partido. Configura la disponibilidad o añade un jugador invitado arriba.")
             else:
                 df_stats_base = pd.DataFrame(jugadores_convocados)
                 
-                # Asegurar orden limpio de columnas
                 cols_orden_stats = ["JUGADOR", "POS", "Rol", "Minutos", "Goles", "Goles Encajados", "Asistencias", "Amarillas", "Rojas"]
                 for c in cols_orden_stats:
                     if c not in df_stats_base.columns: df_stats_base[c] = 0
@@ -1748,13 +1787,17 @@ with tab_ses:
                 
                 if st.button("💾 Guardar Estadísticas de Partido", key=f"btn_save_stats_{idx_real}"):
                     stats_dict = {}
+                    invitados_actualizados = []
                     goles_contra_totales = 0
                     
+                    nombres_plantilla_oficial = [p["JUGADOR"] for p in st.session_state.plantilla]
+                    
                     for _, row in edited_stats.iterrows():
+                        jug_nombre = row["JUGADOR"]
                         g_enc = int(safe_float(row["Goles Encajados"]))
-                        goles_contra_totales += g_enc # Sumamos los goles encajados individuales para el global
+                        goles_contra_totales += g_enc
                         
-                        stats_dict[row["JUGADOR"]] = {
+                        datos_jugador = {
                             "Minutos": safe_float(row["Minutos"]),
                             "Goles": int(safe_float(row["Goles"])),
                             "Goles Encajados": g_enc,
@@ -1763,10 +1806,22 @@ with tab_ses:
                             "Rojas": int(safe_float(row["Rojas"]))
                         }
                         
+                        # Separamos si es de la plantilla oficial o un invitado de cantera
+                        if jug_nombre in nombres_plantilla_oficial:
+                            stats_dict[jug_nombre] = datos_jugador
+                        else:
+                            invitados_actualizados.append({
+                                "JUGADOR": jug_nombre,
+                                "POS": row["POS"],
+                                "Rol": row["Rol"],
+                                **datos_jugador
+                            })
+                        
                     sesion["estadisticas_partido"] = stats_dict
-                    sesion["goles_contra"] = goles_contra_totales # Guardamos el total en contra automáticamente
+                    sesion["estadisticas_invitados"] = invitados_actualizados
+                    sesion["goles_contra"] = goles_contra_totales
                     
                     guardar_datos()
-                    st.success(f"✅ ¡Estadísticas guardadas! (Goles en contra totales calculados: {goles_contra_totales})")
+                    st.success(f"✅ ¡Estadísticas guardadas con éxito! (Goles en contra totales: {goles_contra_totales})")
                     st.rerun()
             st.markdown("---")
