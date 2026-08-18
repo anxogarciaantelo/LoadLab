@@ -16,16 +16,16 @@ st.title("📈 Estadísticas de Rendimiento")
 partidos_totales = [s for s in st.session_state.sesiones if "Partido" in s.get("tipo", "")]
 
 # ==========================================
-# 1. SELECTOR DE COMPETICIÓN
+# 1. SELECTOR DE COMPETICIÓN (Modificado a Global)
 # ==========================================
 col_comp1, col_comp2 = st.columns([1, 3])
 filtro_competicion = col_comp1.selectbox(
     "🏆 Competición:", 
-    ["Liga", "Copa", "Amistosos", "Global (Todas)"]
+    ["Liga", "Copa", "Amistosos", "Global"]
 )
 
 # Filtrar partidos sin bloquear la pantalla si están a cero
-if filtro_competicion == "Global (Todas)":
+if filtro_competicion == "Global":
     partidos = partidos_totales
 elif filtro_competicion == "Amistosos":
     partidos = [p for p in partidos_totales if p.get("tipo") == "Partido Amistoso"]
@@ -224,7 +224,7 @@ with tab_jugadores:
             if mins > 0: datos_jugadores[n_inv]["Partidos Jugados"] += 1
 
     # Alertas de tarjetas
-    if filtro_competicion in ["Liga", "Global (Todas)"]:
+    if filtro_competicion in ["Liga", "Global"]:
         apercibidos = []
         sancionados = []
         for jug, d in datos_jugadores.items():
@@ -284,75 +284,92 @@ with tab_jugadores:
         df_jugadores = df_jugadores.sort_values(by="MIN", ascending=False)
         
         # ==========================================
-        # 👑 RANKING TOP 3 MVP & ESTADÍSTICAS DESTACADAS
+        # 👑 DESTACADOS (Tarjetas Top 3 por categoría)
         # ==========================================
-        st.markdown("#### 👑 Top 3 Destacados (MVP)")
-        c_mvp1, c_mvp2, c_mvp3 = st.columns(3)
+        st.markdown("#### 👑 Destacados")
         
-        # Top 3 Goleadores
-        df_goles = df_jugadores[df_jugadores["G"] > 0].sort_values(by="G", ascending=False).head(3)
-        with c_mvp1:
-            st.markdown("##### ⚽ Máximos Goleadores")
-            if not df_goles.empty:
-                for idx, row in df_goles.reset_index(drop=True).iterrows():
-                    min_gol_str = f"({row['Min/Gol']:.1f}'/gol)" if row['Min/Gol'] > 0 else "(Sin goles)"
-                    st.markdown(f"**{idx+1}. {row['JUGADOR']}** — {row['G']} goles {min_gol_str}")
+        # Función auxiliar para renderizar tarjetas en un contenedor estilizado
+        def render_tarjeta_top3(titulo_categoria, df_sub, columna_valor, sufijo=""):
+            st.markdown(f"**{titulo_categoria}**")
+            if not df_sub.empty:
+                for idx, row in df_sub.reset_index(drop=True).iterrows():
+                    val = row[columna_valor]
+                    val_str = f"{val:.1f}{sufijo}" if isinstance(val, float) else f"{val}{sufijo}"
+                    st.markdown(
+                        f"""
+                        <div style="background-color: #f0f2f6; padding: 8px 12px; border-radius: 6px; margin-bottom: 6px; border-left: 4px solid #ff4b4b;">
+                            <span style="font-size: 0.85em; color: #555;">#{idx+1}</span><br>
+                            <strong style="font-size: 0.95em;">{row['JUGADOR']}</strong><br>
+                            <span style="color: #000000; font-weight: bold; font-size: 1.1em;">{val_str}</span>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
             else:
-                st.caption("Sin datos de goles.")
+                st.caption("Sin datos.")
 
-        # Top 3 Asistentes
-        df_asist = df_jugadores[df_jugadores["A"] > 0].sort_values(by="A", ascending=False).head(3)
-        with c_mvp2:
-            st.markdown("##### 🎯 Máximos Asistentes")
-            if not df_asist.empty:
-                for idx, row in df_asist.reset_index(drop=True).iterrows():
-                    min_asist_str = f"({row['Min/Asist']:.1f}'/asist)" if row['Min/Asist'] > 0 else "(Sin asistencias)"
-                    st.markdown(f"**{idx+1}. {row['JUGADOR']}** — {row['A']} asist. {min_asist_str}")
-            else:
-                st.caption("Sin datos de asistencias.")
-
-        # Top 3 Minutos Jugados
-        df_mins = df_jugadores.sort_values(by="MIN", ascending=False).head(3)
-        with c_mvp3:
-            st.markdown("##### ⏱️ Más Minutos (Fetiches)")
-            for idx, row in df_mins.reset_index(drop=True).iterrows():
-                st.markdown(f"**{idx+1}. {row['JUGADOR']}** — {int(row['MIN'])} mins ({row['% MIN']:.1f}%)")
+        col_d1, col_d2, col_d3, col_d4, col_d5 = st.columns(5)
+        
+        with col_d1:
+            df_g = df_jugadores[df_jugadores["G"] > 0].sort_values(by="G", ascending=False).head(3)
+            render_tarjeta_top3("⚽ Goles", df_g, "G")
+            
+        with col_d2:
+            df_a = df_jugadores[df_jugadores["A"] > 0].sort_values(by="A", ascending=False).head(3)
+            render_tarjeta_top3("🎯 Asistencias", df_a, "A")
+            
+        with col_d3:
+            df_m = df_jugadores.sort_values(by="MIN", ascending=False).head(3)
+            render_tarjeta_top3("⏱️ Minutos", df_m, "MIN", " min")
+            
+        with col_d4:
+            df_mg = df_jugadores[df_jugadores["Min/Gol"] > 0].sort_values(by="Min/Gol", ascending=True).head(3)
+            render_tarjeta_top3("⚡ Min / Gol", df_mg, "Min/Gol", "'")
+            
+        with col_d5:
+            df_ma = df_jugadores[df_jugadores["Min/Asist"] > 0].sort_values(by="Min/Asist", ascending=True).head(3)
+            render_tarjeta_top3("🎯 Min / Asist", df_ma, "Min/Asist", "'")
 
         st.markdown("---")
 
         # ==========================================
-        # 📊 GRÁFICO: MINUTOS ACUMULADOS DE LA PLANTILLA
+        # 📊 GRÁFICO: MINUTOS ACUMULADOS (Vertical)
         # ==========================================
         st.markdown("#### 📊 Gráfico de Minutos Acumulados por Jugador")
         fig_mins = px.bar(
-            df_jugadores.sort_values(by="MIN", ascending=True),
-            x="MIN",
-            y="JUGADOR",
+            df_jugadores.sort_values(by="MIN", ascending=False),
+            x="JUGADOR",
+            y="MIN",
             color="POS",
-            orientation="h",
+            orientation="v",
             labels={"MIN": "Minutos Jugados", "JUGADOR": "Jugador", "POS": "Posición"},
             title="Participación de la Plantilla (Minutos totales)"
         )
-        fig_mins.update_layout(height=400, margin=dict(l=20, r=20, t=40, b=20))
+        fig_mins.update_layout(height=450, xaxis={'tickangle': -45}, margin=dict(l=20, r=20, t=40, b=80))
         st.plotly_chart(fig_mins, use_container_width=True)
 
         # ==========================================
-        # 🗺️ MAPA DE DISTRIBUCIÓN DE MINUTOS POR LÍNEA
+        # 🗺️ MAPA DE DISTRIBUCIÓN DE MINUTOS POR LÍNEA (Desglosado en gráficos circulares individuales)
         # ==========================================
         st.markdown("#### 🗺️ Distribución de Minutos por Demarcación")
-        df_pos = df_jugadores.groupby("POS")["MIN"].sum().reset_index()
-        if not df_pos.empty and df_pos["MIN"].sum() > 0:
-            fig_pie = px.pie(
-                df_pos,
-                names="POS",
-                values="MIN",
-                title="Porcentaje de Minutos Jugados por Línea del Campo",
-                hole=0.4
-            )
-            fig_pie.update_layout(height=350, margin=dict(l=20, r=20, t=40, b=20))
-            st.plotly_chart(fig_pie, use_container_width=True)
+        posiciones_unicas = df_jugadores["POS"].unique()
+        
+        if len(posiciones_unicas) > 0:
+            cols_pos = st.columns(min(len(posiciones_unicas), 5))
+            for i, pos_val in enumerate(sorted(posiciones_unicas)):
+                df_subset = df_jugadores[df_jugadores["POS"] == pos_val]
+                with cols_pos[i % len(cols_pos)]:
+                    fig_circle = px.pie(
+                        df_subset,
+                        names="JUGADOR",
+                        values="MIN",
+                        title=f"Línea: {pos_val}",
+                        hole=0.4
+                    )
+                    fig_circle.update_layout(height=280, margin=dict(l=10, r=10, t=30, b=10), showlegend=False)
+                    st.plotly_chart(fig_circle, use_container_width=True)
         else:
-            st.info("Registra minutos en los partidos para ver la distribución por demarcación.")
+            st.info("Registra minutos en los partidos para ver la distribución.")
 
         st.markdown("---")
         c_f1, c_f2 = st.columns(2)
