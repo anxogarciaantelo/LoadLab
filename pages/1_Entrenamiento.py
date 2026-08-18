@@ -71,22 +71,41 @@ with tab_cal:
                 desc_nuevo = ""
                 comp_nuevo = ""
                 rival_nuevo = ""
-                
+                condicion_nuevo = "Casa" # Por defecto
+                                
                 if tipo_nuevo == "Entrenamiento":
                     desc_nuevo = st.selectbox("Match Day:", ["MD-6", "MD-5", "MD-4", "MD-3", "MD-2", "MD-1", "MD+1", "MD+2", "TD"])
-                elif tipo_nuevo == "Partido Oficial":
-                    comp_nuevo = st.selectbox("Competición:", ["Liga", "Copa"])
-                    rival_nuevo = st.text_input("Rival:")
-                elif tipo_nuevo == "Partido Amistoso":
-                    rival_nuevo = st.text_input("Rival:")
+                else:
+                    if tipo_nuevo == "Partido Oficial":
+                        comp_nuevo = st.selectbox("Competición:", ["Liga", "Copa"])
+                    
+                    col_r1, col_r2 = st.columns(2)
+                    rival_nuevo = col_r1.text_input("Rival:")
+                    condicion_nuevo = col_r2.radio("Condición:", ["Casa", "Fuera"], horizontal=True)
                     
                 if st.button("Guardar Sesión"):
+                    # 1. Determinar la ciudad objetivo
+                    ciudad_objetivo = st.session_state.get("ubicacion_local", "Santiago de Compostela")
+                    
+                    if tipo_nuevo != "Entrenamiento" and condicion_nuevo == "Fuera":
+                        rival_info = st.session_state.get("rivales_guardados", {}).get(rival_nuevo, {})
+                        # Compatibilidad por si el rival antiguo era solo un string
+                        if isinstance(rival_info, dict) and rival_info.get("ciudad"):
+                            ciudad_objetivo = rival_info.get("ciudad")
+                    
+                    # 2. Llamada a la API
+                    with st.spinner(f"Sincronizando clima para {ciudad_objetivo}..."):
+                        clima_data = obtener_clima(ciudad_objetivo, str(dia_clicado))
+                
+                    # 3. Guardar todo
                     st.session_state.sesiones.append({
                         "fecha": str(dia_clicado), 
                         "tipo": tipo_nuevo, 
                         "descripcion": desc_nuevo,
                         "competicion": comp_nuevo,
                         "rival": rival_nuevo,
+                        "condicion": condicion_nuevo,
+                        "clima": clima_data, # <--- DATO CLIMÁTICO AÑADIDO
                         "disponibilidad": {},
                         "informe_generado": False, 
                         "datos_informe": []
@@ -768,7 +787,9 @@ with tab_ses:
         es_partido = "Partido" in sesion['tipo']
         nombre_ev = sesion.get("nombre_dinamico", sesion["tipo"])
         detalle_ev = sesion.get("subtitulo_dinamico", sesion.get("descripcion", ""))
-        
+        clima = sesion.get("clima")
+        if clima:
+            detalle_ev += f" | 🌡️ {clima['temp']}°C | {clima['estado']}"
         with st.container():
             col_s1, col_s2, col_s3, col_s4, col_s5, col_s6, col_s7 = st.columns([1.5, 2.2, 1.2, 1.2, 1.2, 1.2, 1.2])
             fecha_formateada = datetime.strptime(sesion['fecha'], "%Y-%m-%d").strftime("%d-%m-%Y")
