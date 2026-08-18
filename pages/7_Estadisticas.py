@@ -15,29 +15,35 @@ st.title("📈 Estadísticas de Rendimiento")
 
 partidos_totales = [s for s in st.session_state.sesiones if "Partido" in s.get("tipo", "")]
 
-if not partidos_totales:
-    st.info("No hay partidos registrados todavía. Ve a la sección de Entrenamiento y genera un Partido Oficial o Amistoso para empezar a acumular estadísticas.")
-    st.stop()
+# ==========================================
+# 0. CONFIGURACIÓN DINÁMICA DE WIDGETS (Requisito 4)
+# ==========================================
+with st.expander("⚙️ Configurar Enlaces de Widgets Externos (LaPreferente / Otros)"):
+    st.caption("Introduce el ID de competición de LaPreferente para que los widgets carguen automáticamente para tu equipo.")
+    comp_id_default = st.session_state.get("lapreferente_comp_id", "26710")
+    nuevo_comp_id = st.text_input("ID de Competición (LaPreferente):", value=comp_id_default)
+    if nuevo_comp_id != comp_id_default:
+        st.session_state["lapreferente_comp_id"] = nuevo_comp_id
+        st.success("✅ ID actualizado correctamente.")
+
+comp_id = st.session_state.get("lapreferente_comp_id", "26710")
 
 # ==========================================
-# 0. SELECTOR DE COMPETICIÓN
+# 1. SELECTOR DE COMPETICIÓN (Requisito 1)
 # ==========================================
 col_comp1, col_comp2 = st.columns([1, 3])
 filtro_competicion = col_comp1.selectbox(
     "🏆 Competición:", 
-    ["Global (Todas)", "Liga", "Copa", "Amistosos"]
+    ["Liga", "Copa", "Amistosos", "Global (Todas)"]
 )
 
+# Filtrar partidos sin bloquear la pantalla si están a cero (Requisito 1)
 if filtro_competicion == "Global (Todas)":
     partidos = partidos_totales
 elif filtro_competicion == "Amistosos":
     partidos = [p for p in partidos_totales if p.get("tipo") == "Partido Amistoso"]
 else:
     partidos = [p for p in partidos_totales if p.get("tipo") == "Partido Oficial" and p.get("competicion") == filtro_competicion]
-
-if not partidos:
-    st.warning(f"No hay registros para la competición: {filtro_competicion}.")
-    st.stop()
 
 tab_equipo, tab_jugadores = st.tabs(["🛡️ Estadísticas de Equipo", "👤 Estadísticas de Jugadores"])
 
@@ -112,17 +118,31 @@ with tab_equipo:
         mostrar_tabla_moderna(df_fuera.style.hide(axis="index").format({"GF/P": "{:.2f}", "GC/P": "{:.2f}"}))
 
     # ==========================================
-    # CLASIFICACIÓN EN VIVO (Widget de LaPreferente)
+    # CLASIFICACIÓN Y RESULTADOS (Requisito 2 y 3)
     # ==========================================
-    if filtro_competicion in ["Global (Todas)", "Liga"]:
+    if filtro_competicion == "Liga":
         st.markdown("---")
-        st.markdown("### 📊 Clasificación de Liga (En Vivo)")
+        st.markdown("### 📊 Jornada y Clasificación en Vivo")
         
-        st.components.v1.html(
-            '<iframe style="border:0px; width:100%; max-width:600px;" height="400" src="https://www.lapreferente.com/widgetClasificacion.php?comp=26710&colorFondo=FFFFFF&colorFondoCabecera=&colorTextoCabecera=FFFFFF&anchoEscudos=25&fontSize=12&favorito=&ocultaEvolucion=1&ocultaPosicionAnterior=0"></iframe>', 
-            height=420,
-            scrolling=True
-        )
+        col_widget1, col_widget2 = st.columns(2)
+        
+        with col_widget1:
+            st.markdown("#### 📋 Clasificación")
+            url_clasif = f"https://www.lapreferente.com/widgetClasificacion.php?comp={comp_id}&colorFondo=FFFFFF&colorFondoCabecera=&colorTextoCabecera=FFFFFF&anchoEscudos=25&fontSize=12&favorito=&ocultaEvolucion=1&ocultaPosicionAnterior=0"
+            st.components.v1.html(
+                f'<iframe style="border:0px; width:100%;" height="550" src="{url_clasif}"></iframe>', 
+                height=570,
+                scrolling=True
+            )
+            
+        with col_widget2:
+            st.markdown("#### ⚽ Resultados de la Jornada")
+            url_res = f"https://www.lapreferente.com/widgetResultados.php?comp={comp_id}&colorFondo=FFFFFF&colorFondoCabecera=FFFFFF&colorTextoCabecera=000000&anchoEscudos=25&fontSize=12&favorito="
+            st.components.v1.html(
+                f'<iframe style="border:0px; width:100%;" height="550" src="{url_res}"></iframe>', 
+                height=570,
+                scrolling=True
+            )
 
 # ==========================================
 # 👤 PESTAÑA 2: ESTADÍSTICAS DE JUGADORES
