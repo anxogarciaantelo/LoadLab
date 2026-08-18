@@ -249,6 +249,10 @@ else:
             # --- BLOQUE NUEVO DEL GRÁFICO DE RADAR ---
             if f_nivel == "Jugador" and f_jug != "TODOS":
                 pos_actual_jug = next((p['POS'] for p in st.session_state.plantilla if p['JUGADOR'] == f_jug), "DEF")
+                # --- CHIVATO DE DEPURACIÓN ---
+                st.write(f"DEBUG: Analizando a {f_jug} con posición {pos_actual_jug}")
+                st.write(f"DEBUG: Registros GPS encontrados en este filtro: {len(df_perfil)}")
+                # -----------------------------
                 
                 st.markdown("---")
                 st.markdown(f"#### 🕸️ Perfil Radar de Rendimiento: {f_jug}")
