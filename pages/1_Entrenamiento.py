@@ -1692,21 +1692,19 @@ with tab_ses:
             st.markdown("---")
             st.markdown(f"#### ⚡ ESTADÍSTICAS DE PARTIDO | vs {sesion.get('rival', 'Rival')} ({sesion['fecha']})")
             
-            # 1. Datos globales del partido
-            col_g1, col_g2, col_g3 = st.columns(3)
+            # 1. Datos globales del partido (Condición y Goles a Favor globales)
+            col_g1, col_g2 = st.columns(2)
             condicion_actual = sesion.get("condicion", "Casa")
             nueva_condicion = col_g1.selectbox("Condición:", ["Casa", "Fuera"], index=["Casa", "Fuera"].index(condicion_actual), key=f"cond_{idx_real}")
             
             goles_f_actual = sesion.get("goles_favor", 0)
-            goles_c_actual = sesion.get("goles_contra", 0)
-            nuevo_gf = col_g2.number_input("Goles Anotados (Favor):", min_value=0, value=int(goles_f_actual), key=f"gf_{idx_real}")
-            nuevo_gc = col_g3.number_input("Goles Encajados (En contra):", min_value=0, value=int(goles_c_actual), key=f"gc_{idx_real}")
+            nuevo_gf = col_g2.number_input("Goles Anotados (Favor del Equipo):", min_value=0, value=int(goles_f_actual), key=f"gf_{idx_real}")
             
             sesion["condicion"] = nueva_condicion
             sesion["goles_favor"] = nuevo_gf
-            sesion["goles_contra"] = nuevo_gc
 
             st.markdown("##### 📋 Rendimiento de Jugadores Convocados")
+            st.caption("Anota los minutos, goles, asistencias y los **goles encajados** (específico para los porteros). Los goles en contra totales del equipo se calcularán solos.")
             
             # Filtrar solo jugadores convocados según la disponibilidad guardada
             disp_s = sesion.get("disponibilidad", {})
@@ -1723,6 +1721,7 @@ with tab_ses:
                         **sesion.get("estadisticas_partido", {}).get(p["JUGADOR"], {
                             "Minutos": 90 if rol == "Titular" else 0,
                             "Goles": 0,
+                            "Goles Encajados": 0,
                             "Asistencias": 0,
                             "Amarillas": 0,
                             "Rojas": 0
@@ -1734,8 +1733,13 @@ with tab_ses:
             else:
                 df_stats_base = pd.DataFrame(jugadores_convocados)
                 
+                # Asegurar orden limpio de columnas
+                cols_orden_stats = ["JUGADOR", "POS", "Rol", "Minutos", "Goles", "Goles Encajados", "Asistencias", "Amarillas", "Rojas"]
+                for c in cols_orden_stats:
+                    if c not in df_stats_base.columns: df_stats_base[c] = 0
+                
                 edited_stats = st.data_editor(
-                    df_stats_base,
+                    df_stats_base[cols_orden_stats],
                     key=f"editor_stats_partido_{idx_real}",
                     use_container_width=True,
                     hide_index=True,
@@ -1744,16 +1748,25 @@ with tab_ses:
                 
                 if st.button("💾 Guardar Estadísticas de Partido", key=f"btn_save_stats_{idx_real}"):
                     stats_dict = {}
+                    goles_contra_totales = 0
+                    
                     for _, row in edited_stats.iterrows():
+                        g_enc = int(safe_float(row["Goles Encajados"]))
+                        goles_contra_totales += g_enc # Sumamos los goles encajados individuales para el global
+                        
                         stats_dict[row["JUGADOR"]] = {
                             "Minutos": safe_float(row["Minutos"]),
                             "Goles": int(safe_float(row["Goles"])),
+                            "Goles Encajados": g_enc,
                             "Asistencias": int(safe_float(row["Asistencias"])),
                             "Amarillas": int(safe_float(row["Amarillas"])),
                             "Rojas": int(safe_float(row["Rojas"]))
                         }
+                        
                     sesion["estadisticas_partido"] = stats_dict
+                    sesion["goles_contra"] = goles_contra_totales # Guardamos el total en contra automáticamente
+                    
                     guardar_datos()
-                    st.success("✅ ¡Estadísticas del partido guardadas correctamente!")
+                    st.success(f"✅ ¡Estadísticas guardadas! (Goles en contra totales calculados: {goles_contra_totales})")
                     st.rerun()
             st.markdown("---")
