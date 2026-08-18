@@ -130,12 +130,12 @@ with tab_equipo:
             
             st.components.v1.html(
                 f'<iframe style="border:0px; width:100%;" height="275" src="{url_res_actual}"></iframe>', 
-                height=280,
+                height=300,
                 scrolling=True
             )
             st.components.v1.html(
                 f'<iframe style="border:0px; width:100%;" height="275" src="{url_res_prox}"></iframe>', 
-                height=280,
+                height=300,
                 scrolling=True
             )
 
