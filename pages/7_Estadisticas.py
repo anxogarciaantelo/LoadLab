@@ -129,14 +129,14 @@ with tab_equipo:
             url_res_prox = f"https://www.lapreferente.com/widgetResultados.php?comp={comp_id}&proximaJornada=1&colorFondo=FFFFFF&colorFondoCabecera=FFFFFF&colorTextoCabecera=000000&anchoEscudos=25&fontSize=12&favorito="
             
             st.components.v1.html(
-                f'<iframe style="border:0px; width:100%;" height="275" src="{url_res_actual}"></iframe>', 
-                height=350,
-                scrolling=True
+                f'<iframe style="border:0px; width:100%; margin-bottom: -15px;" height="340" src="{url_res_actual}" scrolling="no"></iframe>', 
+                height=345,
+                scrolling=False
             )
             st.components.v1.html(
-                f'<iframe style="border:0px; width:100%;" height="275" src="{url_res_prox}"></iframe>', 
-                height=350,
-                scrolling=True
+                f'<iframe style="border:0px; width:100%;" height="340" src="{url_res_prox}" scrolling="no"></iframe>', 
+                height=345,
+                scrolling=False
             )
 
     # ==========================================
