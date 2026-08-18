@@ -40,6 +40,7 @@ def cargar_datos_equipo(equipo_id):
             st.session_state.sesiones = dat.get("sesiones", [])
             st.session_state.lesiones = dat.get("lesiones", [])
             st.session_state.antropometria = dat.get("antropometria", [])
+            st.session_state.config_mapeo = dat.get("config_mapeo", {})
             
             vals = dat.get("valoraciones", {})
             st.session_state.val_inicial = vals.get("val_inicial", [])
@@ -75,6 +76,7 @@ def guardar_datos():
             "sesiones": st.session_state.sesiones,
             "lesiones": st.session_state.get("lesiones", []),
             "antropometria": st.session_state.get("antropometria", []),
+            "config_mapeo": st.session_state.get("config_mapeo", {}),
             "valoraciones": {
                 "val_inicial": st.session_state.get("val_inicial", []),
                 "val_rom": st.session_state.get("val_rom", []),
