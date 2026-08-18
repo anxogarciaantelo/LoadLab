@@ -301,12 +301,12 @@ with tab_jugadores:
                     val_str = f"{val:.1f}{sufijo}" if isinstance(val, float) else f"{val}{sufijo}"
                     nombre_jugador = row['JUGADOR']
                     
-                    # Buscar foto del jugador si existe
+                    # Comprobar si hay foto real para mostrarla, si no, omitir la etiqueta img para evitar el icono roto
                     foto_url = fotos_plantilla.get(nombre_jugador.strip().lower(), "")
                     if foto_url:
                         avatar_html = f'<img src="{foto_url}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; margin-right: 8px; vertical-align: middle;">'
                     else:
-                        avatar_html = '<span style="font-size: 20px; margin-right: 8px; vertical-align: middle;">👤</span>'
+                        avatar_html = ''  # No muestra nada si no hay foto, evitando el error visual
 
                     st.markdown(
                         f"""
