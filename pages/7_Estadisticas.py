@@ -440,18 +440,24 @@ with tab_rivales:
     # ==========================================
     with st.expander("➕ Añadir o Registrar un Nuevo Equipo Rival"):
         with st.form("form_nuevo_rival"):
-            col_fn1, col_fn2, col_fn3 = st.columns([2, 2, 1])
+            col_fn1, col_fn2, col_fn3, col_fn4 = st.columns([2, 1.5, 1.5, 1])
             with col_fn1:
                 nombre_nuevo_rival = st.text_input("Nombre del Equipo Rival:")
             with col_fn2:
-                id_nuevo_rival = st.text_input("ID de LaPreferente (ej: 6938):")
+                id_nuevo_rival = st.text_input("ID LaPreferente:")
             with col_fn3:
+                ciudad_rival = st.text_input("Ciudad (Para Clima):")
+            with col_fn4:
                 st.markdown("<br>", unsafe_allow_html=True)
-                submit_rival = st.form_submit_button("💾 Guardar Rival")
+                submit_rival = st.form_submit_button("💾 Guardar")
             
             if submit_rival:
-                if nombre_nuevo_rival and id_nuevo_rival:
-                    st.session_state["rivales_guardados"][nombre_nuevo_rival.strip()] = id_nuevo_rival.strip()
+                if nombre_nuevo_rival:
+                    st.session_state["rivales_guardados"][nombre_nuevo_rival.strip()] = {
+                        "id": id_nuevo_rival.strip(),
+                        "ciudad": ciudad_rival.strip()
+                    }
+                    guardar_datos()
                     st.success(f"✅ ¡Rival '{nombre_nuevo_rival}' guardado correctamente!")
                     st.rerun()
                 else:
