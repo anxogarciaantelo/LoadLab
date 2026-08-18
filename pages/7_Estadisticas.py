@@ -348,11 +348,19 @@ with tab_jugadores:
         st.markdown("---")
 
         # ==========================================
-        # 📊 GRÁFICO: MINUTOS ACUMULADOS (Vertical)
+        # 📊 GRÁFICO: MINUTOS ACUMULADOS (Vertical ordenado por POR, DEF, MED, ATA)
         # ==========================================
         st.markdown("#### 📊 Gráfico de Minutos Acumulados por Jugador")
+        
+        # Definir el orden jerárquico de las posiciones
+        orden_posiciones = ["POR", "DEF", "MED", "ATA", "CANTERA"]
+        df_jugadores["POS"] = pd.Categorical(df_jugadores["POS"], categories=orden_posiciones, ordered=True)
+        
+        # Ordenar primero por posición y luego por minutos de mayor a menor dentro de cada posición
+        df_jugadores_sorted = df_jugadores.sort_values(by=["POS", "MIN"], ascending=[True, False])
+
         fig_mins = px.bar(
-            df_jugadores.sort_values(by="MIN", ascending=False),
+            df_jugadores_sorted,
             x="JUGADOR",
             y="MIN",
             color="POS",
@@ -360,20 +368,26 @@ with tab_jugadores:
             labels={"MIN": "Minutos Jugados", "JUGADOR": "Jugador", "POS": "Posición"},
             title="Participación de la Plantilla (Minutos totales)"
         )
-        fig_mins.update_layout(height=450, xaxis={'tickangle': -45}, margin=dict(l=20, r=20, t=40, b=80))
+        fig_mins.update_layout(
+            height=450, 
+            xaxis={'tickangle': -45, 'categoryorder': 'array', 'categoryarray': df_jugadores_sorted["JUGADOR"].tolist()}, 
+            margin=dict(l=20, r=20, t=40, b=80)
+        )
         st.plotly_chart(fig_mins, use_container_width=True)
 
         # ==========================================
-        # 🗺️ MAPA DE DISTRIBUCIÓN DE MINUTOS POR LÍNEA
+        # 🗺️ MAPA DE DISTRIBUCIÓN DE MINUTOS POR LÍNEA (Ordenado POR, DEF, MED, ATA)
         # ==========================================
         st.markdown("#### 🗺️ Distribución de Minutos por Demarcación")
-        posiciones_unicas = df_jugadores["POS"].unique()
         
-        if len(posiciones_unicas) > 0:
-            cols_pos = st.columns(min(len(posiciones_unicas), 5))
-            for i, pos_val in enumerate(sorted(posiciones_unicas)):
+        # Filtrar las posiciones que realmente existan y ordenarlas según POR, DEF, MED, ATA...
+        posiciones_existentes = [p for p in orden_posiciones if p in df_jugadores["POS"].values]
+        
+        if len(posiciones_existentes) > 0:
+            cols_pos = st.columns(min(len(posiciones_existentes), 5))
+            for i, pos_val in enumerate(posiciones_existentes):
                 df_subset = df_jugadores[df_jugadores["POS"] == pos_val]
-                with cols_pos[i % len(cols_pos)]:
+                with cols_pos[i]:
                     fig_circle = px.pie(
                         df_subset,
                         names="JUGADOR",
