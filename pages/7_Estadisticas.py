@@ -16,7 +16,7 @@ st.title("📈 Estadísticas de Rendimiento")
 partidos_totales = [s for s in st.session_state.sesiones if "Partido" in s.get("tipo", "")]
 
 # ==========================================
-# 1. SELECTOR DE COMPETICIÓN (Modificado a Global)
+# 1. SELECTOR DE COMPETICIÓN
 # ==========================================
 col_comp1, col_comp2 = st.columns([1, 3])
 filtro_competicion = col_comp1.selectbox(
@@ -174,6 +174,11 @@ with tab_equipo:
 with tab_jugadores:
     st.markdown(f"### 📋 Rendimiento Individual | {filtro_competicion}")
     
+    # Crear un diccionario rápido de fotos si existen en la plantilla
+    fotos_plantilla = {}
+    for p in st.session_state.plantilla:
+        fotos_plantilla[p["JUGADOR"].strip().lower()] = p.get("FOTO", p.get("foto", ""))
+
     datos_jugadores = {}
     for p in st.session_state.plantilla:
         datos_jugadores[p["JUGADOR"]] = {
@@ -284,23 +289,33 @@ with tab_jugadores:
         df_jugadores = df_jugadores.sort_values(by="MIN", ascending=False)
         
         # ==========================================
-        # 👑 DESTACADOS (Tarjetas Top 3 por categoría)
+        # 👑 DESTACADOS (Tarjetas Top 3 con fotos y sin numeración)
         # ==========================================
         st.markdown("#### 👑 Destacados")
         
-        # Función auxiliar para renderizar tarjetas en un contenedor estilizado
         def render_tarjeta_top3(titulo_categoria, df_sub, columna_valor, sufijo=""):
             st.markdown(f"**{titulo_categoria}**")
             if not df_sub.empty:
                 for idx, row in df_sub.reset_index(drop=True).iterrows():
                     val = row[columna_valor]
                     val_str = f"{val:.1f}{sufijo}" if isinstance(val, float) else f"{val}{sufijo}"
+                    nombre_jugador = row['JUGADOR']
+                    
+                    # Buscar foto del jugador si existe
+                    foto_url = fotos_plantilla.get(nombre_jugador.strip().lower(), "")
+                    if foto_url:
+                        avatar_html = f'<img src="{foto_url}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; margin-right: 8px; vertical-align: middle;">'
+                    else:
+                        avatar_html = '<span style="font-size: 20px; margin-right: 8px; vertical-align: middle;">👤</span>'
+
                     st.markdown(
                         f"""
-                        <div style="background-color: #f0f2f6; padding: 8px 12px; border-radius: 6px; margin-bottom: 6px; border-left: 4px solid #ff4b4b;">
-                            <span style="font-size: 0.85em; color: #555;">#{idx+1}</span><br>
-                            <strong style="font-size: 0.95em;">{row['JUGADOR']}</strong><br>
-                            <span style="color: #000000; font-weight: bold; font-size: 1.1em;">{val_str}</span>
+                        <div style="background-color: #f0f2f6; padding: 8px 12px; border-radius: 6px; margin-bottom: 6px; border-left: 4px solid #ff4b4b; display: flex; align-items: center;">
+                            {avatar_html}
+                            <div style="overflow: hidden;">
+                                <strong style="font-size: 0.9em; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{nombre_jugador}</strong>
+                                <span style="color: #000000; font-weight: bold; font-size: 1.05em;">{val_str}</span>
+                            </div>
                         </div>
                         """,
                         unsafe_allow_html=True
@@ -349,7 +364,7 @@ with tab_jugadores:
         st.plotly_chart(fig_mins, use_container_width=True)
 
         # ==========================================
-        # 🗺️ MAPA DE DISTRIBUCIÓN DE MINUTOS POR LÍNEA (Desglosado en gráficos circulares individuales)
+        # 🗺️ MAPA DE DISTRIBUCIÓN DE MINUTOS POR LÍNEA
         # ==========================================
         st.markdown("#### 🗺️ Distribución de Minutos por Demarcación")
         posiciones_unicas = df_jugadores["POS"].unique()
