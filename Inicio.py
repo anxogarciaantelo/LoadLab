@@ -445,3 +445,6 @@ if st.session_state.get("equipo_seleccionado", False):
             st.switch_page("pages/3_Lesiones.py")
         if st.button("📊 Valoraciones", use_container_width=True):
             st.switch_page("pages/6_Valoraciones.py")
+
+    st.markdown("---")
+    render_panel_principal()
