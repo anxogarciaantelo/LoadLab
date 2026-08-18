@@ -19,6 +19,109 @@ if not st.session_state.get("autenticado", False) or not st.session_state.get("e
         st.rerun()
     st.stop()
 
+import plotly.graph_objects as go
+
+def generar_grafico_radar_gps(df_gps_completo, jugador_seleccionado, posicion_jugador):
+    """
+    Genera un gráfico de radar comparando al jugador con la media de su posición
+    en base a 6 métricas relativas/absolutas clave por minuto.
+    """
+    df_valido = df_gps_completo[df_gps_completo['DIS'] > 0].copy()
+    if df_valido.empty:
+        return None
+
+    for col in ['DIS', 'DIS AI', 'ACC', 'Nº SPR']:
+        if f'{col}/min' not in df_valido.columns:
+            df_valido[f'{col}/min'] = np.where(df_valido['MIN'] > 0, df_valido[col] / df_valido['MIN'], 0)
+
+    df_posicion = df_valido[df_valido['POS'] == posicion_jugador]
+    if df_posicion.empty:
+        return None
+
+    medias_pos = {
+        'ACC/min': df_posicion['ACC/min'].mean(),
+        'VMAX': df_posicion['VMAX'].mean(),
+        'V_Media': df_posicion.get('V_Med', df_posicion['DIS']).mean(),
+        'DIS/min': df_posicion['DIS/min'].mean(),
+        'Nº SPR/min': df_posicion['Nº SPR/min'].mean(),
+        'DIS AI/min': df_posicion['DIS AI/min'].mean()
+    }
+
+    df_jug = df_valido[df_valido['JUGADOR'] == jugador_seleccionado]
+    if df_jug.empty:
+        return None
+
+    medias_jug = {
+        'ACC/min': df_jug['ACC/min'].mean(),
+        'VMAX': df_jug['VMAX'].max(),
+        'V_Media': df_jug.get('V_Med', df_jug['DIS']).mean(),
+        'DIS/min': df_jug['DIS/min'].mean(),
+        'Nº SPR/min': df_jug['Nº SPR/min'].mean(),
+        'DIS AI/min': df_jug['DIS AI/min'].mean()
+    }
+
+    categorias = [
+        'Aceleraciones (>3)/min', 
+        'Velocidad Máxima (Pico)', 
+        'Velocidad Media', 
+        'Distancia/min', 
+        'Sprints/min', 
+        'HSR (>21)/min'
+    ]
+    
+    claves = ['ACC/min', 'VMAX', 'V_Media', 'DIS/min', 'Nº SPR/min', 'DIS AI/min']
+    
+    valores_jugador = []
+    valores_referencia = [100, 100, 100, 100, 100, 100]
+
+    for clave in claves:
+        m_pos = medias_pos[clave]
+        m_jug = medias_jug[clave]
+        
+        if m_pos > 0:
+            porcentaje = (m_jug / m_pos) * 100
+        else:
+            porcentaje = 100
+        valores_jugador.append(round(porcentaje, 1))
+
+    categorias_radar = categorias + [categorias[0]]
+    valores_jug_radar = valores_jugador + [valores_jugador[0]]
+    valores_ref_radar = valores_referencia + [valores_referencia[0]]
+
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatterpolar(
+        r=valores_ref_radar,
+        theta=categorias_radar,
+        fill='toself',
+        name=f'Media Posición ({posicion_jugador})',
+        line=dict(color='rgba(150, 150, 150, 0.8)', width=2),
+        fillcolor='rgba(200, 200, 200, 0.2)'
+    ))
+
+    fig.add_trace(go.Scatterpolar(
+        r=valores_jug_radar,
+        theta=categorias_radar,
+        fill='toself',
+        name=jugador_seleccionado,
+        line=dict(color='#00b4d8', width=3),
+        fillcolor='rgba(0, 180, 216, 0.3)'
+    ))
+
+    fig.update_layout(
+        polar=dict(
+            radialaxis=dict(
+                visible=True,
+                range=[0, max(150, max(valores_jugador) + 20)]
+            )
+        ),
+        title=f"<b>Perfil Físico Relativo vs Media de {posicion_jugador}</b>",
+        showlegend=True,
+        margin=dict(l=40, r=40, t=40, b=40)
+    )
+
+    return fig
+
 st.subheader("📡 GPS")
 
 lista_micro_map = []
@@ -142,6 +245,19 @@ else:
         else:
             kpis = df_perfil[['MIN', 'DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC', 'VMAX']].mean()
             kpis_rel = df_perfil[['DIS/min', 'DIS AI/min', 'ACC/min', 'DCC/min']].mean()
+
+            # --- BLOQUE NUEVO DEL GRÁFICO DE RADAR ---
+            if f_nivel == "Jugador" and f_jug != "TODOS":
+                pos_actual_jug = next((p['POS'] for p in st.session_state.plantilla if p['JUGADOR'] == f_jug), "DEF")
+                
+                st.markdown("---")
+                st.markdown(f"#### 🕸️ Perfil Radar de Rendimiento: {f_jug}")
+                fig_radar = generar_grafico_radar_gps(df_gps, f_jug, pos_actual_jug)
+                if fig_radar:
+                    st.plotly_chart(fig_radar, use_container_width=True)
+                else:
+                    st.info("No hay suficientes datos GPS para generar el radar de este jugador.")
+            # ------------------------------------------
 
             st.markdown("---")
             st.markdown("#### 🚀 Promedios Absolutos (Totales)")
