@@ -304,3 +304,46 @@ def set_login_background(image_path):
         st.markdown(css, unsafe_allow_html=True)
     except FileNotFoundError:
         pass
+
+import requests
+from geopy.geocoders import Nominatim
+
+def obtener_coordenadas(ciudad):
+    if not ciudad: return None, None
+    try:
+        # User_agent es obligatorio para Nominatim
+        geolocator = Nominatim(user_agent="loadlab_sports_app") 
+        location = geolocator.geocode(ciudad, timeout=3)
+        if location:
+            return location.latitude, location.longitude
+    except:
+        pass
+    return None, None
+
+def obtener_clima(ciudad, fecha_str):
+    lat, lon = obtener_coordenadas(ciudad)
+    if not lat or not lon:
+        return None
+    
+    try:
+        # Open-Meteo devuelve datos históricos o previsiones con el mismo formato
+        url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto&start_date={fecha_str}&end_date={fecha_str}"
+        response = requests.get(url).json()
+        
+        # Fallback por si la fecha es muy antigua (Open-Meteo usa otro endpoint para >3 meses)
+        if "error" in response:
+            url_archive = f"https://archive-api.open-meteo.com/v1/archive?latitude={lat}&longitude={lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto&start_date={fecha_str}&end_date={fecha_str}"
+            response = requests.get(url_archive).json()
+
+        if "daily" in response and response["daily"]["temperature_2m_max"]:
+            t_max = response["daily"]["temperature_2m_max"][0]
+            t_min = response["daily"]["temperature_2m_min"][0]
+            lluvia = response["daily"]["precipitation_sum"][0]
+            
+            if t_max is not None and t_min is not None:
+                temp_media = round((t_max + t_min) / 2, 1)
+                estado = "🌧️ Lluvia" if lluvia and lluvia > 1.0 else "☀️ Despejado"
+                return {"temp": temp_media, "estado": estado}
+    except:
+        pass
+    return None
