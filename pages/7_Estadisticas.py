@@ -32,7 +32,7 @@ elif filtro_competicion == "Amistosos":
 else:
     partidos = [p for p in partidos_totales if p.get("tipo") == "Partido Oficial" and p.get("competicion") == filtro_competicion]
 
-tab_equipo, tab_jugadores = st.tabs(["🛡️ Estadísticas de Equipo", "👤 Estadísticas de Jugadores"])
+tab_equipo, tab_jugadores, tab_rivales = st.tabs(["🛡️ Estadísticas de Equipo", "👤 Estadísticas de Jugadores", "🆚 Estadísticas de Rival"])
 
 # ==========================================
 # 🛡️ PESTAÑA 1: ESTADÍSTICAS DE EQUIPO
@@ -424,6 +424,55 @@ with tab_jugadores:
                            
         mostrar_tabla_moderna(estilo_jugadores)
         st.caption("Acrónimos: Conv. (Convocatorias) | PJ (Partidos Jugados) | MIN (Minutos) | G (Goles) | A (Asistencias) | Min/Gol (Minutos necesarios por gol) | GE (Goles Encajados porteros).")
+# ==========================================
+# 🆚 PESTAÑA 3: ESTADÍSTICAS DE RIVAL
+# ==========================================
+with tab_rivales:
+    st.markdown("### 🆚 Análisis de Equipos Rival (LaPreferente)")
+    st.caption("Selecciona el equipo rival de la competición para consultar su plantilla y estadísticas oficiales al instante.")
+    
+    # Diccionario o selector rápido de equipos rivales frecuentes de la competición actual
+    # (Puedes añadir aquí los nombres y sus respectivos IDequipo de LaPreferente de tu grupo)
+    rivales_frecuentes = {
+        "Selecciona un rival...": "",
+        "Coruxo F.C.": "6938",
+        "Club Portugalete": "6939",
+        "Atlético Astorga": "6940",
+        "S.D. Amorebieta": "6941",
+        # Puedes añadir más equipos de tu grupo aquí fácilmente
+    }
+    
+    col_r1, col_r2 = st.columns([2, 2])
+    with col_r1:
+        rival_seleccionado = st.selectbox("Selecciona un rival guardado:", list(rivales_frecuentes.keys()))
+        
+    with col_r2:
+        # Opción para añadir un rival nuevo introduciendo el ID solo una vez si no está en la lista
+        id_personalizado = st.text_input("O introduce el ID de LaPreferente del rival:", value="")
+    
+    # Determinar qué ID usar
+    id_equipo_final = ""
+    if rival_seleccionado != "Selecciona un rival...":
+        id_equipo_final = rivales_frecuentes[rival_seleccionado]
+    elif id_personalizado:
+        id_equipo_final = id_personalizado
+        
+    comp_id_actual = st.session_state.get("lapreferente_comp_id", "26710")
+    
+    if id_equipo_final:
+        st.markdown("---")
+        st.markdown(f"#### 📋 Plantilla y Datos del Rival")
+        
+        url_widget_rival = f"https://www.lapreferente.com/widgetEquipo.php?tipo=plantilla&comp={comp_id_actual}&colorFondo=FFFFFF&colorFondoCabecera=&colorTextoCabecera=FFFFFF&anchoEscudos=25&fontSize=11&favorito=&IDequipo={id_equipo_final}"
+        
+        st.components.v1.html(
+            f'<iframe style="border:0px; width:100%;" height="850" src="{url_widget_rival}" scrolling="yes"></iframe>', 
+            height=870,
+            scrolling=True
+        )
+    else:
+        st.info("💡 Selecciona un equipo del desplegable o introduce su ID de LaPreferente para cargar su información completa.")
+
 
 # ==========================================
 # ⚙️ CONFIGURACIÓN ABAJO DE TODO EN PANTALLA
