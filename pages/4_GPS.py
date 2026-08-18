@@ -252,11 +252,14 @@ else:
                 
                 st.markdown("---")
                 st.markdown(f"#### 🕸️ Perfil Radar de Rendimiento: {f_jug}")
-                fig_radar = generar_grafico_radar_gps(df_gps, f_jug, pos_actual_jug)
+                
+                # <--- CAMBIA 'df_gps' POR 'df_perfil' AQUÍ ABAJO:
+                fig_radar = generar_grafico_radar_gps(df_perfil, f_jug, pos_actual_jug)
+                
                 if fig_radar:
                     st.plotly_chart(fig_radar, use_container_width=True)
                 else:
-                    st.info("No hay suficientes datos GPS para generar el radar de este jugador.")
+                    st.info("No hay suficientes datos GPS para generar el radar con estos filtros.")
             # ------------------------------------------
 
             st.markdown("---")
