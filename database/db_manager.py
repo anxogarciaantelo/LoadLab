@@ -40,7 +40,24 @@ def cargar_datos_equipo(equipo_id):
             st.session_state.sesiones = dat.get("sesiones", [])
             st.session_state.lesiones = dat.get("lesiones", [])
             st.session_state.antropometria = dat.get("antropometria", [])
-            st.session_state.config_mapeo = dat.get("config_mapeo", {})
+            # Cargar config de mapeo con valores por defecto seguros
+            config_guardada = dat.get("config_mapeo", {})
+            if not config_guardada:
+                config_guardada = {
+                    "wellness": {"nombre": "Nombre", "fecha": "Marca temporal", "tqr": "TQR", "fatiga": "W_Fatiga", "sueno": "W_Sueño", "dolor": "W_Dolor", "estres": "W_Estres", "humor": "W_Humor"},
+                    "rpe": {"nombre": "Nombre", "fecha": "Marca temporal", "minutos": "MIN", "rpe": "RPE"},
+                    "gps": {
+                        "nombre": "Player Name", "fecha": "Activity Date",
+                        "min_gps": "Time Played", "dis": "Distance (km)", "v_med": "Avg Speed (km/h)", "v_max": "Max Speed (km/h)",
+                        "hid_21": "HID distance (> 21.00 km/h)", "hid_24": "HID distance (> 24.00 km/h)", 
+                        "spr_24": "# of Sprints (> 24.00 km/h)", "spr_27": "# of Sprints (> 30.00 km/h)",
+                        "acc_max": "ACC. MÁXIMA", "acc_2": "# of Accelerations (> 2.00 m/s²)", "acc_3": "# of Accelerations (> 3.00 m/s²)", "acc_4": "# of Accelerations (> 4.00 m/s²)",
+                        "dcc_2": "# of Decelerations (> 2.00 m/s²)", "dcc_3": "# of Decelerations (> 3.00 m/s²)", "dcc_4": "# of Decelerations (> 4.00 m/s²)",
+                        "r_0_7": "Distance Speed Range (0 - 7 km)", "r_7_14": "Distance Speed Range (7 - 14 km)", "r_14_21": "Distance Speed Range (14 - 21 km)",
+                        "r_21_24": "Distance Speed Range (21 - 24 km)", "r_24_27": "Distance Speed Range (24 - 27 km)", "r_27_30": "Distance Speed Range (27 - 30 km)", "r_30_45": "Distance Speed Range (30 - 45 km)"
+                    }
+                }
+            st.session_state.config_mapeo = config_guardada
             
             vals = dat.get("valoraciones", {})
             st.session_state.val_inicial = vals.get("val_inicial", [])
