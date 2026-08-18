@@ -798,7 +798,12 @@ with tab_ses:
                 st.session_state[f"mostrar_informe_{idx_real}"] = False
                 st.session_state[f"mostrar_disp_{idx_real}"] = False
                 st.session_state[f"mostrar_datos_{idx_real}"] = False
-        
+            if es_partido:
+                    if col_s7.button("⚡ Stats Partido", key=f"btn_stats_{idx_real}"):
+                        st.session_state[f"mostrar_stats_partido_{idx_real}"] = not st.session_state.get(f"mostrar_stats_partido_{idx_real}", False)
+                else:
+                    col_s7.write("") # Espacio vacío si es entrenamiento
+                
         if st.session_state.get(f"mostrar_disp_{idx_real}", False):
             st.markdown("---")
             st.markdown(f"#### 🏥 CONTROL DE DISPONIBILIDAD | {sesion['fecha']}")
@@ -1673,4 +1678,73 @@ with tab_ses:
                         st.success(f"¡Parte médico de {les_jugador} guardado correctamente!")
                         st.rerun()
             st.markdown("---")
+            
+            if st.session_state.get(f"mostrar_stats_partido_{idx_real}", False):
+            st.markdown("---")
+            st.markdown(f"#### ⚡ ESTADÍSTICAS DE PARTIDO | vs {sesion.get('rival', 'Rival')} ({sesion['fecha'])})")
+            
+            # 1. Datos globales del partido
+            col_g1, col_g2, col_g3 = st.columns(3)
+            condicion_actual = sesion.get("condicion", "Casa")
+            nueva_condicion = col_g1.selectbox("Condición:", ["Casa", "Fuera"], index=["Casa", "Fuera"].index(condicion_actual), key=f"cond_{idx_real}")
+            
+            goles_f_actual = sesion.get("goles_favor", 0)
+            goles_c_actual = sesion.get("goles_contra", 0)
+            nuevo_gf = col_g2.number_input("Goles Anotados (Favor):", min_value=0, value=int(goles_f_actual), key=f"gf_{idx_real}")
+            nuevo_gc = col_g3.number_input("Goles Encajados (En contra):", min_value=0, value=int(goles_c_actual), key=f"gc_{idx_real}")
+            
+            sesion["condicion"] = nueva_condicion
+            sesion["goles_favor"] = nuevo_gf
+            sesion["goles_contra"] = nuevo_gc
 
+            st.markdown("##### 📋 Rendimiento de Jugadores Convocados (Titulares y Suplentes)")
+            
+            # Filtrar solo jugadores convocados según la disponibilidad guardada
+            disp_s = sesion.get("disponibilidad", {})
+            disp_clean = {limpiar_nombre(k): v for k, v in disp_s.items()}
+            
+            jugadores_convocados = []
+            for p in st.session_state.plantilla:
+                rol = disp_clean.get(limpiar_nombre(p["JUGADOR"]), "No convocado")
+                if rol in ["Titular", "Suplente"]:
+                    jugadores_convocados.append({
+                        "JUGADOR": p["JUGADOR"],
+                        "POS": p["POS"],
+                        "Rol": rol,
+                        **sesion.get("estadisticas_partido", {}).get(p["JUGADOR"], {
+                            "Minutos": 90 if rol == "Titular" else 0,
+                            "Goles": 0,
+                            "Asistencias": 0,
+                            "Amarillas": 0,
+                            "Rojas": 0
+                        })
+                    })
+            
+            if not jugadores_convocados:
+                st.warning("⚠️ No hay jugadores convocados (Titulares o Suplentes) en el control de disponibilidad de este partido. Configura la disponibilidad primero.")
+            else:
+                df_stats_base = pd.DataFrame(jugadores_convocados)
+                
+                edited_stats = st.data_editor(
+                    df_stats_base,
+                    key=f"editor_stats_partido_{idx_real}",
+                    use_container_width=True,
+                    hide_index=True,
+                    disabled=["JUGADOR", "POS", "Rol"]
+                )
+                
+                if st.button("💾 Guardar Estadísticas de Partido", key=f"btn_save_stats_{idx_real}"):
+                    stats_dict = {}
+                    for _, row in edited_stats.iterrows():
+                        stats_dict[row["JUGADOR"]] = {
+                            "Minutos": safe_float(row["Minutos"]),
+                            "Goles": int(safe_float(row["Goles"])),
+                            "Asistencias": int(safe_float(row["Asistencias"])),
+                            "Amarillas": int(safe_float(row["Amarillas"])),
+                            "Rojas": int(safe_float(row["Rojas"]))
+                        }
+                    sesion["estadisticas_partido"] = stats_dict
+                    guardar_datos()
+                    st.success("✅ ¡Estadísticas del partido guardadas correctamente!")
+                    st.rerun()
+            st.markdown("---")
