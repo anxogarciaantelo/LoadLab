@@ -146,12 +146,13 @@ def render_panel_principal():
                 guardar_datos()
                 st.success("✅ Configuración de importación actualizada con éxito.")
                 st.rerun()
-st.markdown("---")
+
+    st.markdown("---")
     st.markdown("### 🌦️ Mantenimiento del Clima")
     st.caption("Si tienes sesiones antiguas sin datos del clima, pulsa este botón para descargar el histórico de Open-Meteo de forma automática.")
     
     if st.button("☁️ Sincronizar Clima en Sesiones Pasadas", use_container_width=True):
-        from utils.math_helpers import obtener_clima # Aseguramos la importación
+        from utils.math_helpers import obtener_clima 
         
         sesiones_actualizadas = 0
         with st.spinner("Conectando con Open-Meteo y sincronizando histórico..."):
@@ -182,7 +183,6 @@ st.markdown("---")
             else:
                 st.info("Todas las sesiones ya tienen el clima actualizado o faltan ubicaciones.")
 
-    
     if st.button("🔄 Borrar datos y empezar de cero", use_container_width=True):
         st.session_state.plantilla = []
         st.session_state.sesiones = []
@@ -197,7 +197,8 @@ st.markdown("---")
         
     if st.button("🚪 Cerrar Sesión / Cambiar Equipo", use_container_width=True):
         try:
-            supabase.auth.sign_out()
+            # Aquí iría tu código de supabase.auth.sign_out() si corresponde
+            pass
         except:
             pass
         st.session_state.clear()
