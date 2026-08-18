@@ -1679,7 +1679,7 @@ with tab_ses:
                         st.rerun()
             st.markdown("---")
             
-            if st.session_state.get(f"mostrar_stats_partido_{idx_real}", False):
+        if st.session_state.get(f"mostrar_stats_partido_{idx_real}", False):
             st.markdown("---")
             st.markdown(f"#### ⚡ ESTADÍSTICAS DE PARTIDO | vs {sesion.get('rival', 'Rival')} ({sesion['fecha'])})")
             
