@@ -112,22 +112,17 @@ with tab_equipo:
         mostrar_tabla_moderna(df_fuera.style.hide(axis="index").format({"GF/P": "{:.2f}", "GC/P": "{:.2f}"}))
 
     # ==========================================
-    # CLASIFICACIÓN (Enlace directo seguro)
+    # CLASIFICACIÓN EN VIVO (Widget de LaPreferente)
     # ==========================================
     if filtro_competicion in ["Global (Todas)", "Liga"]:
         st.markdown("---")
-        st.markdown("### 📊 Enlace a la Clasificación de Liga")
+        st.markdown("### 📊 Clasificación de Liga (En Vivo)")
         
-        link_clasificacion = st.text_input(
-            "🔗 Pega el enlace de la web de clasificación (BeSoccer, Marca, RFEF...):", 
-            value=st.session_state.get("link_clasificacion", "")
+        st.components.v1.html(
+            '<iframe style="border:0px; width:100%; max-width:600px;" height="400" src="https://www.lapreferente.com/widgetClasificacion.php?comp=26710&colorFondo=FFFFFF&colorFondoCabecera=&colorTextoCabecera=FFFFFF&anchoEscudos=25&fontSize=12&favorito=&ocultaEvolucion=1&ocultaPosicionAnterior=0"></iframe>', 
+            height=420,
+            scrolling=True
         )
-        if link_clasificacion:
-            st.session_state["link_clasificacion"] = link_clasificacion
-            st.markdown(f"👉 **[Haz clic aquí para abrir la clasificación en una pestaña nueva]({link_clasificacion})**", unsafe_allow_html=True)
-            st.caption("Nota: Páginas como BeSoccer o RFEF bloquean la vista interna por seguridad, por lo que se abrirá de forma óptima en tu navegador.")
-        else:
-            st.info("💡 Pega un enlace web para tener el acceso directo siempre disponible.")
 
 # ==========================================
 # 👤 PESTAÑA 2: ESTADÍSTICAS DE JUGADORES
