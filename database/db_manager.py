@@ -40,6 +40,8 @@ def cargar_datos_equipo(equipo_id):
             st.session_state.sesiones = dat.get("sesiones", [])
             st.session_state.lesiones = dat.get("lesiones", [])
             st.session_state.antropometria = dat.get("antropometria", [])
+            st.session_state.ubicacion_local = dat.get("ubicacion_local", "Santiago de Compostela")
+            st.session_state.rivales_guardados = dat.get("rivales_guardados", {})
             
             vals = dat.get("valoraciones", {})
             st.session_state.val_inicial = vals.get("val_inicial", [])
@@ -99,6 +101,8 @@ def guardar_datos():
             "sesiones": st.session_state.sesiones,
             "lesiones": st.session_state.get("lesiones", []),
             "antropometria": st.session_state.get("antropometria", []),
+            "ubicacion_local": st.session_state.get("ubicacion_local", "Santiago de Compostela"),
+            "rivales_guardados": st.session_state.get("rivales_guardados", {}),
             "valoraciones": {
                 "val_inicial": st.session_state.get("val_inicial", []),
                 "val_rom": st.session_state.get("val_rom", []),
