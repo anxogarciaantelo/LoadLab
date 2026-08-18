@@ -153,7 +153,6 @@ def render_panel_principal():
     
     if st.button("☁️ Sincronizar Clima en Sesiones Pasadas", use_container_width=True):
         from utils.math_helpers import obtener_clima 
-        import streamlit as st
         
         # 1. Vaciamos la memoria para obligar a la app a preguntar de nuevo a la API
         st.cache_data.clear()
@@ -163,6 +162,7 @@ def render_panel_principal():
         
         with st.spinner("Conectando con Open-Meteo y sincronizando histórico..."):
             for s in st.session_state.sesiones:
+                # Determinamos la ciudad correspondiente
                 ciudad = st.session_state.get("ubicacion_local", "")
                 
                 if s.get("tipo") != "Entrenamiento" and s.get("condicion") == "Fuera":
