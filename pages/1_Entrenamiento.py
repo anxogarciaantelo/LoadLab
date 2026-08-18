@@ -1434,17 +1434,29 @@ with tab_ses:
                         
                         fecha_sesion_str = pd.to_datetime(sesion['fecha']).strftime('%Y-%m-%d')
                         
-                        def filtrar_fecha(df):
+                        # Extraemos las configuraciones de mapeo
+                        cfg_w = st.session_state.get("config_mapeo", {}).get("wellness", {})
+                        cfg_r = st.session_state.get("config_mapeo", {}).get("rpe", {})
+                        cfg_g = st.session_state.get("config_mapeo", {}).get("gps", {})
+                        
+                        # --- NUEVO FILTRO DE FECHAS DINÁMICO ---
+                        def filtrar_fecha_dinamico(df, col_fecha_config):
                             if df.empty: return df
-                            col_f = next((c for c in df.columns if 'marca temporal' in str(c).lower() or 'activity date' in str(c).lower()), None)
+                            # Buscar exactamente la columna configurada
+                            col_f = next((c for c in df.columns if str(c).strip().lower() == col_fecha_config.strip().lower()), None)
+                            
+                            # Fallback de seguridad (por si el PF la deja en blanco)
+                            if not col_f:
+                                col_f = next((c for c in df.columns if 'marca temporal' in str(c).lower() or 'activity date' in str(c).lower() or 'date' in str(c).lower() or 'fecha' in str(c).lower()), None)
+                                
                             if col_f:
                                 df['FECHA_TEMP'] = pd.to_datetime(df[col_f], errors='coerce').dt.strftime('%Y-%m-%d')
                                 return df[df['FECHA_TEMP'] == fecha_sesion_str].drop(columns=['FECHA_TEMP'])
                             return df
 
-                        df_w_up = filtrar_fecha(df_w_up)
-                        df_r_up = filtrar_fecha(df_r_up)
-                        df_g_up = filtrar_fecha(df_g_up)
+                        df_w_up = filtrar_fecha_dinamico(df_w_up, cfg_w.get("fecha", "Marca temporal"))
+                        df_r_up = filtrar_fecha_dinamico(df_r_up, cfg_r.get("fecha", "Marca temporal"))
+                        df_g_up = filtrar_fecha_dinamico(df_g_up, cfg_g.get("fecha", "Activity Date"))
 
                         nombres_plantilla = [p['JUGADOR'] for p in st.session_state.plantilla]
                         no_encontrados_en_app = set()
@@ -1463,25 +1475,29 @@ with tab_ses:
                                     if limpiar_nombre(n_app) == matches[0]: return n_app
                             return None
 
+                        # --- NUEVO MAPEO DE NOMBRES DINÁMICO ---
                         faltan_w = []
-                        if not df_w_up.empty and 'Nombre' in df_w_up.columns:
-                            df_w_up['JUGADOR_MATCH'] = df_w_up['Nombre'].apply(emparejar_nombre)
-                            no_encontrados_en_app.update(df_w_up[df_w_up['JUGADOR_MATCH'].isna()]['Nombre'].dropna().tolist())
+                        col_w_nom = cfg_w.get("nombre", "Nombre")
+                        if not df_w_up.empty and col_w_nom in df_w_up.columns:
+                            df_w_up['JUGADOR_MATCH'] = df_w_up[col_w_nom].apply(emparejar_nombre)
+                            no_encontrados_en_app.update(df_w_up[df_w_up['JUGADOR_MATCH'].isna()][col_w_nom].dropna().tolist())
                             df_w_up = df_w_up.dropna(subset=['JUGADOR_MATCH'])
                             faltan_w = [n for n in nombres_plantilla if n not in df_w_up['JUGADOR_MATCH'].tolist()]
                         elif archivo_well: faltan_w = nombres_plantilla.copy()
 
                         faltan_r = []
-                        if not df_r_up.empty and 'Nombre' in df_r_up.columns:
-                            df_r_up['JUGADOR_MATCH'] = df_r_up['Nombre'].apply(emparejar_nombre)
-                            no_encontrados_en_app.update(df_r_up[df_r_up['JUGADOR_MATCH'].isna()]['Nombre'].dropna().tolist())
+                        col_r_nom = cfg_r.get("nombre", "Nombre")
+                        if not df_r_up.empty and col_r_nom in df_r_up.columns:
+                            df_r_up['JUGADOR_MATCH'] = df_r_up[col_r_nom].apply(emparejar_nombre)
+                            no_encontrados_en_app.update(df_r_up[df_r_up['JUGADOR_MATCH'].isna()][col_r_nom].dropna().tolist())
                             df_r_up = df_r_up.dropna(subset=['JUGADOR_MATCH'])
                             faltan_r = [n for n in nombres_plantilla if n not in df_r_up['JUGADOR_MATCH'].tolist()]
                         elif archivo_rpe: faltan_r = nombres_plantilla.copy()
 
-                        if not df_g_up.empty and 'Player Name' in df_g_up.columns:
-                            df_g_up['JUGADOR_MATCH'] = df_g_up['Player Name'].apply(emparejar_nombre)
-                            no_encontrados_en_app.update(df_g_up[df_g_up['JUGADOR_MATCH'].isna()]['Player Name'].dropna().tolist())
+                        col_g_nom = cfg_g.get("nombre", "Player Name")
+                        if not df_g_up.empty and col_g_nom in df_g_up.columns:
+                            df_g_up['JUGADOR_MATCH'] = df_g_up[col_g_nom].apply(emparejar_nombre)
+                            no_encontrados_en_app.update(df_g_up[df_g_up['JUGADOR_MATCH'].isna()][col_g_nom].dropna().tolist())
                             df_g_up = df_g_up.dropna(subset=['JUGADOR_MATCH'])
 
                         # 1. RECUPERAR DATOS EXISTENTES PARA NO SOBREESCRIBIRLOS
