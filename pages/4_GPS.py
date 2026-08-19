@@ -41,19 +41,18 @@ def generar_grafico_radar_gps(df_gps_filtrado_jugador, df_gps_global_equipo, jug
     # 2. Benchmark de la posición: Cogemos TODO el equipo (df_gps_global_equipo), 
     # filtramos por su posición (ej. DEF) y por el mismo tipo de sesión/filtros activos, 
     # pero SIN restringir al nombre del jugador.
-    df_global_valido = df_gps_global_equipo[df_gps_global_equipo['DIS'] > 0].copy()
+    df_posicion = df_gps_global_equipo[df_gps_global_equipo['DIS'] > 0].copy()
     for col in ['DIS', 'DIS AI', 'ACC', 'Nº SPR']:
-        if f'{col}/min' not in df_global_valido.columns:
-            df_global_valido[f'{col}/min'] = np.where(df_global_valido['MIN'] > 0, df_global_valido[col] / df_global_valido['MIN'], 0)
+        if f'{col}/min' not in df_posicion.columns:
+            df_posicion[f'{col}/min'] = np.where(df_posicion['MIN'] > 0, df_posicion[col] / df_posicion['MIN'], 0)
 
-    df_posicion = df_global_valido[df_global_valido['POS'] == posicion_jugador]
     if df_posicion.empty:
         return None
 
     medias_pos = {
         'ACC/min': df_posicion['ACC/min'].mean(),
         'VMAX': df_posicion['VMAX'].mean(),
-        'V_Media': df_posicion.get('V_Med', df_posicion['DIS']).mean(),
+        'V_Media': (df_posicion['DIS'].sum() / df_posicion['MIN'].sum()) * 60 if df_posicion['MIN'].sum() > 0 else 0,
         'DIS/min': df_posicion['DIS/min'].mean(),
         'Nº SPR/min': df_posicion['Nº SPR/min'].mean(),
         'DIS AI/min': df_posicion['DIS AI/min'].mean()
@@ -62,8 +61,8 @@ def generar_grafico_radar_gps(df_gps_filtrado_jugador, df_gps_global_equipo, jug
     # 3. Medias individuales del jugador (ej. los 3 partidos de Miguel Prado)
     medias_jug = {
         'ACC/min': df_jug_valido['ACC/min'].mean(),
-        'VMAX': df_jug_valido['VMAX'].max(), # Pico máximo en sus partidos
-        'V_Media': df_jug_valido.get('V_Med', df_jug_valido['DIS']).mean(),
+        'VMAX': df_jug_valido['VMAX'].mean(), # Modificado: de .max() a .mean()
+        'V_Media': (df_jug_valido['DIS'].sum() / df_jug_valido['MIN'].sum()) * 60 if df_jug_valido['MIN'].sum() > 0 else 0,
         'DIS/min': df_jug_valido['DIS/min'].mean(),
         'Nº SPR/min': df_jug_valido['Nº SPR/min'].mean(),
         'DIS AI/min': df_jug_valido['DIS AI/min'].mean()
@@ -259,17 +258,24 @@ else:
 
             # --- BLOQUE NUEVO DEL GRÁFICO DE RADAR ---
             if f_nivel == "Jugador" and f_jug != "TODOS":
-                pos_actual_jug = next((p['POS'] for p in st.session_state.plantilla if p['JUGADOR'] == f_jug), "DEF")
+                # 1. Obtener la posición exacta (pos_1) del jugador seleccionado
+                jugador_info = next((p for p in st.session_state.plantilla if p['JUGADOR'] == f_jug), None)
+                pos_exacta = jugador_info.get('pos_1', 'Desconocida') if jugador_info else 'Desconocida'
                 
-                # 'df_perfil' contiene los datos de Miguel filtrados.
-                # Para sacar la media de la posición manteniendo el filtro de "Partido", 
-                # aplicamos los filtros generales omitiendo solo el nombre del jugador:
-                df_contexto_posicion = aplicar_filtros_gps(df_gps, f_tipo, f_md, "TODOS", "TODOS", f_pos, f_tiempo, f_sel_tiempo)
+                # 2. Buscar todos los jugadores que compartan esa posición exacta
+                jugadores_misma_pos = [p['JUGADOR'] for p in st.session_state.plantilla if p.get('pos_1') == pos_exacta]
                 
+                # 3. Crear el DataFrame de referencia (la media del 100%)
+                # Aplicamos SOLO el filtro de tipo de sesión (Entreno/Partido/Todos) y la posición exacta
+                df_contexto_posicion = df_gps[df_gps['JUGADOR'].isin(jugadores_misma_pos)].copy()
+                if f_tipo != "TODOS":
+                    df_contexto_posicion = df_contexto_posicion[df_contexto_posicion['TIPO'] == f_tipo]
+                    
                 st.markdown("---")
                 st.markdown(f"#### 🕸️ Perfil Radar de Rendimiento: {f_jug}")
                 
-                fig_radar = generar_grafico_radar_gps(df_perfil, df_contexto_posicion, f_jug, pos_actual_jug)
+                # Le pasamos pos_exacta al radar para que la leyenda diga "Media Posición (Central)"
+                fig_radar = generar_grafico_radar_gps(df_perfil, df_contexto_posicion, f_jug, pos_exacta)
                 
                 if fig_radar:
                     st.plotly_chart(fig_radar, use_container_width=True)
