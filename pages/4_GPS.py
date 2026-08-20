@@ -19,28 +19,20 @@ if not st.session_state.get("autenticado", False) or not st.session_state.get("e
         st.rerun()
     st.stop()
 
-import plotly.graph_objects as go
-import numpy as np
-
 def generar_grafico_radar_gps(df_gps_filtrado_jugador, df_gps_global_equipo, jugador_seleccionado, posicion_jugador):
     """
-    1. Calcula las medias del jugador usando los datos filtrados (ej. sus partidos).
+    1. Calcula las medias del jugador usando los datos filtrados.
     2. Calcula las medias del GRUPO DE POSICIÓN usando todo el histórico del equipo 
-       para ese mismo contexto (ej. todos los defensas en partidos), sin filtrar por jugador.
+       para ese mismo contexto, sin filtrar por jugador.
     """
-    # 1. Datos válidos del jugador seleccionado (según los filtros de arriba)
     df_jug_valido = df_gps_filtrado_jugador[df_gps_filtrado_jugador['DIS'] > 0].copy()
     if df_jug_valido.empty:
         return None
 
-    # Asegurar métricas por minuto
     for col in ['DIS', 'DIS AI', 'ACC', 'Nº SPR']:
         if f'{col}/min' not in df_jug_valido.columns:
             df_jug_valido[f'{col}/min'] = np.where(df_jug_valido['MIN'] > 0, df_jug_valido[col] / df_jug_valido['MIN'], 0)
 
-    # 2. Benchmark de la posición: Cogemos TODO el equipo (df_gps_global_equipo), 
-    # filtramos por su posición (ej. DEF) y por el mismo tipo de sesión/filtros activos, 
-    # pero SIN restringir al nombre del jugador.
     df_posicion = df_gps_global_equipo[df_gps_global_equipo['DIS'] > 0].copy()
     for col in ['DIS', 'DIS AI', 'ACC', 'Nº SPR']:
         if f'{col}/min' not in df_posicion.columns:
@@ -58,10 +50,9 @@ def generar_grafico_radar_gps(df_gps_filtrado_jugador, df_gps_global_equipo, jug
         'DIS AI/min': df_posicion['DIS AI/min'].mean()
     }
 
-    # 3. Medias individuales del jugador (ej. los 3 partidos de Miguel Prado)
     medias_jug = {
         'ACC/min': df_jug_valido['ACC/min'].mean(),
-        'VMAX': df_jug_valido['VMAX'].mean(), # Modificado: de .max() a .mean()
+        'VMAX': df_jug_valido['VMAX'].mean(),
         'V_Media': (df_jug_valido['DIS'].sum() / df_jug_valido['MIN'].sum()) * 60 if df_jug_valido['MIN'].sum() > 0 else 0,
         'DIS/min': df_jug_valido['DIS/min'].mean(),
         'Nº SPR/min': df_jug_valido['Nº SPR/min'].mean(),
@@ -80,7 +71,7 @@ def generar_grafico_radar_gps(df_gps_filtrado_jugador, df_gps_global_equipo, jug
     claves = ['ACC/min', 'VMAX', 'V_Media', 'DIS/min', 'Nº SPR/min', 'DIS AI/min']
     
     valores_jugador = []
-    valores_referencia = [100, 100, 100, 100, 100, 100] # El 100 es la media de los 15 registros de los defensas
+    valores_referencia = [100, 100, 100, 100, 100, 100]
 
     for clave in claves:
         m_pos = medias_pos[clave]
@@ -98,7 +89,6 @@ def generar_grafico_radar_gps(df_gps_filtrado_jugador, df_gps_global_equipo, jug
 
     fig = go.Figure()
 
-    # Traza del Grupo de Posición (Media de los 15 registros de defensa = 100)
     fig.add_trace(go.Scatterpolar(
         r=valores_ref_radar,
         theta=categorias_radar,
@@ -108,7 +98,6 @@ def generar_grafico_radar_gps(df_gps_filtrado_jugador, df_gps_global_equipo, jug
         fillcolor='rgba(200, 200, 200, 0.2)'
     ))
 
-    # Traza de Miguel Prado (Sus 3 partidos comparados contra esos 15 registros)
     fig.add_trace(go.Scatterpolar(
         r=valores_jug_radar,
         theta=categorias_radar,
@@ -146,6 +135,9 @@ if lista_micro_map:
     df_m_map = pd.DataFrame(lista_micro_map).drop_duplicates(subset=["num_semana"]).sort_values("lunes_dt", ascending=True).reset_index(drop=True)
     mapa_micros = {row["num_semana"]: i + 1 for i, row in df_m_map.iterrows()}
 
+# Mapa dinámico de posiciones específicas asignadas en la plantilla
+dict_pos_esp = {limpiar_nombre(p["JUGADOR"]): p.get("pos_1", p.get("POS", "")) for p in st.session_state.get("plantilla", [])}
+
 datos_gps = []
 for s in st.session_state.sesiones:
     if s.get("informe_generado"):
@@ -155,27 +147,34 @@ for s in st.session_state.sesiones:
         
         disp_s = s.get("disponibilidad", {})
         disp_s_clean = {limpiar_nombre(k): v for k, v in disp_s.items()}
+
+        nombre_ev = s.get("nombre_dinamico", s["tipo"])
+        subtitulo = s.get("subtitulo_dinamico", "")
+        nombre_sesion_completo = f"{s['fecha']} | {nombre_ev}"
+        if subtitulo:
+            nombre_sesion_completo += f" ({subtitulo})"
         
         for d in s["datos_informe"]:
             jug_nombre = d["JUGADOR"]
             est_jug = disp_s_clean.get(limpiar_nombre(jug_nombre), "Disponible")
             
-            # FILTRO DE EXCLUSIÓN PARA GPS GLOBAL: Solo jugadores válidos y con distancia > 0
             if est_jug in ["Disponible", "Titular", "Suplente"] and float(d.get("DIS", 0)) > 0:
                 min_val = float(d.get("MIN_GPS", d.get("MIN", 0)))
                 if min_val == 0: min_val = 1 
                 
                 num_sem = obtener_numero_semana(s["fecha"])
                 id_micro = mapa_micros.get(num_sem, num_sem)
+                pos_esp_val = dict_pos_esp.get(limpiar_nombre(jug_nombre), d.get("POS", ""))
                 
                 datos_gps.append({
                     "FECHA": s["fecha"],
                     "TIPO": tipo_str,
                     "MD": md_str,
                     "Microciclo": f"Microciclo {id_micro}",
-                    "Nombre_Sesion": f"{s['fecha']} | {s.get('nombre_dinamico', s['tipo'])}",
+                    "Nombre_Sesion": nombre_sesion_completo,
                     "JUGADOR": d["JUGADOR"],
                     "POS": d.get("POS", ""),
+                    "POS_ESP": pos_esp_val,
                     "MIN": min_val,
                     "DIS": float(d.get("DIS", 0)),
                     "DIS AI": float(d.get("HID >21", d.get("DIS AI", 0))),
@@ -204,51 +203,126 @@ else:
 
     lista_jugs = sorted(df_gps['JUGADOR'].unique())
     lista_pos = ["POR", "DEF", "MED", "ATA"]
+    lista_pos_esp = ["Portero", "Central", "Lateral", "Mediocentro", "Mediapunta", "Extremo", "Delantero"]
     lista_mds = ["TODOS", "MD-6", "MD-5", "MD-4", "MD-3", "MD-2", "MD-1", "MD+1", "MD+2", "TD"]
 
-    def aplicar_filtros_gps(df, target_tipo, target_md, target_nivel, target_jug, target_pos, target_tiempo="Histórico Completo", target_sel_tiempo="TODOS"):
+    def aplicar_filtros_gps(df, target_tipo="Todas", target_md="TODOS", target_nivel="Equipo completo", target_jug="TODOS", target_pos="DEF", target_tiempo="Promedio total", target_sel_micro="TODOS", target_sel_sesion="TODOS", target_pos_esp="Central"):
         res = df.copy()
         
-        if target_tiempo == "Microciclo Concreto" and target_sel_tiempo != "TODOS":
-            res = res[res['Microciclo'] == target_sel_tiempo]
-        elif target_tiempo == "Sesión Concreta" and target_sel_tiempo != "TODOS":
-            res = res[res['Nombre_Sesion'] == target_sel_tiempo]
+        if target_tiempo == "Promedio de microciclo" and target_sel_micro != "TODOS":
+            res = res[res['Microciclo'] == target_sel_micro]
+        elif target_tiempo == "Sesión" and target_sel_sesion != "TODOS":
+            res = res[res['Nombre_Sesion'] == target_sel_sesion]
             
-        if target_tipo != "TODOS":
+        if target_tipo != "Todas":
             res = res[res['TIPO'] == target_tipo]
             if target_tipo == "Entrenamiento" and target_md != "TODOS":
                 res = res[res['MD'] == target_md]
-        if target_nivel == "Jugador":
+
+        if target_sel_sesion != "TODOS":
+            res = res[res['Nombre_Sesion'] == target_sel_sesion]
+
+        if target_nivel == "Por jugador":
             if target_jug != "TODOS": res = res[res['JUGADOR'] == target_jug]
-        elif target_nivel == "Posición":
+        elif target_nivel == "Por posición general":
             res = res[res['POS'] == target_pos]
+        elif target_nivel == "Por posición específica":
+            res = res[res['POS_ESP'] == target_pos_esp]
+
         return res
 
     with tab_gps_perf:
         st.markdown("#### 🔍 Filtros de Rendimiento")
         
-        c_t1, c_t2 = st.columns(2)
-        f_tiempo = c_t1.selectbox("Filtro Temporal:", ["Histórico Completo", "Microciclo Concreto", "Sesión Concreta"], key="p_tiempo")
-        f_sel_tiempo = "TODOS"
+        # --- FILTROS SUPERIORES EN CASILLAS Y DROPDOWN CONTEXTUAL ---
+        c_f1, c_f2, c_f3 = st.columns([1.2, 1.2, 1.6])
         
-        if f_tiempo == "Microciclo Concreto":
-            lista_micros = sorted(df_gps['Microciclo'].unique(), key=lambda x: int(x.split()[1]))
-            f_sel_tiempo = c_t2.selectbox("Seleccionar Microciclo:", lista_micros, key="p_sel_micro")
-        elif f_tiempo == "Sesión Concreta":
-            lista_sesiones = sorted(df_gps['Nombre_Sesion'].unique(), reverse=True)
-            f_sel_tiempo = c_t2.selectbox("Seleccionar Sesión:", lista_sesiones, key="p_sel_ses")
+        with c_f1:
+            f_tiempo = st.radio(
+                "Analizar:", 
+                ["Promedio total", "Promedio de microciclo", "Sesión"], 
+                key="p_tiempo"
+            )
+            
+        with c_f2:
+            f_tipo = st.radio(
+                "Tipo de Sesión:", 
+                ["Todas", "Entrenamiento", "Partido"], 
+                key="p_tipo"
+            )
 
-        c1, c2, c3, c4 = st.columns(4)
-        f_tipo = c1.selectbox("Sesión:", ["TODOS", "Entrenamiento", "Partido"], key="p_tipo")
+        f_sel_micro = "TODOS"
+        f_sel_sesion = "TODOS"
         f_md = "TODOS"
-        if f_tipo == "Entrenamiento": f_md = c2.selectbox("Match Day:", lista_mds, key="p_md")
-        
-        f_nivel = c3.radio("Analizar por:", ["Equipo Completo", "Posición", "Jugador"], key="p_niv")
-        f_jug, f_pos = "TODOS", "DEF"
-        if f_nivel == "Jugador": f_jug = c4.selectbox("Seleccionar Jugador:", ["TODOS"] + lista_jugs, key="p_jug")
-        elif f_nivel == "Posición": f_pos = c4.selectbox("Seleccionar Posición:", lista_pos, key="p_pos")
 
-        df_perfil = aplicar_filtros_gps(df_gps, f_tipo, f_md, f_nivel, f_jug, f_pos, f_tiempo, f_sel_tiempo)
+        with c_f3:
+            # Selector de Microciclos
+            if f_tiempo == "Promedio de microciclo":
+                lista_micros = sorted(df_gps['Microciclo'].unique(), key=lambda x: int(x.split()[1]) if len(x.split()) > 1 and x.split()[1].isdigit() else 0)
+                f_sel_micro = st.selectbox("Seleccionar microciclo:", lista_micros, key="p_sel_micro")
+            
+            # Selector condicional según entrenamiento, partido o sesión general
+            if f_tipo == "Entrenamiento":
+                lista_entrenos = sorted(df_gps[df_gps['TIPO'] == 'Entrenamiento']['Nombre_Sesion'].unique(), reverse=True)
+                if lista_entrenos:
+                    if f_tiempo == "Sesión":
+                        f_sel_sesion = st.selectbox("Seleccionar entrenamiento:", lista_entrenos, key="p_sel_entreno")
+                    else:
+                        f_sel_sesion = st.selectbox("Seleccionar entrenamiento (Opcional):", ["TODOS"] + lista_entrenos, key="p_sel_entreno")
+                else:
+                    st.info("No hay entrenamientos registrados.")
+                    
+            elif f_tipo == "Partido":
+                lista_partidos = sorted(df_gps[df_gps['TIPO'] == 'Partido']['Nombre_Sesion'].unique(), reverse=True)
+                if lista_partidos:
+                    if f_tiempo == "Sesión":
+                        f_sel_sesion = st.selectbox("Seleccionar partido:", lista_partidos, key="p_sel_partido")
+                    else:
+                        f_sel_sesion = st.selectbox("Seleccionar partido (Opcional):", ["TODOS"] + lista_partidos, key="p_sel_partido")
+                else:
+                    st.info("No hay partidos registrados.")
+
+            elif f_tiempo == "Sesión" and f_tipo == "Todas":
+                lista_todas_ses = sorted(df_gps['Nombre_Sesion'].unique(), reverse=True)
+                f_sel_sesion = st.selectbox("Seleccionar sesión:", lista_todas_ses, key="p_sel_ses_todas")
+
+        st.markdown("---")
+
+        # --- FILTRO INFERIOR POR NIVEL (CASILLAS HORIZONTALES) ---
+        c_n1, c_n2 = st.columns([2.2, 1.2])
+        
+        with c_n1:
+            f_nivel = st.radio(
+                "Analizar por:", 
+                ["Equipo completo", "Por posición general", "Por posición específica", "Por jugador"], 
+                horizontal=True, 
+                key="p_niv"
+            )
+
+        f_jug = "TODOS"
+        f_pos = "DEF"
+        f_pos_esp = "Central"
+
+        with c_n2:
+            if f_nivel == "Por posición general":
+                f_pos = st.selectbox("Seleccionar posición general:", lista_pos, key="p_pos")
+            elif f_nivel == "Por posición específica":
+                f_pos_esp = st.selectbox("Seleccionar posición específica:", lista_pos_esp, key="p_pos_esp")
+            elif f_nivel == "Por jugador":
+                f_jug = st.selectbox("Seleccionar jugador:", ["TODOS"] + lista_jugs, key="p_jug")
+
+        df_perfil = aplicar_filtros_gps(
+            df_gps, 
+            target_tipo=f_tipo, 
+            target_md=f_md, 
+            target_nivel=f_nivel, 
+            target_jug=f_jug, 
+            target_pos=f_pos, 
+            target_tiempo=f_tiempo, 
+            target_sel_micro=f_sel_micro, 
+            target_sel_sesion=f_sel_sesion, 
+            target_pos_esp=f_pos_esp
+        )
 
         if df_perfil.empty:
             st.warning("No hay datos para esta combinación de filtros.")
@@ -256,32 +330,25 @@ else:
             kpis = df_perfil[['MIN', 'DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC', 'VMAX']].mean()
             kpis_rel = df_perfil[['DIS/min', 'DIS AI/min', 'ACC/min', 'DCC/min']].mean()
 
-            # --- BLOQUE NUEVO DEL GRÁFICO DE RADAR ---
-            if f_nivel == "Jugador" and f_jug != "TODOS":
-                # 1. Obtener la posición exacta (pos_1) del jugador seleccionado
+            if f_nivel == "Por jugador" and f_jug != "TODOS":
                 jugador_info = next((p for p in st.session_state.plantilla if p['JUGADOR'] == f_jug), None)
                 pos_exacta = jugador_info.get('pos_1', 'Desconocida') if jugador_info else 'Desconocida'
                 
-                # 2. Buscar todos los jugadores que compartan esa posición exacta
                 jugadores_misma_pos = [p['JUGADOR'] for p in st.session_state.plantilla if p.get('pos_1') == pos_exacta]
                 
-                # 3. Crear el DataFrame de referencia (la media del 100%)
-                # Aplicamos SOLO el filtro de tipo de sesión (Entreno/Partido/Todos) y la posición exacta
                 df_contexto_posicion = df_gps[df_gps['JUGADOR'].isin(jugadores_misma_pos)].copy()
-                if f_tipo != "TODOS":
+                if f_tipo != "Todas":
                     df_contexto_posicion = df_contexto_posicion[df_contexto_posicion['TIPO'] == f_tipo]
                     
                 st.markdown("---")
                 st.markdown(f"#### 🕸️ Perfil Radar de Rendimiento: {f_jug}")
                 
-                # Le pasamos pos_exacta al radar para que la leyenda diga "Media Posición (Central)"
                 fig_radar = generar_grafico_radar_gps(df_perfil, df_contexto_posicion, f_jug, pos_exacta)
                 
                 if fig_radar:
                     st.plotly_chart(fig_radar, use_container_width=True)
                 else:
                     st.info("No hay suficientes datos GPS para generar el radar con estos filtros.")
-            # ------------------------------------------
 
             st.markdown("---")
             st.markdown("#### 🚀 Promedios Absolutos (Totales)")
@@ -332,7 +399,7 @@ else:
         colA, colB, colC = st.columns(3)
         with colA:
             st.markdown("##### 🔵 Perfil A")
-            a_tipo = st.selectbox("Sesión (A):", ["TODOS", "Entrenamiento", "Partido"], key="c_a_tipo")
+            a_tipo = st.selectbox("Sesión (A):", ["Todas", "Entrenamiento", "Partido"], key="c_a_tipo")
             a_md = "TODOS"
             if a_tipo == "Entrenamiento": a_md = st.selectbox("MD (A):", lista_mds, key="c_a_md")
             a_nivel = st.radio("Filtro (A):", ["Jugador", "Posición", "Equipo Completo"], key="c_a_niv")
@@ -342,7 +409,7 @@ else:
         
         with colB:
             st.markdown("##### 🔴 Perfil B")
-            b_tipo = st.selectbox("Sesión (B):", ["TODOS", "Entrenamiento", "Partido"], key="c_b_tipo")
+            b_tipo = st.selectbox("Sesión (B):", ["Todas", "Entrenamiento", "Partido"], key="c_b_tipo")
             b_md = "TODOS"
             if b_tipo == "Entrenamiento": b_md = st.selectbox("MD (B):", lista_mds, key="c_b_md")
             b_nivel = st.radio("Filtro (B):", ["Jugador", "Posición", "Equipo Completo"], key="c_b_niv")
@@ -354,7 +421,7 @@ else:
             st.markdown("##### 🟢 Perfil C (Opcional)")
             usar_C = st.checkbox("Activar Perfil C")
             if usar_C:
-                c_tipo = st.selectbox("Sesión (C):", ["TODOS", "Entrenamiento", "Partido"], key="c_c_tipo")
+                c_tipo = st.selectbox("Sesión (C):", ["Todas", "Entrenamiento", "Partido"], key="c_c_tipo")
                 c_md = "TODOS"
                 if c_tipo == "Entrenamiento": c_md = st.selectbox("MD (C):", lista_mds, key="c_c_md")
                 c_nivel = st.radio("Filtro (C):", ["Jugador", "Posición", "Equipo Completo"], key="c_c_niv")
@@ -362,11 +429,11 @@ else:
                 if c_nivel == "Jugador": c_jug = st.selectbox("Jugador (C):", lista_jugs, key="c_c_jug")
                 elif c_nivel == "Posición": c_pos = st.selectbox("Posición (C):", lista_pos, key="c_c_pos")
             else:
-                c_tipo, c_md, c_nivel, c_jug, c_pos = "TODOS", "TODOS", "Equipo Completo", "TODOS", "ATA"
+                c_tipo, c_md, c_nivel, c_jug, c_pos = "Todas", "TODOS", "Equipo Completo", "TODOS", "ATA"
 
-        df_A = aplicar_filtros_gps(df_gps, a_tipo, a_md, a_nivel, a_jug, a_pos)
-        df_B = aplicar_filtros_gps(df_gps, b_tipo, b_md, b_nivel, b_jug, b_pos)
-        df_C = aplicar_filtros_gps(df_gps, c_tipo, c_md, c_nivel, c_jug, c_pos) if usar_C else pd.DataFrame()
+        df_A = aplicar_filtros_gps(df_gps, target_tipo=a_tipo, target_md=a_md, target_nivel=a_nivel, target_jug=a_jug, target_pos=a_pos)
+        df_B = aplicar_filtros_gps(df_gps, target_tipo=b_tipo, target_md=b_md, target_nivel=b_nivel, target_jug=b_jug, target_pos=b_pos)
+        df_C = aplicar_filtros_gps(df_gps, target_tipo=c_tipo, target_md=c_md, target_nivel=c_nivel, target_jug=c_jug, target_pos=c_pos) if usar_C else pd.DataFrame()
 
         if df_A.empty or df_B.empty or (usar_C and df_C.empty):
             st.warning("⚠️ Uno de los perfiles activos no tiene datos. Revisa los filtros.")
