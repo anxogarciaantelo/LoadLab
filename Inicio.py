@@ -425,26 +425,30 @@ if st.session_state.get("equipo_seleccionado", False):
         </style>
     """, unsafe_allow_html=True)
 
-    # Crear una cuadrícula (grid) con 3 columnas para los 6 botones
-    c1, c2, c3 = st.columns(3)
+    # Crear una cuadrícula con 4 columnas para los 7 accesos rápidos
+    c1, c2, c3, c4 = st.columns(4)
     
     with c1:
         if st.button("📅 Entrenamientos", use_container_width=True):
             st.switch_page("pages/1_Entrenamiento.py")
-        if st.button("📡 GPS", use_container_width=True):
-            st.switch_page("pages/4_GPS.py")
+        if st.button("⚖️ Antropometría", use_container_width=True):
+            st.switch_page("pages/5_Antropometria.py")
             
     with c2:
         if st.button("👥 Plantilla", use_container_width=True):
             st.switch_page("pages/2_Plantilla.py")
-        if st.button("⚖️ Antropometría", use_container_width=True):
-            st.switch_page("pages/5_Antropometria.py")
+        if st.button("📊 Valoraciones", use_container_width=True):
+            st.switch_page("pages/6_Valoraciones.py")
             
     with c3:
         if st.button("🚑 Lesiones", use_container_width=True):
             st.switch_page("pages/3_Lesiones.py")
-        if st.button("📊 Valoraciones", use_container_width=True):
-            st.switch_page("pages/6_Valoraciones.py")
+        if st.button("📈 Estadísticas", use_container_width=True):
+            st.switch_page("pages/7_Estadisticas.py")
+
+    with c4:
+        if st.button("📡 GPS", use_container_width=True):
+            st.switch_page("pages/4_GPS.py")
 
     st.markdown("---")
     render_panel_principal()
