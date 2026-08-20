@@ -530,78 +530,81 @@ else:
             })
             mostrar_tabla_moderna(df_detallado.style.hide(axis="index"))
 
+    # ==========================================
+    # PESTAÑA 2: COMPARADOR (FILTROS PLEGABLES)
+    # ==========================================
     with tab_gps_comp:
-        st.markdown("#### ⚖️ Configurar Perfiles a Comparar")
-        
-        # Función auxiliar para renderizar los filtros de cada perfil en su columna en formato Selectbox compacto
-        def render_columna_filtro_comparador(prefijo, titulo, color_hex):
-            st.markdown(f"**<span style='color:{color_hex}'>■</span> {titulo}**", unsafe_allow_html=True)
+        # --- DESPLEGABLE CON LOS FILTROS DE LOS PERFILES ---
+        with st.expander("⚖️ Configurar Perfiles a Comparar", expanded=False):
             
-            t_tiempo = st.selectbox("Analizar:", ["Promedio total", "Promedio de microciclo", "Sesión"], key=f"c_{prefijo}_tiempo")
-            t_tipo = st.selectbox("Tipo de Sesión:", ["Todas", "Entrenamiento", "Partido"], key=f"c_{prefijo}_tipo")
-            
-            t_sel_micro, t_sel_sesion = "TODOS", "TODOS"
-            
-            if t_tiempo == "Promedio de microciclo":
-                lista_micros = sorted(df_gps['Microciclo'].unique(), key=lambda x: int(x.split()[1]) if len(x.split()) > 1 and x.split()[1].isdigit() else 0)
-                t_sel_micro = st.selectbox("Microciclo:", lista_micros, key=f"c_{prefijo}_micro")
-            elif t_tipo == "Entrenamiento":
-                lista_entrenos = sorted(df_gps[df_gps['TIPO'] == 'Entrenamiento']['Nombre_Sesion'].unique(), reverse=True)
-                t_sel_sesion = st.selectbox("Entrenamiento:", lista_entrenos if t_tiempo=="Sesión" else ["TODOS"]+lista_entrenos, key=f"c_{prefijo}_entreno")
-            elif t_tipo == "Partido":
-                lista_partidos = sorted(df_gps[df_gps['TIPO'] == 'Partido']['Nombre_Sesion'].unique(), reverse=True)
-                t_sel_sesion = st.selectbox("Partido:", lista_partidos if t_tiempo=="Sesión" else ["TODOS"]+lista_partidos, key=f"c_{prefijo}_partido")
-            elif t_tiempo == "Sesión" and t_tipo == "Todas":
-                lista_todas_ses = sorted(df_gps['Nombre_Sesion'].unique(), reverse=True)
-                t_sel_sesion = st.selectbox("Sesión:", lista_todas_ses, key=f"c_{prefijo}_ses_todas")
+            # Función auxiliar para renderizar los filtros de cada perfil en su columna
+            def render_columna_filtro_comparador(prefijo, titulo, color_hex):
+                st.markdown(f"**<span style='color:{color_hex}'>■</span> {titulo}**", unsafe_allow_html=True)
+                
+                t_tiempo = st.selectbox("Analizar:", ["Promedio total", "Promedio de microciclo", "Sesión"], key=f"c_{prefijo}_tiempo")
+                t_tipo = st.selectbox("Tipo de Sesión:", ["Todas", "Entrenamiento", "Partido"], key=f"c_{prefijo}_tipo")
+                
+                t_sel_micro, t_sel_sesion = "TODOS", "TODOS"
+                
+                if t_tiempo == "Promedio de microciclo":
+                    lista_micros = sorted(df_gps['Microciclo'].unique(), key=lambda x: int(x.split()[1]) if len(x.split()) > 1 and x.split()[1].isdigit() else 0)
+                    t_sel_micro = st.selectbox("Microciclo:", lista_micros, key=f"c_{prefijo}_micro")
+                elif t_tipo == "Entrenamiento":
+                    lista_entrenos = sorted(df_gps[df_gps['TIPO'] == 'Entrenamiento']['Nombre_Sesion'].unique(), reverse=True)
+                    t_sel_sesion = st.selectbox("Entrenamiento:", lista_entrenos if t_tiempo=="Sesión" else ["TODOS"]+lista_entrenos, key=f"c_{prefijo}_entreno")
+                elif t_tipo == "Partido":
+                    lista_partidos = sorted(df_gps[df_gps['TIPO'] == 'Partido']['Nombre_Sesion'].unique(), reverse=True)
+                    t_sel_sesion = st.selectbox("Partido:", lista_partidos if t_tiempo=="Sesión" else ["TODOS"]+lista_partidos, key=f"c_{prefijo}_partido")
+                elif t_tiempo == "Sesión" and t_tipo == "Todas":
+                    lista_todas_ses = sorted(df_gps['Nombre_Sesion'].unique(), reverse=True)
+                    t_sel_sesion = st.selectbox("Sesión:", lista_todas_ses, key=f"c_{prefijo}_ses_todas")
 
-            t_nivel = st.selectbox("Analizar por:", ["Equipo completo", "Por posición general", "Por posición específica", "Por jugador"], key=f"c_{prefijo}_niv")
-            t_jug, t_pos, t_pos_esp = "TODOS", "DEF", "Central"
-            
-            if t_nivel == "Por posición general":
-                t_pos = st.selectbox("Posición General:", lista_pos, key=f"c_{prefijo}_pos")
-            elif t_nivel == "Por posición específica":
-                t_pos_esp = st.selectbox("Posición Específica:", lista_pos_esp, key=f"c_{prefijo}_pos_esp")
-            elif t_nivel == "Por jugador":
-                t_jug = st.selectbox("Jugador:", ["TODOS"] + lista_jugs, key=f"c_{prefijo}_jug")
-            
-            # Etiqueta dinámica para la leyenda
-            lbl_nivel = t_jug if t_nivel == "Por jugador" else (t_pos if t_nivel == "Por posición general" else (t_pos_esp if t_nivel == "Por posición específica" else "Equipo"))
-            lbl_ctx = t_sel_micro if t_tiempo == "Promedio de microciclo" else (t_sel_sesion if t_tiempo == "Sesión" else ("Entrenos" if t_tipo == "Entrenamiento" else ("Partidos" if t_tipo == "Partido" else "Total")))
-            label_final = f"{lbl_nivel} ({lbl_ctx})"
+                t_nivel = st.selectbox("Analizar por:", ["Equipo completo", "Por posición general", "Por posición específica", "Por jugador"], key=f"c_{prefijo}_niv")
+                t_jug, t_pos, t_pos_esp = "TODOS", "DEF", "Central"
+                
+                if t_nivel == "Por posición general":
+                    t_pos = st.selectbox("Posición General:", lista_pos, key=f"c_{prefijo}_pos")
+                elif t_nivel == "Por posición específica":
+                    t_pos_esp = st.selectbox("Posición Específica:", lista_pos_esp, key=f"c_{prefijo}_pos_esp")
+                elif t_nivel == "Por jugador":
+                    t_jug = st.selectbox("Jugador:", ["TODOS"] + lista_jugs, key=f"c_{prefijo}_jug")
+                
+                # Etiqueta dinámica para la leyenda del radar y la tabla
+                lbl_nivel = t_jug if t_nivel == "Por jugador" else (t_pos if t_nivel == "Por posición general" else (t_pos_esp if t_nivel == "Por posición específica" else "Equipo"))
+                lbl_ctx = t_sel_micro if t_tiempo == "Promedio de microciclo" else (t_sel_sesion if t_tiempo == "Sesión" else ("Entrenos" if t_tipo == "Entrenamiento" else ("Partidos" if t_tipo == "Partido" else "Total")))
+                label_final = f"{lbl_nivel} ({lbl_ctx})"
 
-            # Filtrar utilizando los parámetros nombrados para garantizar compatibilidad
-            df_res = aplicar_filtros_gps(
-                df_gps, 
-                target_tiempo=t_tiempo, 
-                target_tipo=t_tipo, 
-                target_sel_micro=t_sel_micro, 
-                target_sel_sesion=t_sel_sesion, 
-                target_nivel=t_nivel, 
-                target_pos=t_pos, 
-                target_pos_esp=t_pos_esp, 
-                target_jug=t_jug
-            )
+                df_res = aplicar_filtros_gps(
+                    df_gps, 
+                    target_tiempo=t_tiempo, 
+                    target_tipo=t_tipo, 
+                    target_sel_micro=t_sel_micro, 
+                    target_sel_sesion=t_sel_sesion, 
+                    target_nivel=t_nivel, 
+                    target_pos=t_pos, 
+                    target_pos_esp=t_pos_esp, 
+                    target_jug=t_jug
+                )
 
-            return df_res, label_final
+                return df_res, label_final
 
-        colA, colB, colC = st.columns(3)
-        with colA: 
-            df_A, lbl_A = render_columna_filtro_comparador("A", "Perfil A", "#00b4d8")
-        with colB: 
-            df_B, lbl_B = render_columna_filtro_comparador("B", "Perfil B", "#ff4b4b")
-        with colC:
-            usar_C = st.checkbox("Activar Perfil C", value=False)
-            if usar_C:
-                df_C, lbl_C = render_columna_filtro_comparador("C", "Perfil C", "#28a745")
-            else:
-                df_C, lbl_C = pd.DataFrame(), ""
+            # Cuadrícula de 3 columnas dentro del expander
+            colA, colB, colC = st.columns(3)
+            with colA: 
+                df_A, lbl_A = render_columna_filtro_comparador("A", "Perfil A", "#00b4d8")
+            with colB: 
+                df_B, lbl_B = render_columna_filtro_comparador("B", "Perfil B", "#ff4b4b")
+            with colC:
+                usar_C = st.checkbox("Activar Perfil C", value=False)
+                if usar_C:
+                    df_C, lbl_C = render_columna_filtro_comparador("C", "Perfil C", "#28a745")
+                else:
+                    df_C, lbl_C = pd.DataFrame(), ""
 
+        # --- CONTENIDO VISUAL EN PANTALLA PRINCIPAL (FUERA DEL EXPANDER) ---
         if df_A.empty or df_B.empty or (usar_C and df_C.empty):
             st.warning("⚠️ Uno de los perfiles activos no tiene datos para los filtros seleccionados.")
         else:
-            st.markdown("---")
-            
             # 1. CÁLCULO DE MEDIAS PARA EL RADAR MULTI-PERFIL
             metrics_radar = ['ACC/min', 'VMAX', 'DIS/min', 'Nº SPR/min', 'DIS AI/min', 'MIN', 'DIS']
             mean_A = df_A[metrics_radar].mean().to_dict()
