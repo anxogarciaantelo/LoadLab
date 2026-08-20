@@ -117,6 +117,74 @@ def generar_grafico_radar_gps(df_target, df_ref, label_target, label_ref):
     )
 
     return fig
+def generar_radar_comparador(dict_medias, usar_C):
+    """ 
+    Radar para Comparador Múltiple (A vs B vs C).
+    Normaliza cada métrica al valor máximo de los perfiles seleccionados (Máx = 100%).
+    """
+    categorias = ['Aceleraciones (>3)/min', 'Velocidad Máxima', 'Velocidad Media', 'Distancia/min', 'Sprints/min', 'HSR (>21)/min']
+    claves = ['ACC/min', 'VMAX', 'V_Media', 'DIS/min', 'Nº SPR/min', 'DIS AI/min']
+    
+    datos_graf = {'A': [], 'B': [], 'C': []}
+    
+    for clave in claves:
+        val_A = dict_medias['A'].get(clave, 0)
+        val_B = dict_medias['B'].get(clave, 0)
+        val_C = dict_medias['C'].get(clave, 0) if usar_C else 0
+        
+        # Encontrar el valor máximo entre los perfiles activos para escalar a 100%
+        max_val = max(val_A, val_B, val_C) if usar_C else max(val_A, val_B)
+        
+        if max_val > 0:
+            datos_graf['A'].append((val_A / max_val) * 100)
+            datos_graf['B'].append((val_B / max_val) * 100)
+            if usar_C:
+                datos_graf['C'].append((val_C / max_val) * 100)
+        else:
+            datos_graf['A'].append(0)
+            datos_graf['B'].append(0)
+            if usar_C:
+                datos_graf['C'].append(0)
+
+    fig = go.Figure()
+
+    # Perfil A (Azul)
+    fig.add_trace(go.Scatterpolar(
+        r=datos_graf['A'] + [datos_graf['A'][0]], 
+        theta=categorias + [categorias[0]],
+        fill='toself', 
+        name=dict_medias['A_label'], 
+        line=dict(color='#00b4d8', width=2), 
+        fillcolor='rgba(0, 180, 216, 0.2)'
+    ))
+    
+    # Perfil B (Rojo)
+    fig.add_trace(go.Scatterpolar(
+        r=datos_graf['B'] + [datos_graf['B'][0]], 
+        theta=categorias + [categorias[0]],
+        fill='toself', 
+        name=dict_medias['B_label'], 
+        line=dict(color='#ff4b4b', width=2), 
+        fillcolor='rgba(255, 75, 75, 0.2)'
+    ))
+
+    # Perfil C (Verde)
+    if usar_C:
+        fig.add_trace(go.Scatterpolar(
+            r=datos_graf['C'] + [datos_graf['C'][0]], 
+            theta=categorias + [categorias[0]],
+            fill='toself', 
+            name=dict_medias['C_label'], 
+            line=dict(color='#28a745', width=2), 
+            fillcolor='rgba(40, 167, 69, 0.2)'
+        ))
+
+    fig.update_layout(
+        polar=dict(radialaxis=dict(visible=True, range=[0, 110])),
+        title="<b>Comparativa Multidimensional (100% = Valor Máximo Relativo)</b>",
+        margin=dict(l=40, r=40, t=40, b=40)
+    )
+    return fig
 
 st.subheader("📡 GPS")
 
@@ -194,7 +262,7 @@ tab_gps_perf, tab_gps_comp = st.tabs(["📈 Perfil de Rendimiento", "⚖️ Comp
 if df_gps.empty:
     st.info("No hay datos de GPS registrados todavía. Procesa datos en alguna sesión para visualizarlos aquí.")
 else:
-    cols_dinamicas = ['DIS', 'DIS AI', 'ACC', 'DCC', 'Z1', 'Z2', 'Z3', 'Z4', 'Z5', 'Z6']
+    cols_dinamicas = ['DIS', 'DIS AI', 'ACC', 'DCC', 'Nº SPR', 'Z1', 'Z2', 'Z3', 'Z4', 'Z5', 'Z6']
     for c in cols_dinamicas:
         df_gps[f'{c}/min'] = np.where(df_gps['MIN'] > 0, df_gps[c] / df_gps['MIN'], 0)
 
@@ -463,67 +531,122 @@ else:
             mostrar_tabla_moderna(df_detallado.style.hide(axis="index"))
 
     with tab_gps_comp:
-        st.markdown("#### ⚖️ Comparador (A vs B vs C)")
+        st.markdown("#### ⚖️ Configurar Perfiles a Comparar")
         
+        # Función auxiliar para renderizar los filtros de cada perfil en su columna en formato Selectbox compacto
+        def render_columna_filtro_comparador(prefijo, titulo, color_hex):
+            st.markdown(f"**<span style='color:{color_hex}'>■</span> {titulo}**", unsafe_allow_html=True)
+            
+            t_tiempo = st.selectbox("Analizar:", ["Promedio total", "Promedio de microciclo", "Sesión"], key=f"c_{prefijo}_tiempo")
+            t_tipo = st.selectbox("Tipo de Sesión:", ["Todas", "Entrenamiento", "Partido"], key=f"c_{prefijo}_tipo")
+            
+            t_sel_micro, t_sel_sesion = "TODOS", "TODOS"
+            
+            if t_tiempo == "Promedio de microciclo":
+                lista_micros = sorted(df_gps['Microciclo'].unique(), key=lambda x: int(x.split()[1]) if len(x.split()) > 1 and x.split()[1].isdigit() else 0)
+                t_sel_micro = st.selectbox("Microciclo:", lista_micros, key=f"c_{prefijo}_micro")
+            elif t_tipo == "Entrenamiento":
+                lista_entrenos = sorted(df_gps[df_gps['TIPO'] == 'Entrenamiento']['Nombre_Sesion'].unique(), reverse=True)
+                t_sel_sesion = st.selectbox("Entrenamiento:", lista_entrenos if t_tiempo=="Sesión" else ["TODOS"]+lista_entrenos, key=f"c_{prefijo}_entreno")
+            elif t_tipo == "Partido":
+                lista_partidos = sorted(df_gps[df_gps['TIPO'] == 'Partido']['Nombre_Sesion'].unique(), reverse=True)
+                t_sel_sesion = st.selectbox("Partido:", lista_partidos if t_tiempo=="Sesión" else ["TODOS"]+lista_partidos, key=f"c_{prefijo}_partido")
+            elif t_tiempo == "Sesión" and t_tipo == "Todas":
+                lista_todas_ses = sorted(df_gps['Nombre_Sesion'].unique(), reverse=True)
+                t_sel_sesion = st.selectbox("Sesión:", lista_todas_ses, key=f"c_{prefijo}_ses_todas")
+
+            t_nivel = st.selectbox("Analizar por:", ["Equipo completo", "Por posición general", "Por posición específica", "Por jugador"], key=f"c_{prefijo}_niv")
+            t_jug, t_pos, t_pos_esp = "TODOS", "DEF", "Central"
+            
+            if t_nivel == "Por posición general":
+                t_pos = st.selectbox("Posición General:", lista_pos, key=f"c_{prefijo}_pos")
+            elif t_nivel == "Por posición específica":
+                t_pos_esp = st.selectbox("Posición Específica:", lista_pos_esp, key=f"c_{prefijo}_pos_esp")
+            elif t_nivel == "Por jugador":
+                t_jug = st.selectbox("Jugador:", ["TODOS"] + lista_jugs, key=f"c_{prefijo}_jug")
+            
+            # Etiqueta dinámica para la leyenda
+            lbl_nivel = t_jug if t_nivel == "Por jugador" else (t_pos if t_nivel == "Por posición general" else (t_pos_esp if t_nivel == "Por posición específica" else "Equipo"))
+            lbl_ctx = t_sel_micro if t_tiempo == "Promedio de microciclo" else (t_sel_sesion if t_tiempo == "Sesión" else ("Entrenos" if t_tipo == "Entrenamiento" else ("Partidos" if t_tipo == "Partido" else "Total")))
+            label_final = f"{lbl_nivel} ({lbl_ctx})"
+
+            # Filtrar utilizando los parámetros nombrados para garantizar compatibilidad
+            df_res = aplicar_filtros_gps(
+                df_gps, 
+                target_tiempo=t_tiempo, 
+                target_tipo=t_tipo, 
+                target_sel_micro=t_sel_micro, 
+                target_sel_sesion=t_sel_sesion, 
+                target_nivel=t_nivel, 
+                target_pos=t_pos, 
+                target_pos_esp=t_pos_esp, 
+                target_jug=t_jug
+            )
+
+            return df_res, label_final
+
         colA, colB, colC = st.columns(3)
-        with colA:
-            st.markdown("##### 🔵 Perfil A")
-            a_tipo = st.selectbox("Sesión (A):", ["Todas", "Entrenamiento", "Partido"], key="c_a_tipo")
-            a_md = "TODOS"
-            if a_tipo == "Entrenamiento": a_md = st.selectbox("MD (A):", lista_mds, key="c_a_md")
-            a_nivel = st.radio("Filtro (A):", ["Jugador", "Posición", "Equipo Completo"], key="c_a_niv")
-            a_jug, a_pos = "TODOS", "DEF"
-            if a_nivel == "Jugador": a_jug = st.selectbox("Jugador (A):", lista_jugs, key="c_a_jug")
-            elif a_nivel == "Posición": a_pos = st.selectbox("Posición (A):", lista_pos, key="c_a_pos")
-        
-        with colB:
-            st.markdown("##### 🔴 Perfil B")
-            b_tipo = st.selectbox("Sesión (B):", ["Todas", "Entrenamiento", "Partido"], key="c_b_tipo")
-            b_md = "TODOS"
-            if b_tipo == "Entrenamiento": b_md = st.selectbox("MD (B):", lista_mds, key="c_b_md")
-            b_nivel = st.radio("Filtro (B):", ["Jugador", "Posición", "Equipo Completo"], key="c_b_niv")
-            b_jug, b_pos = "TODOS", "MED"
-            if b_nivel == "Jugador": b_jug = st.selectbox("Jugador (B):", lista_jugs, key="c_b_jug")
-            elif b_nivel == "Posición": b_pos = st.selectbox("Posición (B):", lista_pos, key="c_b_pos")
-
+        with colA: 
+            df_A, lbl_A = render_columna_filtro_comparador("A", "Perfil A", "#00b4d8")
+        with colB: 
+            df_B, lbl_B = render_columna_filtro_comparador("B", "Perfil B", "#ff4b4b")
         with colC:
-            st.markdown("##### 🟢 Perfil C (Opcional)")
-            usar_C = st.checkbox("Activar Perfil C")
+            usar_C = st.checkbox("Activar Perfil C", value=False)
             if usar_C:
-                c_tipo = st.selectbox("Sesión (C):", ["Todas", "Entrenamiento", "Partido"], key="c_c_tipo")
-                c_md = "TODOS"
-                if c_tipo == "Entrenamiento": c_md = st.selectbox("MD (C):", lista_mds, key="c_c_md")
-                c_nivel = st.radio("Filtro (C):", ["Jugador", "Posición", "Equipo Completo"], key="c_c_niv")
-                c_jug, c_pos = "TODOS", "ATA"
-                if c_nivel == "Jugador": c_jug = st.selectbox("Jugador (C):", lista_jugs, key="c_c_jug")
-                elif c_nivel == "Posición": c_pos = st.selectbox("Posición (C):", lista_pos, key="c_c_pos")
+                df_C, lbl_C = render_columna_filtro_comparador("C", "Perfil C", "#28a745")
             else:
-                c_tipo, c_md, c_nivel, c_jug, c_pos = "Todas", "TODOS", "Equipo Completo", "TODOS", "ATA"
-
-        df_A = aplicar_filtros_gps(df_gps, target_tipo=a_tipo, target_md=a_md, target_nivel=a_nivel, target_jug=a_jug, target_pos=a_pos)
-        df_B = aplicar_filtros_gps(df_gps, target_tipo=b_tipo, target_md=b_md, target_nivel=b_nivel, target_jug=b_jug, target_pos=b_pos)
-        df_C = aplicar_filtros_gps(df_gps, target_tipo=c_tipo, target_md=c_md, target_nivel=c_nivel, target_jug=c_jug, target_pos=c_pos) if usar_C else pd.DataFrame()
+                df_C, lbl_C = pd.DataFrame(), ""
 
         if df_A.empty or df_B.empty or (usar_C and df_C.empty):
-            st.warning("⚠️ Uno de los perfiles activos no tiene datos. Revisa los filtros.")
+            st.warning("⚠️ Uno de los perfiles activos no tiene datos para los filtros seleccionados.")
         else:
             st.markdown("---")
-            modo_comp = st.radio("¿Qué tipo de métricas quieres comparar?", ["Absolutas (Totales)", "Relativas (Por Minuto)"], horizontal=True)
+            
+            # 1. CÁLCULO DE MEDIAS PARA EL RADAR MULTI-PERFIL
+            metrics_radar = ['ACC/min', 'VMAX', 'DIS/min', 'Nº SPR/min', 'DIS AI/min', 'MIN', 'DIS']
+            mean_A = df_A[metrics_radar].mean().to_dict()
+            mean_B = df_B[metrics_radar].mean().to_dict()
+            mean_C = df_C[metrics_radar].mean().to_dict() if usar_C else {}
+            
+            def calc_vmedia(df): 
+                return (df['DIS'].sum() / df['MIN'].sum()) * 60 if df['MIN'].sum() > 0 else 0
+
+            mean_A['V_Media'] = calc_vmedia(df_A)
+            mean_B['V_Media'] = calc_vmedia(df_B)
+            if usar_C: 
+                mean_C['V_Media'] = calc_vmedia(df_C)
+
+            dict_medias_radar = {
+                'A': mean_A, 'A_label': lbl_A,
+                'B': mean_B, 'B_label': lbl_B,
+                'C': mean_C, 'C_label': lbl_C
+            }
+
+            # 2. MOSTRAR RADAR
+            st.markdown("#### 🕸️ Radar Comparativo")
+            fig_comp = generar_radar_comparador(dict_medias_radar, usar_C)
+            st.plotly_chart(fig_comp, use_container_width=True)
+            
+            st.markdown("---")
+
+            # 3. MOSTRAR TABLA COMPARATIVA
+            st.markdown("#### 📊 Tabla Analítica")
+            modo_comp = st.radio("¿Qué tipo de métricas quieres comparar en la tabla?", ["Absolutas (Totales)", "Relativas (Por Minuto)"], horizontal=True)
             
             if modo_comp == "Absolutas (Totales)":
-                metrics_to_compare = ['MIN', 'DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC', 'VMAX', 'Z1', 'Z2', 'Z3', 'Z4', 'Z5', 'Z6']
+                metrics_to_compare = ['MIN', 'DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC', 'VMAX']
             else:
-                metrics_to_compare = ['DIS/min', 'DIS AI/min', 'ACC/min', 'DCC/min', 'Z1/min', 'Z2/min', 'Z3/min', 'Z4/min', 'Z5/min', 'Z6/min']
+                metrics_to_compare = ['DIS/min', 'DIS AI/min', 'ACC/min', 'DCC/min']
 
-            mean_A = df_A[metrics_to_compare].mean()
-            mean_B = df_B[metrics_to_compare].mean()
-            mean_C = df_C[metrics_to_compare].mean() if usar_C else None
+            mean_t_A = df_A[metrics_to_compare].mean()
+            mean_t_B = df_B[metrics_to_compare].mean()
+            mean_t_C = df_C[metrics_to_compare].mean() if usar_C else None
 
             comp_data = []
             for m in metrics_to_compare:
-                valA = mean_A[m] if not pd.isna(mean_A[m]) else 0
-                valB = mean_B[m] if not pd.isna(mean_B[m]) else 0
-                valC = mean_C[m] if usar_C and not pd.isna(mean_C[m]) else 0
+                valA = mean_t_A[m] if not pd.isna(mean_t_A[m]) else 0
+                valB = mean_t_B[m] if not pd.isna(mean_t_B[m]) else 0
+                valC = mean_t_C[m] if usar_C and not pd.isna(mean_t_C[m]) else 0
                 
                 if 'DIS/min' in m or 'DIS AI/min' in m:
                     valA, valB, valC = valA * 1000, valB * 1000, valC * 1000
@@ -533,16 +656,15 @@ else:
                     
                 fila = {
                     "Métrica": m.replace("/min", " (m/min)" if "DIS" in m else " / min"),
-                    "A": round(valA, 2),
-                    "B": round(valB, 2),
+                    f"A: {lbl_A}": round(valA, 2),
+                    f"B: {lbl_B}": round(valB, 2),
                     "Dif. B vs A": diff_str_B
                 }
                 if usar_C:
-                    fila["C"] = round(valC, 2)
+                    fila[f"C: {lbl_C}"] = round(valC, 2)
                     fila["Dif. C vs A"] = diff_str_C
                     
                 comp_data.append(fila)
                 
-            st.markdown("#### 📊 Tabla de Comparación Triple")
             columnas_estilo = ["Dif. B vs A", "Dif. C vs A"] if usar_C else ["Dif. B vs A"]
             mostrar_tabla_moderna(pd.DataFrame(comp_data).style.hide(axis="index").map(lambda x: "color: #28a745" if "+" in str(x) else ("color: #ff4b4b" if "-" in str(x) else ""), subset=columnas_estilo))
