@@ -155,6 +155,24 @@ with tab_antro_res:
                     marker=dict(size=12, opacity=0.8, line=dict(width=1, color='DarkSlateGrey'))
                 )
 
+                # --- NUEVO: ZONA OBJETIVO ÉLITE ---
+                fig_quad.add_shape(
+                    type="rect",
+                    x0=7.5, x1=10.0,
+                    y0=20.0, y1=23.0,
+                    fillcolor="green",
+                    opacity=0.15,
+                    line_width=2,
+                    line_color="green",
+                    layer="below"
+                )
+                fig_quad.add_annotation(
+                    x=8.75, y=23.3, 
+                    text="ZONA ÉLITE", 
+                    showarrow=False, 
+                    font=dict(color="green", size=12, weight="bold")
+                )
+
                 # Líneas divisorias (Cuadrantes) usando la media del grupo filtrado
                 fig_quad.add_vline(x=media_grasa, line_dash="dot", line_color="gray", opacity=0.7)
                 fig_quad.add_hline(y=media_ffmi, line_dash="dot", line_color="gray", opacity=0.7)
@@ -281,6 +299,40 @@ with tab_antro_jug:
                 c2.metric("% Graso (Yuhasz)", f"{ultimo_pesaje['% Graso']:.2f} %")
                 c3.metric("Masa Magra", f"{ultimo_pesaje['Kg Magros']:.1f} kg")
                 c4.metric("∑ 4 Pliegues", f"{ultimo_pesaje['Suma_Pliegues']:.1f} mm")
+                
+                # --- NUEVO: CÁLCULO DE OBJETIVOS AUTOMÁTICOS ---
+                st.markdown("---")
+                st.markdown("#### 🎯 Objetivos de Composición Corporal")
+                st.caption("Metas calculadas automáticamente para situar al jugador en la **Zona Élite (Grasa 7.5% - 10% | FFMI 20 - 23)** según su estatura.")
+                
+                altura_cm = safe_float(jugador_datos.get('altura', 175)) if jugador_datos else 175
+                altura_m = altura_cm / 100.0
+                
+                # Cálculo de rangos de peso basados en FFMI y % Grasa
+                # Formula derivada: Peso = (FFMI * Altura^2) / (1 - %Grasa/100)
+                peso_min = (20 * (altura_m ** 2)) / (1 - 0.075)
+                peso_max = (23 * (altura_m ** 2)) / (1 - 0.10)
+                
+                peso_actual = safe_float(ultimo_pesaje['Peso'])
+                grasa_actual = safe_float(ultimo_pesaje['% Graso'])
+                
+                # Evaluador de estado
+                def evaluar_objetivo(actual, v_min, v_max, unidad):
+                    if actual < v_min:
+                        dif = actual - v_min
+                        return f"🟡 {dif:.1f} {unidad} (Bajo)"
+                    elif actual > v_max:
+                        dif = actual - v_max
+                        return f"🔴 +{dif:.1f} {unidad} (Alto)"
+                    else:
+                        return f"✅ En peso óptimo"
+
+                est_peso = evaluar_objetivo(peso_actual, peso_min, peso_max, "kg")
+                est_grasa = evaluar_objetivo(grasa_actual, 7.5, 10.0, "%")
+                
+                co1, co2 = st.columns(2)
+                co1.info(f"**Rango de Peso Ideal:** {peso_min:.1f} kg — {peso_max:.1f} kg\n\n**Desviación actual:** {est_peso}")
+                co2.info(f"**Rango de Grasa Ideal:** 7.5 % — 10.0 %\n\n**Desviación actual:** {est_grasa}")
             
             with st.container(border=True):
                 st.markdown("#### 📏 Perímetros")
