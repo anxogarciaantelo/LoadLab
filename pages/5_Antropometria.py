@@ -112,6 +112,71 @@ with tab_antro_res:
             a2.metric("Pierna (D - I)", calc_asim_str(prom_pierna_d, prom_pierna_i))
             a3.metric("Bíceps (D - I)", calc_asim_str(prom_biceps_d, prom_biceps_i))
             
+            # ==========================================
+            # NUEVO: CUADRANTE DE COMPOSICIÓN CORPORAL (FFMI)
+            # ==========================================
+            st.markdown("---")
+            st.markdown("#### 🎯 Cuadrante de Composición Corporal (Último Pesaje)")
+            st.caption("Relación entre % Graso y el Índice de Masa Libre de Grasa (FFMI). Aísla la masa muscular real anulando el sesgo de la estatura del jugador.")
+
+            # 1. Obtener la altura de los jugadores desde la plantilla
+            dict_altura = {limpiar_nombre(p['JUGADOR']): safe_float(p.get('altura', 175)) for p in st.session_state.plantilla}
+
+            # 2. Quedarnos solo con el último pesaje de cada jugador (dentro del filtro actual)
+            df_latest = df_filt_clean.sort_values('fecha_dt', ascending=False).drop_duplicates(subset=['jugador']).copy()
+
+            # 3. Calcular FFMI (Kg Magros / (Altura en metros)^2)
+            def calcular_ffmi(row):
+                altura_cm = dict_altura.get(limpiar_nombre(row['jugador']), 175)
+                altura_m = altura_cm / 100.0
+                if altura_m > 0 and row['Kg Magros'] > 0:
+                    return row['Kg Magros'] / (altura_m ** 2)
+                return 0.0
+
+            df_latest['FFMI'] = df_latest.apply(calcular_ffmi, axis=1)
+            df_latest_valid = df_latest[df_latest['FFMI'] > 0].copy()
+
+            if not df_latest_valid.empty:
+                media_grasa = df_latest_valid['% Graso'].mean()
+                media_ffmi = df_latest_valid['FFMI'].mean()
+
+                fig_quad = px.scatter(
+                    df_latest_valid, 
+                    x='% Graso', 
+                    y='FFMI', 
+                    color='POS',
+                    hover_name='jugador',
+                    text='jugador',
+                    color_discrete_map={"POR": "gray", "DEF": "#00b4d8", "MED": "#28a745", "ATA": "#ff4b4b"}
+                )
+
+                fig_quad.update_traces(
+                    textposition='top center', 
+                    marker=dict(size=12, opacity=0.8, line=dict(width=1, color='DarkSlateGrey'))
+                )
+
+                # Líneas divisorias (Cuadrantes) usando la media del grupo filtrado
+                fig_quad.add_vline(x=media_grasa, line_dash="dot", line_color="gray", opacity=0.7)
+                fig_quad.add_hline(y=media_ffmi, line_dash="dot", line_color="gray", opacity=0.7)
+
+                # Configuración visual de los cuadrantes
+                fig_quad.update_layout(
+                    xaxis_title="% Grasa (Yuhasz)",
+                    yaxis_title="FFMI (Índice de Masa Magra)",
+                    height=550,
+                    margin=dict(l=20, r=20, t=40, b=20)
+                )
+
+                # Anotaciones descriptivas sutiles en las esquinas
+                fig_quad.add_annotation(x=0.02, y=0.98, xref="paper", yref="paper", text="↑ Musculados / Finos ↓", showarrow=False, font=dict(color="gray", size=10), opacity=0.6)
+                fig_quad.add_annotation(x=0.98, y=0.98, xref="paper", yref="paper", text="↑ Musculados / Pesados ↑", showarrow=False, font=dict(color="gray", size=10), opacity=0.6)
+                fig_quad.add_annotation(x=0.02, y=0.02, xref="paper", yref="paper", text="↓ Ligeros / Finos ↓", showarrow=False, font=dict(color="gray", size=10), opacity=0.6)
+                fig_quad.add_annotation(x=0.98, y=0.02, xref="paper", yref="paper", text="↓ Ligeros / Pesados ↑", showarrow=False, font=dict(color="gray", size=10), opacity=0.6)
+
+                st.plotly_chart(fig_quad, use_container_width=True, key="antro_quadrant")
+            else:
+                st.info("No hay suficientes datos válidos (peso y altura en la plantilla) para generar el cuadrante.")
+
             st.markdown("---")
             st.markdown("#### 📈 Evolución Mensual: Peso y % Graso")
             
