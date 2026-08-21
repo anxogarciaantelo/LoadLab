@@ -53,10 +53,21 @@ else:
         if df_filtrado.empty:
             st.warning("No hay lesiones que coincidan con los filtros aplicados para este jugador/periodo.")
         else:
+            # --- 1. CÁLCULO DINÁMICO DE DÍAS REALES ---
+            def calcular_dias_reales(row):
+                if row.get('estado') == 'Activa':
+                    fecha_les = datetime.strptime(row['id_sesion'], "%Y-%m-%d").date()
+                    return max((date.today() - fecha_les).days, 0)
+                else:
+                    return safe_float(row.get('dias_baja', 0))
+
+            df_filtrado['dias_reales'] = df_filtrado.apply(calcular_dias_reales, axis=1)
+            
             total_lesiones = len(df_filtrado)
-            total_dias = int(df_filtrado['dias_baja'].fillna(0).sum())
+            total_dias = int(df_filtrado['dias_reales'].sum())
             promedio_dias = total_dias / total_lesiones if total_lesiones > 0 else 0
             
+            # --- 2. CÁLCULO DE EXPOSICIÓN (HORAS) ---
             horas_totales = 0
             for s in st.session_state.sesiones:
                 if s.get("informe_generado", False):
@@ -70,13 +81,17 @@ else:
                             horas_totales += float(d.get("MIN", 0)) / 60.0
 
             incidencia = (total_lesiones / horas_totales * 1000) if horas_totales > 0 else 0
+            
+            # --- 3. CÁLCULO DEL BURDEN LESIONAL ---
+            burden = (total_dias / horas_totales * 1000) if horas_totales > 0 else 0
 
             st.markdown("#### 🎯 Métricas Globales")
-            k1, k2, k3, k4 = st.columns(4)
+            k1, k2, k3, k4, k5 = st.columns(5)
             k1.metric("Total de Lesiones", total_lesiones)
             k2.metric("Total Días de Baja", f"{total_dias} días")
             k3.metric("Promedio de Baja", f"{promedio_dias:.1f} días / lesión")
-            k4.metric("Incidencia (/1000h)", f"{incidencia:.1f}", help="Fórmula: (Total Lesiones / Horas Totales Exposición) * 1000. \nCalculado usando los minutos GPS/RPE.")
+            k4.metric("Incidencia (/1000h)", f"{incidencia:.1f}")
+            k5.metric("Burden (/1000h)", f"{burden:.0f}", help="Días perdidos por cada 1000 horas de exposición. Óptimo (<100) | Moderado (100-150) | Crítico (>150)")
             
             st.markdown("---")
             st.markdown("#### 📈 Desglose Estadístico")
@@ -112,11 +127,22 @@ else:
                 st.plotly_chart(fig_sup, use_container_width=True, key="les_pie_sup")
 
     with tab_les_list:
-        cols_mostrar = ["id_sesion", "tipo_sesion", "jugador", "tipo", "zona", "lado", "lateralidad", "contacto", "cesped", "recidiva", "estado", "dias_baja", "comentarios"]
-        df_mostrar = df_les[cols_mostrar].rename(columns={
+        # --- MEJORA VISUAL: Mostrar días en tiempo real para lesiones activas ---
+        df_mostrar_list = df_les.copy()
+        
+        def display_dias_tabla(row):
+            if row.get('estado') == 'Activa':
+                dias_actuales = max((date.today() - datetime.strptime(row['id_sesion'], "%Y-%m-%d").date()).days, 0)
+                return f"{dias_actuales} (Activa)"
+            return str(int(safe_float(row.get('dias_baja', 0))))
+            
+        df_mostrar_list['dias_baja_display'] = df_mostrar_list.apply(display_dias_tabla, axis=1)
+
+        cols_mostrar = ["id_sesion", "tipo_sesion", "jugador", "tipo", "zona", "lado", "lateralidad", "contacto", "cesped", "recidiva", "estado", "dias_baja_display", "comentarios"]
+        df_mostrar = df_mostrar_list[cols_mostrar].rename(columns={
             "id_sesion": "Fecha", "tipo_sesion": "Sesión", "jugador": "Jugador", "tipo": "Tipo", 
             "zona": "Zona", "lado": "Lado", "lateralidad": "Lateralidad", "contacto": "Contacto", 
-            "cesped": "Superficie", "recidiva": "Recidiva", "estado": "Estado", "dias_baja": "Días Baja", "comentarios": "Comentarios"
+            "cesped": "Superficie", "recidiva": "Recidiva", "estado": "Estado", "dias_baja_display": "Días Baja", "comentarios": "Comentarios"
         })
         mostrar_tabla_moderna(df_mostrar.style.hide(axis="index"))
         
