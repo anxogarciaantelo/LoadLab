@@ -394,10 +394,120 @@ if st.session_state.get("equipo_seleccionado", False):
                 {img_html}
                 <h1 style="color: #0f172a; font-weight: 800; margin-bottom: 5px; font-size: 2.2rem;">{st.session_state.get('nombre_equipo', 'LoadLab')}</h1>
                 <p style="color: #64748b; font-size: 1.1rem; margin-top: 0;">
-                    <b>{st.session_state.get('categoria_equipo', '')}</b> | {st.session_state.get('division_equipo', '')} &bull; Temp: {st.session_state.get('temporada_equipo', '')}
-                </p>
-            </div>
-        """, unsafe_allow_html=True)
+            <b>{st.session_state.get('categoria_equipo', '')}</b> | {st.session_state.get('division_equipo', '')} &bull; Temp: {st.session_state.get('temporada_equipo', '')}
+        </p>
+    </div>
+""", unsafe_allow_html=True)
+
+    # ==========================================
+    # 🚨 THE CONTROL ROOM (PANEL DEL MÍSTER)
+    # ==========================================
+    st.markdown("### 🚨 THE CONTROL ROOM | Tu resumen en 30 segundos")
+    
+    # 1. Timeline y Clima (Buscamos la sesión más relevante)
+    hoy_str = str(date.today())
+    sesiones_ordenadas = sorted(st.session_state.sesiones, key=lambda x: x["fecha"])
+    sesion_ref = next((s for s in sesiones_ordenadas if s["fecha"] == hoy_str), None)
+    
+    if not sesion_ref and sesiones_ordenadas:
+        # Si hoy no hay, cogemos la última registrada
+        pasadas = [s for s in sesiones_ordenadas if s["fecha"] <= hoy_str]
+        sesion_ref = pasadas[-1] if pasadas else sesiones_ordenadas[0]
+
+    contexto_txt = "No hay sesiones programadas recientemente."
+    if sesion_ref:
+        md_txt = sesion_ref.get("descripcion", sesion_ref.get("tipo", ""))
+        rival_txt = f" vs {sesion_ref.get('rival', 'Rival')}" if "Partido" in sesion_ref.get("tipo", "") else ""
+        fecha_formato = datetime.strptime(sesion_ref["fecha"], "%Y-%m-%d").strftime("%d-%m-%Y")
+        
+        clima = sesion_ref.get("clima", {})
+        clima_txt = f" | {clima.get('estado', '')} ({clima.get('temp', '')}ºC)" if clima else ""
+        
+        contexto_txt = f"📅 **Última Referencia: {fecha_formato}** {clima_txt} | ⏱️ Contexto: **{md_txt}{rival_txt}**"
+        
+    st.info(contexto_txt)
+
+    # 2. Recopilación de Datos para las 3 Columnas
+    bajas = []
+    lesiones_activas = [l for l in st.session_state.get("lesiones", []) if l.get("estado") == "Activa"]
+    for l in lesiones_activas:
+        bajas.append(f"👤 **{l['jugador']}** <br> ↳ <i>Lesión {l['tipo'].lower()} ({l['zona']})</i>")
+        
+    if sesion_ref:
+        disp = sesion_ref.get("disponibilidad", {})
+        for j_nombre, estado in disp.items():
+            if estado in ["Enfermo", "No disponible", "Falta"]:
+                if not any(j_nombre in b for b in bajas):
+                    bajas.append(f"👤 **{j_nombre}** <br> ↳ <i>{estado}</i>")
+                    
+    algodones = []
+    if sesion_ref and sesion_ref.get("datos_informe"):
+        for d in sesion_ref["datos_informe"]:
+            tqr = safe_float(d.get("TQR"))
+            well = safe_float(d.get("WELLNESS"))
+            alertas = []
+            if 0 < tqr <= 3: alertas.append(f"TQR Crítico ({tqr}/10)")
+            if well >= 24: alertas.append(f"Fatiga/Dolor Alto")
+            if alertas:
+                algodones.append(f"👤 **{d['JUGADOR']}** <br> ↳ <i>{', '.join(alertas)}</i>")
+                
+    zona_roja = []
+    ewma_hoy = calcular_ewma_historico(st.session_state.sesiones, hoy_str)
+    for jug, vals in ewma_hoy.items():
+        ratio = vals.get("RATIO A/C", 0)
+        if ratio >= 1.4:
+            zona_roja.append(f"👤 **{jug}** <br> ↳ <i>Ratio A/C disparado ({ratio:.2f})</i>")
+
+    # 3. Renderizado de Columnas
+    c_b, c_a, c_z = st.columns(3)
+    
+    css_tarjeta = "padding: 12px; border-radius: 8px; margin-bottom: 10px; font-size: 0.95rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1);"
+    
+    with c_b:
+        st.markdown(f"**🏥 BAJAS CONFIRMADAS ({len(bajas)})**")
+        if bajas:
+            for b in bajas: st.markdown(f"<div style='background-color: #fef2f2; border-left: 4px solid #ef4444; color: #7f1d1d; {css_tarjeta}'>{b}</div>", unsafe_allow_html=True)
+        else:
+            st.success("✅ Plantilla sana y disponible.")
+            
+    with c_a:
+        st.markdown(f"**🔋 ENTRE ALGODONES ({len(algodones)})**")
+        if algodones:
+            for a in algodones: st.markdown(f"<div style='background-color: #fffbeb; border-left: 4px solid #f59e0b; color: #78350f; {css_tarjeta}'>{a}</div>", unsafe_allow_html=True)
+        else:
+            st.success("✅ Buena recuperación general.")
+            
+    with c_z:
+        st.markdown(f"**⚠️ ZONA ROJA CARGA ({len(zona_roja)})**")
+        if zona_roja:
+            for z in zona_roja: st.markdown(f"<div style='background-color: #fff1f2; border-left: 4px solid #e11d48; color: #881337; {css_tarjeta}'>{z}</div>", unsafe_allow_html=True)
+        else:
+            st.success("✅ Cargas controladas.")
+
+    # 4. Alertas de Sanciones (Tarjetas)
+    partidos = [s for s in st.session_state.sesiones if "Partido" in s.get("tipo", "")]
+    tarjetas_jugador = {}
+    for p in partidos:
+        stats = p.get("estadisticas_partido", {})
+        for jug, vals in stats.items():
+            tarjetas_jugador[jug] = tarjetas_jugador.get(jug, 0) + vals.get("Amarillas", 0)
+            
+    apercibidos = []
+    sancionados = []
+    for jug, ta in tarjetas_jugador.items():
+        if ta > 0:
+            if ta % 5 == 4: apercibidos.append(jug)
+            elif ta % 5 == 0: sancionados.append(jug)
+            
+    if apercibidos or sancionados:
+        st.markdown("---")
+        st.markdown("**⚖️ ALERTAS DE PARTIDO:**")
+        if sancionados:
+            st.error(f"🛑 **Sancionados (Ciclo cumplido):** {', '.join(sancionados)}")
+        if apercibidos:
+            st.warning(f"🟨 **Apercibidos (A una tarjeta de la sanción):** {', '.join(apercibidos)}")
+
+    st.markdown("---")
         
     # --- 3. TARJETAS DE NAVEGACIÓN (ACCESOS RÁPIDOS) ---
     st.markdown("<h3 style='text-align: center; color: #0f172a; font-weight: 800; margin-bottom: 25px;'>🚀 Accesos Rápidos</h3>", unsafe_allow_html=True)
