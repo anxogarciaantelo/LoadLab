@@ -300,39 +300,51 @@ with tab_antro_jug:
                 c3.metric("Masa Magra", f"{ultimo_pesaje['Kg Magros']:.1f} kg")
                 c4.metric("∑ 4 Pliegues", f"{ultimo_pesaje['Suma_Pliegues']:.1f} mm")
                 
-                # --- NUEVO: CÁLCULO DE OBJETIVOS AUTOMÁTICOS ---
+                # --- NUEVO: CÁLCULO DE OBJETIVOS AUTOMÁTICOS (ANCLADO A SU GENÉTICA) ---
                 st.markdown("---")
                 st.markdown("#### 🎯 Objetivos de Composición Corporal")
-                st.caption("Metas calculadas automáticamente para situar al jugador en la **Zona Élite (Grasa 7.5% - 10% | FFMI 20 - 23)** según su estatura.")
+                
+                peso_actual = safe_float(ultimo_pesaje['Peso'])
+                grasa_actual = safe_float(ultimo_pesaje['% Graso'])
+                masa_magra_actual = safe_float(ultimo_pesaje['Kg Magros'])
                 
                 altura_cm = safe_float(jugador_datos.get('altura', 175)) if jugador_datos else 175
                 altura_m = altura_cm / 100.0
                 
-                # Cálculo de rangos de peso basados en FFMI y % Grasa
-                # Formula derivada: Peso = (FFMI * Altura^2) / (1 - %Grasa/100)
-                peso_min = (20 * (altura_m ** 2)) / (1 - 0.075)
-                peso_max = (23 * (altura_m ** 2)) / (1 - 0.10)
+                # 1. Calculamos el FFMI real del jugador en este momento
+                ffmi_actual = masa_magra_actual / (altura_m ** 2) if altura_m > 0 else 21.0
                 
-                peso_actual = safe_float(ultimo_pesaje['Peso'])
-                grasa_actual = safe_float(ultimo_pesaje['% Graso'])
+                # 2. Creamos un rango muscular hiper-personalizado: Su FFMI actual ± 0.3
+                # Lo limitamos ("clipeamos") a los topes de salud del fútbol (20.0 mínimo, 23.0 máximo)
+                ffmi_min = max(20.0, ffmi_actual - 0.3)
+                ffmi_max = min(23.0, ffmi_actual + 0.3)
                 
-                # Evaluador de estado
+                # 3. Rango de grasa estándar de élite (ventana estrecha)
+                grasa_min, grasa_max = 8.0, 9.5
+                
+                st.caption(f"Metas individualizadas basadas en su propia estructura muscular actual (FFMI: **{ffmi_actual:.1f}**). Se ha calculado un rango objetivo de mantenimiento muscular ({ffmi_min:.1f} - {ffmi_max:.1f}) ajustando la grasa al nivel élite ({grasa_min}% - {grasa_max}%).")
+                
+                # 4. Cálculo de rangos de peso exactos (Esto generará una ventana de ~2 o 3 kg adaptada al 100% a él)
+                peso_min = (ffmi_min * (altura_m ** 2)) / (1 - (grasa_min / 100))
+                peso_max = (ffmi_max * (altura_m ** 2)) / (1 - (grasa_max / 100))
+                
+                # 5. Evaluador de estado (te dice exactamente cuántos kilos o % sobran o faltan)
                 def evaluar_objetivo(actual, v_min, v_max, unidad):
                     if actual < v_min:
-                        dif = actual - v_min
-                        return f"🟡 {dif:.1f} {unidad} (Bajo)"
+                        dif = v_min - actual
+                        return f"🟡 Faltan {dif:.1f} {unidad}"
                     elif actual > v_max:
                         dif = actual - v_max
-                        return f"🔴 +{dif:.1f} {unidad} (Alto)"
+                        return f"🔴 Sobran {dif:.1f} {unidad}"
                     else:
-                        return f"✅ En peso óptimo"
+                        return f"✅ En rango óptimo"
 
                 est_peso = evaluar_objetivo(peso_actual, peso_min, peso_max, "kg")
-                est_grasa = evaluar_objetivo(grasa_actual, 7.5, 10.0, "%")
+                est_grasa = evaluar_objetivo(grasa_actual, grasa_min, grasa_max, "%")
                 
                 co1, co2 = st.columns(2)
-                co1.info(f"**Rango de Peso Ideal:** {peso_min:.1f} kg — {peso_max:.1f} kg\n\n**Desviación actual:** {est_peso}")
-                co2.info(f"**Rango de Grasa Ideal:** 7.5 % — 10.0 %\n\n**Desviación actual:** {est_grasa}")
+                co1.info(f"**Rango de Peso Ideal:** {peso_min:.1f} kg — {peso_max:.1f} kg\n\n**Estado:** {est_peso}")
+                co2.info(f"**Rango de Grasa Ideal:** {grasa_min:.1f} % — {grasa_max:.1f} %\n\n**Estado:** {est_grasa}")
             
             with st.container(border=True):
                 st.markdown("#### 📏 Perímetros")
