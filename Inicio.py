@@ -400,9 +400,9 @@ if st.session_state.get("equipo_seleccionado", False):
 """, unsafe_allow_html=True)
 
     # ==========================================
-    # 🚨 THE CONTROL ROOM (PANEL DEL MÍSTER)
+    # 🚨 INFORMACIÓN DIARIA (DASHBOARD)
     # ==========================================
-    st.markdown("### 🚨 THE CONTROL ROOM | Tu resumen en 30 segundos")
+    st.markdown("### 🚨 Información diaria")
     
     # 1. Timeline y Clima (Buscamos la sesión más relevante)
     hoy_str = str(date.today())
@@ -410,7 +410,6 @@ if st.session_state.get("equipo_seleccionado", False):
     sesion_ref = next((s for s in sesiones_ordenadas if s["fecha"] == hoy_str), None)
     
     if not sesion_ref and sesiones_ordenadas:
-        # Si hoy no hay, cogemos la última registrada
         pasadas = [s for s in sesiones_ordenadas if s["fecha"] <= hoy_str]
         sesion_ref = pasadas[-1] if pasadas else sesiones_ordenadas[0]
 
@@ -419,68 +418,77 @@ if st.session_state.get("equipo_seleccionado", False):
         md_txt = sesion_ref.get("descripcion", sesion_ref.get("tipo", ""))
         rival_txt = f" vs {sesion_ref.get('rival', 'Rival')}" if "Partido" in sesion_ref.get("tipo", "") else ""
         fecha_formato = datetime.strptime(sesion_ref["fecha"], "%Y-%m-%d").strftime("%d-%m-%Y")
-        
         clima = sesion_ref.get("clima", {})
         clima_txt = f" | {clima.get('estado', '')} ({clima.get('temp', '')}ºC)" if clima else ""
-        
         contexto_txt = f"📅 **Última Referencia: {fecha_formato}** {clima_txt} | ⏱️ Contexto: **{md_txt}{rival_txt}**"
         
     st.info(contexto_txt)
 
+    # Helper para cargar la foto del jugador en formato pequeño
+    def get_avatar_html(jugador_nombre):
+        for p in st.session_state.get("plantilla", []):
+            if limpiar_nombre(p["JUGADOR"]) == limpiar_nombre(jugador_nombre):
+                if p.get("foto"):
+                    return f'<img src="data:image/jpeg;base64,{p["foto"]}" style="width:28px; height:28px; border-radius:50%; object-fit: cover; vertical-align: middle; margin-right: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">'
+                break
+        return '<span style="font-size: 22px; margin-right: 8px; vertical-align: middle;">👤</span>'
+
     # 2. Recopilación de Datos para las 3 Columnas
     bajas = []
-    lesiones_activas = [l for l in st.session_state.get("lesiones", []) if l.get("estado") == "Activa"]
-    for l in lesiones_activas:
-        bajas.append(f"👤 **{l['jugador']}** <br> ↳ <i>Lesión {l['tipo'].lower()} ({l['zona']})</i>")
-        
     if sesion_ref:
         disp = sesion_ref.get("disponibilidad", {})
         for j_nombre, estado in disp.items():
-            if estado in ["Enfermo", "No disponible", "Falta"]:
-                if not any(j_nombre in b for b in bajas):
-                    bajas.append(f"👤 **{j_nombre}** <br> ↳ <i>{estado}</i>")
+            if estado in ["Lesionado", "Enfermo", "No disponible", "Falta"]:
+                avatar = get_avatar_html(j_nombre)
+                bajas.append(f"<div style='display:flex; align-items:center;'>{avatar} <strong style='font-size: 1rem;'>{j_nombre}</strong></div><div style='margin-left: 36px; font-size: 0.85rem; color: #555;'>↳ <i>{estado}</i></div>")
                     
-    algodones = []
+    a_vigilar = []
     if sesion_ref and sesion_ref.get("datos_informe"):
         for d in sesion_ref["datos_informe"]:
             tqr = safe_float(d.get("TQR"))
             well = safe_float(d.get("WELLNESS"))
             alertas = []
-            if 0 < tqr <= 3: alertas.append(f"TQR Crítico ({tqr}/10)")
-            if well >= 24: alertas.append(f"Fatiga/Dolor Alto")
+            if 0 < tqr <= 4: alertas.append(f"TQR Bajo ({tqr}/10)")
+            if well >= 18: alertas.append(f"Wellness Alto ({well} pts)")
+            
             if alertas:
-                algodones.append(f"👤 **{d['JUGADOR']}** <br> ↳ <i>{', '.join(alertas)}</i>")
+                avatar = get_avatar_html(d["JUGADOR"])
+                a_vigilar.append(f"<div style='display:flex; align-items:center;'>{avatar} <strong style='font-size: 1rem;'>{d['JUGADOR']}</strong></div><div style='margin-left: 36px; font-size: 0.85rem; color: #555;'>↳ <i>{', '.join(alertas)}</i></div>")
                 
     zona_roja = []
-    ewma_hoy = calcular_ewma_historico(st.session_state.sesiones, hoy_str)
-    for jug, vals in ewma_hoy.items():
-        ratio = vals.get("RATIO A/C", 0)
-        if ratio >= 1.4:
-            zona_roja.append(f"👤 **{jug}** <br> ↳ <i>Ratio A/C disparado ({ratio:.2f})</i>")
+    if sesion_ref:
+        ewma_hoy = calcular_ewma_historico(st.session_state.sesiones, sesion_ref["fecha"])
+        for jug, vals in ewma_hoy.items():
+            ratio = vals.get("RATIO A/C", 0)
+            aguda = vals.get("EWMA AGUDA", 0)
+            
+            # Filtro exacto que usamos en el informe de 1_Entrenamiento (Aguda > 1000 y Ratio >= 1.35)
+            if aguda > 1000 and ratio >= 1.35:
+                avatar = get_avatar_html(jug)
+                zona_roja.append(f"<div style='display:flex; align-items:center;'>{avatar} <strong style='font-size: 1rem;'>{jug}</strong></div><div style='margin-left: 36px; font-size: 0.85rem; color: #555;'>↳ <i>Ratio A/C de Riesgo ({ratio:.2f})</i></div>")
 
     # 3. Renderizado de Columnas
     c_b, c_a, c_z = st.columns(3)
-    
-    css_tarjeta = "padding: 12px; border-radius: 8px; margin-bottom: 10px; font-size: 0.95rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1);"
+    css_tarjeta = "padding: 10px 12px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); background-color: white;"
     
     with c_b:
         st.markdown(f"**🏥 BAJAS CONFIRMADAS ({len(bajas)})**")
         if bajas:
-            for b in bajas: st.markdown(f"<div style='background-color: #fef2f2; border-left: 4px solid #ef4444; color: #7f1d1d; {css_tarjeta}'>{b}</div>", unsafe_allow_html=True)
+            for b in bajas: st.markdown(f"<div style='border-left: 4px solid #ef4444; {css_tarjeta}'>{b}</div>", unsafe_allow_html=True)
         else:
             st.success("✅ Plantilla sana y disponible.")
             
     with c_a:
-        st.markdown(f"**🔋 ENTRE ALGODONES ({len(algodones)})**")
-        if algodones:
-            for a in algodones: st.markdown(f"<div style='background-color: #fffbeb; border-left: 4px solid #f59e0b; color: #78350f; {css_tarjeta}'>{a}</div>", unsafe_allow_html=True)
+        st.markdown(f"**🔋 A VIGILAR ({len(a_vigilar)})**")
+        if a_vigilar:
+            for a in a_vigilar: st.markdown(f"<div style='border-left: 4px solid #f59e0b; {css_tarjeta}'>{a}</div>", unsafe_allow_html=True)
         else:
             st.success("✅ Buena recuperación general.")
             
     with c_z:
-        st.markdown(f"**⚠️ ZONA ROJA CARGA ({len(zona_roja)})**")
+        st.markdown(f"**⚠️ ZONA ALTA DE CARGA ({len(zona_roja)})**")
         if zona_roja:
-            for z in zona_roja: st.markdown(f"<div style='background-color: #fff1f2; border-left: 4px solid #e11d48; color: #881337; {css_tarjeta}'>{z}</div>", unsafe_allow_html=True)
+            for z in zona_roja: st.markdown(f"<div style='border-left: 4px solid #e11d48; {css_tarjeta}'>{z}</div>", unsafe_allow_html=True)
         else:
             st.success("✅ Cargas controladas.")
 
@@ -508,7 +516,7 @@ if st.session_state.get("equipo_seleccionado", False):
             st.warning(f"🟨 **Apercibidos (A una tarjeta de la sanción):** {', '.join(apercibidos)}")
 
     st.markdown("---")
-        
+
     # --- 3. TARJETAS DE NAVEGACIÓN (ACCESOS RÁPIDOS) ---
     st.markdown("<h3 style='text-align: center; color: #0f172a; font-weight: 800; margin-bottom: 25px;'>🚀 Accesos Rápidos</h3>", unsafe_allow_html=True)
     
