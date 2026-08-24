@@ -115,8 +115,11 @@ def construir_dataset_entrenamiento(sesiones, lesiones):
         group['Sprints_7d'] = group['SPRINTS'].rolling(window=7, min_periods=1).sum()
         group['ACC_7d'] = group['ACC'].rolling(window=7, min_periods=1).sum()
         group['DCC_7d'] = group['DCC'].rolling(window=7, min_periods=1).sum()
+        
+        # Estado de Bienestar (Promedio 3 días para ver caídas recientes)
         group['Wellness_3d'] = group['WELLNESS'].replace(0, np.nan).rolling(window=3, min_periods=1).mean().fillna(0)
         group['Sueno_3d'] = group['SUEÑO'].replace(0, np.nan).rolling(window=3, min_periods=1).mean().fillna(0)
+        
         group['JUGADOR'] = jug
         features.append(group.reset_index())
         
@@ -175,8 +178,8 @@ if total_lesiones_validas >= MIN_LESIONES_REQUERIDAS:
             X_hoy = scaler.transform(df_hoy[predictores])
             df_hoy['Riesgo_%'] = modelo.predict_proba(X_hoy)[:, 1] * 100
 else:
-    # MOTOR HEURÍSTICO / LITERATURA CIENTÍFICA
-    st.info(f"🧠 **Motor Heurístico Científico Activo:** ({total_lesiones_validas}/{MIN_LESIONES_REQUERIDAS} lesiones). La IA requiere más histórico. Predicciones actuales calculadas mediante baremos científicos estándar (Gabbett, McCall).")
+    # MOTOR HEURÍSTICO / LITERATURA CIENTÍFICA CORREGIDO
+    st.info(f"🧠 **Motor Heurístico Científico Activo:** ({total_lesiones_validas}/{MIN_LESIONES_REQUERIDAS} lesiones musculares sin contacto). La IA requiere más histórico. Predicciones actuales calculadas mediante baremos científicos estándar.")
     
     def calcular_riesgo_cientifico(row):
         riesgo = 5.0 # Riesgo base
@@ -187,11 +190,9 @@ else:
         elif row['Ratio_AC'] < 0.8: riesgo += 10.0
         
         # 2. Wellness y Sueño (Escala inversa: mayor = peor)
-        # Sueño va de 1 (genial) a 7 (fatal)
         if row['Sueno_3d'] >= 5: 
             riesgo += 15.0
             
-        # Wellness va de 5 (genial) a 35 (fatal)
         if row['Wellness_3d'] >= 24: 
             riesgo += 15.0 # Wellness crítico
         elif row['Wellness_3d'] >= 18: 
@@ -233,7 +234,7 @@ else:
                 <p style="color: #881337; font-size: 0.9em; margin-top: 10px;">
                     Ratio A/C: {row['Ratio_AC']:.2f}<br>
                     HSR (Últimos 7d): {row['HSR_7d']:.0f} m<br>
-                    Calidad Sueño: {row['Sueno_3d']:.1f}
+                    Calidad Sueño (1-7): {row['Sueno_3d']:.1f}
                 </p>
             </div>
             """, unsafe_allow_html=True)
@@ -246,7 +247,7 @@ with c_info1:
     if modo_ia:
         st.markdown("#### 🔍 Explicabilidad del Modelo (XGBoost)")
         importancias = modelo.feature_importances_
-        nombres_amigables = {'Ratio_AC': 'Ratio A/C (EWMA)', 'Carga_Aguda': 'Carga Aguda', 'HSR_7d': 'HSR Acum. (7d)', 'Sprints_7d': 'Sprints Acum. (7d)', 'ACC_7d': 'Aceleraciones (7d)', 'DCC_7d': 'Deceleraciones (7d)', 'Wellness_3d': 'Caída de Wellness', 'Sueno_3d': 'Falta de Sueño'}
+        nombres_amigables = {'Ratio_AC': 'Ratio A/C (EWMA)', 'Carga_Aguda': 'Carga Aguda', 'HSR_7d': 'HSR Acum. (7d)', 'Sprints_7d': 'Sprints Acum. (7d)', 'ACC_7d': 'Aceleraciones (7d)', 'DCC_7d': 'Deceleraciones (7d)', 'Wellness_3d': 'Fatiga / Dolor', 'Sueno_3d': 'Falta de Sueño'}
         
         df_importancia = pd.DataFrame({'Variable': [nombres_amigables.get(p, p) for p in predictores], 'Impacto': importancias * 100}).sort_values('Impacto', ascending=True)
 
@@ -255,7 +256,7 @@ with c_info1:
         st.plotly_chart(fig_imp, use_container_width=True)
     else:
         st.markdown("#### ⚖️ Baremos Científicos Aplicados")
-        st.info("**Ponderación actual:** \n\n• Ratio A/C > 1.5 (+35%)\n• Ratio A/C < 0.8 (+10%)\n• Lesión Previa en 60d (+20%)\n• Wellness bajo (+15%)\n• Sueño deficitario (+15%)")
+        st.info("**Ponderación actual:** \n\n• Ratio A/C > 1.5 (+35%)\n• Ratio A/C < 0.8 (+10%)\n• Lesión Previa en 60d (+20%)\n• Wellness Crítico > 24 (+15%)\n• Sueño Deficiente > 5 (+15%)")
 
 with c_info2:
     st.markdown("#### 📋 Listado del Equipo (Disponibles)")
