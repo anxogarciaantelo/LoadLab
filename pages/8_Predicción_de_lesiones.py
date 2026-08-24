@@ -4,49 +4,38 @@ import numpy as np
 from datetime import datetime, timedelta
 import plotly.express as px
 
-# --- LIBRERÍAS DE MACHINE LEARNING ---
 try:
     import xgboost as xgb
     from sklearn.preprocessing import StandardScaler
 except ImportError:
-    st.error("⚠️ Faltan librerías. Añade 'xgboost' y 'scikit-learn' a tu archivo requirements.txt y reinicia la app.")
+    st.error("⚠️ Faltan librerías. Añade 'xgboost' y 'scikit-learn' a tu archivo requirements.txt.")
     st.stop()
 
-# --- IMPORTACIONES LOCALES ---
 from utils.math_helpers import *
 from database.db_manager import *
 
-# --- COMPROBACIÓN DE SEGURIDAD ---
 if not st.session_state.get("autenticado", False) or not st.session_state.get("equipo_seleccionado", False):
-    st.warning("⚠️ La sesión ha expirado o no se ha seleccionado un equipo. Por favor, vuelve a iniciar sesión.")
-    if st.button("Ir al Login principal"):
-        st.session_state.clear()
-        st.rerun()
+    st.warning("⚠️ La sesión ha expirado o no se ha seleccionado un equipo.")
     st.stop()
 
-st.title("🧠 Predicción de riesgo lesional")
-st.caption("Motor de Inteligencia Artificial (XGBoost) que aprende de los patrones históricos de carga y bienestar de tu plantilla para predecir el riesgo de lesión a 7 días vista.")
+st.title("🧠 Oráculo: Predicción de Riesgo Lesional")
+st.caption("Sistema Híbrido: Combina algoritmos científicos de prevención deportiva con Machine Learning adaptativo (XGBoost) para tu plantilla.")
 
 # ==========================================
-# 1. CONSTRUCCIÓN DEL DATASET TEMPORAL (CON IMPUTACIÓN AISLADA)
+# 1. CONSTRUCCIÓN DEL DATASET TEMPORAL (CON IMPUTACIÓN)
 # ==========================================
 @st.cache_data(ttl=3600, show_spinner=False)
 def construir_dataset_entrenamiento(sesiones, lesiones):
     registros = []
-    
-    # Mapeo rápido de posiciones desde la plantilla
     dict_pos_esp = {limpiar_nombre(p["JUGADOR"]): p.get("pos_1", "Desconocida") for p in st.session_state.get("plantilla", [])}
     dict_pos_gen = {limpiar_nombre(p["JUGADOR"]): p.get("POS", "DEF") for p in st.session_state.get("plantilla", [])}
 
-    # 1.1 Extraer métricas diarias de las sesiones
     for s in sesiones:
-        if not s.get("informe_generado"):
-            continue
+        if not s.get("informe_generado"): continue
             
         es_partido = "Partido" in s.get("tipo", "")
         disp_dict = {limpiar_nombre(k): v for k, v in s.get("disponibilidad", {}).items()}
         
-        # --- FASE A: Calcular Promedios por Minuto de la Sesión (Solo para quienes llevaron GPS) ---
         datos_gps_validos = []
         for d in s.get("datos_informe", []):
             dis_val = safe_float(d.get("DIS"))
@@ -64,21 +53,17 @@ def construir_dataset_entrenamiento(sesiones, lesiones):
                     "DCC_pm": safe_float(d.get("DCC", d.get("DCC >3", 0))) / min_val,
                 })
         
-        # Generar diccionarios de medias por posición específica, general y equipo
         medias_esp, medias_gen, medias_equipo = {}, {}, {}
         if datos_gps_validos:
             df_validos = pd.DataFrame(datos_gps_validos)
             cols_pm = ["DIS_pm", "HSR_pm", "SPRINTS_pm", "ACC_pm", "DCC_pm"]
-            
             medias_esp = df_validos.groupby("POS_ESP")[cols_pm].mean().to_dict('index')
             medias_gen = df_validos.groupby("POS_GEN")[cols_pm].mean().to_dict('index')
             medias_equipo = df_validos[cols_pm].mean().to_dict()
 
-        # --- FASE B: Extraer datos e Imputar si es necesario ---
         for d in s.get("datos_informe", []):
             jug_nombre = d["JUGADOR"]
             jug_limpio = limpiar_nombre(jug_nombre)
-            
             min_jug = safe_float(d.get("MIN", 0))
             dis_jug = safe_float(d.get("DIS"))
             hsr_jug = safe_float(d.get("DIS AI", d.get("HID >21", 0)))
@@ -86,33 +71,20 @@ def construir_dataset_entrenamiento(sesiones, lesiones):
             acc_jug = safe_float(d.get("ACC", d.get("ACC >3", 0)))
             dcc_jug = safe_float(d.get("DCC", d.get("DCC >3", 0)))
             
-            # Lógica de elegibilidad para imputación
             estado = disp_dict.get(jug_limpio, "Disponible" if not es_partido else "Titular")
-            elegible = False
-            
-            if es_partido:
-                if estado in ["Titular", "Suplente"] and min_jug > 0: elegible = True
-            else:
-                if estado == "Disponible" and min_jug > 0: elegible = True
+            elegible = (estado in ["Titular", "Suplente"] and min_jug > 0) if es_partido else (estado == "Disponible" and min_jug > 0)
 
-            # IMPUTACIÓN AISLADA: Solo si es elegible y no tiene GPS (DIS == 0)
             if elegible and dis_jug == 0 and min_jug > 0 and datos_gps_validos:
                 pos_e = dict_pos_esp.get(jug_limpio, "Desconocida")
                 pos_g = dict_pos_gen.get(jug_limpio, "DEF")
+                ratios = medias_esp.get(pos_e, medias_gen.get(pos_g, medias_equipo))
                 
-                # Buscar la media más precisa disponible (Específica -> General -> Equipo)
-                if pos_e in medias_esp: ratios = medias_esp[pos_e]
-                elif pos_g in medias_gen: ratios = medias_gen[pos_g]
-                else: ratios = medias_equipo
-                
-                # Multiplicar los ratios (m/min) por los minutos reales del jugador
                 dis_jug = ratios["DIS_pm"] * min_jug
                 hsr_jug = ratios["HSR_pm"] * min_jug
                 spr_jug = ratios["SPRINTS_pm"] * min_jug
                 acc_jug = ratios["ACC_pm"] * min_jug
                 dcc_jug = ratios["DCC_pm"] * min_jug
 
-            # Guardar el registro en el Oráculo (Con datos reales o imputados aisladamente)
             registros.append({
                 "FECHA": pd.to_datetime(s["fecha"]),
                 "JUGADOR": jug_nombre,
@@ -129,109 +101,114 @@ def construir_dataset_entrenamiento(sesiones, lesiones):
                 "CARGA": safe_float(d.get("CARGA"))
             })
                 
-    if not registros:
-        return pd.DataFrame()
+    if not registros: return pd.DataFrame()
         
     df = pd.DataFrame(registros).sort_values("FECHA")
     
-    # 1.2 Ingeniería de Características (Rolling Windows)
     features = []
     for jug, group in df.groupby("JUGADOR"):
         group = group.set_index("FECHA").resample('D').sum().fillna(0)
-        
-        # Carga Aguda, Crónica y Ratio A/C (Fórmulas EWMA)
         group['Carga_Aguda'] = group['CARGA'].ewm(span=7, adjust=False).mean()
         group['Carga_Cronica'] = group['CARGA'].ewm(span=28, adjust=False).mean()
         group['Ratio_AC'] = np.where(group['Carga_Cronica'] > 0, group['Carga_Aguda'] / group['Carga_Cronica'], 1.0)
-        
-        # Picos Acumulados (7 días) usando los datos imputados si correspondía
         group['HSR_7d'] = group['HSR'].rolling(window=7, min_periods=1).sum()
         group['Sprints_7d'] = group['SPRINTS'].rolling(window=7, min_periods=1).sum()
         group['ACC_7d'] = group['ACC'].rolling(window=7, min_periods=1).sum()
         group['DCC_7d'] = group['DCC'].rolling(window=7, min_periods=1).sum()
-        
-        # Estado de Bienestar (Promedio 3 días para ver caídas recientes)
         group['Wellness_3d'] = group['WELLNESS'].replace(0, np.nan).rolling(window=3, min_periods=1).mean().fillna(0)
         group['Sueno_3d'] = group['SUEÑO'].replace(0, np.nan).rolling(window=3, min_periods=1).mean().fillna(0)
-        
         group['JUGADOR'] = jug
         features.append(group.reset_index())
         
-    if not features:
-        return pd.DataFrame()
-        
     df_features = pd.concat(features, ignore_index=True)
     
-    # 1.3 Etiquetado de la Variable Objetivo (Target: 1 = Lesión en los prox 7 días)
+    # Target: Solo lesiones MUSCULARES/TENDINOSAS SIN CONTACTO
     df_features['Lesion_Target'] = 0
     fechas_lesiones = [
-    (l['jugador'], pd.to_datetime(l['id_sesion'])) 
-    for l in lesiones 
-    if l.get('tipo') in ["Muscular", "Tendinosa"] and l.get('contacto') == "No"
-]
+        (l['jugador'], pd.to_datetime(l['id_sesion'])) 
+        for l in lesiones 
+        if l.get('tipo') in ["Muscular", "Tendinosa"] and l.get('contacto') == "No"
+    ]
+    
     for jug, fecha_lesion in fechas_lesiones:
-        # Ventana de riesgo: los 7 días previos a romperse
         mask_riesgo = (df_features['JUGADOR'] == jug) & (df_features['FECHA'] >= fecha_lesion - pd.Timedelta(days=7)) & (df_features['FECHA'] < fecha_lesion)
         df_features.loc[mask_riesgo, 'Lesion_Target'] = 1
-        
-        # Eliminar del dataset los días en los que el jugador ya estaba de baja (ruido estadístico)
         mask_baja = (df_features['JUGADOR'] == jug) & (df_features['FECHA'] >= fecha_lesion) & (df_features['FECHA'] <= fecha_lesion + pd.Timedelta(days=21))
         df_features = df_features[~mask_baja]
 
     return df_features
 
 # ==========================================
-# 2. ENTRENAMIENTO E INFERENCIA (ML)
+# 2. SELECCIÓN DEL MOTOR DE IA (HÍBRIDO)
 # ==========================================
 df_master = construir_dataset_entrenamiento(st.session_state.sesiones, st.session_state.lesiones)
 
-# Control de datos mínimos para Machine Learning
-MIN_LESIONES_REQUERIDAS = 3
-
 if df_master.empty:
-    st.info("📊 No hay datos suficientes de entrenamientos para generar predicciones.")
+    st.info("📊 No hay datos de entrenamiento para generar predicciones.")
     st.stop()
 
-total_lesiones_registradas = len(df_master[df_master['Lesion_Target'] == 1])
+# Extracción de la fotografía actual
+df_hoy = df_master.loc[df_master.groupby('JUGADOR')['FECHA'].idxmax()].copy()
 
-if total_lesiones_registradas < MIN_LESIONES_REQUERIDAS:
-    st.info(f"⏳ **Fase de calibración:** El algoritmo necesita aprender de tu equipo. Registra al menos {MIN_LESIONES_REQUERIDAS} lesiones en el historial (actualmente hay {total_lesiones_registradas} ventanas válidas) para activar las predicciones de IA.")
-    st.stop()
+# EXCLUSIÓN DE JUGADORES LESIONADOS ACTUALMENTE
+lesionados_activos = [l['jugador'] for l in st.session_state.lesiones if l.get('estado') == 'Activa']
+df_hoy = df_hoy[~df_hoy['JUGADOR'].isin(lesionados_activos)]
 
-# Definición de variables predictoras
+MIN_LESIONES_REQUERIDAS = 10
+total_lesiones_validas = len(df_master[df_master['Lesion_Target'] == 1])
 predictores = ['Ratio_AC', 'Carga_Aguda', 'HSR_7d', 'Sprints_7d', 'ACC_7d', 'DCC_7d', 'Wellness_3d', 'Sueno_3d']
+modo_ia = False
 
-with st.spinner("Entrenando el modelo XGBoost con los patrones físicos de tu plantilla..."):
-    X = df_master[predictores]
-    y = df_master['Lesion_Target']
+if total_lesiones_validas >= MIN_LESIONES_REQUERIDAS:
+    modo_ia = True
+    with st.spinner("Motor XGBoost Activo: Procesando patrones individuales..."):
+        X = df_master[predictores]
+        y = df_master['Lesion_Target']
+        ratio_desbalanceo = len(y[y == 0]) / len(y[y == 1]) if len(y[y == 1]) > 0 else 1
+        
+        modelo = xgb.XGBClassifier(n_estimators=100, max_depth=4, learning_rate=0.05, scale_pos_weight=ratio_desbalanceo, eval_metric='logloss')
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(X)
+        modelo.fit(X_scaled, y)
+        
+        if not df_hoy.empty:
+            X_hoy = scaler.transform(df_hoy[predictores])
+            df_hoy['Riesgo_%'] = modelo.predict_proba(X_hoy)[:, 1] * 100
+else:
+    # MOTOR HEURÍSTICO / LITERATURA CIENTÍFICA
+    st.info(f"🧠 **Motor Heurístico Científico Activo:** ({total_lesiones_validas}/{MIN_LESIONES_REQUERIDAS} lesiones). La IA requiere más histórico. Predicciones actuales calculadas mediante baremos científicos estándar (Gabbett, McCall).")
     
-    # Balanceo matemático (hay muchos días sanos y muy pocos de lesión)
-    num_sanos = len(y[y == 0])
-    num_lesionados = len(y[y == 1])
-    ratio_desbalanceo = num_sanos / num_lesionados if num_lesionados > 0 else 1
-    
-    # Modelo
-    modelo = xgb.XGBClassifier(
-        n_estimators=100,
-        max_depth=4,
-        learning_rate=0.05,
-        scale_pos_weight=ratio_desbalanceo, 
-        eval_metric='logloss'
-    )
-    
-    # Normalización (Mejora la estabilidad del modelo)
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
-    
-    # Entrenamiento
-    modelo.fit(X_scaled, y)
-    
-    # 2.1 Predicción del riesgo ACTUAL (Último día registrado por jugador)
-    df_hoy = df_master.loc[df_master.groupby('JUGADOR')['FECHA'].idxmax()].copy()
-    
-    X_hoy = scaler.transform(df_hoy[predictores])
-    probabilidades = modelo.predict_proba(X_hoy)[:, 1] * 100
-    df_hoy['Riesgo_%'] = probabilidades
+    def calcular_riesgo_cientifico(row):
+        riesgo = 5.0 # Riesgo base
+        
+        # 1. Ratio A/C
+        if row['Ratio_AC'] > 1.5: riesgo += 35.0
+        elif row['Ratio_AC'] > 1.3: riesgo += 15.0
+        elif row['Ratio_AC'] < 0.8: riesgo += 10.0
+        
+        # 2. Wellness y Sueño (Escala inversa: mayor = peor)
+        # Sueño va de 1 (genial) a 7 (fatal)
+        if row['Sueno_3d'] >= 5: 
+            riesgo += 15.0
+            
+        # Wellness va de 5 (genial) a 35 (fatal)
+        if row['Wellness_3d'] >= 24: 
+            riesgo += 15.0 # Wellness crítico
+        elif row['Wellness_3d'] >= 18: 
+            riesgo += 5.0  # Wellness moderado
+        
+        # 3. Historial clínico (Últimos 60 días)
+        recaida = False
+        for l in st.session_state.lesiones:
+            if l['jugador'] == row['JUGADOR']:
+                fecha_l = datetime.strptime(l['id_sesion'], "%Y-%m-%d")
+                if (datetime.today() - fecha_l).days <= 60:
+                    recaida = True
+        if recaida: riesgo += 20.0
+        
+        return min(riesgo, 95.0)
+
+    df_hoy['Riesgo_%'] = df_hoy.apply(calcular_riesgo_cientifico, axis=1)
 
 # ==========================================
 # 3. DASHBOARD TÁCTICO
@@ -239,12 +216,12 @@ with st.spinner("Entrenando el modelo XGBoost con los patrones físicos de tu pl
 st.markdown("### ⚡ Panel de Riesgo a 7 Días Vista")
 
 df_hoy = df_hoy.sort_values(by="Riesgo_%", ascending=False)
-alto_riesgo = df_hoy[df_hoy['Riesgo_%'] > 60] # Umbral de riesgo crítico
+alto_riesgo = df_hoy[df_hoy['Riesgo_%'] > 60]
 
 if alto_riesgo.empty:
-    st.success("✅ Ningún jugador presenta un patrón crítico de riesgo de lesión para la próxima semana.")
+    st.success("✅ Ningún jugador activo presenta un patrón crítico de riesgo de lesión para la próxima semana.")
 else:
-    st.error(f"🚨 Se han detectado {len(alto_riesgo)} jugadores con perfiles físicos idénticos a los que precedieron lesiones en el pasado.")
+    st.error(f"🚨 Se han detectado {len(alto_riesgo)} jugadores con parámetros que indican alto riesgo lesional inminente.")
     
     cols = st.columns(min(len(alto_riesgo), 3))
     for i, (idx, row) in enumerate(alto_riesgo.head(3).iterrows()):
@@ -254,7 +231,6 @@ else:
                 <h3 style="margin-bottom: 5px; color: #9f1239;">{row['JUGADOR']}</h3>
                 <h1 style="color: #be123c; margin: 0;">{row['Riesgo_%']:.1f}%</h1>
                 <p style="color: #881337; font-size: 0.9em; margin-top: 10px;">
-                    <strong>Foco de alerta actual:</strong><br>
                     Ratio A/C: {row['Ratio_AC']:.2f}<br>
                     HSR (Últimos 7d): {row['HSR_7d']:.0f} m<br>
                     Calidad Sueño: {row['Sueno_3d']:.1f}
@@ -264,41 +240,25 @@ else:
 
 st.markdown("---")
 
-# ==========================================
-# 4. EXPLICABILIDAD DEL MODELO
-# ==========================================
 c_info1, c_info2 = st.columns([2, 1])
 
 with c_info1:
-    st.markdown("#### 🔍 ¿Qué está provocando las lesiones en tu equipo?")
-    st.caption("Importancia de cada métrica (Feature Importance) calculada por la IA según el histórico de tu plantilla.")
-    
-    importancias = modelo.feature_importances_
-    nombres_amigables = {
-        'Ratio_AC': 'Ratio A/C (EWMA)', 'Carga_Aguda': 'Carga Aguda', 
-        'HSR_7d': 'HSR Acum. (7d)', 'Sprints_7d': 'Sprints Acum. (7d)', 
-        'ACC_7d': 'Aceleraciones (7d)', 'DCC_7d': 'Deceleraciones (7d)', 
-        'Wellness_3d': 'Caída de Wellness', 'Sueno_3d': 'Falta de Sueño'
-    }
-    
-    df_importancia = pd.DataFrame({
-        'Variable': [nombres_amigables.get(p, p) for p in predictores], 
-        'Impacto': importancias * 100
-    }).sort_values('Impacto', ascending=True)
+    if modo_ia:
+        st.markdown("#### 🔍 Explicabilidad del Modelo (XGBoost)")
+        importancias = modelo.feature_importances_
+        nombres_amigables = {'Ratio_AC': 'Ratio A/C (EWMA)', 'Carga_Aguda': 'Carga Aguda', 'HSR_7d': 'HSR Acum. (7d)', 'Sprints_7d': 'Sprints Acum. (7d)', 'ACC_7d': 'Aceleraciones (7d)', 'DCC_7d': 'Deceleraciones (7d)', 'Wellness_3d': 'Caída de Wellness', 'Sueno_3d': 'Falta de Sueño'}
+        
+        df_importancia = pd.DataFrame({'Variable': [nombres_amigables.get(p, p) for p in predictores], 'Impacto': importancias * 100}).sort_values('Impacto', ascending=True)
 
-    fig_imp = px.bar(
-        df_importancia, 
-        x='Impacto', 
-        y='Variable', 
-        orientation='h',
-        color_discrete_sequence=['#00b4d8']
-    )
-    fig_imp.update_layout(xaxis_title="Nivel de Impacto en Lesiones (%)", yaxis_title="")
-    st.plotly_chart(fig_imp, use_container_width=True)
+        fig_imp = px.bar(df_importancia, x='Impacto', y='Variable', orientation='h', color_discrete_sequence=['#00b4d8'])
+        fig_imp.update_layout(xaxis_title="Peso en la predicción (%)", yaxis_title="")
+        st.plotly_chart(fig_imp, use_container_width=True)
+    else:
+        st.markdown("#### ⚖️ Baremos Científicos Aplicados")
+        st.info("**Ponderación actual:** \n\n• Ratio A/C > 1.5 (+35%)\n• Ratio A/C < 0.8 (+10%)\n• Lesión Previa en 60d (+20%)\n• Wellness bajo (+15%)\n• Sueño deficitario (+15%)")
 
 with c_info2:
-    st.markdown("#### 📋 Listado Completo del Equipo")
-    # Formateo visual de la tabla
+    st.markdown("#### 📋 Listado del Equipo (Disponibles)")
     df_lista = df_hoy[['JUGADOR', 'Riesgo_%', 'Ratio_AC', 'HSR_7d']].copy()
     
     def color_riesgo(val):
@@ -306,12 +266,4 @@ with c_info2:
         if val > 30: return 'color: black; background-color: #fcd34d;'
         return 'color: black; background-color: #86efac;'
         
-    st.dataframe(
-        df_lista.style.format({
-            "Riesgo_%": "{:.1f}%", 
-            "Ratio_AC": "{:.2f}",
-            "HSR_7d": "{:.0f} m"
-        }).map(color_riesgo, subset=['Riesgo_%']),
-        use_container_width=True,
-        hide_index=True
-    )
+    st.dataframe(df_lista.style.format({"Riesgo_%": "{:.1f}%", "Ratio_AC": "{:.2f}", "HSR_7d": "{:.0f} m"}).map(color_riesgo, subset=['Riesgo_%']), use_container_width=True, hide_index=True)
