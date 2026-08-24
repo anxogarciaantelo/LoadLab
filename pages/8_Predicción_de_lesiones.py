@@ -164,8 +164,11 @@ def construir_dataset_entrenamiento(sesiones, lesiones):
     
     # 1.3 Etiquetado de la Variable Objetivo (Target: 1 = Lesión en los prox 7 días)
     df_features['Lesion_Target'] = 0
-    fechas_lesiones = [(l['jugador'], pd.to_datetime(l['id_sesion'])) for l in lesiones]
-    
+    fechas_lesiones = [
+    (l['jugador'], pd.to_datetime(l['id_sesion'])) 
+    for l in lesiones 
+    if l.get('tipo') in ["Muscular", "Tendinosa"] and l.get('contacto') == "No"
+]
     for jug, fecha_lesion in fechas_lesiones:
         # Ventana de riesgo: los 7 días previos a romperse
         mask_riesgo = (df_features['JUGADOR'] == jug) & (df_features['FECHA'] >= fecha_lesion - pd.Timedelta(days=7)) & (df_features['FECHA'] < fecha_lesion)
