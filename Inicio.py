@@ -189,37 +189,62 @@ if not st.session_state.get("equipo_seleccionado", False):
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 1. PANTALLA DE LOGIN
+# 1. PANTALLA DE LOGIN / REGISTRO
 # ==========================================
 if not st.session_state.autenticado:
     set_login_background("fondo_login.jpg")
     
-    # Reducimos los saltos de línea para que quede más centrado con la imagen
     st.markdown("<br><br><br><br><br><br><br><br><br><br><br><br>", unsafe_allow_html=True)
     
-    col_izq, col_centro, col_der = st.columns([1.5, 1, 1.5]) # <--- 1. Proporciones ajustadas para estrechar el centro
+    col_izq, col_centro, col_der = st.columns([1.5, 1, 1.5])
     
     with col_centro:
-        st.markdown("<h2 style='text-align: center; color: #ffffff; font-weight: 800; margin-bottom: 10px;'>Iniciar Sesión</h2>", unsafe_allow_html=True)
+        # Pestañas para elegir entre Entrar o Registrarse
+        tab_login, tab_reg = st.tabs(["Iniciar Sesión", "Registrarse"])
         
-        # <--- 2. Envolvemos en un formulario para habilitar la tecla "Enter"
-        with st.form(key="login_form", clear_on_submit=False):
-            email = st.text_input("Correo electrónico")
-            password = st.text_input("Contraseña", type="password")
-            
-            # El botón ahora es un form_submit_button
-            submit_btn = st.form_submit_button("Entrar", use_container_width=True)
-            
-            if submit_btn:
-                try:
-                    res = supabase.auth.sign_in_with_password({"email": email, "password": password})
-                    st.session_state.usuario_id = res.user.id
-                    st.session_state.access_token = res.session.access_token
-                    st.session_state.refresh_token = res.session.refresh_token
-                    st.session_state.autenticado = True
-                    st.rerun()
-                except Exception as e:
-                    st.error("Credenciales incorrectas o error de conexión.")
+        with tab_login:
+            st.markdown("<h3 style='text-align: center; color: #ffffff; font-weight: 800; margin-bottom: 10px;'>Acceso</h3>", unsafe_allow_html=True)
+            with st.form(key="login_form"):
+                email = st.text_input("Correo electrónico", key="log_email")
+                password = st.text_input("Contraseña", type="password", key="log_pass")
+                submit_btn = st.form_submit_button("Entrar", use_container_width=True)
+                
+                if submit_btn:
+                    try:
+                        res = supabase.auth.sign_in_with_password({"email": email, "password": password})
+                        st.session_state.usuario_id = res.user.id
+                        st.session_state.access_token = res.session.access_token
+                        st.session_state.refresh_token = res.session.refresh_token
+                        st.session_state.autenticado = True
+                        st.rerun()
+                    except Exception as e:
+                        st.error("Credenciales incorrectas o error de conexión.")
+                        
+        with tab_reg:
+            st.markdown("<h3 style='text-align: center; color: #ffffff; font-weight: 800; margin-bottom: 10px;'>Nuevo Usuario</h3>", unsafe_allow_html=True)
+            with st.form(key="register_form"):
+                reg_email = st.text_input("Correo electrónico", key="reg_email")
+                reg_password = st.text_input("Contraseña (mín. 6 caracteres)", type="password", key="reg_pass")
+                
+                # Aviso de Privacidad y RGPD
+                st.markdown("""
+                    <div style="font-size: 0.75rem; color: #cbd5e1; margin-bottom: 10px; line-height: 1.2;">
+                        🔒 <strong>Aviso de Privacidad:</strong> Al registrarte, aceptas que los datos de cargas y salud introducidos son responsabilidad exclusiva del usuario. Se recomienda anonimizar a los deportistas.
+                    </div>
+                """, unsafe_allow_html=True)
+                
+                acepta_privacidad = st.checkbox("Acepto el aviso de privacidad y LOPD")
+                submit_reg = st.form_submit_button("Crear Cuenta", use_container_width=True)
+                
+                if submit_reg:
+                    if not acepta_privacidad:
+                        st.warning("Debes aceptar el aviso de privacidad para registrarte.")
+                    else:
+                        try:
+                            res = supabase.auth.sign_up({"email": reg_email, "password": reg_password})
+                            st.success("¡Cuenta creada con éxito! Revisa tu correo si Supabase requiere confirmación, o inicia sesión directamente.")
+                        except Exception as e:
+                            st.error(f"Error al registrarse: {e}")
     st.stop()
 # ==========================================
 # 2. SELECCIÓN DE EQUIPO
