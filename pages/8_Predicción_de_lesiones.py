@@ -24,35 +24,110 @@ if not st.session_state.get("autenticado", False) or not st.session_state.get("e
         st.rerun()
     st.stop()
 
-st.title("🧠 Oráculo: Predicción de Riesgo Lesional")
+st.title("🧠 Predicción de riesgo lesional")
 st.caption("Motor de Inteligencia Artificial (XGBoost) que aprende de los patrones históricos de carga y bienestar de tu plantilla para predecir el riesgo de lesión a 7 días vista.")
 
 # ==========================================
-# 1. CONSTRUCCIÓN DEL DATASET TEMPORAL
+# 1. CONSTRUCCIÓN DEL DATASET TEMPORAL (CON IMPUTACIÓN AISLADA)
 # ==========================================
 @st.cache_data(ttl=3600, show_spinner=False)
 def construir_dataset_entrenamiento(sesiones, lesiones):
     registros = []
     
+    # Mapeo rápido de posiciones desde la plantilla
+    dict_pos_esp = {limpiar_nombre(p["JUGADOR"]): p.get("pos_1", "Desconocida") for p in st.session_state.get("plantilla", [])}
+    dict_pos_gen = {limpiar_nombre(p["JUGADOR"]): p.get("POS", "DEF") for p in st.session_state.get("plantilla", [])}
+
     # 1.1 Extraer métricas diarias de las sesiones
     for s in sesiones:
-        if s.get("informe_generado"):
-            for d in s.get("datos_informe", []):
-                registros.append({
-                    "FECHA": pd.to_datetime(s["fecha"]),
-                    "JUGADOR": d["JUGADOR"],
-                    "RPE": safe_float(d.get("RPE")),
-                    "WELLNESS": safe_float(d.get("WELLNESS")),
-                    "SUEÑO": safe_float(d.get("W_Sueño")),
-                    "FATIGA": safe_float(d.get("W_Fatiga")),
-                    "ESTRES": safe_float(d.get("W_Estres")),
-                    "DIS_TOTAL": safe_float(d.get("DIS")),
-                    "HSR": safe_float(d.get("DIS AI", d.get("HID >21", 0))),
-                    "SPRINTS": safe_float(d.get("Nº SPR", d.get("SPR >24", 0))),
-                    "ACC": safe_float(d.get("ACC", d.get("ACC >3", 0))),
-                    "DCC": safe_float(d.get("DCC", d.get("DCC >3", 0))),
-                    "CARGA": safe_float(d.get("CARGA"))
+        if not s.get("informe_generado"):
+            continue
+            
+        es_partido = "Partido" in s.get("tipo", "")
+        disp_dict = {limpiar_nombre(k): v for k, v in s.get("disponibilidad", {}).items()}
+        
+        # --- FASE A: Calcular Promedios por Minuto de la Sesión (Solo para quienes llevaron GPS) ---
+        datos_gps_validos = []
+        for d in s.get("datos_informe", []):
+            dis_val = safe_float(d.get("DIS"))
+            min_val = safe_float(d.get("MIN", 0))
+            if dis_val > 0 and min_val > 0:
+                jug_limpio = limpiar_nombre(d["JUGADOR"])
+                datos_gps_validos.append({
+                    "POS_ESP": dict_pos_esp.get(jug_limpio, "Desconocida"),
+                    "POS_GEN": dict_pos_gen.get(jug_limpio, "DEF"),
+                    "MIN": min_val,
+                    "DIS_pm": dis_val / min_val,
+                    "HSR_pm": safe_float(d.get("DIS AI", d.get("HID >21", 0))) / min_val,
+                    "SPRINTS_pm": safe_float(d.get("Nº SPR", d.get("SPR >24", 0))) / min_val,
+                    "ACC_pm": safe_float(d.get("ACC", d.get("ACC >3", 0))) / min_val,
+                    "DCC_pm": safe_float(d.get("DCC", d.get("DCC >3", 0))) / min_val,
                 })
+        
+        # Generar diccionarios de medias por posición específica, general y equipo
+        medias_esp, medias_gen, medias_equipo = {}, {}, {}
+        if datos_gps_validos:
+            df_validos = pd.DataFrame(datos_gps_validos)
+            cols_pm = ["DIS_pm", "HSR_pm", "SPRINTS_pm", "ACC_pm", "DCC_pm"]
+            
+            medias_esp = df_validos.groupby("POS_ESP")[cols_pm].mean().to_dict('index')
+            medias_gen = df_validos.groupby("POS_GEN")[cols_pm].mean().to_dict('index')
+            medias_equipo = df_validos[cols_pm].mean().to_dict()
+
+        # --- FASE B: Extraer datos e Imputar si es necesario ---
+        for d in s.get("datos_informe", []):
+            jug_nombre = d["JUGADOR"]
+            jug_limpio = limpiar_nombre(jug_nombre)
+            
+            min_jug = safe_float(d.get("MIN", 0))
+            dis_jug = safe_float(d.get("DIS"))
+            hsr_jug = safe_float(d.get("DIS AI", d.get("HID >21", 0)))
+            spr_jug = safe_float(d.get("Nº SPR", d.get("SPR >24", 0)))
+            acc_jug = safe_float(d.get("ACC", d.get("ACC >3", 0)))
+            dcc_jug = safe_float(d.get("DCC", d.get("DCC >3", 0)))
+            
+            # Lógica de elegibilidad para imputación
+            estado = disp_dict.get(jug_limpio, "Disponible" if not es_partido else "Titular")
+            elegible = False
+            
+            if es_partido:
+                if estado in ["Titular", "Suplente"] and min_jug > 0: elegible = True
+            else:
+                if estado == "Disponible" and min_jug > 0: elegible = True
+
+            # IMPUTACIÓN AISLADA: Solo si es elegible y no tiene GPS (DIS == 0)
+            if elegible and dis_jug == 0 and min_jug > 0 and datos_gps_validos:
+                pos_e = dict_pos_esp.get(jug_limpio, "Desconocida")
+                pos_g = dict_pos_gen.get(jug_limpio, "DEF")
+                
+                # Buscar la media más precisa disponible (Específica -> General -> Equipo)
+                if pos_e in medias_esp: ratios = medias_esp[pos_e]
+                elif pos_g in medias_gen: ratios = medias_gen[pos_g]
+                else: ratios = medias_equipo
+                
+                # Multiplicar los ratios (m/min) por los minutos reales del jugador
+                dis_jug = ratios["DIS_pm"] * min_jug
+                hsr_jug = ratios["HSR_pm"] * min_jug
+                spr_jug = ratios["SPRINTS_pm"] * min_jug
+                acc_jug = ratios["ACC_pm"] * min_jug
+                dcc_jug = ratios["DCC_pm"] * min_jug
+
+            # Guardar el registro en el Oráculo (Con datos reales o imputados aisladamente)
+            registros.append({
+                "FECHA": pd.to_datetime(s["fecha"]),
+                "JUGADOR": jug_nombre,
+                "RPE": safe_float(d.get("RPE")),
+                "WELLNESS": safe_float(d.get("WELLNESS")),
+                "SUEÑO": safe_float(d.get("W_Sueño")),
+                "FATIGA": safe_float(d.get("W_Fatiga")),
+                "ESTRES": safe_float(d.get("W_Estres")),
+                "DIS_TOTAL": dis_jug,
+                "HSR": hsr_jug,
+                "SPRINTS": spr_jug,
+                "ACC": acc_jug,
+                "DCC": dcc_jug,
+                "CARGA": safe_float(d.get("CARGA"))
+            })
                 
     if not registros:
         return pd.DataFrame()
@@ -69,7 +144,7 @@ def construir_dataset_entrenamiento(sesiones, lesiones):
         group['Carga_Cronica'] = group['CARGA'].ewm(span=28, adjust=False).mean()
         group['Ratio_AC'] = np.where(group['Carga_Cronica'] > 0, group['Carga_Aguda'] / group['Carga_Cronica'], 1.0)
         
-        # Picos Acumulados (7 días)
+        # Picos Acumulados (7 días) usando los datos imputados si correspondía
         group['HSR_7d'] = group['HSR'].rolling(window=7, min_periods=1).sum()
         group['Sprints_7d'] = group['SPRINTS'].rolling(window=7, min_periods=1).sum()
         group['ACC_7d'] = group['ACC'].rolling(window=7, min_periods=1).sum()
