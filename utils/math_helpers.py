@@ -230,74 +230,85 @@ def set_login_background(image_path):
             background-attachment: fixed;
         }}
         
-        /* 2. Eliminar la barra blanca superior que corta el logo */
+        /* 2. Eliminar la barra superior */
         header[data-testid="stHeader"] {{
             background-color: transparent !important;
             box-shadow: none !important;
         }}
         
-        /* Ajustar el espaciado superior general */
         .block-container {{
             padding-top: 1rem !important;
         }}
         
-        /* 3. Crear el recuadro color carbón transparente SOLAMENTE en la columna central */
+        /* 3. EL ESTILO DE TARJETA (Idéntico a selección de equipos) */
         div[data-testid="column"]:nth-child(2) > div[data-testid="stVerticalBlock"] {{
-            background-color: rgba(20, 20, 20, 0.75) !important; /* Color carbón con 75% de opacidad */
+            background-color: rgba(255, 255, 255, 0.95) !important; /* Fondo blanco casi opaco */
             padding: 40px 30px !important;
             border-radius: 16px !important;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8) !important;
-            border: 1px solid rgba(255, 255, 255, 0.08); /* Borde sutil blanquecino */
-            backdrop-filter: blur(4px); /* Efecto cristal oscuro */
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15) !important;
+            border: 1px solid #e2e8f0 !important;
         }}
         
-        /* Modificar el texto de los labels (Correo y Contraseña) a blanco y negrita */
-        div[data-testid="stVerticalBlock"] label {{
-            color: #ffffff !important;
+        /* Textos y labels en gris oscuro/negro */
+        div[data-testid="column"]:nth-child(2) label {{
+            color: #0f172a !important;
             font-weight: 800 !important;
             font-size: 0.95rem !important;
             letter-spacing: 0.5px;
         }}
         
-        /* Estilo moderno para los cajones de texto */
+        /* Inputs modernos integrados en la tarjeta */
         div[data-testid="stTextInput"] input {{
-            background-color: rgba(255, 255, 255, 0.9) !important;
-            border: 2px solid transparent !important;
+            background-color: #f8fafc !important;
+            border: 1px solid #cbd5e1 !important;
             border-radius: 8px !important;
-            color: #000000 !important;
+            color: #0f172a !important;
             padding: 12px !important;
             font-weight: 600 !important;
             transition: all 0.3s ease;
         }}
         
-        /* Efecto al hacer clic en los cajones (borde rojo) */
         div[data-testid="stTextInput"] input:focus {{
-            border: 2px solid #e60000 !important;
+            border: 1px solid #00b4d8 !important;
             background-color: #ffffff !important;
-            box-shadow: 0 0 10px rgba(230, 0, 0, 0.4) !important;
+            box-shadow: 0 0 8px rgba(0, 180, 216, 0.3) !important;
         }}
         
-        /* Estilo moderno y agresivo para el botón Entrar */
-        div[data-testid="stButton"] button {{
-            background: linear-gradient(90deg, #8a0000, #e60000) !important;
+        /* Botón de acceso elegante */
+        div[data-testid="stFormSubmitButton"] button {{
+            background-color: #0f172a !important;
             color: #ffffff !important;
             border: none !important;
             border-radius: 8px !important;
             font-weight: 800 !important;
             padding: 10px !important;
             text-transform: uppercase;
-            letter-spacing: 1.5px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5) !important;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1) !important;
             transition: all 0.3s ease;
             margin-top: 15px;
         }}
         
-        /* Efecto al pasar el ratón por el botón */
-        div[data-testid="stButton"] button:hover {{
-            background: linear-gradient(90deg, #e60000, #8a0000) !important;
+        div[data-testid="stFormSubmitButton"] button:hover {{
+            background-color: #1e293b !important;
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(230, 0, 0, 0.6) !important;
-            color: #ffffff !important;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15) !important;
+        }}
+        
+        /* Estilo para las Pestañas de Login/Registro */
+        div[data-testid="stTabs"] [data-baseweb="tab-list"] {{
+            background-color: #f1f5f9;
+            border-radius: 10px;
+            padding: 4px;
+        }}
+        div[data-testid="stTabs"] [data-baseweb="tab"] {{
+            color: #475569;
+        }}
+        div[data-testid="stTabs"] [aria-selected="true"] {{
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-radius: 8px;
         }}
         </style>
         """
