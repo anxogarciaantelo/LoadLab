@@ -22,7 +22,7 @@ st.title("🧠 Oráculo: Predicción de Riesgo Lesional")
 st.caption("Sistema Híbrido: Combina algoritmos científicos de prevención deportiva con Machine Learning adaptativo (XGBoost) para tu plantilla.")
 
 # ==========================================
-# 1. CONSTRUCCIÓN DEL DATASET TEMPORAL (CON IMPUTACIÓN)
+# 1. CONSTRUCCIÓN DEL DATASET TEMPORAL (CON IMPUTACIÓN Y AJUSTE A METROS)
 # ==========================================
 @st.cache_data(ttl=3600, show_spinner=False)
 def construir_dataset_entrenamiento(sesiones, lesiones):
@@ -38,16 +38,20 @@ def construir_dataset_entrenamiento(sesiones, lesiones):
         
         datos_gps_validos = []
         for d in s.get("datos_informe", []):
-            dis_val = safe_float(d.get("DIS"))
+            # CORRECCIÓN: Convertir explícitamente los KM a METROS multiplicando por 1000
+            dis_val = safe_float(d.get("DIS")) * 1000
             min_val = safe_float(d.get("MIN", 0))
+            
             if dis_val > 0 and min_val > 0:
                 jug_limpio = limpiar_nombre(d["JUGADOR"])
+                hsr_val = safe_float(d.get("DIS AI", d.get("HID >21", 0))) * 1000
+                
                 datos_gps_validos.append({
                     "POS_ESP": dict_pos_esp.get(jug_limpio, "Desconocida"),
                     "POS_GEN": dict_pos_gen.get(jug_limpio, "DEF"),
                     "MIN": min_val,
                     "DIS_pm": dis_val / min_val,
-                    "HSR_pm": safe_float(d.get("DIS AI", d.get("HID >21", 0))) / min_val,
+                    "HSR_pm": hsr_val / min_val,
                     "SPRINTS_pm": safe_float(d.get("Nº SPR", d.get("SPR >24", 0))) / min_val,
                     "ACC_pm": safe_float(d.get("ACC", d.get("ACC >3", 0))) / min_val,
                     "DCC_pm": safe_float(d.get("DCC", d.get("DCC >3", 0))) / min_val,
@@ -65,8 +69,10 @@ def construir_dataset_entrenamiento(sesiones, lesiones):
             jug_nombre = d["JUGADOR"]
             jug_limpio = limpiar_nombre(jug_nombre)
             min_jug = safe_float(d.get("MIN", 0))
-            dis_jug = safe_float(d.get("DIS"))
-            hsr_jug = safe_float(d.get("DIS AI", d.get("HID >21", 0)))
+            
+            # CORRECCIÓN: Convertir explícitamente a METROS
+            dis_jug = safe_float(d.get("DIS")) * 1000
+            hsr_jug = safe_float(d.get("DIS AI", d.get("HID >21", 0))) * 1000
             spr_jug = safe_float(d.get("Nº SPR", d.get("SPR >24", 0)))
             acc_jug = safe_float(d.get("ACC", d.get("ACC >3", 0)))
             dcc_jug = safe_float(d.get("DCC", d.get("DCC >3", 0)))
@@ -115,11 +121,8 @@ def construir_dataset_entrenamiento(sesiones, lesiones):
         group['Sprints_7d'] = group['SPRINTS'].rolling(window=7, min_periods=1).sum()
         group['ACC_7d'] = group['ACC'].rolling(window=7, min_periods=1).sum()
         group['DCC_7d'] = group['DCC'].rolling(window=7, min_periods=1).sum()
-        
-        # Estado de Bienestar (Promedio 3 días para ver caídas recientes)
         group['Wellness_3d'] = group['WELLNESS'].replace(0, np.nan).rolling(window=3, min_periods=1).mean().fillna(0)
         group['Sueno_3d'] = group['SUEÑO'].replace(0, np.nan).rolling(window=3, min_periods=1).mean().fillna(0)
-        
         group['JUGADOR'] = jug
         features.append(group.reset_index())
         
@@ -158,11 +161,15 @@ lesionados_activos = [l['jugador'] for l in st.session_state.lesiones if l.get('
 df_hoy = df_hoy[~df_hoy['JUGADOR'].isin(lesionados_activos)]
 
 MIN_LESIONES_REQUERIDAS = 10
-total_lesiones_validas = len(df_master[df_master['Lesion_Target'] == 1])
+
+# CORRECCIÓN DEL CONTEO: Contamos eventos reales, no filas de entrenamiento
+lesiones_musculares_validas = [l for l in st.session_state.lesiones if l.get('tipo') in ["Muscular", "Tendinosa"] and l.get('contacto') == "No"]
+total_lesiones_reales = len(lesiones_musculares_validas)
+
 predictores = ['Ratio_AC', 'Carga_Aguda', 'HSR_7d', 'Sprints_7d', 'ACC_7d', 'DCC_7d', 'Wellness_3d', 'Sueno_3d']
 modo_ia = False
 
-if total_lesiones_validas >= MIN_LESIONES_REQUERIDAS:
+if total_lesiones_reales >= MIN_LESIONES_REQUERIDAS:
     modo_ia = True
     with st.spinner("Motor XGBoost Activo: Procesando patrones individuales..."):
         X = df_master[predictores]
@@ -179,7 +186,7 @@ if total_lesiones_validas >= MIN_LESIONES_REQUERIDAS:
             df_hoy['Riesgo_%'] = modelo.predict_proba(X_hoy)[:, 1] * 100
 else:
     # MOTOR HEURÍSTICO / LITERATURA CIENTÍFICA CORREGIDO
-    st.info(f"🧠 **Motor Heurístico Científico Activo:** ({total_lesiones_validas}/{MIN_LESIONES_REQUERIDAS} lesiones musculares sin contacto). La IA requiere más histórico. Predicciones actuales calculadas mediante baremos científicos estándar.")
+    st.info(f"🧠 **Motor Heurístico Científico Activo:** ({total_lesiones_reales}/{MIN_LESIONES_REQUERIDAS} lesiones musculares sin contacto). La IA requiere más histórico. Predicciones actuales calculadas mediante baremos científicos estándar.")
     
     def calcular_riesgo_cientifico(row):
         riesgo = 5.0 # Riesgo base
