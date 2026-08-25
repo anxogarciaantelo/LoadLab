@@ -227,14 +227,27 @@ if not st.session_state.autenticado:
                 reg_email = st.text_input("Correo electrónico", key="reg_email")
                 reg_password = st.text_input("Contraseña (mín. 6 caracteres)", type="password", key="reg_pass")
                 
-                # Texto legal en gris slate para combinar con la tarjeta
+                # Aviso destacado de responsabilidad legal (Estilo integrado con la UI)
                 st.markdown("""
-                    <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 10px; line-height: 1.2;">
-                        🔒 <strong>Aviso de Privacidad:</strong> Al registrarte, aceptas que los datos de cargas y salud introducidos son responsabilidad exclusiva del usuario. Se recomienda anonimizar a los deportistas.
+                    <div style="font-size: 0.8rem; color: #334155; margin-bottom: 15px; line-height: 1.5; background-color: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1;">
+                        🔒 <strong>Aviso Importante sobre Protección de Datos (RGPD/LOPD):</strong><br>
+                        LoadLab es una plataforma de gestión deportiva. Al registrarte, asumes la figura de <strong>Responsable del Tratamiento</strong> de los datos que introduzcas.<br><br>
+                        ⚠️ <strong>Recomendación Crítica:</strong> Te recomendamos encarecidamente utilizar <strong>alias, iniciales o apodos</strong> (ej. "Jugador 1", "M. García") para tus deportistas en lugar de sus nombres completos, a menos que cuentes con su <strong>consentimiento explícito y por escrito</strong> para registrar sus datos de salud, antropometría y rendimiento.
                     </div>
                 """, unsafe_allow_html=True)
                 
-                acepta_privacidad = st.checkbox("Acepto el aviso de privacidad y LOPD")
+                # Expander con los términos legales detallados para no ensuciar la interfaz
+                with st.expander("📄 Leer Términos y Condiciones Completos"):
+                    st.markdown("""
+                        <small>
+                        **1. Responsabilidad de los Datos:** El usuario (Preparador Físico / Entrenador) es el único responsable de la legalidad de los datos introducidos. LoadLab actúa únicamente como herramienta tecnológica (Encargado de Tratamiento).<br><br>
+                        **2. Naturaleza Sensible:** Los datos sobre lesiones y composición corporal se consideran información especialmente protegida. No introduzcas información identificable sin cumplir con la legislación de tu país.<br><br>
+                        **3. Uso de la Plataforma:** LoadLab no cederá, venderá ni explotará estos datos con terceros. Su uso es estrictamente funcional para el rendimiento de la aplicación.<br><br>
+                        **4. Fase Beta:** Esta aplicación se encuentra en fase de pruebas. Se recomienda a los usuarios exportar y mantener copias de seguridad de sus informes PDF. El autor no se hace responsable de posibles pérdidas de datos.
+                        </small>
+                    """, unsafe_allow_html=True)
+
+                acepta_privacidad = st.checkbox("He leído y acepto el aviso de privacidad y LOPD", key="check_privacidad")
                 submit_reg = st.form_submit_button("Crear Cuenta", use_container_width=True)
                 
                 if submit_reg:
