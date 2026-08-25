@@ -221,7 +221,7 @@ def set_login_background(image_path):
             encoded_string = base64.b64encode(img_file.read()).decode()
         css = f"""
         <style>
-        /* 1. Fondo general de la app */
+        /* 1. Fondo general de la app con la imagen */
         .stApp {{
             background-image: url("data:image/jpeg;base64,{encoded_string}");
             background-size: cover;
@@ -240,24 +240,45 @@ def set_login_background(image_path):
             padding-top: 1rem !important;
         }}
         
-        /* 3. EL ESTILO DE TARJETA (Idéntico a selección de equipos) */
+        /* 3. LA TARJETA BLANCA (Columna central) */
+        /* Exactamente igual a la tarjeta de selección de equipo */
         div[data-testid="column"]:nth-child(2) > div[data-testid="stVerticalBlock"] {{
-            background-color: rgba(255, 255, 255, 0.95) !important; /* Fondo blanco casi opaco */
-            padding: 40px 30px !important;
+            background-color: #ffffff !important;
+            padding: 30px !important;
             border-radius: 16px !important;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15) !important;
             border: 1px solid #e2e8f0 !important;
         }}
         
-        /* Textos y labels en gris oscuro/negro */
+        /* 4. INTEGRACIÓN DE LAS PESTAÑAS (TABS) */
+        /* Hacemos que el fondo de las pestañas encaje con el gris claro de la tarjeta */
+        div[data-testid="stTabs"] [data-baseweb="tab-list"] {{
+            background-color: #f8fafc !important;
+            border-radius: 10px !important;
+            padding: 5px !important;
+            border: 1px solid #e2e8f0 !important;
+            margin-bottom: 10px !important;
+        }}
+        div[data-testid="stTabs"] [data-baseweb="tab"] {{
+            color: #64748b !important;
+            font-weight: 700 !important;
+            padding-top: 10px !important;
+            padding-bottom: 10px !important;
+        }}
+        div[data-testid="stTabs"] [aria-selected="true"] {{
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
+            border-radius: 8px !important;
+        }}
+        
+        /* 5. TEXTOS Y FORMULARIOS */
         div[data-testid="column"]:nth-child(2) label {{
             color: #0f172a !important;
             font-weight: 800 !important;
             font-size: 0.95rem !important;
-            letter-spacing: 0.5px;
         }}
         
-        /* Inputs modernos integrados en la tarjeta */
         div[data-testid="stTextInput"] input {{
             background-color: #f8fafc !important;
             border: 1px solid #cbd5e1 !important;
@@ -274,7 +295,7 @@ def set_login_background(image_path):
             box-shadow: 0 0 8px rgba(0, 180, 216, 0.3) !important;
         }}
         
-        /* Botón de acceso elegante */
+        /* 6. BOTÓN DE ACCESO */
         div[data-testid="stFormSubmitButton"] button {{
             background-color: #0f172a !important;
             color: #ffffff !important;
@@ -286,29 +307,14 @@ def set_login_background(image_path):
             letter-spacing: 1px;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1) !important;
             transition: all 0.3s ease;
-            margin-top: 15px;
+            margin-top: 10px;
+            width: 100% !important;
         }}
         
         div[data-testid="stFormSubmitButton"] button:hover {{
             background-color: #1e293b !important;
             transform: translateY(-2px);
             box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15) !important;
-        }}
-        
-        /* Estilo para las Pestañas de Login/Registro */
-        div[data-testid="stTabs"] [data-baseweb="tab-list"] {{
-            background-color: #f1f5f9;
-            border-radius: 10px;
-            padding: 4px;
-        }}
-        div[data-testid="stTabs"] [data-baseweb="tab"] {{
-            color: #475569;
-        }}
-        div[data-testid="stTabs"] [aria-selected="true"] {{
-            background-color: #ffffff !important;
-            color: #0f172a !important;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            border-radius: 8px;
         }}
         </style>
         """
