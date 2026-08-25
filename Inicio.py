@@ -196,7 +196,7 @@ if not st.session_state.autenticado:
     
     st.markdown("<br><br><br><br><br><br><br><br><br><br><br><br>", unsafe_allow_html=True)
     
-    col_izq, col_centro, col_der = st.columns([1.4, 1, 1.4])
+    col_izq, col_centro, col_der = st.columns([1.2, 1, 1.2])
     
     with col_centro:
         tab_login, tab_reg = st.tabs(["Iniciar Sesión", "Registrarse"])
