@@ -304,7 +304,8 @@ with tab_jugadores:
                     # Comprobar si hay foto en base64 en la plantilla
                     foto_b64 = fotos_plantilla.get(nombre_jugador.strip().lower(), "")
                     if foto_b64:
-                        avatar_html = f'<img src="data:image/jpeg;base64,{foto_b64}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; margin-right: 8px; vertical-align: middle;">'
+                        img_src = foto_b64 if str(foto_b64).startswith("http") else f"data:image/jpeg;base64,{foto_b64}"
+                        avatar_html = f'<img src="{img_src}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; margin-right: 8px; vertical-align: middle;">'
                     else:
                         avatar_html = '<span style="font-size: 20px; margin-right: 8px; vertical-align: middle;">👤</span>'
 
