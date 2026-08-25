@@ -72,7 +72,8 @@ if st.session_state.vista_plantilla == "📋 Plantilla":
                         with st.container(border=True):
                             if jug.get("foto"):
                                 try:
-                                    st.markdown(f'<div style="text-align: center;"><img src="data:image/jpeg;base64,{jug["foto"]}" style="width:90px; height:90px; object-fit: cover; border-radius:50%;"></div>', unsafe_allow_html=True)
+                                    img_src = jug["foto"] if str(jug["foto"]).startswith("http") else f"data:image/jpeg;base64,{jug['foto']}"
+                                    st.markdown(f'<div style="text-align: center;"><img src="{img_src}" style="width:90px; height:90px; object-fit: cover; border-radius:50%;"></div>', unsafe_allow_html=True)
                                 except:
                                     st.markdown('<div style="text-align: center; font-size: 40px;">👤</div>', unsafe_allow_html=True)
                             else:
@@ -147,7 +148,8 @@ else:
     with col_i1:
             if jugador.get("foto"):
                 try:
-                    st.markdown(f'<img src="data:image/jpeg;base64,{jugador["foto"]}" style="width:100%; max-width:200px; border-radius:10px;">', unsafe_allow_html=True)
+                    img_src = jugador["foto"] if str(jugador["foto"]).startswith("http") else f"data:image/jpeg;base64,{jugador['foto']}"
+                    st.markdown(f'<img src="{img_src}" style="width:100%; max-width:200px; border-radius:10px;">', unsafe_allow_html=True)
                 except:
                     st.markdown("👤")
             else:
