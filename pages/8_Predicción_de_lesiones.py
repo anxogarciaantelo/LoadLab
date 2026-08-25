@@ -205,14 +205,22 @@ else:
         elif row['Wellness_3d'] >= 18: 
             riesgo += 5.0  # Wellness moderado
         
-        # 3. Historial clínico (Últimos 60 días)
-        recaida = False
+        # 3. Historial clínico inteligente (Últimos 60 días)
+        riesgo_previo = 0.0
         for l in st.session_state.lesiones:
             if l['jugador'] == row['JUGADOR']:
                 fecha_l = datetime.strptime(l['id_sesion'], "%Y-%m-%d")
                 if (datetime.today() - fecha_l).days <= 60:
-                    recaida = True
-        if recaida: riesgo += 20.0
+                    tipo_lesion = l.get('tipo', '')
+                    
+                    if tipo_lesion in ["Muscular", "Tendinosa"]:
+                        # Riesgo altísimo por posible recaída directa del tejido
+                        riesgo_previo = max(riesgo_previo, 20.0) 
+                    elif tipo_lesion == "Artículo-ligamentosa":
+                        # Riesgo moderado por alteraciones y compensaciones biomecánicas
+                        riesgo_previo = max(riesgo_previo, 10.0)
+                        
+        riesgo += riesgo_previo
         
         return min(riesgo, 95.0)
 
