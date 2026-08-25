@@ -1,60 +1,81 @@
 import streamlit as st
 from supabase import create_client
+import base64
+import unicodedata
 
-# --- INICIALIZACIÓN DE SUPABASE ---
-# (Asumimos que los secretos están configurados en Streamlit)
 url = st.secrets["SUPABASE_URL"]
 key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
 
-# RESTAURAR SESIÓN PARA RLS
 if "access_token" in st.session_state and "refresh_token" in st.session_state:
     try:
         supabase.auth.set_session(st.session_state.access_token, st.session_state.refresh_token)
     except:
         pass
 
+def limpiar_nombre_archivo(texto):
+    texto_limpio = ''.join(c for c in unicodedata.normalize('NFD', texto) if unicodedata.category(c) != 'Mn')
+    return texto_limpio.replace(' ', '_').lower()
+
 @st.cache_data(ttl=3600, show_spinner=False)
 def fetch_datos_equipo_supabase(equipo_id):
     res_eq = supabase.table("equipos").select("*").eq("id", equipo_id).execute()
-    res_dat = supabase.table("datos_equipo").select("*").eq("equipo_id", equipo_id).execute()
-    return res_eq.data, res_dat.data
+    res_plan = supabase.table("plantilla").select("*").eq("equipo_id", equipo_id).execute()
+    res_ses = supabase.table("sesiones").select("*").eq("equipo_id", equipo_id).execute()
+    res_les = supabase.table("lesiones_historial").select("*").eq("equipo_id", equipo_id).execute()
+    res_ant = supabase.table("antropometria_historial").select("*").eq("equipo_id", equipo_id).execute()
+    res_cfg = supabase.table("configuracion_equipo").select("*").eq("equipo_id", equipo_id).execute()
+    return res_eq.data, res_plan.data, res_ses.data, res_les.data, res_ant.data, res_cfg.data
 
 def cargar_datos_equipo(equipo_id):
     try:
-        eq_data, dat_data = fetch_datos_equipo_supabase(equipo_id)
-        if eq_data and dat_data:
+        eq_data, plan_data, ses_data, les_data, ant_data, cfg_data = fetch_datos_equipo_supabase(equipo_id)
+        if eq_data:
             eq = eq_data[0]
-            dat = dat_data[0]
-            
             st.session_state.equipo_creado = True
             st.session_state.equipo_id = equipo_id
             st.session_state.nombre_equipo = eq.get("nombre", "")
             st.session_state.categoria_equipo = eq.get("categoria", "")
             st.session_state.division_equipo = eq.get("division", "")
             st.session_state.temporada_equipo = eq.get("temporada", "")
-            st.session_state.escudo_equipo = eq.get("escudo_base64", None)
+            st.session_state.escudo_equipo = eq.get("escudo_base64", None) 
             st.session_state.color_sidebar = eq.get("color_sidebar", "#f1f5f9")
             
-            st.session_state.plantilla = dat.get("plantilla", [])
-            st.session_state.sesiones = dat.get("sesiones", [])
-            st.session_state.lesiones = dat.get("lesiones", [])
-            st.session_state.antropometria = dat.get("antropometria", [])
+            plantilla = []
+            for p in plan_data:
+                plantilla.append({
+                    "JUGADOR": p["jugador"], "POS": p["pos"], "pos_1": p["pos_1"],
+                    "pos_2": p["pos_2"], "edad": p["edad"], "dorsal": p["dorsal"],
+                    "altura": p["altura"], "lateralidad": p["lateralidad"],
+                    "foto": p["foto_url"] # AHORA CARGAMOS LA URL LIGERA
+                })
+            st.session_state.plantilla = plantilla
+
+            sesiones = []
+            for s in ses_data:
+                sesiones.append({
+                    "fecha": s["fecha"], "tipo": s["tipo"], "descripcion": s["descripcion"],
+                    "competicion": s["competicion"], "rival": s["rival"], "condicion": s["condicion"],
+                    "ciudad_manual": s["ciudad_manual"], "goles_favor": s["goles_favor"],
+                    "goles_contra": s["goles_contra"], "clima": s["clima"],
+                    "disponibilidad": s["disponibilidad"], "estadisticas_partido": s["estadisticas_partido"],
+                    "estadisticas_invitados": s["estadisticas_invitados"], "informe_generado": s["informe_generado"],
+                    "datos_informe": s["datos_informe"]
+                })
+            st.session_state.sesiones = sesiones
+            st.session_state.lesiones = les_data
+            st.session_state.antropometria = [a["datos"] for a in ant_data]
+
+            cfg = cfg_data[0] if cfg_data else {}
+            st.session_state.val_inicial = cfg.get("val_inicial", [])
+            st.session_state.val_rom = cfg.get("val_rom", [])
+            st.session_state.val_1rm = cfg.get("val_1rm", [])
+            st.session_state.ubicacion_local = cfg.get("ubicacion_local", "Santiago de Compostela")
+            st.session_state.rivales_guardados = cfg.get("rivales_guardados", {})
             
-            # Cogemos el bloque de valoraciones
-            vals = dat.get("valoraciones", {})
-            st.session_state.val_inicial = vals.get("val_inicial", [])
-            st.session_state.val_rom = vals.get("val_rom", [])
-            st.session_state.val_1rm = vals.get("val_1rm", [])
-            
-            # --- AQUÍ CARGAMOS NUESTROS AJUSTES ---
-            st.session_state.ubicacion_local = vals.get("ubicacion_local", "Santiago de Compostela")
-            st.session_state.rivales_guardados = vals.get("rivales_guardados", {})
-            
-            # Cargar config de mapeo desde 'valoraciones' con valores por defecto seguros
-            config_guardada = vals.get("config_mapeo", {})
-            if not config_guardada:
-                config_guardada = {
+            st.session_state.config_mapeo = cfg.get("config_mapeo", {})
+            if not st.session_state.config_mapeo:
+                st.session_state.config_mapeo = {
                     "wellness": {"nombre": "Nombre", "fecha": "Marca temporal", "tqr": "TQR", "fatiga": "W_Fatiga", "sueno": "W_Sueño", "dolor": "W_Dolor", "estres": "W_Estres", "humor": "W_Humor"},
                     "rpe": {"nombre": "Nombre", "fecha": "Marca temporal", "minutos": "MIN", "rpe": "RPE"},
                     "gps": {
@@ -68,13 +89,6 @@ def cargar_datos_equipo(equipo_id):
                         "r_21_24": "Distance Speed Range (21 - 24 km)", "r_24_27": "Distance Speed Range (24 - 27 km)", "r_27_30": "Distance Speed Range (27 - 30 km)", "r_30_45": "Distance Speed Range (30 - 45 km)"
                     }
                 }
-            st.session_state.config_mapeo = config_guardada
-            
-            vals = dat.get("valoraciones", {})
-            st.session_state.val_inicial = vals.get("val_inicial", [])
-            st.session_state.val_rom = vals.get("val_rom", [])
-            st.session_state.val_1rm = vals.get("val_1rm", [])
-            
             st.session_state.datos_cargados = True
             return True
     except Exception as e:
@@ -82,40 +96,76 @@ def cargar_datos_equipo(equipo_id):
     return False
 
 def guardar_datos():
-    if "equipo_id" not in st.session_state:
-        return
-        
+    if "equipo_id" not in st.session_state: return
     eq_id = st.session_state.equipo_id
     
     try:
-        # Guardar metadatos
         supabase.table("equipos").update({
-            "nombre": st.session_state.nombre_equipo,
-            "categoria": st.session_state.categoria_equipo,
-            "division": st.session_state.division_equipo,
-            "temporada": st.session_state.temporada_equipo,
-            "escudo_base64": st.session_state.get("escudo_equipo", None),
-            "color_sidebar": st.session_state.get("color_sidebar", "#f1f5f9") # <--- AÑADIR ESTA LÍNEA
+            "nombre": st.session_state.nombre_equipo, "categoria": st.session_state.categoria_equipo,
+            "division": st.session_state.division_equipo, "temporada": st.session_state.temporada_equipo,
+            "escudo_base64": st.session_state.get("escudo_equipo", None)
         }).eq("id", eq_id).execute()
         
-        # Guardar arrays
-        data_json = {
-            "plantilla": st.session_state.plantilla,
-            "sesiones": st.session_state.sesiones,
-            "lesiones": st.session_state.get("lesiones", []),
-            "antropometria": st.session_state.get("antropometria", []),
-            "valoraciones": {
-                "val_inicial": st.session_state.get("val_inicial", []),
-                "val_rom": st.session_state.get("val_rom", []),
-                "val_1rm": st.session_state.get("val_1rm", []),
-                "config_mapeo": st.session_state.get("config_mapeo", {}),
-                
-                # --- AQUÍ GUARDAMOS NUESTROS AJUSTES ---
-                "ubicacion_local": st.session_state.get("ubicacion_local", "Santiago de Compostela"),
-                "rivales_guardados": st.session_state.get("rivales_guardados", {})
-            }
-        }
-        supabase.table("datos_equipo").update(data_json).eq("equipo_id", eq_id).execute()
+        plantilla_db = []
+        for p in st.session_state.plantilla:
+            foto_url = p.get("foto")
+            # Convertir fotos nuevas a URLs en Storage automáticamente
+            if foto_url and not str(foto_url).startswith("http") and len(foto_url) > 1000:
+                try:
+                    b64_clean = foto_url.split(",")[1] if foto_url.startswith("data:image") else foto_url
+                    img_bytes = base64.b64decode(b64_clean)
+                    nombre_arch = f"{eq_id}/jugadores/{limpiar_nombre_archivo(p['JUGADOR'])}.jpg"
+                    supabase.storage.from_("loadlab_media").upload(nombre_arch, img_bytes, file_options={"content-type": "image/jpeg", "upsert": "true"})
+                    foto_url = supabase.storage.from_("loadlab_media").get_public_url(nombre_arch)
+                    p["foto"] = foto_url 
+                except Exception as e:
+                    print(f"Error subiendo foto al guardar: {e}")
+            
+            plantilla_db.append({
+                "equipo_id": eq_id, "jugador": p.get("JUGADOR"), "pos": p.get("POS"),
+                "pos_1": p.get("pos_1"), "pos_2": p.get("pos_2"), "edad": p.get("edad"),
+                "dorsal": p.get("dorsal"), "altura": p.get("altura"),
+                "lateralidad": p.get("lateralidad"), "foto_url": foto_url
+            })
+        supabase.table("plantilla").delete().eq("equipo_id", eq_id).execute()
+        if plantilla_db: supabase.table("plantilla").insert(plantilla_db).execute()
+
+        sesiones_db = []
+        for s in st.session_state.sesiones:
+            sesiones_db.append({
+                "equipo_id": eq_id, "fecha": s.get("fecha"), "tipo": s.get("tipo"), "descripcion": s.get("descripcion"),
+                "competicion": s.get("competicion"), "rival": s.get("rival"), "condicion": s.get("condicion"),
+                "ciudad_manual": s.get("ciudad_manual"), "goles_favor": s.get("goles_favor"), "goles_contra": s.get("goles_contra"),
+                "clima": s.get("clima", {}), "disponibilidad": s.get("disponibilidad", {}), "estadisticas_partido": s.get("estadisticas_partido", {}),
+                "estadisticas_invitados": s.get("estadisticas_invitados", []), "informe_generado": s.get("informe_generado", False),
+                "datos_informe": s.get("datos_informe", [])
+            })
+        supabase.table("sesiones").delete().eq("equipo_id", eq_id).execute()
+        if sesiones_db: supabase.table("sesiones").insert(sesiones_db).execute()
+
+        lesiones_db = []
+        for l in st.session_state.lesiones:
+            lesiones_db.append({
+                "equipo_id": eq_id, "fecha_registro": l.get("fecha_registro"), "id_sesion": l.get("id_sesion"),
+                "tipo_sesion": l.get("tipo_sesion"), "jugador": l.get("jugador"), "tipo": l.get("tipo"),
+                "zona": l.get("zona"), "lado": l.get("lado"), "lateralidad": l.get("lateralidad"),
+                "contacto": l.get("contacto"), "cesped": l.get("cesped"), "recidiva": l.get("recidiva"),
+                "estado": l.get("estado"), "dias_baja": l.get("dias_baja"), "comentarios": l.get("comentarios")
+            })
+        supabase.table("lesiones_historial").delete().eq("equipo_id", eq_id).execute()
+        if lesiones_db: supabase.table("lesiones_historial").insert(lesiones_db).execute()
+
+        antro_db = [{"equipo_id": eq_id, "fecha": a.get("fecha"), "jugador": a.get("jugador"), "datos": a} for a in st.session_state.antropometria]
+        supabase.table("antropometria_historial").delete().eq("equipo_id", eq_id).execute()
+        if antro_db: supabase.table("antropometria_historial").insert(antro_db).execute()
+
+        supabase.table("configuracion_equipo").upsert({
+            "equipo_id": eq_id, "ubicacion_local": st.session_state.get("ubicacion_local", "Santiago de Compostela"),
+            "color_sidebar": st.session_state.get("color_sidebar", "#f1f5f9"), "rivales_guardados": st.session_state.get("rivales_guardados", {}),
+            "config_mapeo": st.session_state.get("config_mapeo", {}), "val_inicial": st.session_state.get("val_inicial", []),
+            "val_rom": st.session_state.get("val_rom", []), "val_1rm": st.session_state.get("val_1rm", [])
+        }).execute()
+
         fetch_datos_equipo_supabase.clear()
     except Exception as e:
         st.error(f"Error al guardar en Supabase: {e}")
