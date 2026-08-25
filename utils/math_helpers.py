@@ -240,30 +240,31 @@ def set_login_background(image_path):
             padding-top: 1rem !important;
         }}
         
-        /* 3. LA TARJETA BLANCA (Columna central) */
-        /* Exactamente igual a la tarjeta de selección de equipo */
-        div[data-testid="column"]:nth-child(2) > div[data-testid="stVerticalBlock"] {{
+        /* 3. CONVERTIR TODO EL BLOQUE DE TABS EN LA TARJETA BLANCA */
+        div[data-testid="stTabs"] {{
             background-color: #ffffff !important;
             padding: 30px !important;
             border-radius: 16px !important;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15) !important;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4) !important;
             border: 1px solid #e2e8f0 !important;
         }}
         
-        /* 4. INTEGRACIÓN DE LAS PESTAÑAS (TABS) */
-        /* Hacemos que el fondo de las pestañas encaje con el gris claro de la tarjeta */
+        /* Asegurar que el fondo del contenido herede el blanco */
+        div[role="tabpanel"] {{
+            background-color: transparent !important; 
+        }}
+        
+        /* 4. INTEGRACIÓN DE LAS PESTAÑAS (TABS HEADER) */
         div[data-testid="stTabs"] [data-baseweb="tab-list"] {{
             background-color: #f8fafc !important;
             border-radius: 10px !important;
             padding: 5px !important;
             border: 1px solid #e2e8f0 !important;
-            margin-bottom: 10px !important;
+            margin-bottom: 15px !important;
         }}
         div[data-testid="stTabs"] [data-baseweb="tab"] {{
             color: #64748b !important;
             font-weight: 700 !important;
-            padding-top: 10px !important;
-            padding-bottom: 10px !important;
         }}
         div[data-testid="stTabs"] [aria-selected="true"] {{
             background-color: #ffffff !important;
@@ -272,11 +273,16 @@ def set_login_background(image_path):
             border-radius: 8px !important;
         }}
         
-        /* 5. TEXTOS Y FORMULARIOS */
-        div[data-testid="column"]:nth-child(2) label {{
+        /* 5. TEXTOS Y FORMULARIOS DENTRO DE LA TARJETA */
+        div[data-testid="stTabs"] label {{
             color: #0f172a !important;
             font-weight: 800 !important;
             font-size: 0.95rem !important;
+        }}
+        
+        /* Forzar que textos extra (como el checkbox) se vean en oscuro */
+        div[data-testid="stTabs"] div[data-testid="stMarkdownContainer"] p {{
+            color: #475569 !important; 
         }}
         
         div[data-testid="stTextInput"] input {{
@@ -306,9 +312,9 @@ def set_login_background(image_path):
             text-transform: uppercase;
             letter-spacing: 1px;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1) !important;
-            transition: all 0.3s ease;
-            margin-top: 10px;
+            margin-top: 15px;
             width: 100% !important;
+            transition: all 0.3s ease;
         }}
         
         div[data-testid="stFormSubmitButton"] button:hover {{
