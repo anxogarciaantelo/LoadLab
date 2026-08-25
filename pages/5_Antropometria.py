@@ -266,7 +266,8 @@ with tab_antro_jug:
         with col_img:
             if jugador_datos and jugador_datos.get("foto"):
                 try:
-                    st.markdown(f'<img src="data:image/jpeg;base64,{jugador_datos["foto"]}" style="width:100%; max-width:130px; border-radius:12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">', unsafe_allow_html=True)
+                    img_src = jugador_datos["foto"] if str(jugador_datos["foto"]).startswith("http") else f"data:image/jpeg;base64,{jugador_datos['foto']}"
+                    st.markdown(f'<img src="{img_src}" style="width:100%; max-width:130px; border-radius:12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">', unsafe_allow_html=True)
                 except:
                     st.markdown('<div style="font-size: 70px; text-align: center;">👤</div>', unsafe_allow_html=True)
             else:
