@@ -432,7 +432,12 @@ def generar_pdf_antropometria_jugador(jugador_nombre, jugador_info, fecha_pesaje
         
     if foto_b64:
         tmp_foto = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
-        tmp_foto.write(base64.b64decode(foto_b64))
+        if str(foto_b64).startswith("http"):
+            import requests
+            r = requests.get(foto_b64)
+            tmp_foto.write(r.content)
+        else:
+            tmp_foto.write(base64.b64decode(foto_b64))
         tmp_foto.close()
         img_paths['foto'] = tmp_foto.name
         
