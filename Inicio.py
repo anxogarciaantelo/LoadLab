@@ -199,11 +199,11 @@ if not st.session_state.autenticado:
     col_izq, col_centro, col_der = st.columns([1.5, 1, 1.5])
     
     with col_centro:
-        # Pestañas para elegir entre Entrar o Registrarse
         tab_login, tab_reg = st.tabs(["Iniciar Sesión", "Registrarse"])
         
         with tab_login:
-            st.markdown("<h3 style='text-align: center; color: #ffffff; font-weight: 800; margin-bottom: 10px;'>Acceso</h3>", unsafe_allow_html=True)
+            # Color oscuro para la tarjeta blanca
+            st.markdown("<h3 style='text-align: center; color: #0f172a; font-weight: 800; margin-bottom: 10px;'>Acceso</h3>", unsafe_allow_html=True)
             with st.form(key="login_form"):
                 email = st.text_input("Correo electrónico", key="log_email")
                 password = st.text_input("Contraseña", type="password", key="log_pass")
@@ -221,14 +221,15 @@ if not st.session_state.autenticado:
                         st.error("Credenciales incorrectas o error de conexión.")
                         
         with tab_reg:
-            st.markdown("<h3 style='text-align: center; color: #ffffff; font-weight: 800; margin-bottom: 10px;'>Nuevo Usuario</h3>", unsafe_allow_html=True)
+            # Color oscuro para la tarjeta blanca
+            st.markdown("<h3 style='text-align: center; color: #0f172a; font-weight: 800; margin-bottom: 10px;'>Nuevo Usuario</h3>", unsafe_allow_html=True)
             with st.form(key="register_form"):
                 reg_email = st.text_input("Correo electrónico", key="reg_email")
                 reg_password = st.text_input("Contraseña (mín. 6 caracteres)", type="password", key="reg_pass")
                 
-                # Aviso de Privacidad y RGPD
+                # Texto legal en gris slate para combinar con la tarjeta
                 st.markdown("""
-                    <div style="font-size: 0.75rem; color: #cbd5e1; margin-bottom: 10px; line-height: 1.2;">
+                    <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 10px; line-height: 1.2;">
                         🔒 <strong>Aviso de Privacidad:</strong> Al registrarte, aceptas que los datos de cargas y salud introducidos son responsabilidad exclusiva del usuario. Se recomienda anonimizar a los deportistas.
                     </div>
                 """, unsafe_allow_html=True)
@@ -242,7 +243,7 @@ if not st.session_state.autenticado:
                     else:
                         try:
                             res = supabase.auth.sign_up({"email": reg_email, "password": reg_password})
-                            st.success("¡Cuenta creada con éxito! Revisa tu correo si Supabase requiere confirmación, o inicia sesión directamente.")
+                            st.success("¡Cuenta creada con éxito! Inicia sesión para continuar.")
                         except Exception as e:
                             st.error(f"Error al registrarse: {e}")
     st.stop()
