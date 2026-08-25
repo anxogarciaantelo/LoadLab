@@ -470,7 +470,8 @@ if st.session_state.get("equipo_seleccionado", False):
                 if p.get("foto"):
                     img_src = p["foto"] if str(p["foto"]).startswith("http") else f"data:image/jpeg;base64,{p['foto']}"
                     return f'<img src="{img_src}" style="width:28px; height:28px; border-radius:50%; object-fit: cover; vertical-align: middle; margin-right: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">'
-                breakyle="font-size: 22px; margin-right: 8px; vertical-align: middle;">👤</span>'
+                break
+        return '<span style="font-size: 22px; margin-right: 8px; vertical-align: middle;">👤</span>'
 
     # 2. Recopilación de Datos para las 3 Columnas
     bajas = []
