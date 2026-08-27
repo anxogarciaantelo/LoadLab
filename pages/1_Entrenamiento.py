@@ -121,7 +121,7 @@ with tab_cal:
                         "informe_generado": False, 
                         "datos_informe": []
                     })
-                    guardar_datos()
+                    guardar_datos(modulo="plantilla")
                     st.success("¡Evento creado en el calendario!")
                     st.rerun()
     with c_dia2:
@@ -272,7 +272,7 @@ with tab_cal:
                         
                     sesion_obj["datos_informe"] = registros_sesion
                     
-                guardar_datos()
+                guardar_datos(modulo="plantilla")
                 st.success(f"✅ ¡Histórico importado correctamente! Se procesaron {len(df_hist_valid)} registros en total.")
                 st.rerun()
             except Exception as e:
@@ -895,7 +895,7 @@ with tab_ses:
                         nuevo2 = col_d2.selectbox(f"👤 {jugador2}", opciones_disp, index=opciones_disp.index(estado2), key=f"sel2_{idx_real}_{jugador2}")
                         st.session_state.sesiones[idx_real]["disponibilidad"][jugador2] = nuevo2
                 if st.form_submit_button("💾 Guardar Cambios"):
-                    guardar_datos()
+                    guardar_datos(modulo="plantilla")
                     st.success("Disponibilidad guardada.")
                     st.rerun()
             st.markdown("---")
@@ -1462,7 +1462,7 @@ with tab_ses:
                             
                         st.session_state.sesiones[idx_real]['datos_informe'] = full_records
                         st.session_state.sesiones[idx_real]['informe_generado'] = True
-                        guardar_datos()
+                        guardar_datos(modulo="plantilla")
                         st.success("✅ ¡Datos manuales guardados correctamente!")
                         st.rerun()
 
@@ -1470,7 +1470,7 @@ with tab_ses:
                     if st.button("🗑️ Borrar Datos de la Sesión", key=f"btn_del_session_{idx_real}"):
                         st.session_state.sesiones[idx_real]['datos_informe'] = []
                         st.session_state.sesiones[idx_real]['informe_generado'] = False
-                        guardar_datos()
+                        guardar_datos(modulo="plantilla")
                         st.success("✅ Datos de la sesión borrados correctamente.")
                         st.rerun()
 
@@ -1661,7 +1661,7 @@ with tab_ses:
                             
                         st.session_state.sesiones[idx_real]['datos_informe'] = registros_sesion
                         st.session_state.sesiones[idx_real]['informe_generado'] = True
-                        guardar_datos()
+                        guardar_datos(modulo="plantilla")
                         
                         msgs = [f"✅ Sincronización completada. Se generó la tabla con los {len(nombres_plantilla)} jugadores de tu plantilla."]
                         if archivo_well and faltan_w: msgs.append(f"⚠️ **Faltan en Wellness:** {', '.join(faltan_w)}")
@@ -1726,7 +1726,7 @@ with tab_ses:
                             "fecha_registro": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         }
                         st.session_state.lesiones.append(nueva_lesion)
-                        guardar_datos()
+                        guardar_datos(modulo="plantilla")
                         st.success(f"¡Parte médico de {les_jugador} guardado correctamente!")
                         st.rerun()
             st.markdown("---")
@@ -1805,7 +1805,7 @@ with tab_ses:
                             "Minutos": min_invitado,
                             "Goles": 0, "Goles Encajados": 0, "Asistencias": 0, "Amarillas": 0, "Rojas": 0
                         })
-                        guardar_datos()
+                        guardar_datos(modulo="plantilla")
                         st.success(f"✅ {nombre_invitado} añadido al partido.")
                         st.rerun()
                     else:
@@ -1864,7 +1864,7 @@ with tab_ses:
                     sesion["estadisticas_invitados"] = invitados_actualizados
                     sesion["goles_contra"] = goles_contra_totales
                     
-                    guardar_datos()
+                    guardar_datos(modulo="plantilla")
                     st.success(f"✅ ¡Estadísticas guardadas con éxito! (Goles en contra totales: {goles_contra_totales})")
                     st.rerun()
             st.markdown("---")
