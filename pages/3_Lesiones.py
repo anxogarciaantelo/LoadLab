@@ -28,7 +28,7 @@ if not les_data:
     with tab_les_res: st.success("¡Buenas noticias! No hay ninguna lesión registrada en el historial del equipo.")
     with tab_les_list: st.success("¡Buenas noticias! No hay ninguna lesión registrada en el historial del equipo.")
 else:
-    df_les = pd.DataFrame(les_data)
+    df_les = st.session_state.df_lesiones.copy()
     df_les['Mes_Num'] = pd.to_datetime(df_les['id_sesion']).dt.month
     df_les['Mes'] = df_les['Mes_Num'].map(meses_esp)
     df_les['Gravedad'] = df_les['dias_baja'].apply(categorizar_duracion)
