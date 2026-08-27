@@ -126,7 +126,10 @@ with tab_cal:
                     st.rerun()
     with c_dia2:
         if st.session_state.sesiones:
-            df_s = pd.DataFrame(st.session_state.sesiones).sort_values("fecha", ascending=False)
+            if not st.session_state.df_sesiones.empty:
+                df_s = st.session_state.df_sesiones.copy().sort_values("fecha", ascending=False)
+            else:
+                df_s = pd.DataFrame()
             df_s["Sesión"] = df_s.apply(lambda row: row.get("nombre_dinamico", row["tipo"]), axis=1)
             df_s["MD / Rival"] = df_s.apply(lambda row: row.get("subtitulo_dinamico", row.get("descripcion", "")), axis=1)
             df_s["Fecha"] = df_s["fecha"]
@@ -301,27 +304,21 @@ with tab_temp:
                 nombre_micro = f"Microciclo {i+1}"
                 ses_sem = [s for s in st.session_state.sesiones if obtener_numero_semana(s["fecha"]) == num_sem and s.get("informe_generado", False)]
                 datos_acum = []
-                for s in ses_sem:
-                    disp_s = s.get("disponibilidad", {})
-                    disp_s_clean = {limpiar_nombre(k): v for k, v in disp_s.items()}
-                    
-                    for d in s["datos_informe"]:
-                        jug_name = d["JUGADOR"]
-                        est_jug = disp_s_clean.get(limpiar_nombre(jug_name), "Disponible")
-                        
-                        # EXCLUSIÓN PARA MEDIAS DE CARGA INTERNA: Ni lesionados, ni readaptación, ni no disponibles
-                        if est_jug in ["Disponible", "Titular", "Suplente"]:
-                            datos_acum.append({
-                                "JUGADOR": jug_name, "DIA": s["fecha"],
-                                "TQR": safe_float(d.get("TQR")), "WELLNESS": safe_float(d.get("WELLNESS")),
-                                "RPE": safe_float(d.get("RPE")), "MIN": safe_float(d.get("MIN")),
-                                "CARGA": safe_float(d.get("CARGA")), "DIS": safe_float(d.get("DIS")),
-                                "DIS AI": safe_float(d.get("HID >21", d.get("DIS AI", 0))), 
-                                "Nº SPR": safe_float(d.get("SPR >24", d.get("Nº SPR", 0))),
-                                "ACC": safe_float(d.get("ACC >3", d.get("ACC", 0))), 
-                                "DCC": safe_float(d.get("DCC >3", d.get("DCC", 0)))
-                            })
-                df_sem = pd.DataFrame(datos_acum)
+                # --- NUEVO FILTRADO ULTRA RÁPIDO ---
+                fechas_semana = [s["fecha"] for s in ses_sem]
+                df_master = st.session_state.df_master_informes
+                
+                # Filtramos la RAM buscando los días de esta semana y a los jugadores sanos
+                df_sem = df_master[
+                    (df_master['FECHA'].isin(fechas_semana)) & 
+                    (df_master['ESTADO'].isin(["Disponible", "Titular", "Suplente"]))
+                ].copy()
+                
+                # Mapeo de columnas para mantener la compatibilidad con el resto de tus gráficos
+                if 'HID >21' in df_sem.columns: df_sem['DIS AI'] = df_sem['HID >21']
+                if 'SPR >24' in df_sem.columns: df_sem['Nº SPR'] = df_sem['SPR >24']
+                if 'ACC >3' in df_sem.columns: df_sem['ACC'] = df_sem['ACC >3']
+                if 'DCC >3' in df_sem.columns: df_sem['DCC'] = df_sem['DCC >3']
                 if not df_sem.empty:
                     # Reemplazar 0 por NaN en encuestas para que los no-rellenados no bajen la media
                     df_sem['TQR'] = df_sem['TQR'].replace(0, np.nan)
