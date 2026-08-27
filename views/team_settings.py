@@ -31,7 +31,7 @@ def render_panel_principal():
                 st.session_state.ubicacion_local = nueva_ubicacion
                 if nuevo_escudo_up:
                     st.session_state.escudo_equipo = get_base64_of_bin_file(nuevo_escudo_up)
-                guardar_datos()
+                guardar_datos(modulo="configuracion")
                 st.success("¡Datos de cuenta actualizados!")
                 st.rerun()
 
@@ -143,7 +143,7 @@ def render_panel_principal():
                         "r_21_24": n_r21_24, "r_24_27": n_r24_27, "r_27_30": n_r27_30, "r_30_45": n_r30_45
                     }
                 }
-                guardar_datos()
+                guardar_datos(modulo="configuracion")
                 st.success("✅ Configuración de importación actualizada con éxito.")
                 st.rerun()
 
@@ -187,7 +187,7 @@ def render_panel_principal():
                     errores.append(f"Sesión {s['fecha']}: La API falló al buscar el clima de '{ciudad}'.")
                             
             if sesiones_actualizadas > 0:
-                guardar_datos()
+                guardar_datos(modulo="sesiones")
                 st.success(f"✅ ¡Éxito! Se ha actualizado el clima para {sesiones_actualizadas} sesiones.")
             else:
                 st.error("No se han podido actualizar las sesiones. Revisa el registro de errores:")
