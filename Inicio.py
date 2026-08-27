@@ -333,7 +333,8 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
                         # ¡Es imposible que Streamlit las vuelva transparentes!
                         escudo = eq_info.get("escudo_base64")
                         if escudo:
-                            img_html = f'<img src="data:image/jpeg;base64,{escudo}" style="width:90px; height:90px; object-fit: cover; border-radius:50%; margin-bottom: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">'
+                            img_src = escudo if str(escudo).startswith("http") else f"data:image/jpeg;base64,{escudo}"
+                            img_html = f'<img src="{img_src}" style="width:90px; height:90px; object-fit: cover; border-radius:50%; margin-bottom: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">'
                         else:
                             img_html = '<div style="font-size: 50px; margin-bottom: 10px;">🛡️</div>'
                             
@@ -421,7 +422,8 @@ if st.session_state.get("equipo_seleccionado", False):
     # --- 1. PREPARAR EL ESCUDO ---
     escudo = st.session_state.get("escudo_equipo")
     if escudo:
-        img_html = f'<img src="data:image/jpeg;base64,{escudo}" style="width:140px; height:140px; object-fit: cover; border-radius:50%; margin-bottom: 15px; box-shadow: 0 8px 20px rgba(0,0,0,0.15);">'
+        img_src = escudo if str(escudo).startswith("http") else f"data:image/jpeg;base64,{escudo}"
+        img_html = f'<img src="{img_src}" style="width:140px; height:140px; object-fit: cover; border-radius:50%; margin-bottom: 15px; box-shadow: 0 8px 20px rgba(0,0,0,0.15);">'
     else:
         img_html = '<div style="font-size: 70px; margin-bottom: 15px;">🛡️</div>'
 
