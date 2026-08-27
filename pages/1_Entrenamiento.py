@@ -439,7 +439,8 @@ with tab_temp:
                     fig_well = px.bar(
                         df_well_temp, x='Microciclo', y=['Fatiga', 'Sueño', 'Dolor', 'Estrés', 'Humor'],
                         title="Evolución Wellness por Componentes", color_discrete_sequence=px.colors.qualitative.Set2,
-                        labels={'value': 'Puntos', 'variable': 'Factor', 'Microciclo': ''}
+                        labels={'value': 'Puntos', 'variable': 'Factor', 'Microciclo': ''},
+                        barmode='stack'
                     )
                     fig_well.update_layout(barmode='stack', yaxis_range=[0, 35])
                     fig_well.add_hline(y=18, line_dash="dot", line_color="orange", annotation_text="Moderado (18)", annotation_position="bottom right")
