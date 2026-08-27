@@ -52,7 +52,8 @@ def obtener_rango_fechas_semana(fecha_str):
 @st.cache_data
 def calcular_ewma_historico(_sesiones, fecha_objetivo):
     registros = []
-    for s in sesiones:
+    # Añadimos el guion bajo aquí:
+    for s in _sesiones: 
         if s.get("informe_generado") and s["fecha"] <= fecha_objetivo:
             for d in s["datos_informe"]:
                 registros.append({"fecha": s["fecha"], "JUGADOR": d["JUGADOR"], "CARGA": float(d.get("CARGA", 0))})
@@ -116,7 +117,7 @@ def calcular_monotonia_7d(_sesiones, jugador, fecha_objetivo):
     
     dic_cargas = {(fecha_ini + timedelta(days=i)).strftime("%Y-%m-%d"): 0.0 for i in range(7)}
     
-    for s in sesiones:
+    for s in _sesiones: 
         if s.get("informe_generado") and s["fecha"] in dic_cargas:
             for d in s["datos_informe"]:
                 if limpiar_nombre(d["JUGADOR"]) == limpiar_nombre(jugador):
