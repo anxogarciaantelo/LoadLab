@@ -50,7 +50,7 @@ def obtener_rango_fechas_semana(fecha_str):
     return lunes.strftime("%d/%m"), domingo.strftime("%d/%m"), lunes, domingo
 
 @st.cache_data
-def calcular_ewma_historico(sesiones, fecha_objetivo):
+def calcular_ewma_historico(_sesiones, fecha_objetivo):
     registros = []
     for s in sesiones:
         if s.get("informe_generado") and s["fecha"] <= fecha_objetivo:
@@ -110,7 +110,7 @@ def categorizar_duracion(dias):
     return "Grave (>28d)"
 
 @st.cache_data
-def calcular_monotonia_7d(sesiones, jugador, fecha_objetivo):
+def calcular_monotonia_7d(_sesiones, jugador, fecha_objetivo):
     fecha_fin = datetime.strptime(fecha_objetivo, "%Y-%m-%d")
     fecha_ini = fecha_fin - timedelta(days=6)
     
