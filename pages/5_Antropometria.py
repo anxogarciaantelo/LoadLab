@@ -29,7 +29,7 @@ with tab_antro_res:
     if not antro_data:
         st.info("Aún no hay datos antropométricos registrados. Sube tu Excel en la pestaña 'Cargar Datos'.")
     else:
-        df_antro = pd.DataFrame(antro_data)
+        df_antro = st.session_state.df_antropometria.copy()
         
         df_antro['fecha_dt'] = pd.to_datetime(df_antro['fecha'])
         df_antro['Mes_Num'] = df_antro['fecha_dt'].dt.month
@@ -279,7 +279,7 @@ with tab_antro_jug:
         
         st.markdown("---")
         
-        df_antro = pd.DataFrame(antro_data)
+        df_antro = st.session_state.df_antropometria.copy()
         df_antro['fecha_dt'] = pd.to_datetime(df_antro['fecha'])
         df_jug_antro = df_antro[df_antro['jugador'] == jugador_seleccionado].sort_values('fecha_dt', ascending=False)
         
