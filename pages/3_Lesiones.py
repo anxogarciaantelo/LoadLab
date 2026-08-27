@@ -190,7 +190,7 @@ else:
                                 L["estado"] = "Recuperado"
                                 L["dias_baja"] = dias_baja_input
                                 break
-                        guardar_datos()
+                        guardar_datos(modulo="lesiones")
                         st.success(f"Alta médica procesada. {les_obj['jugador']} estuvo {dias_baja_input} días de baja.")
                         st.rerun()
 
@@ -207,7 +207,7 @@ else:
                 if st.form_submit_button("💾 Guardar Cambios"):
                     real_idx = st.session_state.lesiones.index(les_edit_obj)
                     st.session_state.lesiones[real_idx]["comentarios"] = nuevo_com
-                    guardar_datos()
+                    guardar_datos(modulo="lesiones")
                     st.success("¡Comentario actualizado correctamente!")
                     st.rerun()
 
