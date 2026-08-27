@@ -90,6 +90,7 @@ def cargar_datos_equipo(equipo_id):
                     }
                 }
             st.session_state.datos_cargados = True
+            reconstruir_dataframes_globales()
             return True
     except Exception as e:
         st.error(f"Error al cargar desde Supabase: {e}")
@@ -177,6 +178,8 @@ def guardar_datos(modulo="todo"):
 
         if modulo in ["todo", "configuracion"]:
             fetch_datos_equipo_supabase.clear()
+
+        reconstruir_dataframes_globales()
             
     except Exception as e:
         st.error(f"Error al guardar en Supabase: {e}")
