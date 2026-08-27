@@ -726,7 +726,7 @@ with tab_antro_up:
                     st.session_state.antropometria.append(nuevo_pesaje)
                     registros_nuevos += 1
                     
-                guardar_datos()
+                guardar_datos(modulo="antropometria")
                 st.success(f"✅ ¡{registros_nuevos} pesajes procesados e integrados con éxito!")
                 st.rerun()
         except Exception as e:
