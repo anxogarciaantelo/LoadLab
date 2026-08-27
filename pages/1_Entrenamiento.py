@@ -643,17 +643,25 @@ with tab_micro:
                                         
                                 datos_w.append({"DIA": dia_n, "Fatiga": f_val, "Sueño": s_val, "Dolor": d_val, "Estrés": e_val, "Humor": h_val})
                             
-                            fig_well = px.bar(
-                                pd.DataFrame(datos_w), x='DIA', y=['Fatiga', 'Sueño', 'Dolor', 'Estrés', 'Humor'], 
-                                title="Evolución Wellness Diario", color_discrete_sequence=px.colors.qualitative.Set2,
-                                labels={'value': 'Puntos', 'variable': 'Factor', 'DIA': ''}
+                            fig_well = go.Figure()
+                            colores_w = px.colors.qualitative.Set2
+                            factores = ['Fatiga', 'Sueño', 'Dolor', 'Estrés', 'Humor']
+                            df_w_plot = pd.DataFrame(datos_w)
+                            
+                            for i, factor in enumerate(factores):
+                                fig_well.add_trace(go.Bar(x=df_w_plot['DIA'], y=df_w_plot[factor], name=factor, marker_color=colores_w[i]))
+                            
+                            fig_well.update_layout(
+                                title="Evolución Wellness Diario",
+                                barmode='stack',
+                                yaxis_title="Puntos",
+                                legend_title_text="Factor",
+                                yaxis_range=[0, 35],
+                                hovermode="x unified"
                             )
                             fig_well.update_xaxes(categoryorder='array', categoryarray=["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"])
-                            fig_well.update_yaxes(range=[0, 35])
                             fig_well.add_hline(y=18, line_dash="dot", line_color="orange", annotation_text="Moderado (18)", annotation_position="bottom right")
                             fig_well.add_hline(y=24, line_dash="dash", line_color="red", annotation_text="Crítico (24)", annotation_position="top right")
-                            fig_well.update_traces(hovertemplate="%{variable}: %{y:.1f} pts")
-                            fig_well.update_layout(barmode='stack', legend_title_text='Factores', hovermode="x unified")
                             st.plotly_chart(fig_well, use_container_width=True, key=f"micro_well_{num_sem}_{idx_real}")
 
                         st.markdown("---")
@@ -993,31 +1001,26 @@ with tab_ses:
                             df_well = df_well.rename(columns=nombres_limpios)
                             cols_wellness = list(nombres_limpios.values())
                             
-                            fig_well = px.bar(
-                                df_well,
-                                x='JUGADOR',
-                                y=cols_wellness,
-                                title="<b>Desglose de Wellness por Componentes</b>",
-                                labels={'value': 'Puntos', 'variable': '', 'JUGADOR': ''},
-                                color_discrete_sequence=px.colors.qualitative.Set2
-                            )
-
-                            fig_well.add_hline(y=18, line_dash="dot", line_color="orange", annotation_text="Moderado (18)", annotation_position="bottom right")
-                            fig_well.add_hline(y=24, line_dash="dash", line_color="red", annotation_text="Crítico (24)", annotation_position="top right")
+                            fig_well = go.Figure()
+                            colores_w = px.colors.qualitative.Set2
                             
-                            # MODIFICACIÓN: Fijar el eje Y de 0 a 35 obligatoriamente
-                            fig_well.update_yaxes(range=[0, 35])
+                            for i, factor in enumerate(cols_wellness):
+                                fig_well.add_trace(go.Bar(x=df_well['JUGADOR'], y=df_well[factor], name=factor, marker_color=colores_w[i]))
                             
-                            fig_well.update_traces(hovertemplate="%{y}")
                             fig_well.update_layout(
+                                title="<b>Desglose de Wellness por Componentes</b>",
                                 barmode='stack',
+                                yaxis_title="Puntos",
+                                legend_title_text="Factores",
+                                yaxis_range=[0, 35],
                                 xaxis_tickangle=-45,
                                 plot_bgcolor='rgba(0,0,0,0)',
                                 paper_bgcolor='rgba(0,0,0,0)',
                                 margin=dict(t=40, b=120, l=40, r=40),
-                                legend_title_text='Factores',
                                 hovermode="x unified"
                             )
+                            fig_well.add_hline(y=18, line_dash="dot", line_color="orange", annotation_text="Moderado (18)", annotation_position="bottom right")
+                            fig_well.add_hline(y=24, line_dash="dash", line_color="red", annotation_text="Crítico (24)", annotation_position="top right")
                             st.plotly_chart(fig_well, use_container_width=True, key=f"ses_well_detalle_grafico_{idx_real}")
                     
                     with cg2:
