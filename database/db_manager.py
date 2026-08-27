@@ -103,10 +103,31 @@ def guardar_datos(modulo="todo"):
     try:
         # 1. GUARDAR EQUIPO Y CONFIGURACIÓN
         if modulo in ["todo", "equipo", "configuracion"]:
+            
+            # --- NUEVA LÓGICA PARA EL ESCUDO ---
+            escudo_actual = st.session_state.get("escudo_equipo")
+            # Si hay escudo y NO es una URL (es decir, acaba de ser subido en Base64)
+            if escudo_actual and not str(escudo_actual).startswith("http") and len(escudo_actual) > 1000:
+                try:
+                    b64_clean = escudo_actual.split(",")[1] if escudo_actual.startswith("data:image") else escudo_actual
+                    import base64
+                    img_bytes = base64.b64decode(b64_clean)
+                    nombre_arch = f"{eq_id}/escudo_club.jpg"
+                    
+                    # Lo subimos al mismo bucket de los jugadores
+                    supabase.storage.from_("loadlab_media").upload(nombre_arch, img_bytes, file_options={"content-type": "image/jpeg", "upsert": "true"})
+                    
+                    # Obtenemos la URL y machacamos el Base64 en la memoria RAM
+                    escudo_actual = supabase.storage.from_("loadlab_media").get_public_url(nombre_arch)
+                    st.session_state.escudo_equipo = escudo_actual
+                except Exception as e:
+                    print(f"Error subiendo escudo: {e}")
+
+            # Ahora guardamos en la base de datos (Aunque la columna se llame 'escudo_base64', guardará la URL corta)
             supabase.table("equipos").update({
                 "nombre": st.session_state.nombre_equipo, "categoria": st.session_state.categoria_equipo,
                 "division": st.session_state.division_equipo, "temporada": st.session_state.temporada_equipo,
-                "escudo_base64": st.session_state.get("escudo_equipo", None)
+                "escudo_base64": escudo_actual 
             }).eq("id", eq_id).execute()
 
             supabase.table("configuracion_equipo").upsert({
