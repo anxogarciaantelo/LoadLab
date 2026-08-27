@@ -216,7 +216,12 @@ def reconstruir_dataframes_globales():
                     row["MD"] = s.get("descripcion")
                     row["COMPETICION"] = s.get("competicion", "")
                     datos_completos.append(row)
-                    
+    # 4. DataFrame de Antropometría
+    if "antropometria" in st.session_state and st.session_state.antropometria:
+        st.session_state.df_antropometria = pd.DataFrame(st.session_state.antropometria)
+    else:
+        st.session_state.df_antropometria = pd.DataFrame()
+        
     if datos_completos:
         # Lo guardamos en session_state listo para usar en cualquier gráfica
         st.session_state.df_master_informes = pd.DataFrame(datos_completos)
