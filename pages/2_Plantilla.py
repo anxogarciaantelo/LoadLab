@@ -116,7 +116,7 @@ elif st.session_state.vista_plantilla == "⚙️ Modificar Plantilla":
                     "lateralidad": lateralidad_j,
                     "foto": get_base64_of_bin_file(foto_up)
                 })
-                guardar_datos()
+                guardar_datos(modulo="plantilla")
                 st.success(f"¡{nombre_j} añadido!")
                 st.rerun()
 
@@ -129,7 +129,7 @@ elif st.session_state.vista_plantilla == "⚙️ Modificar Plantilla":
                 st.warning("⚠️ Cuidado: Si eliminas a un jugador, desaparecerá de la plantilla actual.")
                 if st.form_submit_button("❌ Confirmar Eliminación"):
                     st.session_state.plantilla = [j for j in st.session_state.plantilla if j["JUGADOR"] != jugador_a_borrar]
-                    guardar_datos()
+                    guardar_datos(modulo="plantilla")
                     st.success(f"¡El jugador {jugador_a_borrar} ha sido eliminado!")
                     st.rerun()
         else:
@@ -182,7 +182,7 @@ else:
                         st.session_state.plantilla[i]['altura'] = new_alt
                         st.session_state.plantilla[i]['dorsal'] = new_dorsal
                         if new_foto: st.session_state.plantilla[i]['foto'] = get_base64_of_bin_file(new_foto)
-                        guardar_datos()
+                        guardar_datos(modulo="plantilla")
                         st.rerun()
 
     with col_i2:
