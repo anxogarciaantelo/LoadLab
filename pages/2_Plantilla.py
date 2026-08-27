@@ -188,13 +188,14 @@ else:
     with col_i2:
             sub_tabs = st.tabs(["🧠 Bienestar", "🔥 Carga Interna", "🏃‍♂️ Perfil GPS", "🚑 Historial Médico", "⚖️ Composición Corporal", "📊 Valoraciones"])
             
-            datos_sesiones_jug = []
-            for s in st.session_state.sesiones:
-                if s.get("informe_generado"):
-                    for d in s["datos_informe"]:
-                        if d["JUGADOR"] == jugador["JUGADOR"]:
-                            datos_sesiones_jug.append({"FECHA": s["fecha"], "TIPO": s["tipo"], "MD": s["descripcion"], **d})
-            df_j = pd.DataFrame(datos_sesiones_jug)
+            # --- NUEVO MOTOR OPTIMIZADO ---
+            if "df_master_informes" in st.session_state and not st.session_state.df_master_informes.empty:
+                # Filtramos instantáneamente el DataFrame global por el nombre del jugador
+                df_j = st.session_state.df_master_informes[st.session_state.df_master_informes['JUGADOR'] == jugador["JUGADOR"]].copy()
+                # Renombrar columna TIPO_SESION a TIPO para que los gráficos funcionen igual
+                df_j = df_j.rename(columns={"TIPO_SESION": "TIPO"})
+            else:
+                df_j = pd.DataFrame()
             
             with sub_tabs[0]:
                     if df_j.empty or 'TQR' not in df_j.columns:
