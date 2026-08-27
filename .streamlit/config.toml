@@ -1,6 +1,0 @@
-[theme]
-primaryColor = "#e11d48" # El rojo oscuro/neón que usas para detalles
-backgroundColor = "#f8fafc" # Un gris ultra claro y limpio para el fondo
-secondaryBackgroundColor = "#ffffff" # Blanco puro para los menús y tarjetas
-textColor = "#0f172a" # Gris pizarra casi negro para máxima legibilidad
-font = "sans serif"
