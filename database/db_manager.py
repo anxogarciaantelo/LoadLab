@@ -95,77 +95,88 @@ def cargar_datos_equipo(equipo_id):
         st.error(f"Error al cargar desde Supabase: {e}")
     return False
 
-def guardar_datos():
+def guardar_datos(modulo="todo"):
     if "equipo_id" not in st.session_state: return
     eq_id = st.session_state.equipo_id
     
     try:
-        supabase.table("equipos").update({
-            "nombre": st.session_state.nombre_equipo, "categoria": st.session_state.categoria_equipo,
-            "division": st.session_state.division_equipo, "temporada": st.session_state.temporada_equipo,
-            "escudo_base64": st.session_state.get("escudo_equipo", None)
-        }).eq("id", eq_id).execute()
-        
-        plantilla_db = []
-        for p in st.session_state.plantilla:
-            foto_url = p.get("foto")
-            # Convertir fotos nuevas a URLs en Storage automáticamente
-            if foto_url and not str(foto_url).startswith("http") and len(foto_url) > 1000:
-                try:
-                    b64_clean = foto_url.split(",")[1] if foto_url.startswith("data:image") else foto_url
-                    img_bytes = base64.b64decode(b64_clean)
-                    nombre_arch = f"{eq_id}/jugadores/{limpiar_nombre_archivo(p['JUGADOR'])}.jpg"
-                    supabase.storage.from_("loadlab_media").upload(nombre_arch, img_bytes, file_options={"content-type": "image/jpeg", "upsert": "true"})
-                    foto_url = supabase.storage.from_("loadlab_media").get_public_url(nombre_arch)
-                    p["foto"] = foto_url 
-                except Exception as e:
-                    print(f"Error subiendo foto al guardar: {e}")
+        # 1. GUARDAR EQUIPO Y CONFIGURACIÓN
+        if modulo in ["todo", "equipo", "configuracion"]:
+            supabase.table("equipos").update({
+                "nombre": st.session_state.nombre_equipo, "categoria": st.session_state.categoria_equipo,
+                "division": st.session_state.division_equipo, "temporada": st.session_state.temporada_equipo,
+                "escudo_base64": st.session_state.get("escudo_equipo", None)
+            }).eq("id", eq_id).execute()
+
+            supabase.table("configuracion_equipo").upsert({
+                "equipo_id": eq_id, "ubicacion_local": st.session_state.get("ubicacion_local", "Santiago de Compostela"),
+                "color_sidebar": st.session_state.get("color_sidebar", "#f1f5f9"), "rivales_guardados": st.session_state.get("rivales_guardados", {}),
+                "config_mapeo": st.session_state.get("config_mapeo", {}), "val_inicial": st.session_state.get("val_inicial", []),
+                "val_rom": st.session_state.get("val_rom", []), "val_1rm": st.session_state.get("val_1rm", [])
+            }).execute()
+
+        # 2. GUARDAR PLANTILLA
+        if modulo in ["todo", "plantilla"]:
+            plantilla_db = []
+            for p in st.session_state.plantilla:
+                foto_url = p.get("foto")
+                if foto_url and not str(foto_url).startswith("http") and len(foto_url) > 1000:
+                    try:
+                        b64_clean = foto_url.split(",")[1] if foto_url.startswith("data:image") else foto_url
+                        img_bytes = base64.b64decode(b64_clean)
+                        nombre_arch = f"{eq_id}/jugadores/{limpiar_nombre_archivo(p['JUGADOR'])}.jpg"
+                        supabase.storage.from_("loadlab_media").upload(nombre_arch, img_bytes, file_options={"content-type": "image/jpeg", "upsert": "true"})
+                        foto_url = supabase.storage.from_("loadlab_media").get_public_url(nombre_arch)
+                        p["foto"] = foto_url 
+                    except Exception as e:
+                        print(f"Error subiendo foto al guardar: {e}")
+                
+                plantilla_db.append({
+                    "equipo_id": eq_id, "jugador": p.get("JUGADOR"), "pos": p.get("POS"),
+                    "pos_1": p.get("pos_1"), "pos_2": p.get("pos_2"), "edad": p.get("edad"),
+                    "dorsal": p.get("dorsal"), "altura": p.get("altura"),
+                    "lateralidad": p.get("lateralidad"), "foto_url": foto_url
+                })
+            supabase.table("plantilla").delete().eq("equipo_id", eq_id).execute()
+            if plantilla_db: supabase.table("plantilla").insert(plantilla_db).execute()
+
+        # 3. GUARDAR SESIONES
+        if modulo in ["todo", "sesiones"]:
+            sesiones_db = []
+            for s in st.session_state.sesiones:
+                sesiones_db.append({
+                    "equipo_id": eq_id, "fecha": s.get("fecha"), "tipo": s.get("tipo"), "descripcion": s.get("descripcion"),
+                    "competicion": s.get("competicion"), "rival": s.get("rival"), "condicion": s.get("condicion"),
+                    "ciudad_manual": s.get("ciudad_manual"), "goles_favor": s.get("goles_favor"), "goles_contra": s.get("goles_contra"),
+                    "clima": s.get("clima", {}), "disponibilidad": s.get("disponibilidad", {}), "estadisticas_partido": s.get("estadisticas_partido", {}),
+                    "estadisticas_invitados": s.get("estadisticas_invitados", []), "informe_generado": s.get("informe_generado", False),
+                    "datos_informe": s.get("datos_informe", [])
+                })
+            supabase.table("sesiones").delete().eq("equipo_id", eq_id).execute()
+            if sesiones_db: supabase.table("sesiones").insert(sesiones_db).execute()
+
+        # 4. GUARDAR LESIONES
+        if modulo in ["todo", "lesiones"]:
+            lesiones_db = []
+            for l in st.session_state.lesiones:
+                lesiones_db.append({
+                    "equipo_id": eq_id, "fecha_registro": l.get("fecha_registro"), "id_sesion": l.get("id_sesion"),
+                    "tipo_sesion": l.get("tipo_sesion"), "jugador": l.get("jugador"), "tipo": l.get("tipo"),
+                    "zona": l.get("zona"), "lado": l.get("lado"), "lateralidad": l.get("lateralidad"),
+                    "contacto": l.get("contacto"), "cesped": l.get("cesped"), "recidiva": l.get("recidiva"),
+                    "estado": l.get("estado"), "dias_baja": l.get("dias_baja"), "comentarios": l.get("comentarios")
+                })
+            supabase.table("lesiones_historial").delete().eq("equipo_id", eq_id).execute()
+            if lesiones_db: supabase.table("lesiones_historial").insert(lesiones_db).execute()
+
+        # 5. GUARDAR ANTROPOMETRÍA
+        if modulo in ["todo", "antropometria"]:
+            antro_db = [{"equipo_id": eq_id, "fecha": a.get("fecha"), "jugador": a.get("jugador"), "datos": a} for a in st.session_state.antropometria]
+            supabase.table("antropometria_historial").delete().eq("equipo_id", eq_id).execute()
+            if antro_db: supabase.table("antropometria_historial").insert(antro_db).execute()
+
+        if modulo in ["todo", "configuracion"]:
+            fetch_datos_equipo_supabase.clear()
             
-            plantilla_db.append({
-                "equipo_id": eq_id, "jugador": p.get("JUGADOR"), "pos": p.get("POS"),
-                "pos_1": p.get("pos_1"), "pos_2": p.get("pos_2"), "edad": p.get("edad"),
-                "dorsal": p.get("dorsal"), "altura": p.get("altura"),
-                "lateralidad": p.get("lateralidad"), "foto_url": foto_url
-            })
-        supabase.table("plantilla").delete().eq("equipo_id", eq_id).execute()
-        if plantilla_db: supabase.table("plantilla").insert(plantilla_db).execute()
-
-        sesiones_db = []
-        for s in st.session_state.sesiones:
-            sesiones_db.append({
-                "equipo_id": eq_id, "fecha": s.get("fecha"), "tipo": s.get("tipo"), "descripcion": s.get("descripcion"),
-                "competicion": s.get("competicion"), "rival": s.get("rival"), "condicion": s.get("condicion"),
-                "ciudad_manual": s.get("ciudad_manual"), "goles_favor": s.get("goles_favor"), "goles_contra": s.get("goles_contra"),
-                "clima": s.get("clima", {}), "disponibilidad": s.get("disponibilidad", {}), "estadisticas_partido": s.get("estadisticas_partido", {}),
-                "estadisticas_invitados": s.get("estadisticas_invitados", []), "informe_generado": s.get("informe_generado", False),
-                "datos_informe": s.get("datos_informe", [])
-            })
-        supabase.table("sesiones").delete().eq("equipo_id", eq_id).execute()
-        if sesiones_db: supabase.table("sesiones").insert(sesiones_db).execute()
-
-        lesiones_db = []
-        for l in st.session_state.lesiones:
-            lesiones_db.append({
-                "equipo_id": eq_id, "fecha_registro": l.get("fecha_registro"), "id_sesion": l.get("id_sesion"),
-                "tipo_sesion": l.get("tipo_sesion"), "jugador": l.get("jugador"), "tipo": l.get("tipo"),
-                "zona": l.get("zona"), "lado": l.get("lado"), "lateralidad": l.get("lateralidad"),
-                "contacto": l.get("contacto"), "cesped": l.get("cesped"), "recidiva": l.get("recidiva"),
-                "estado": l.get("estado"), "dias_baja": l.get("dias_baja"), "comentarios": l.get("comentarios")
-            })
-        supabase.table("lesiones_historial").delete().eq("equipo_id", eq_id).execute()
-        if lesiones_db: supabase.table("lesiones_historial").insert(lesiones_db).execute()
-
-        antro_db = [{"equipo_id": eq_id, "fecha": a.get("fecha"), "jugador": a.get("jugador"), "datos": a} for a in st.session_state.antropometria]
-        supabase.table("antropometria_historial").delete().eq("equipo_id", eq_id).execute()
-        if antro_db: supabase.table("antropometria_historial").insert(antro_db).execute()
-
-        supabase.table("configuracion_equipo").upsert({
-            "equipo_id": eq_id, "ubicacion_local": st.session_state.get("ubicacion_local", "Santiago de Compostela"),
-            "color_sidebar": st.session_state.get("color_sidebar", "#f1f5f9"), "rivales_guardados": st.session_state.get("rivales_guardados", {}),
-            "config_mapeo": st.session_state.get("config_mapeo", {}), "val_inicial": st.session_state.get("val_inicial", []),
-            "val_rom": st.session_state.get("val_rom", []), "val_1rm": st.session_state.get("val_1rm", [])
-        }).execute()
-
-        fetch_datos_equipo_supabase.clear()
     except Exception as e:
         st.error(f"Error al guardar en Supabase: {e}")
