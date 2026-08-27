@@ -436,13 +436,20 @@ with tab_temp:
                     
                     df_well_temp = pd.DataFrame(datos_w_temp)
                     
-                    fig_well = px.bar(
-                        df_well_temp, x='Microciclo', y=['Fatiga', 'Sueño', 'Dolor', 'Estrés', 'Humor'],
-                        title="Evolución Wellness por Componentes", color_discrete_sequence=px.colors.qualitative.Set2,
-                        labels={'value': 'Puntos', 'variable': 'Factor', 'Microciclo': ''},
-                        barmode='stack'
+                    fig_well = go.Figure()
+                    colores_w = px.colors.qualitative.Set2
+                    factores = ['Fatiga', 'Sueño', 'Dolor', 'Estrés', 'Humor']
+                    
+                    for i, factor in enumerate(factores):
+                        fig_well.add_trace(go.Bar(x=df_well_temp['Microciclo'], y=df_well_temp[factor], name=factor, marker_color=colores_w[i]))
+                    
+                    fig_well.update_layout(
+                        title="Evolución Wellness por Componentes",
+                        barmode='stack',
+                        yaxis_title="Puntos",
+                        legend_title_text="Factor",
+                        yaxis_range=[0, 35]
                     )
-                    fig_well.update_layout(barmode='stack', yaxis_range=[0, 35])
                     fig_well.add_hline(y=18, line_dash="dot", line_color="orange", annotation_text="Moderado (18)", annotation_position="bottom right")
                     fig_well.add_hline(y=24, line_dash="dash", line_color="red", annotation_text="Crítico (24)", annotation_position="top right")
                     st.plotly_chart(fig_well, use_container_width=True, key="temp_well_bar")
