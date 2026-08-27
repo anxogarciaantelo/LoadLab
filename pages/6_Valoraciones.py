@@ -102,7 +102,7 @@ with tab_val_up:
             
             # Serialización absoluta a JSON para evitar el crash de fechas y NaNs
             st.session_state.val_inicial = json.loads(df.to_json(orient='records', date_format='iso'))
-            guardar_datos()
+            guardar_datos(modulo="configuracion")
             st.success(f"✅ V. Inicial cargada.")
             st.rerun()
             
@@ -114,7 +114,7 @@ with tab_val_up:
             if col_nombre: df = sincronizar_nombres_df(df, col_nombre)
             
             st.session_state.val_rom = json.loads(df.to_json(orient='records', date_format='iso'))
-            guardar_datos()
+            guardar_datos(modulo="configuracion")
             st.success(f"✅ ROM/Fuerza cargados.")
             st.rerun()
             
@@ -126,14 +126,14 @@ with tab_val_up:
             if col_nombre: df = sincronizar_nombres_df(df, col_nombre)
             
             st.session_state.val_1rm = json.loads(df.to_json(orient='records', date_format='iso'))
-            guardar_datos()
+            guardar_datos(modulo="configuracion")
             st.success(f"✅ Datos 1RM cargados.")
             st.rerun()
             
     st.markdown("---")
     if st.button("🗑️ Borrar todas las valoraciones"):
         st.session_state.val_inicial, st.session_state.val_rom, st.session_state.val_1rm = [], [], []
-        guardar_datos()
+        guardar_datos(modulo="configuracion")
         st.success("Valoraciones borradas correctamente.")
         st.rerun()
 
