@@ -187,43 +187,61 @@ def guardar_datos(modulo="todo"):
 import pandas as pd
 
 def reconstruir_dataframes_globales():
-    """Construye los DataFrames pesados una sola vez y los guarda en memoria RAM listos para usar"""
+    """Construye todos los DataFrames pesados una sola vez en la RAM listos para usar"""
     
-    # 1. DataFrame de Plantilla
+    # 1. DATAFRAME DE PLANTILLA
     if "plantilla" in st.session_state and st.session_state.plantilla:
         st.session_state.df_plantilla = pd.DataFrame(st.session_state.plantilla)
     else:
         st.session_state.df_plantilla = pd.DataFrame()
 
-    # 2. DataFrame de Lesiones
+    # 2. DATAFRAME DE LESIONES
     if "lesiones" in st.session_state and st.session_state.lesiones:
         st.session_state.df_lesiones = pd.DataFrame(st.session_state.lesiones)
     else:
         st.session_state.df_lesiones = pd.DataFrame()
 
-    # 3. EL MÁS IMPORTANTE: El "Master" de GPS, Carga y Wellness
-    # En lugar de que 4_GPS.py o 1_Entrenamiento.py hagan esto en cada clic, lo hacemos aquí.
-    datos_completos = []
-    if "sesiones" in st.session_state:
-        for s in st.session_state.sesiones:
-            if s.get("informe_generado") and s.get("datos_informe"):
-                for d in s["datos_informe"]:
-                    # Hacemos una copia de los datos del jugador
-                    row = d.copy() 
-                    # Le inyectamos los datos de la sesión padre
-                    row["FECHA"] = s.get("fecha")
-                    row["TIPO_SESION"] = s.get("tipo")
-                    row["MD"] = s.get("descripcion")
-                    row["COMPETICION"] = s.get("competicion", "")
-                    datos_completos.append(row)
-    # 4. DataFrame de Antropometría
+    # 3. DATAFRAME DE ANTROPOMETRÍA
     if "antropometria" in st.session_state and st.session_state.antropometria:
         st.session_state.df_antropometria = pd.DataFrame(st.session_state.antropometria)
     else:
         st.session_state.df_antropometria = pd.DataFrame()
-        
+
+    # 4. DATAFRAME DE SESIONES (Ligero, solo el calendario)
+    if "sesiones" in st.session_state and st.session_state.sesiones:
+        sesiones_ligero = []
+        for s in st.session_state.sesiones:
+            # Copiamos la sesión pero omitimos la lista pesada de 'datos_informe'
+            ses_copy = {k: v for k, v in s.items() if k != 'datos_informe'}
+            sesiones_ligero.append(ses_copy)
+        st.session_state.df_sesiones = pd.DataFrame(sesiones_ligero)
+    else:
+        st.session_state.df_sesiones = pd.DataFrame()
+
+    # 5. EL MAESTRO: GPS, Carga, Wellness y ESTADO
+    datos_completos = []
+    if "sesiones" in st.session_state:
+        for s in st.session_state.sesiones:
+            if s.get("informe_generado") and s.get("datos_informe"):
+                # Preparamos el diccionario de disponibilidad limpio
+                disp_s = s.get("disponibilidad", {})
+                disp_clean = {str(k).strip().lower(): v for k, v in disp_s.items()}
+                
+                for d in s["datos_informe"]:
+                    row = d.copy() 
+                    row["FECHA"] = s.get("fecha")
+                    row["TIPO_SESION"] = s.get("tipo")
+                    row["MD"] = s.get("descripcion")
+                    row["COMPETICION"] = s.get("competicion", "")
+                    
+                    # Inyectamos el estado médico/convocatoria
+                    jug_key = str(d["JUGADOR"]).strip().lower()
+                    estado_default = "Titular" if "Partido" in s.get("tipo", "") else "Disponible"
+                    row["ESTADO"] = disp_clean.get(jug_key, estado_default)
+                    
+                    datos_completos.append(row)
+                    
     if datos_completos:
-        # Lo guardamos en session_state listo para usar en cualquier gráfica
         st.session_state.df_master_informes = pd.DataFrame(datos_completos)
     else:
         st.session_state.df_master_informes = pd.DataFrame()
