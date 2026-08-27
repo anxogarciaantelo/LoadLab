@@ -180,3 +180,42 @@ def guardar_datos(modulo="todo"):
             
     except Exception as e:
         st.error(f"Error al guardar en Supabase: {e}")
+
+import pandas as pd
+
+def reconstruir_dataframes_globales():
+    """Construye los DataFrames pesados una sola vez y los guarda en memoria RAM listos para usar"""
+    
+    # 1. DataFrame de Plantilla
+    if "plantilla" in st.session_state and st.session_state.plantilla:
+        st.session_state.df_plantilla = pd.DataFrame(st.session_state.plantilla)
+    else:
+        st.session_state.df_plantilla = pd.DataFrame()
+
+    # 2. DataFrame de Lesiones
+    if "lesiones" in st.session_state and st.session_state.lesiones:
+        st.session_state.df_lesiones = pd.DataFrame(st.session_state.lesiones)
+    else:
+        st.session_state.df_lesiones = pd.DataFrame()
+
+    # 3. EL MÁS IMPORTANTE: El "Master" de GPS, Carga y Wellness
+    # En lugar de que 4_GPS.py o 1_Entrenamiento.py hagan esto en cada clic, lo hacemos aquí.
+    datos_completos = []
+    if "sesiones" in st.session_state:
+        for s in st.session_state.sesiones:
+            if s.get("informe_generado") and s.get("datos_informe"):
+                for d in s["datos_informe"]:
+                    # Hacemos una copia de los datos del jugador
+                    row = d.copy() 
+                    # Le inyectamos los datos de la sesión padre
+                    row["FECHA"] = s.get("fecha")
+                    row["TIPO_SESION"] = s.get("tipo")
+                    row["MD"] = s.get("descripcion")
+                    row["COMPETICION"] = s.get("competicion", "")
+                    datos_completos.append(row)
+                    
+    if datos_completos:
+        # Lo guardamos en session_state listo para usar en cualquier gráfica
+        st.session_state.df_master_informes = pd.DataFrame(datos_completos)
+    else:
+        st.session_state.df_master_informes = pd.DataFrame()
