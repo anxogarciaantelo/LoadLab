@@ -203,59 +203,26 @@ if lista_micro_map:
 # Mapa dinámico de posiciones específicas
 dict_pos_esp = {limpiar_nombre(p["JUGADOR"]): p.get("pos_1", p.get("POS", "")) for p in st.session_state.get("plantilla", [])}
 
-datos_gps = []
-for s in st.session_state.sesiones:
-    if s.get("informe_generado"):
-        es_partido = "Partido" in s["tipo"]
-        tipo_str = "Partido" if es_partido else "Entrenamiento"
-        md_str = s["descripcion"]
-        
-        disp_s = s.get("disponibilidad", {})
-        disp_s_clean = {limpiar_nombre(k): v for k, v in disp_s.items()}
-
-        nombre_ev = s.get("nombre_dinamico", s["tipo"])
-        subtitulo = s.get("subtitulo_dinamico", "")
-        nombre_sesion_completo = f"{s['fecha']} | {nombre_ev}"
-        if subtitulo:
-            nombre_sesion_completo += f" ({subtitulo})"
-        
-        for d in s["datos_informe"]:
-            jug_nombre = d["JUGADOR"]
-            est_jug = disp_s_clean.get(limpiar_nombre(jug_nombre), "Disponible")
-            
-            if est_jug in ["Disponible", "Titular", "Suplente"] and float(d.get("DIS", 0)) > 0:
-                min_val = float(d.get("MIN_GPS", d.get("MIN", 0)))
-                if min_val == 0: min_val = 1 
-                
-                num_sem = obtener_numero_semana(s["fecha"])
-                id_micro = mapa_micros.get(num_sem, num_sem)
-                pos_esp_val = dict_pos_esp.get(limpiar_nombre(jug_nombre), d.get("POS", ""))
-                
-                datos_gps.append({
-                    "FECHA": s["fecha"],
-                    "TIPO": tipo_str,
-                    "MD": md_str,
-                    "Microciclo": f"Microciclo {id_micro}",
-                    "Nombre_Sesion": nombre_sesion_completo,
-                    "JUGADOR": d["JUGADOR"],
-                    "POS": d.get("POS", ""),
-                    "POS_ESP": pos_esp_val,
-                    "MIN": min_val,
-                    "DIS": float(d.get("DIS", 0)),
-                    "DIS AI": float(d.get("HID >21", d.get("DIS AI", 0))),
-                    "Nº SPR": float(d.get("SPR >24", d.get("Nº SPR", 0))),
-                    "ACC": float(d.get("ACC >3", d.get("ACC", 0))),
-                    "DCC": float(d.get("DCC >3", d.get("DCC", 0))),
-                    "VMAX": float(d.get("V_Max", d.get("VMAX", 0))),
-                    "Z1": float(d.get("Z1", 0)),
-                    "Z2": float(d.get("Z2", 0)),
-                    "Z3": float(d.get("Z3", 0)),
-                    "Z4": float(d.get("Z4", 0)),
-                    "Z5": float(d.get("Z5", 0)),
-                    "Z6": float(d.get("Z6", 0))
-                })
-                
-df_gps = pd.DataFrame(datos_gps)
+# --- NUEVO MOTOR OPTIMIZADO ---
+if "df_master_informes" in st.session_state and not st.session_state.df_master_informes.empty:
+    # 1. Copiamos el master de la RAM
+    df_gps = st.session_state.df_master_informes.copy()
+    
+    # 2. Nos quedamos solo con los que llevaron GPS (Distancia > 0)
+    df_gps = df_gps[df_gps['DIS'] > 0]
+    
+    # 3. Recreamos las columnas específicas que necesita esta vista (Microciclo, Nombre Sesión, POS_ESP)
+    df_gps['Microciclo'] = df_gps['FECHA'].apply(lambda f: f"Microciclo {mapa_micros.get(obtener_numero_semana(f), obtener_numero_semana(f))}")
+    df_gps['Nombre_Sesion'] = df_gps['FECHA'] + " | " + df_gps['TIPO_SESION'] + " (" + df_gps['MD'] + ")"
+    
+    # Diccionarios rápidos para cruzar las posiciones específicas
+    dict_pos_esp = {limpiar_nombre(p["JUGADOR"]): p.get("pos_1", p.get("POS", "")) for p in st.session_state.get("plantilla", [])}
+    df_gps['POS_ESP'] = df_gps['JUGADOR'].apply(lambda x: dict_pos_esp.get(limpiar_nombre(x), "Desconocida"))
+    
+    # Renombrar para compatibilidad con el resto del código de GPS
+    df_gps = df_gps.rename(columns={"TIPO_SESION": "TIPO"})
+else:
+    df_gps = pd.DataFrame()
 
 tab_gps_perf, tab_gps_comp = st.tabs(["📈 Perfil de Rendimiento", "⚖️ Comparador"])
 
