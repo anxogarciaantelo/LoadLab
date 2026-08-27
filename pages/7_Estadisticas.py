@@ -458,7 +458,7 @@ with tab_rivales:
                         "id": id_nuevo_rival.strip(),
                         "ciudad": ciudad_rival.strip()
                     }
-                    guardar_datos()
+                    guardar_datos(modulo="configuracion")
                     st.success(f"✅ ¡Rival '{nombre_nuevo_rival}' guardado correctamente!")
                     st.rerun()
                 else:
