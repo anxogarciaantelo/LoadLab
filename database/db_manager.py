@@ -266,18 +266,3 @@ def reconstruir_dataframes_globales():
         st.session_state.df_master_informes = pd.DataFrame(datos_completos)
     else:
         st.session_state.df_master_informes = pd.DataFrame()
-
-def render_estado_vacio(icono, titulo, descripcion, accion_sugerida=None):
-    """Renderiza una tarjeta moderna para pantallas sin datos (Onboarding)"""
-    html_accion = f'<p style="color: #dc2626; font-weight: 800; font-size: 0.85rem; margin-top: 20px; text-transform: uppercase; letter-spacing: 0.05em;">↳ {accion_sugerida}</p>' if accion_sugerida else ''
-    
-    html = f"""
-    <div style="background-color: #ffffff; border: 2px dashed #d4d4d8; border-radius: 12px; padding: 50px 20px; text-align: center; margin: 20px 0; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);">
-        <div style="font-size: 3.5rem; margin-bottom: 15px; opacity: 0.9;">{icono}</div>
-        <h3 style="color: #1c1c1e; font-weight: 800; font-size: 1.3rem; margin-bottom: 10px; text-transform: uppercase;">{titulo}</h3>
-        <p style="color: #475569; font-size: 0.95rem; max-width: 500px; margin: 0 auto; line-height: 1.5;">{descripcion}</p>
-        {html_accion}
-    </div>
-    """
-    import streamlit as st
-    st.markdown(html, unsafe_allow_html=True)
