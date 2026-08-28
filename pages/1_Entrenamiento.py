@@ -804,7 +804,12 @@ with tab_micro:
 
 with tab_ses:
     if not st.session_state.sesiones:
-        st.info("Aún no has generado ninguna sesión.")
+        render_estado_vacio(
+            icono="📅", 
+            titulo="Sin sesiones registradas", 
+            descripcion="Aún no has planificado ningún entrenamiento o partido. LoadLab necesita este calendario para mapear la fatiga del equipo.",
+            accion_sugerida="Ve a la pestaña '🗓️ Calendario' para generar tu primer evento o importa un Excel histórico."
+        )
     
     sesiones_ordenadas = sorted(st.session_state.sesiones, key=lambda x: x["fecha"], reverse=True)
         
