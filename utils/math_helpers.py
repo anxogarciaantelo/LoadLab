@@ -222,9 +222,9 @@ def set_login_background(image_path):
             encoded_string = base64.b64encode(img_file.read()).decode()
         css = f"""
         <style>
-        /* 1. Fondo general de la app con la imagen */
+        /* 1. Fondo general: Filtro oscuro sobre tu imagen para resaltar la tarjeta */
         .stApp {{
-            background-image: url("data:image/jpeg;base64,{encoded_string}");
+            background-image: linear-gradient(rgba(10, 10, 10, 0.6), rgba(10, 10, 10, 0.8)), url("data:image/jpeg;base64,{encoded_string}");
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
@@ -241,87 +241,87 @@ def set_login_background(image_path):
             padding-top: 1rem !important;
         }}
         
-        /* 3. CONVERTIR TODO EL BLOQUE DE TABS EN LA TARJETA BLANCA */
+        /* 3. LA TARJETA PRINCIPAL (Efecto Cristal + Borde Rojo) */
         div[data-testid="stTabs"] {{
-            background-color: #ffffff !important;
-            padding: 30px !important;
-            border-radius: 16px !important;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4) !important;
-            border: 1px solid #e2e8f0 !important;
+            background-color: rgba(255, 255, 255, 0.95) !important;
+            padding: 35px 30px !important;
+            border-radius: 12px !important;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6) !important;
+            border: 1px solid #e4e4e7 !important;
+            border-top: 5px solid #dc2626 !important;
+            backdrop-filter: blur(10px);
         }}
         
-        /* Asegurar que el fondo del contenido herede el blanco */
+        /* Asegurar que el fondo del contenido herede la transparencia */
         div[role="tabpanel"] {{
             background-color: transparent !important; 
         }}
         
-        /* 4. INTEGRACIÓN DE LAS PESTAÑAS (TABS HEADER) */
+        /* 4. INTEGRACIÓN DE LAS PESTAÑAS (Carbón) */
         div[data-testid="stTabs"] [data-baseweb="tab-list"] {{
-            background-color: #f8fafc !important;
-            border-radius: 10px !important;
-            padding: 5px !important;
-            border: 1px solid #e2e8f0 !important;
-            margin-bottom: 15px !important;
+            background-color: #f4f4f5 !important;
+            border-radius: 8px !important;
+            padding: 4px !important;
+            border: 1px solid #e4e4e7 !important;
+            margin-bottom: 25px !important;
         }}
         div[data-testid="stTabs"] [data-baseweb="tab"] {{
-            color: #64748b !important;
-            font-weight: 700 !important;
+            color: #475569 !important;
+            font-weight: 800 !important;
+            font-size: 0.85rem !important;
         }}
         div[data-testid="stTabs"] [aria-selected="true"] {{
-            background-color: #ffffff !important;
-            color: #0f172a !important;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
-            border-radius: 8px !important;
+            background-color: #1c1c1e !important;
+            color: #ffffff !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+            border-radius: 6px !important;
         }}
         
-        /* 5. TEXTOS Y FORMULARIOS DENTRO DE LA TARJETA */
+        /* 5. TEXTOS Y CAMPOS DE ENTRADA */
         div[data-testid="stTabs"] label {{
-            color: #0f172a !important;
+            color: #1c1c1e !important;
             font-weight: 800 !important;
-            font-size: 0.95rem !important;
-        }}
-        
-        /* Forzar que textos extra (como el checkbox) se vean en oscuro */
-        div[data-testid="stTabs"] div[data-testid="stMarkdownContainer"] p {{
-            color: #475569 !important; 
+            font-size: 0.8rem !important;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }}
         
         div[data-testid="stTextInput"] input {{
-            background-color: #f8fafc !important;
-            border: 1px solid #cbd5e1 !important;
-            border-radius: 8px !important;
-            color: #0f172a !important;
+            background-color: #f4f4f5 !important;
+            border: 1px solid #d4d4d8 !important;
+            border-radius: 6px !important;
+            color: #0a0a0a !important;
             padding: 12px !important;
             font-weight: 600 !important;
             transition: all 0.3s ease;
         }}
         
         div[data-testid="stTextInput"] input:focus {{
-            border: 1px solid #00b4d8 !important;
+            border: 1px solid #dc2626 !important;
             background-color: #ffffff !important;
-            box-shadow: 0 0 8px rgba(0, 180, 216, 0.3) !important;
+            box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15) !important;
         }}
         
-        /* 6. BOTÓN DE ACCESO */
+        /* 6. BOTÓN DE ACCESO (Rojo Élite) */
         div[data-testid="stFormSubmitButton"] button {{
-            background-color: #0f172a !important;
+            background-color: #dc2626 !important;
             color: #ffffff !important;
             border: none !important;
-            border-radius: 8px !important;
+            border-radius: 6px !important;
             font-weight: 800 !important;
-            padding: 10px !important;
+            padding: 12px !important;
             text-transform: uppercase;
             letter-spacing: 1px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1) !important;
-            margin-top: 15px;
+            box-shadow: 0 4px 6px rgba(220, 38, 38, 0.3) !important;
+            margin-top: 10px;
             width: 100% !important;
             transition: all 0.3s ease;
         }}
         
         div[data-testid="stFormSubmitButton"] button:hover {{
-            background-color: #1e293b !important;
+            background-color: #b91c1c !important;
             transform: translateY(-2px);
-            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15) !important;
+            box-shadow: 0 6px 12px rgba(220, 38, 38, 0.4) !important;
         }}
         </style>
         """
