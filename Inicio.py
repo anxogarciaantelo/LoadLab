@@ -194,20 +194,22 @@ if not st.session_state.get("equipo_seleccionado", False):
 if not st.session_state.autenticado:
     set_login_background("fondo_login.jpg")
     
-    st.markdown("<br><br><br><br><br><br><br><br><br><br><br><br>", unsafe_allow_html=True)
+    # Reducimos los saltos de línea para que quede bien centrado en pantalla
+    st.markdown("<br><br><br><br><br><br><br><br>", unsafe_allow_html=True)
     
     col_izq, col_centro, col_der = st.columns([1.2, 1, 1.2])
     
     with col_centro:
-        tab_login, tab_reg = st.tabs(["Iniciar Sesión", "Registrarse"])
+        tab_login, tab_reg = st.tabs(["INICIAR SESIÓN", "NUEVA CUENTA"])
         
         with tab_login:
-            # Color oscuro para la tarjeta blanca
-            st.markdown("<h3 style='text-align: center; color: #0f172a; font-weight: 800; margin-bottom: 10px;'>Acceso</h3>", unsafe_allow_html=True)
+            # Título de Marca Profesional
+            st.markdown("<h2 style='text-align: center; color: #0a0a0a; font-weight: 800; margin-bottom: 25px; font-size: 2.2rem; letter-spacing: -1px;'>LOAD<span style='color: #dc2626;'>LAB</span></h2>", unsafe_allow_html=True)
+            
             with st.form(key="login_form"):
                 email = st.text_input("Correo electrónico", key="log_email")
                 password = st.text_input("Contraseña", type="password", key="log_pass")
-                submit_btn = st.form_submit_button("Entrar", use_container_width=True)
+                submit_btn = st.form_submit_button("Entrar al Sistema", use_container_width=True)
                 
                 if submit_btn:
                     try:
@@ -221,34 +223,31 @@ if not st.session_state.autenticado:
                         st.error("Credenciales incorrectas o error de conexión.")
                         
         with tab_reg:
-            # Color oscuro para la tarjeta blanca
-            st.markdown("<h3 style='text-align: center; color: #0f172a; font-weight: 800; margin-bottom: 10px;'>Nuevo Usuario</h3>", unsafe_allow_html=True)
+            st.markdown("<h2 style='text-align: center; color: #0a0a0a; font-weight: 800; margin-bottom: 20px; font-size: 1.5rem;'>CREAR CUENTA</h2>", unsafe_allow_html=True)
             with st.form(key="register_form"):
                 reg_email = st.text_input("Correo electrónico", key="reg_email")
                 reg_password = st.text_input("Contraseña (mín. 6 caracteres)", type="password", key="reg_pass")
                 
-                # Aviso destacado de responsabilidad legal (Estilo integrado con la UI)
+                # Aviso rediseñado al estilo Carbón
                 st.markdown("""
-                    <div style="font-size: 0.8rem; color: #334155; margin-bottom: 15px; line-height: 1.5; background-color: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1;">
-                        🔒 <strong>Aviso Importante sobre Protección de Datos (RGPD/LOPD):</strong><br>
-                        LoadLab es una plataforma de gestión deportiva. Al registrarte, asumes la figura de <strong>Responsable del Tratamiento</strong> de los datos que introduzcas.<br><br>
-                        ⚠️ <strong>Recomendación Crítica:</strong> Te recomendamos encarecidamente utilizar <strong>alias, iniciales o apodos</strong> (ej. "Jugador 1", "M. García") para tus deportistas en lugar de sus nombres completos, a menos que cuentes con su <strong>consentimiento explícito y por escrito</strong> para registrar sus datos de salud, antropometría y rendimiento.
+                    <div style="font-size: 0.75rem; color: #475569; margin-bottom: 15px; line-height: 1.5; background-color: #f4f4f5; padding: 12px; border-radius: 6px; border-left: 3px solid #1c1c1e;">
+                        🔒 <strong>Aviso de Privacidad (RGPD):</strong><br>
+                        Al registrarte asumes la figura de <strong>Responsable del Tratamiento</strong> de los datos.<br>
+                        ⚠️ <strong>Recomendación:</strong> Utiliza alias o iniciales para los deportistas a menos que cuentes con su consentimiento explícito.
                     </div>
                 """, unsafe_allow_html=True)
                 
-                # Expander con los términos legales detallados para no ensuciar la interfaz
-                with st.expander("📄 Leer Términos y Condiciones Completos"):
+                with st.expander("📄 Leer Términos y Condiciones"):
                     st.markdown("""
                         <small>
-                        **1. Responsabilidad de los Datos:** El usuario (Preparador Físico / Entrenador) es el único responsable de la legalidad de los datos introducidos. LoadLab actúa únicamente como herramienta tecnológica (Encargado de Tratamiento).<br><br>
-                        **2. Naturaleza Sensible:** Los datos sobre lesiones y composición corporal se consideran información especialmente protegida. No introduzcas información identificable sin cumplir con la legislación de tu país.<br><br>
-                        **3. Uso de la Plataforma:** LoadLab no cederá, venderá ni explotará estos datos con terceros. Su uso es estrictamente funcional para el rendimiento de la aplicación.<br><br>
-                        **4. Fase Beta:** Esta aplicación se encuentra en fase de pruebas. Se recomienda a los usuarios exportar y mantener copias de seguridad de sus informes PDF. El autor no se hace responsable de posibles pérdidas de datos.
+                        **1. Responsabilidad de los Datos:** El usuario es el único responsable de la legalidad de los datos. LoadLab actúa como Encargado de Tratamiento.<br>
+                        **2. Uso de la Plataforma:** LoadLab no cederá ni explotará estos datos con terceros.<br>
+                        **3. Fase Beta:** Se recomienda exportar y mantener copias de seguridad de sus informes PDF.
                         </small>
                     """, unsafe_allow_html=True)
 
-                acepta_privacidad = st.checkbox("He leído y acepto el aviso de privacidad y LOPD", key="check_privacidad")
-                submit_reg = st.form_submit_button("Crear Cuenta", use_container_width=True)
+                acepta_privacidad = st.checkbox("He leído y acepto el aviso de privacidad", key="check_privacidad")
+                submit_reg = st.form_submit_button("Registrarse", use_container_width=True)
                 
                 if submit_reg:
                     if not acepta_privacidad:
@@ -260,6 +259,7 @@ if not st.session_state.autenticado:
                         except Exception as e:
                             st.error(f"Error al registrarse: {e}")
     st.stop()
+    
 # ==========================================
 # 2. SELECCIÓN DE EQUIPO
 # ==========================================
