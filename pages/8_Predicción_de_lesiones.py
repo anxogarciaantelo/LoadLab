@@ -18,6 +18,8 @@ if not st.session_state.get("autenticado", False) or not st.session_state.get("e
     st.warning("⚠️ La sesión ha expirado o no se ha seleccionado un equipo.")
     st.stop()
 
+aplicar_color_sidebar()
+
 st.title("🧠 Oráculo: Predicción de Riesgo Lesional")
 st.caption("Sistema Híbrido: Combina algoritmos científicos de prevención deportiva con Machine Learning adaptativo (XGBoost) para tu plantilla.")
 
