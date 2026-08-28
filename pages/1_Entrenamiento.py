@@ -1782,7 +1782,7 @@ with tab_ses:
             nueva_condicion = col_g1.selectbox("Condición:", ["Casa", "Fuera"], index=["Casa", "Fuera"].index(condicion_actual), key=f"cond_{idx_real}")
             
             goles_f_actual = sesion.get("goles_favor", 0)
-            nuevo_gf = col_g2.number_input("Goles Anotados (Favor del Equipo):", min_value=0, value=int(goles_f_actual), key=f"gf_{idx_real}")
+            nuevo_gf = col_g2.number_input("Goles Anotados (Favor del Equipo):", min_value=0, value=int(goles_f_actual or 0), key=f"gf_{idx_real}")
             
             sesion["condicion"] = nueva_condicion
             sesion["goles_favor"] = nuevo_gf
