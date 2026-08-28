@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 
 # Importar las herramientas visuales
 from utils.math_helpers import *
+from database.db_manager import *
 
 # --- COMPROBACIÓN DE SEGURIDAD ---
 if not st.session_state.get("autenticado", False) or not st.session_state.get("equipo_seleccionado", False):
