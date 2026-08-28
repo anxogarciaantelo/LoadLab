@@ -19,6 +19,8 @@ if not st.session_state.get("autenticado", False) or not st.session_state.get("e
         st.rerun()
     st.stop()
 
+aplicar_color_sidebar()
+
 st.subheader("⚖️ Antropometría y Composición Corporal")
 
 tab_antro_res, tab_antro_jug, tab_antro_up = st.tabs(["📊 Resumen Analítico", "👤 Jugadores", "📂 Cargar Datos"])
