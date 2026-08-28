@@ -20,8 +20,6 @@ if not st.session_state.get("autenticado", False) or not st.session_state.get("e
     st.stop()
  aplicar_color_sidebar()
 
-st.subheader("📅 Entrenamiento") # O el título que toque en cada página
-
 sesiones_crono = sorted(st.session_state.sesiones, key=lambda x: x["fecha"])
 conteo_entrenos = 0
 conteo_amistosos = 0
