@@ -483,7 +483,14 @@ with tab_rivales:
             rival_elegido = st.selectbox("Selecciona un rival guardado:", ["Selecciona un equipo..."] + rivales_disponibles)
             
         if rival_elegido != "Selecciona un equipo...":
-            id_equipo_final = st.session_state["rivales_guardados"][rival_elegido]
+            datos_rival = st.session_state["rivales_guardados"][rival_elegido]
+            
+            # Extraer correctamente el ID si es un diccionario (nuevo formato), o dejarlo tal cual si es texto (antiguo)
+            if isinstance(datos_rival, dict):
+                id_equipo_final = datos_rival.get("id", "")
+            else:
+                id_equipo_final = datos_rival
+                
             comp_id_actual = st.session_state.get("lapreferente_comp_id", "26710")
             
             st.markdown(f"#### 📋 Plantilla y Estadísticas de: **{rival_elegido}**")
