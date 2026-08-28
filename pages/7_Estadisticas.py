@@ -13,6 +13,8 @@ if not st.session_state.get("autenticado", False) or not st.session_state.get("e
 
 st.title("📈 Estadísticas de Rendimiento")
 
+aplicar_color_sidebar()
+
 partidos_totales = [s for s in st.session_state.sesiones if "Partido" in s.get("tipo", "")]
 
 # ==========================================
