@@ -405,3 +405,40 @@ def aplicar_color_sidebar():
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
     except Exception as e:
         pass
+
+
+def render_estado_vacio(icono, titulo, descripcion, accion_sugerida=None):
+    """Renderiza una tarjeta moderna para pantallas sin datos (Onboarding)"""
+    html_accion = f'<p style="color: #dc2626; font-weight: 800; font-size: 0.85rem; margin-top: 20px; text-transform: uppercase; letter-spacing: 0.05em;">↳ {accion_sugerida}</p>' if accion_sugerida else ''
+    
+    html = f"""
+    <div style="background-color: #ffffff; border: 2px dashed #d4d4d8; border-radius: 12px; padding: 50px 20px; text-align: center; margin: 20px 0; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);">
+        <div style="font-size: 3.5rem; margin-bottom: 15px; opacity: 0.9;">{icono}</div>
+        <h3 style="color: #1c1c1e; font-weight: 800; font-size: 1.3rem; margin-bottom: 10px; text-transform: uppercase;">{titulo}</h3>
+        <p style="color: #475569; font-size: 0.95rem; max-width: 500px; margin: 0 auto; line-height: 1.5;">{descripcion}</p>
+        {html_accion}
+    </div>
+    """
+    import streamlit as st
+    st.markdown(html, unsafe_allow_html=True)
+
+def validar_columnas_excel(df, nombre_archivo, columnas_esperadas):
+    """
+    Analiza un DataFrame recién subido. Si le faltan columnas críticas,
+    devuelve un mensaje de error descriptivo para el usuario en lugar de un colapso.
+    """
+    if df.empty:
+        return False, f"El archivo <b>{nombre_archivo}</b> está vacío o corrupto."
+        
+    columnas_reales = [str(c).strip().lower() for c in df.columns]
+    faltantes = []
+    
+    for col_esperada in columnas_esperadas:
+        if str(col_esperada).strip().lower() not in columnas_reales:
+            faltantes.append(f"'{col_esperada}'")
+            
+    if faltantes:
+        msg = f"<b>🚨 Error de formato en {nombre_archivo}:</b> No se han encontrado las columnas {', '.join(faltantes)}. <br><br><span style='font-size: 0.85rem; color: #475569;'><i>Solución: Revisa que el encabezado del Excel coincida exactamente con lo que espera el sistema o ajusta los nombres en el 'Mapeador Dinámico' de la configuración. Cuidado con los espacios en blanco invisibles.</i></span>"
+        return False, msg
+        
+    return True, "OK"
