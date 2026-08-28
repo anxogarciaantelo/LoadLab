@@ -128,14 +128,18 @@ with tab_cal:
                     st.rerun()
     with c_dia2:
         if st.session_state.sesiones:
-            if not st.session_state.df_sesiones.empty:
-                df_s = st.session_state.df_sesiones.copy().sort_values("fecha", ascending=False)
-            else:
-                df_s = pd.DataFrame()
-            df_s["Sesión"] = df_s.apply(lambda row: row.get("nombre_dinamico", row["tipo"]), axis=1)
-            df_s["MD / Rival"] = df_s.apply(lambda row: row.get("subtitulo_dinamico", row.get("descripcion", "")), axis=1)
-            df_s["Fecha"] = df_s["fecha"]
-            mostrar_tabla_moderna(df_s[["Fecha", "Sesión", "MD / Rival"]].style.hide(axis="index"))
+            # Construimos la tabla leyendo directamente los nombres dinámicos actualizados
+            datos_tabla = []
+            for s in st.session_state.sesiones:
+                datos_tabla.append({
+                    "Fecha": s.get("fecha", ""),
+                    "Sesión": s.get("nombre_dinamico", s.get("tipo", "")),
+                    "MD / Rival": s.get("subtitulo_dinamico", s.get("descripcion", ""))
+                })
+            
+            # Lo convertimos a DataFrame y lo ordenamos de más reciente a más antiguo
+            df_s = pd.DataFrame(datos_tabla).sort_values("Fecha", ascending=False)
+            mostrar_tabla_moderna(df_s.style.hide(axis="index"))
 
     # --- IMPORTADOR MASIVO DE HISTÓRICO ---
     st.markdown("---")
