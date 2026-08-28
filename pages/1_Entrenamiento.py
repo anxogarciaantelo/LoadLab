@@ -145,9 +145,17 @@ with tab_cal:
         if st.button("🚀 Procesar Histórico Masivo") and archivo_historico is not None:
             try:
                 df_hist = pd.read_excel(archivo_historico)
-                df_hist_valid = df_hist[df_hist['JUGADOR'] != 0].copy()
-                df_hist_valid['FECHA_STR'] = pd.to_datetime(df_hist_valid['FECHA'], errors='coerce').dt.strftime('%Y-%m-%d')
-                df_hist_valid = df_hist_valid.dropna(subset=['FECHA_STR'])
+                
+                # --- NUEVA VALIDACIÓN EXTREMA ---
+                cols_necesarias = ['JUGADOR', 'FECHA']
+                es_valido, msj_error = validar_columnas_excel(df_hist, "Histórico de Temporada", cols_necesarias)
+                
+                if not es_valido:
+                    st.markdown(f"<div style='background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 15px; margin-bottom: 15px; border-radius: 6px; color: #991b1b;'>{msj_error}</div>", unsafe_allow_html=True)
+                else:
+                    df_hist_valid = df_hist[df_hist['JUGADOR'] != 0].copy()
+                    df_hist_valid['FECHA_STR'] = pd.to_datetime(df_hist_valid['FECHA'], errors='coerce').dt.strftime('%Y-%m-%d')
+                    df_hist_valid = df_hist_valid.dropna(subset=['FECHA_STR'])
                 
                 sesiones_creadas_count = 0
                 for fecha_str, grupo in df_hist_valid.groupby('FECHA_STR'):
@@ -1493,7 +1501,32 @@ with tab_ses:
                         df_r_up = pd.read_excel(archivo_rpe) if archivo_rpe else pd.DataFrame()
                         df_g_up = pd.read_excel(archivo_gps) if archivo_gps else pd.DataFrame()
                         
-                        fecha_sesion_str = pd.to_datetime(sesion['fecha']).strftime('%Y-%m-%d')
+                        # Extraemos las configuraciones de mapeo
+                        cfg_w = st.session_state.get("config_mapeo", {}).get("wellness", {})
+                        cfg_r = st.session_state.get("config_mapeo", {}).get("rpe", {})
+                        cfg_g = st.session_state.get("config_mapeo", {}).get("gps", {})
+                        
+                        # --- BARRERA DE VALIDACIÓN DINÁMICA ---
+                        errores_criticos = []
+                        
+                        if not df_w_up.empty:
+                            valido, err = validar_columnas_excel(df_w_up, "Wellness", [cfg_w.get("nombre", "Nombre"), cfg_w.get("fecha", "Marca temporal")])
+                            if not valido: errores_criticos.append(err)
+                                
+                        if not df_r_up.empty:
+                            valido, err = validar_columnas_excel(df_r_up, "RPE", [cfg_r.get("nombre", "Nombre"), cfg_r.get("fecha", "Marca temporal")])
+                            if not valido: errores_criticos.append(err)
+                                
+                        if not df_g_up.empty:
+                            valido, err = validar_columnas_excel(df_g_up, "GPS", [cfg_g.get("nombre", "Player Name"), cfg_g.get("fecha", "Activity Date"), cfg_g.get("dis", "Distance (km)")])
+                            if not valido: errores_criticos.append(err)
+                                
+                        if errores_criticos:
+                            for error_msg in errores_criticos:
+                                st.markdown(f"<div style='background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 15px; margin-bottom: 10px; border-radius: 6px; color: #991b1b;'>{error_msg}</div>", unsafe_allow_html=True)
+                        else:
+                            # --- SI TODO ESTÁ OK, CONTINUAMOS CON EL PROCESAMIENTO ---
+                            fecha_sesion_str = pd.to_datetime(sesion['fecha']).strftime('%Y-%m-%d')
                         
                         # Extraemos las configuraciones de mapeo
                         cfg_w = st.session_state.get("config_mapeo", {}).get("wellness", {})
