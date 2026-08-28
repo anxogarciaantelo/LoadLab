@@ -19,6 +19,8 @@ if not st.session_state.get("autenticado", False) or not st.session_state.get("e
         st.rerun()
     st.stop()
 
+aplicar_color_sidebar()
+
 st.subheader("📊 Valoraciones Físicas y Tests")
 
 # Inicializar memoria para valoraciones si no existe
