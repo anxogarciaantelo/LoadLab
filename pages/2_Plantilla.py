@@ -18,7 +18,9 @@ if not st.session_state.get("autenticado", False) or not st.session_state.get("e
         st.session_state.clear()
         st.rerun()
     st.stop()
-    
+
+aplicar_color_sidebar()
+
 if "vista_plantilla" not in st.session_state:
     st.session_state.vista_plantilla = "📋 Plantilla"
 
