@@ -152,7 +152,12 @@ def construir_dataset_entrenamiento(sesiones, lesiones):
 df_master = construir_dataset_entrenamiento(st.session_state.sesiones, st.session_state.lesiones)
 
 if df_master.empty:
-    st.info("📊 No hay datos de entrenamiento para generar predicciones.")
+    render_estado_vacio(
+        icono="🧠", 
+        titulo="El oráculo necesita datos", 
+        descripcion="Para que el algoritmo pueda calcular el riesgo lesional mediante Machine Learning, necesita un volumen mínimo de entrenamientos procesados con minutos, RPE o GPS.",
+        accion_sugerida="Vuelve a la pestaña 'Entrenamientos' y carga los datos físicos de tus sesiones."
+    )
     st.stop()
 
 # Extracción de la fotografía actual
