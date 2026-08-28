@@ -475,14 +475,37 @@ if st.session_state.get("equipo_seleccionado", False):
                 break
         return '<span style="font-size: 22px; margin-right: 8px; vertical-align: middle;">👤</span>'
 
-    # 2. Recopilación de Datos para las 3 Columnas
+    # 2. Función Helper y Recopilación de Datos para las 3 Columnas
+    def render_estado_jugador(jugador_nombre, subtexto, nivel_alerta="moderado", avatar_html=""):
+        if nivel_alerta == "critico":
+            borde, bg_badge, color_badge = "#dc2626", "#dc2626", "#ffffff"
+        elif nivel_alerta == "moderado":
+            borde, bg_badge, color_badge = "#475569", "#fef2f2", "#dc2626"
+        else:
+            borde, bg_badge, color_badge = "#1c1c1e", "#f4f4f5", "#1c1c1e"
+            
+        html = f"""
+        <div style="background-color: #ffffff; border: 1px solid #e4e4e7; border-left: 4px solid {borde}; border-radius: 6px; padding: 12px 14px; margin-bottom: 8px;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center;">
+                    {avatar_html}
+                    <strong style="color: #0a0a0a; font-size: 0.95rem; margin-left: 8px; font-weight: 700;">{jugador_nombre}</strong>
+                </div>
+                <span style="background-color: {bg_badge}; color: {color_badge}; padding: 3px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase;">
+                    {subtexto}
+                </span>
+            </div>
+        </div>
+        """
+        st.markdown(html, unsafe_allow_html=True)
+
     bajas = []
     if sesion_ref:
         disp = sesion_ref.get("disponibilidad", {})
         for j_nombre, estado in disp.items():
             if estado in ["Lesionado", "Enfermo", "No disponible", "Falta"]:
                 avatar = get_avatar_html(j_nombre)
-                bajas.append(f"<div style='display:flex; align-items:center;'>{avatar} <strong style='font-size: 1rem;'>{j_nombre}</strong></div><div style='margin-left: 36px; font-size: 0.85rem; color: #555;'>↳ <i>{estado}</i></div>")
+                bajas.append({"jug": j_nombre, "est": estado, "ava": avatar})
                     
     a_vigilar = []
     if sesion_ref and sesion_ref.get("datos_informe"):
@@ -490,12 +513,12 @@ if st.session_state.get("equipo_seleccionado", False):
             tqr = safe_float(d.get("TQR"))
             well = safe_float(d.get("WELLNESS"))
             alertas = []
-            if 0 < tqr <= 4: alertas.append(f"TQR Bajo ({tqr}/10)")
-            if well >= 18: alertas.append(f"Wellness Alto ({well} pts)")
+            if 0 < tqr <= 4: alertas.append(f"TQR {tqr}")
+            if well >= 18: alertas.append(f"Fatiga {well}")
             
             if alertas:
                 avatar = get_avatar_html(d["JUGADOR"])
-                a_vigilar.append(f"<div style='display:flex; align-items:center;'>{avatar} <strong style='font-size: 1rem;'>{d['JUGADOR']}</strong></div><div style='margin-left: 36px; font-size: 0.85rem; color: #555;'>↳ <i>{', '.join(alertas)}</i></div>")
+                a_vigilar.append({"jug": d["JUGADOR"], "est": " / ".join(alertas), "ava": avatar})
                 
     zona_roja = []
     if sesion_ref:
@@ -503,34 +526,31 @@ if st.session_state.get("equipo_seleccionado", False):
         for jug, vals in ewma_hoy.items():
             ratio = vals.get("RATIO A/C", 0)
             aguda = vals.get("EWMA AGUDA", 0)
-            
-            # Filtro exacto que usamos en el informe de 1_Entrenamiento (Aguda > 1000 y Ratio >= 1.35)
             if aguda > 1000 and ratio >= 1.35:
                 avatar = get_avatar_html(jug)
-                zona_roja.append(f"<div style='display:flex; align-items:center;'>{avatar} <strong style='font-size: 1rem;'>{jug}</strong></div><div style='margin-left: 36px; font-size: 0.85rem; color: #555;'>↳ <i>Ratio A/C de Riesgo ({ratio:.2f})</i></div>")
+                zona_roja.append({"jug": jug, "est": f"A/C: {ratio:.2f}", "ava": avatar})
 
     # 3. Renderizado de Columnas
     c_b, c_a, c_z = st.columns(3)
-    css_tarjeta = "padding: 10px 12px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); background-color: white;"
     
     with c_b:
         st.markdown(f"**🏥 BAJAS CONFIRMADAS ({len(bajas)})**")
         if bajas:
-            for b in bajas: st.markdown(f"<div style='border-left: 4px solid #ef4444; {css_tarjeta}'>{b}</div>", unsafe_allow_html=True)
+            for b in bajas: render_estado_jugador(b["jug"], b["est"], "critico", b["ava"])
         else:
             st.success("✅ Plantilla sana y disponible.")
             
     with c_a:
         st.markdown(f"**🔋 A VIGILAR ({len(a_vigilar)})**")
         if a_vigilar:
-            for a in a_vigilar: st.markdown(f"<div style='border-left: 4px solid #f59e0b; {css_tarjeta}'>{a}</div>", unsafe_allow_html=True)
+            for a in a_vigilar: render_estado_jugador(a["jug"], a["est"], "moderado", a["ava"])
         else:
             st.success("✅ Buena recuperación general.")
             
     with c_z:
-        st.markdown(f"**⚠️ ZONA ALTA DE CARGA ({len(zona_roja)})**")
+        st.markdown(f"**⚠️ ZONA ALTA CARGA ({len(zona_roja)})**")
         if zona_roja:
-            for z in zona_roja: st.markdown(f"<div style='border-left: 4px solid #e11d48; {css_tarjeta}'>{z}</div>", unsafe_allow_html=True)
+            for z in zona_roja: render_estado_jugador(z["jug"], z["est"], "critico", z["ava"])
         else:
             st.success("✅ Cargas controladas.")
 
