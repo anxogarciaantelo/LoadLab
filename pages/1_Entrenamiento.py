@@ -18,7 +18,8 @@ if not st.session_state.get("autenticado", False) or not st.session_state.get("e
         st.session_state.clear()
         st.rerun()
     st.stop()
- aplicar_color_sidebar()
+
+aplicar_color_sidebar()
 
 sesiones_crono = sorted(st.session_state.sesiones, key=lambda x: x["fecha"])
 conteo_entrenos = 0
