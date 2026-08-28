@@ -19,6 +19,8 @@ if not st.session_state.get("autenticado", False) or not st.session_state.get("e
         st.rerun()
     st.stop()
 
+aplicar_color_sidebar()
+
 def generar_grafico_radar_gps(df_target, df_ref, label_target, label_ref):
     """
     Genera un gráfico de radar universal:
