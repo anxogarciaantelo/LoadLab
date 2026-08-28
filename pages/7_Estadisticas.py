@@ -49,8 +49,9 @@ with tab_equipo:
         cond = p.get("condicion", "Casa")
         if cond not in totales: cond = "Casa"
         
-        gf = p.get("goles_favor", 0)
-        gc = p.get("goles_contra", 0)
+        # Forzamos la conversión a número entero de forma segura
+        gf = int(safe_float(p.get("goles_favor", 0)))
+        gc = int(safe_float(p.get("goles_contra", 0)))
         
         totales[cond]["P"] += 1
         totales[cond]["GF"] += gf
@@ -294,28 +295,28 @@ with tab_jugadores:
         st.markdown("#### 👑 Destacados")
         
         def render_tarjeta_top3(titulo_categoria, df_sub, columna_valor, sufijo=""):
-            st.markdown(f"**{titulo_categoria}**")
+            st.markdown(f"<strong style='color:#1c1c1e;'>{titulo_categoria}</strong>", unsafe_allow_html=True)
             if not df_sub.empty:
                 for idx, row in df_sub.reset_index(drop=True).iterrows():
                     val = row[columna_valor]
                     val_str = f"{val:.1f}{sufijo}" if isinstance(val, float) else f"{val}{sufijo}"
                     nombre_jugador = row['JUGADOR']
                     
-                    # Comprobar si hay foto en base64 en la plantilla
                     foto_b64 = fotos_plantilla.get(nombre_jugador.strip().lower(), "")
                     if foto_b64:
                         img_src = foto_b64 if str(foto_b64).startswith("http") else f"data:image/jpeg;base64,{foto_b64}"
-                        avatar_html = f'<img src="{img_src}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; margin-right: 8px; vertical-align: middle;">'
+                        avatar_html = f'<img src="{img_src}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; margin-right: 10px; border: 1px solid #e4e4e7;">'
                     else:
-                        avatar_html = '<span style="font-size: 20px; margin-right: 8px; vertical-align: middle;">👤</span>'
+                        avatar_html = '<span style="font-size: 20px; margin-right: 10px;">👤</span>'
 
+                    # Nuevo estilo Carbón/Rojo
                     st.markdown(
                         f"""
-                        <div style="background-color: #f0f2f6; padding: 8px 12px; border-radius: 6px; margin-bottom: 6px; border-left: 4px solid #ff4b4b; display: flex; align-items: center;">
+                        <div style="background-color: #ffffff; padding: 8px 12px; border-radius: 6px; margin-bottom: 6px; border: 1px solid #e4e4e7; border-left: 4px solid #dc2626; display: flex; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
                             {avatar_html}
-                            <div style="overflow: hidden;">
-                                <strong style="font-size: 0.9em; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{nombre_jugador}</strong>
-                                <span style="color: #000000; font-weight: bold; font-size: 1.05em;">{val_str}</span>
+                            <div style="overflow: hidden; width: 100%;">
+                                <strong style="font-size: 0.85em; color: #475569; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase;">{nombre_jugador}</strong>
+                                <span style="color: #0a0a0a; font-weight: 800; font-size: 1.1em;">{val_str}</span>
                             </div>
                         </div>
                         """,
