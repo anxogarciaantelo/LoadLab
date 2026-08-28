@@ -128,29 +128,29 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 
-# Configuración global para forzar negrita y color negro en todos los gráficos de Plotly
+# Configuración global para tema Élite (Rojo, Carbón, Pizarra) en todos los gráficos de Plotly
 import plotly.io as pio
-pio.templates["loadlab_bold"] = {
-    "layout": {
-        "font": {"weight": "bold", "color": "black", "family": "sans-serif"},
-        "title": {"font": {"weight": "bold", "color": "black"}},
-        "xaxis": {
-            "color": "black",
-            "title_font": {"weight": "bold", "color": "black"}, 
-            "tickfont": {"weight": "bold", "color": "black"}
-        },
-        "yaxis": {
-            "color": "black",
-            "title_font": {"weight": "bold", "color": "black"}, 
-            "tickfont": {"weight": "bold", "color": "black"}
-        },
-        "legend": {
-            "font": {"weight": "bold", "color": "black"},
-            "title": {"font": {"weight": "bold", "color": "black"}}
-        }
-    }
-}
-pio.templates.default = "loadlab_bold"
+import plotly.graph_objects as go
+
+pio.templates["loadlab_elite"] = go.layout.Template(
+    layout=go.Layout(
+        font=dict(family="Plus Jakarta Sans, sans-serif", size=12, color="#1c1c1e"),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        colorway=["#dc2626", "#1c1c1e", "#475569", "#a1a1aa", "#7f1d1d", "#0a0a0a"],
+        xaxis=dict(
+            gridcolor="#e4e4e7",
+            zerolinecolor="#d4d4d8",
+            title=dict(font=dict(weight="bold", color="#1c1c1e"))
+        ),
+        yaxis=dict(
+            gridcolor="#e4e4e7",
+            zerolinecolor="#d4d4d8",
+            title=dict(font=dict(weight="bold", color="#1c1c1e"))
+        )
+    )
+)
+pio.templates.default = "loadlab_elite"
 
 # --- INICIALIZACIÓN DE ESTADOS CLAVE ---
 if "autenticado" not in st.session_state:
