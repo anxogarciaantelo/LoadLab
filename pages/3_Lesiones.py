@@ -18,7 +18,9 @@ if not st.session_state.get("autenticado", False) or not st.session_state.get("e
         st.session_state.clear()
         st.rerun()
     st.stop()
-    
+
+aplicar_color_sidebar()
+
 st.subheader("🚑 Lesiones")
 
 tab_les_res, tab_les_list = st.tabs(["📊 Resumen", "📋 Listado de Lesiones"])
