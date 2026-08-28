@@ -390,7 +390,7 @@ def aplicar_color_sidebar():
         [data-testid="stSidebar"] label,
         [data-testid="stSidebar"] p,
         [data-testid="stSidebar"] span {{
-            color: #ffffff !important;
+            color: #000000 !important;
             font-weight: 800 !important;
         }}
     </style>
