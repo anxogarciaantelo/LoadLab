@@ -264,7 +264,7 @@ if not st.session_state.autenticado:
 # 2. SELECCIÓN DE EQUIPO
 # ==========================================
 if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
-    # 1. Aplicamos el fondo de imagen
+    # 1. Aplicamos el fondo de imagen oscuro con efecto cristal (Glassmorphism)
     try:
         import base64
         with open("fondo_login.jpg", "rb") as img_file:
@@ -272,7 +272,7 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
         css_fondo_equipos = f"""
         <style>
         .stApp {{
-            background-image: url("data:image/jpeg;base64,{encoded_string}");
+            background-image: linear-gradient(rgba(10, 10, 10, 0.6), rgba(10, 10, 10, 0.8)), url("data:image/jpeg;base64,{encoded_string}");
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
@@ -282,26 +282,49 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
             background-color: transparent !important;
         }}
         
-        /* Asegurar que los botones de acceder tengan el estilo correcto */
+        /* Botones de acceder a los equipos (Estilo Carbón -> Rojo) */
         div[data-testid="column"] button {{
-            background-color: #f8fafc !important;
-            border: 1px solid #cbd5e1 !important;
-            color: #0f172a !important;
+            background-color: #1c1c1e !important;
+            border: none !important;
+            color: #ffffff !important;
             font-weight: 800 !important;
+            border-radius: 6px !important;
+            padding: 10px !important;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease !important;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important;
         }}
         div[data-testid="column"] button:hover {{
-            background-color: #e2e8f0 !important;
+            background-color: #dc2626 !important;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(220, 38, 38, 0.4) !important;
         }}
         
-        /* Fondo blanco para el desplegable de Crear Equipo */
+        /* Fondo cristal para el desplegable de Crear Equipo */
         div[data-testid="stExpander"] details {{
             background-color: rgba(255, 255, 255, 0.95) !important;
-            border-radius: 10px !important;
-            border: 1px solid #cbd5e1 !important;
+            border-radius: 12px !important;
+            border: 1px solid #e4e4e7 !important;
+            border-top: 4px solid #dc2626 !important;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6) !important;
         }}
         div[data-testid="stExpander"] summary p {{
-            color: #0f172a !important;
+            color: #0a0a0a !important;
             font-weight: 800 !important;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }}
+        
+        /* Inputs dentro de crear equipo */
+        div[data-testid="stExpander"] div[data-testid="stTextInput"] input,
+        div[data-testid="stExpander"] div[data-testid="stSelectbox"] div[data-baseweb="select"] {{
+            background-color: #f4f4f5 !important;
+            border: 1px solid #d4d4d8 !important;
+            border-radius: 6px !important;
+            color: #0a0a0a !important;
+            font-weight: 600 !important;
         }}
         </style>
         """
@@ -309,9 +332,9 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
     except FileNotFoundError:
         pass
 
-    # Un poco de espacio superior y título centrado
-    st.markdown("<br><br>", unsafe_allow_html=True)
-    st.markdown("<h2 style='text-align: center; color: #ffffff; font-weight: 800; margin-bottom: 40px; text-shadow: 0px 4px 10px rgba(0,0,0,0.6);'>📋 Selecciona tu Equipo</h2>", unsafe_allow_html=True)
+    # Un poco de espacio superior y título rediseñado
+    st.markdown("<br><br><br><br><br>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center; color: #ffffff; font-weight: 800; margin-bottom: 40px; font-size: 2.5rem; letter-spacing: -1px; text-shadow: 0px 4px 15px rgba(0,0,0,0.8);'>SELECCIONA TU <span style='color: #dc2626;'>EQUIPO</span></h2>", unsafe_allow_html=True)
     
     # Consulta a Supabase
     res_equipos = supabase.table("equipo_usuarios").select("equipo_id, equipos(nombre, categoria, division, escudo_base64)").eq("usuario_id", st.session_state.usuario_id).execute()
@@ -329,24 +352,23 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
                     eq_id = equipos_lista[idx_global]["equipo_id"]
                     
                     with cols[j]:
-                        # 🌟 SOLUCIÓN DEFINITIVA: Cajas HTML nativas con estilos inline. 
-                        # ¡Es imposible que Streamlit las vuelva transparentes!
                         escudo = eq_info.get("escudo_base64")
                         if escudo:
                             img_src = escudo if str(escudo).startswith("http") else f"data:image/jpeg;base64,{escudo}"
-                            img_html = f'<img src="{img_src}" style="width:90px; height:90px; object-fit: cover; border-radius:50%; margin-bottom: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">'
+                            img_html = f'<img src="{img_src}" style="width:90px; height:90px; object-fit: cover; border-radius:50%; margin-bottom: 15px; box-shadow: 0 6px 12px rgba(0,0,0,0.15); border: 2px solid #e4e4e7;">'
                         else:
-                            img_html = '<div style="font-size: 50px; margin-bottom: 10px;">🛡️</div>'
+                            img_html = '<div style="font-size: 50px; margin-bottom: 15px;">🛡️</div>'
                             
                         nombre = eq_info.get('nombre', 'Equipo')
                         division = eq_info.get('division') or "Sin división"
                         categoria = eq_info.get('categoria') or ""
                         
+                        # Tarjeta de Equipo con Glassmorphism y Borde Rojo
                         tarjeta_html = f"""
-                        <div style="background-color: #ffffff; padding: 25px 20px 15px 20px; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 10px 30px rgba(0,0,0,0.15); text-align: center; margin-bottom: 15px;">
+                        <div style="background-color: rgba(255, 255, 255, 0.95); padding: 30px 20px 20px 20px; border-radius: 12px; border: 1px solid #e4e4e7; border-top: 4px solid #dc2626; box-shadow: 0 20px 40px rgba(0,0,0,0.5); text-align: center; margin-bottom: 15px; backdrop-filter: blur(10px);">
                             {img_html}
-                            <h3 style="color: #0f172a; font-weight: 800; margin-bottom: 0px; font-size: 1.25rem;">{nombre}</h3>
-                            <p style="color: #475569; font-size: 0.85rem; margin-top: 2px;">{categoria} | {division}</p>
+                            <h3 style="color: #0a0a0a; font-weight: 800; margin-bottom: 5px; font-size: 1.3rem; text-transform: uppercase; letter-spacing: -0.5px;">{nombre}</h3>
+                            <p style="color: #475569; font-size: 0.85rem; font-weight: 700; margin-top: 0px; text-transform: uppercase; letter-spacing: 0.5px;">{categoria} | {division}</p>
                         </div>
                         """
                         st.markdown(tarjeta_html, unsafe_allow_html=True)
@@ -362,33 +384,39 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
         
     st.markdown("---")
     
-    # 4. BOTÓN "CREAR NUEVO EQUIPO" CENTRADO, ESTRECHO Y BLANCO
+    # 4. BOTÓN "CREAR NUEVO EQUIPO" CENTRADO
     col_exp_izq, col_exp_cen, col_exp_der = st.columns([2, 1.5, 2])
     
     with col_exp_cen:
-        with st.expander("➕ Crear Nuevo Equipo"):
+        with st.expander("➕ CREAR NUEVO EQUIPO"):
             with st.form("form_nuevo_equipo"):
                 n_nombre = st.text_input("Nombre del Club / Equipo:")
                 n_categoria = st.selectbox("Categoría:", ["Senior", "Juvenil", "Cadete", "Infantil", "Alevín", "Benjamín", "Prebenjamín", "Biberón"])
                 n_division = st.text_input("División / Liga:")
                 n_temporada = st.text_input("Temporada:", value="2026/2027")
                 
-                # Inyectar CSS solo para el botón de este formulario específico
+                # Inyectar CSS solo para el botón de este formulario específico (Rojo)
                 st.markdown("""
                     <style>
                     [data-testid="stForm"] [data-testid="stFormSubmitButton"] button {
-                        background-color: #ffffff !important;
-                        color: #000000 !important;
-                        border: 1px solid #cbd5e1 !important;
+                        background-color: #dc2626 !important;
+                        color: #ffffff !important;
+                        border: none !important;
                         font-weight: 800 !important;
+                        text-transform: uppercase;
+                        letter-spacing: 1px;
+                        box-shadow: 0 4px 6px rgba(220, 38, 38, 0.3) !important;
+                    }
+                    [data-testid="stForm"] [data-testid="stFormSubmitButton"] button:hover {
+                        background-color: #b91c1c !important;
+                        transform: translateY(-2px);
                     }
                     </style>
                 """, unsafe_allow_html=True)
                 
-                # Columnas internas para hacer el botón en sí aún más pequeño dentro del formulario
                 c_btn1, c_btn2, c_btn3 = st.columns([1, 1.5, 1])
                 with c_btn2:
-                    btn_crear = st.form_submit_button("🚀 Crear y Acceder", use_container_width=True)
+                    btn_crear = st.form_submit_button("🚀 CREAR Y ACCEDER", use_container_width=True)
                 
                 if btn_crear and n_nombre:
                     res_insert = supabase.table("equipos").insert({
