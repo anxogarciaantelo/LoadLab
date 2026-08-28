@@ -71,24 +71,34 @@ if st.session_state.vista_plantilla == "📋 Plantilla":
                 if idx_global < len(jugadores_lista):
                     jug = jugadores_lista[idx_global]
                     with cols[j]:
-                        with st.container(border=True):
-                            if jug.get("foto"):
-                                try:
-                                    img_src = jug["foto"] if str(jug["foto"]).startswith("http") else f"data:image/jpeg;base64,{jug['foto']}"
-                                    st.markdown(f'<div style="text-align: center;"><img src="{img_src}" style="width:90px; height:90px; object-fit: cover; border-radius:50%;"></div>', unsafe_allow_html=True)
-                                except:
-                                    st.markdown('<div style="text-align: center; font-size: 40px;">👤</div>', unsafe_allow_html=True)
-                            else:
-                                st.markdown('<div style="text-align: center; font-size: 40px;">👤</div>', unsafe_allow_html=True)
-                            
-                            st.markdown(f"<h3 style='text-align: center; margin-bottom: 0px;'>#{jug.get('dorsal', '99')}</h3>", unsafe_allow_html=True)
-                            st.markdown(f"<h4 style='text-align: center; margin-top: 0px; font-size: 1.1rem;'>{jug['JUGADOR']}</h4>", unsafe_allow_html=True)
-                            st.markdown(f"<p style='text-align: center; color: gray; font-size: 0.8rem;'>{jug.get('pos_1', jug.get('POS', ''))}</p>", unsafe_allow_html=True)
-                            
-                            # Botón interactivo para ir a la vista del jugador
-                            if st.button("🔍 Ver Perfil", key=f"btn_ver_perfil_{idx_global}", use_container_width=True):
-                                st.session_state.vista_plantilla = f"👤 {jug['JUGADOR']}"
-                                st.rerun()
+                        # --- NUEVA TARJETA DE JUGADOR ÉLITE ---
+                        if jug.get("foto"):
+                            try:
+                                img_src = jug["foto"] if str(jug["foto"]).startswith("http") else f"data:image/jpeg;base64,{jug['foto']}"
+                                img_html = f'<img src="{img_src}" style="width:85px; height:85px; object-fit: cover; border-radius:50%; border: 3px solid #f4f4f5; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">'
+                            except:
+                                img_html = '<div style="font-size: 45px; margin-bottom: 5px;">👤</div>'
+                        else:
+                            img_html = '<div style="font-size: 45px; margin-bottom: 5px;">👤</div>'
+                        
+                        posicion = jug.get('pos_1', jug.get('POS', ''))
+                        dorsal = jug.get('dorsal', '99')
+                        nombre = jug['JUGADOR']
+                        
+                        tarjeta_html = f"""
+                        <div style="background-color: #ffffff; border: 1px solid #e4e4e7; border-top: 4px solid #dc2626; border-radius: 10px; padding: 20px 10px 15px 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.04); text-align: center; margin-bottom: 12px; transition: transform 0.2s ease;">
+                            {img_html}
+                            <h3 style="color: #dc2626; font-weight: 800; font-size: 1.1rem; margin: 10px 0 2px 0;">#{dorsal}</h3>
+                            <h4 style="color: #0a0a0a; font-weight: 800; font-size: 1rem; margin: 0 0 10px 0; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{nombre}</h4>
+                            <span style="background-color: #f4f4f5; color: #475569; font-weight: 800; font-size: 0.75rem; padding: 4px 10px; border-radius: 4px; text-transform: uppercase; border: 1px solid #e4e4e7;">{posicion}</span>
+                        </div>
+                        """
+                        st.markdown(tarjeta_html, unsafe_allow_html=True)
+                        
+                        # Botón interactivo debajo de la tarjeta
+                        if st.button("🔍 Ver Perfil", key=f"btn_ver_perfil_{idx_global}", use_container_width=True):
+                            st.session_state.vista_plantilla = f"👤 {nombre}"
+                            st.rerun()
         
 elif st.session_state.vista_plantilla == "⚙️ Modificar Plantilla":
     with st.expander("➕ Añadir Jugador"):
