@@ -52,7 +52,12 @@ st.markdown("---")
 
 if st.session_state.vista_plantilla == "📋 Plantilla":
     if not st.session_state.plantilla:
-        st.info("No hay jugadores en la plantilla.")
+        render_estado_vacio(
+            icono="👥", 
+            titulo="Tu plantilla está vacía", 
+            descripcion="El primer paso para dominar LoadLab es registrar a tus deportistas. Esto habilitará el control de cargas, estadísticas y predicción de lesiones.",
+            accion_sugerida="Ve al menú desplegable superior y selecciona '⚙️ Modificar Plantilla' para añadir tu primer jugador."
+        )
     else:
         st.markdown("### 📋 Cuadro de Plantilla")
         st.caption("Haz clic en el botón de perfil de cualquier jugador para acceder directamente a sus datos detallados.")
