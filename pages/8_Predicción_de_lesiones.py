@@ -243,14 +243,20 @@ else:
     for i, (idx, row) in enumerate(alto_riesgo.head(3).iterrows()):
         with cols[i]:
             st.markdown(f"""
-            <div style="background-color: #fff1f2; border-left: 5px solid #e11d48; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-                <h3 style="margin-bottom: 5px; color: #9f1239;">{row['JUGADOR']}</h3>
-                <h1 style="color: #be123c; margin: 0;">{row['Riesgo_%']:.1f}%</h1>
-                <p style="color: #881337; font-size: 0.9em; margin-top: 10px;">
-                    Ratio A/C: {row['Ratio_AC']:.2f}<br>
-                    HSR (Últimos 7d): {row['HSR_7d']:.0f} m<br>
-                    Calidad Sueño (1-7): {row['Sueno_3d']:.1f}
-                </p>
+            <div style="background: #ffffff; border: 1px solid #e4e4e7; border-left: 5px solid #dc2626; padding: 18px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h4 style="margin: 0; color: #0a0a0a; font-weight: 800; text-transform: uppercase;">{row['JUGADOR']}</h4>
+                    <span style="background: #dc2626; color: #ffffff; font-weight: 800; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; letter-spacing: 0.05em;">
+                        {row['Riesgo_%']:.1f}% RIESGO
+                    </span>
+                </div>
+                <hr style="margin: 12px 0; border-color: #f4f4f5;">
+                <div style="font-size: 0.85rem; color: #475569; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <div><b style="color:#1c1c1e;">Ratio A/C:</b> {row['Ratio_AC']:.2f}</div>
+                    <div><b style="color:#1c1c1e;">HSR (7d):</b> {row['HSR_7d']:.0f} m</div>
+                    <div><b style="color:#1c1c1e;">Sueño:</b> {row['Sueno_3d']:.1f}/7</div>
+                    <div><b style="color:#1c1c1e;">Fatiga/Dolor:</b> {row['Wellness_3d']:.1f}</div>
+                </div>
             </div>
             """, unsafe_allow_html=True)
 
