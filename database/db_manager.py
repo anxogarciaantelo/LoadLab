@@ -197,8 +197,10 @@ def guardar_datos(modulo="todo"):
             supabase.table("antropometria_historial").delete().eq("equipo_id", eq_id).execute()
             if antro_db: supabase.table("antropometria_historial").insert(antro_db).execute()
 
-        if modulo in ["todo", "configuracion"]:
-            fetch_datos_equipo_supabase.clear()
+        # LIMPIEZA DE CACHÉ OBLIGATORIA:
+        # Siempre que guardemos un dato en la BD (sea el módulo que sea), 
+        # borramos la caché para que al salir y entrar descargue la información real.
+        fetch_datos_equipo_supabase.clear()
 
         reconstruir_dataframes_globales()
             
