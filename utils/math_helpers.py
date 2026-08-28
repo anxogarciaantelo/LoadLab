@@ -372,3 +372,15 @@ def obtener_clima(ciudad, fecha_str):
     except Exception as e:
         print(f"Error clima: {e}")
     return None
+
+def aplicar_color_sidebar():
+    """Inyecta el color dinámico del equipo en la barra lateral para todas las páginas"""
+    color = st.session_state.get("color_sidebar", "#0a0a0a") # #0a0a0a es el negro carbón por defecto
+    css = f"""
+    <style>
+        [data-testid="stSidebar"] {{
+            background-color: {color} !important;
+        }}
+    </style>
+    """
+    st.markdown(css, unsafe_allow_html=True)
