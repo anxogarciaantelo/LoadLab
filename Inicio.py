@@ -255,6 +255,15 @@ if not st.session_state.autenticado:
                     else:
                         try:
                             res = supabase.auth.sign_up({"email": reg_email, "password": reg_password})
+                            
+                            # NUEVO: Insertar el ID del usuario recién creado en la tabla pública 'usuarios'
+                            # Asegúrate de que las columnas ("id", "email") coinciden con tu tabla 'usuarios' real
+                            if res.user:
+                                supabase.table("usuarios").insert({
+                                    "id": res.user.id,
+                                    "email": reg_email
+                                }).execute()
+                                
                             st.success("¡Cuenta creada con éxito! Inicia sesión para continuar.")
                         except Exception as e:
                             st.error(f"Error al registrarse: {e}")
