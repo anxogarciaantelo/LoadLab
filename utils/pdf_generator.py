@@ -620,7 +620,7 @@ def generar_pdf_antropometria_jugador(jugador_nombre, jugador_info, fecha_pesaje
         pdf.set_xy(offset_quad, 30 + h_quad + 15)
         pdf.set_font("Arial", 'I', 10)
         pdf.set_text_color(100, 100, 100)
-        texto_leyenda = "El recuadro verde delimita la Zona de Elite referencial en el futbol profesional (7.5% - 10.0% Grasa y 20 - 23 de FFMI). Este grafico aísla la masa muscular real anulando el sesgo de la estatura del jugador, permitiendo focalizar el objetivo nutricional."
+        texto_leyenda = "El recuadro verde delimita la de referencia a nivel de grasa y masa muscular (7.5% - 10.0% Grasa y 20 - 23 de FFMI). Este grafico aísla la masa muscular real anulando el sesgo de la estatura."
         pdf.multi_cell(w_quad, 5, clean_txt(texto_leyenda), align='C')
         pdf.set_text_color(0, 0, 0)
         
