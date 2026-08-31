@@ -512,10 +512,40 @@ with tab_antro_jug:
                 'Biceps': calc_asim_str_jug(ultimo_valido['Per_Biceps_D'], ultimo_valido['Per_Biceps_I'])
             }
             
+            # --- NUEVO: CREACIÓN DEL CUADRANTE INDIVIDUAL PARA EL PDF ---
+            df_quad_indiv = pd.DataFrame({
+                'jugador': [jugador_seleccionado],
+                '% Graso': [grasa_actual],
+                'FFMI': [ffmi_actual],
+                'POS': [jugador_datos.get('pos_1', jugador_datos.get('POS', '')) if jugador_datos else 'Desconocida']
+            })
+
+            fig_quad_j = px.scatter(
+                df_quad_indiv, x='% Graso', y='FFMI', color='POS', text='jugador',
+                color_discrete_map={"POR": "gray", "DEF": "#00b4d8", "MED": "#28a745", "ATA": "#ff4b4b"}
+            )
+            fig_quad_j.update_traces(textposition='top center', marker=dict(size=16, opacity=0.9, line=dict(width=2, color='DarkSlateGrey')))
+            
+            # Zona Élite y Cuadrantes
+            fig_quad_j.add_shape(type="rect", x0=7.5, x1=10.0, y0=20.0, y1=23.0, fillcolor="green", opacity=0.15, line_width=2, line_color="green", layer="below")
+            fig_quad_j.add_annotation(x=8.75, y=23.3, text="ZONA ÉLITE", showarrow=False, font=dict(color="green", size=12, weight="bold"))
+            fig_quad_j.add_vline(x=10.0, line_dash="dot", line_color="gray", opacity=0.7)
+            fig_quad_j.add_hline(y=20.0, line_dash="dot", line_color="gray", opacity=0.7)
+            
+            fig_quad_j.update_layout(
+                title="Posición en el Cuadrante Élite Corporal",
+                xaxis_title="% Grasa (Yuhasz)", yaxis_title="FFMI (Índice de Masa Magra)",
+                xaxis=dict(range=[min(5.0, grasa_actual-2), max(15.0, grasa_actual+2)]),
+                yaxis=dict(range=[min(17.0, ffmi_actual-1), max(24.0, ffmi_actual+1)]),
+                margin=dict(l=20, r=20, t=40, b=20)
+            )
+
+            # --- DICCIONARIO DE GRÁFICOS ACTUALIZADO ---
             dict_figs_jug = {
                 'peso': fig_peso_j, 'grasa': fig_grasa_j,
                 'per1': fig_p1_j, 'per2': fig_p2_j,
-                'per3': fig_p3_j, 'per4': fig_p4_j
+                'per3': fig_p3_j, 'per4': fig_p4_j,
+                'quadrante': fig_quad_j  # Añadimos el nuevo gráfico
             }
             # ==========================================
             # 1. DESCARGA INDIVIDUAL
@@ -620,7 +650,40 @@ with tab_antro_jug:
                                 fig_per3_m = go.Figure().add_trace(go.Scatter(x=df_per_m['Mes'], y=df_per_m['Per_Muslo_D'], name='Muslo D')).add_trace(go.Scatter(x=df_per_m['Mes'], y=df_per_m['Per_Muslo_I'], name='Muslo I', line=dict(dash='dash'))).update_layout(title="Muslo (D/I)")
                                 fig_per4_m = go.Figure().add_trace(go.Scatter(x=df_per_m['Mes'], y=df_per_m['Per_Pierna_D'], name='Pierna D')).add_trace(go.Scatter(x=df_per_m['Mes'], y=df_per_m['Per_Pierna_I'], name='Pierna I', line=dict(dash='dash'))).update_layout(title="Pierna (D/I)")
 
-                                dict_figs_m = {'peso': fig_pm, 'grasa': fig_gm, 'per1': fig_per1_m, 'per2': fig_per2_m, 'per3': fig_per3_m, 'per4': fig_per4_m}
+                                # --- NUEVO: CUADRANTE INDIVIDUAL PARA EL ZIP MASIVO ---
+                                altura_cm_m = safe_float(p.get('altura', 175))
+                                altura_m_m = altura_cm_m / 100.0
+                                grasa_actual_m = safe_float(ult_pesaje['% Graso'])
+                                masa_magra_actual_m = safe_float(ult_pesaje['Kg Magros'])
+                                ffmi_actual_m = masa_magra_actual_m / (altura_m_m ** 2) if altura_m_m > 0 else 21.0
+
+                                df_quad_m = pd.DataFrame({
+                                    'jugador': [jug_masivo], '% Graso': [grasa_actual_m], 'FFMI': [ffmi_actual_m], 
+                                    'POS': [p.get('pos_1', p.get('POS', ''))]
+                                })
+
+                                fig_quad_m = px.scatter(
+                                    df_quad_m, x='% Graso', y='FFMI', color='POS', text='jugador',
+                                    color_discrete_map={"POR": "gray", "DEF": "#00b4d8", "MED": "#28a745", "ATA": "#ff4b4b"}
+                                )
+                                fig_quad_m.update_traces(textposition='top center', marker=dict(size=16, opacity=0.9, line=dict(width=2, color='DarkSlateGrey')))
+                                fig_quad_m.add_shape(type="rect", x0=7.5, x1=10.0, y0=20.0, y1=23.0, fillcolor="green", opacity=0.15, line_width=2, line_color="green", layer="below")
+                                fig_quad_m.add_annotation(x=8.75, y=23.3, text="ZONA ÉLITE", showarrow=False, font=dict(color="green", size=12, weight="bold"))
+                                fig_quad_m.add_vline(x=10.0, line_dash="dot", line_color="gray", opacity=0.7)
+                                fig_quad_m.add_hline(y=20.0, line_dash="dot", line_color="gray", opacity=0.7)
+                                fig_quad_m.update_layout(
+                                    title="Posición en el Cuadrante Élite Corporal", xaxis_title="% Grasa (Yuhasz)", yaxis_title="FFMI (Índice de Masa Magra)",
+                                    xaxis=dict(range=[min(5.0, grasa_actual_m-2), max(15.0, grasa_actual_m+2)]),
+                                    yaxis=dict(range=[min(17.0, ffmi_actual_m-1), max(24.0, ffmi_actual_m+1)]),
+                                    margin=dict(l=20, r=20, t=40, b=20)
+                                )
+
+                                # --- DICCIONARIO ACTUALIZADO ZIP ---
+                                dict_figs_m = {
+                                    'peso': fig_pm, 'grasa': fig_gm, 'per1': fig_per1_m, 
+                                    'per2': fig_per2_m, 'per3': fig_per3_m, 'per4': fig_per4_m,
+                                    'quadrante': fig_quad_m
+                                }
                                 
                                 for part, col_d, col_i in [('Bíceps', 'Per_Biceps_D', 'Per_Biceps_I'), ('Muslo', 'Per_Muslo_D', 'Per_Muslo_I'), ('Pierna', 'Per_Pierna_D', 'Per_Pierna_I')]:
                                     mx = df_jug_masivo[[col_d, col_i]].max(axis=1)
