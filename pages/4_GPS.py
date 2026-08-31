@@ -34,23 +34,28 @@ def generar_grafico_radar_gps(df_target, df_ref, label_target, label_ref):
         return None
 
     for df in [df_t_val, df_r_val]:
+        min_efectivo_radar = np.where(df['MIN_GPS'] > 0, df['MIN_GPS'], df['MIN'])
         for col in ['DIS', 'DIS AI', 'ACC', 'Nº SPR']:
             if f'{col}/min' not in df.columns:
-                df[f'{col}/min'] = np.where(df['MIN'] > 0, df[col] / df['MIN'], 0)
-
+                df[f'{col}/min'] = np.where(min_efectivo_radar > 0, df[col] / min_efectivo_radar, 0)
+    
+    # Corrección de la Velocidad Media para usar el tiempo de GPS real
+    min_ref_sum = np.where(df_r_val['MIN_GPS'] > 0, df_r_val['MIN_GPS'], df_r_val['MIN']).sum()
+    min_tar_sum = np.where(df_t_val['MIN_GPS'] > 0, df_t_val['MIN_GPS'], df_t_val['MIN']).sum()
+    
     medias_ref = {
         'ACC/min': df_r_val['ACC/min'].mean(),
         'VMAX': df_r_val['VMAX'].mean(),
-        'V_Media': (df_r_val['DIS'].sum() / df_r_val['MIN'].sum()) * 60 if df_r_val['MIN'].sum() > 0 else 0,
+        'V_Media': (df_r_val['DIS'].sum() / min_ref_sum) * 60 if min_ref_sum > 0 else 0,
         'DIS/min': df_r_val['DIS/min'].mean(),
         'Nº SPR/min': df_r_val['Nº SPR/min'].mean(),
         'DIS AI/min': df_r_val['DIS AI/min'].mean()
     }
-
+    
     medias_target = {
         'ACC/min': df_t_val['ACC/min'].mean(),
         'VMAX': df_t_val['VMAX'].mean(),
-        'V_Media': (df_t_val['DIS'].sum() / df_t_val['MIN'].sum()) * 60 if df_t_val['MIN'].sum() > 0 else 0,
+        'V_Media': (df_t_val['DIS'].sum() / min_tar_sum) * 60 if min_tar_sum > 0 else 0,
         'DIS/min': df_t_val['DIS/min'].mean(),
         'Nº SPR/min': df_t_val['Nº SPR/min'].mean(),
         'DIS AI/min': df_t_val['DIS AI/min'].mean()
@@ -233,7 +238,9 @@ if df_gps.empty:
 else:
     cols_dinamicas = ['DIS', 'DIS AI', 'ACC', 'DCC', 'Nº SPR', 'Z1', 'Z2', 'Z3', 'Z4', 'Z5', 'Z6']
     for c in cols_dinamicas:
-        df_gps[f'{c}/min'] = np.where(df_gps['MIN'] > 0, df_gps[c] / df_gps['MIN'], 0)
+        # Usamos MIN_GPS prioritariamente. Si por algún error de subida está a 0 pero hay distancia, usamos MIN como salvavidas antibloqueo.
+        min_efectivo = np.where(df_gps['MIN_GPS'] > 0, df_gps['MIN_GPS'], df_gps['MIN'])
+        df_gps[f'{c}/min'] = np.where(min_efectivo > 0, df_gps[c] / min_efectivo, 0)
 
     lista_jugs = sorted(df_gps['JUGADOR'].unique())
     lista_pos = ["POR", "DEF", "MED", "ATA"]
@@ -453,13 +460,13 @@ else:
                     st.info("No hay suficientes datos GPS para generar la comparación radar.")
 
             # --- METRICAS KPI Y TABLAS ---
-            kpis = df_perfil[['MIN', 'DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC', 'VMAX']].mean()
+            kpis = df_perfil[['MIN_GPS', 'DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC', 'VMAX']].mean()
             kpis_rel = df_perfil[['DIS/min', 'DIS AI/min', 'ACC/min', 'DCC/min']].mean()
 
             st.markdown("---")
             st.markdown("#### 🚀 Promedios Absolutos (Totales)")
             kp1, kp2, kp3, kp4, kp5, kp6, kp7 = st.columns(7)
-            kp1.metric("Minutos GPS", f"{kpis['MIN']:.1f}")
+            kp1.metric("Minutos GPS", f"{kpis['MIN_GPS']:.1f}")
             kp2.metric("Distancia (km)", f"{kpis['DIS']:.2f}")
             kp3.metric("HSR (m)", f"{kpis['DIS AI']:.1f}")
             kp4.metric("Sprints", f"{kpis['Nº SPR']:.1f}")
