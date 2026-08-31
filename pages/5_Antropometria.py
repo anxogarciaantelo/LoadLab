@@ -45,7 +45,7 @@ with tab_antro_res:
         df_antro['POS'] = df_antro['jugador'].map(lambda x: dict_pos.get(x, "N/A"))
 
         st.markdown("#### 🔍 Filtros Antropométricos")
-        ca1, ca2, ca3 = st.columns(3)
+        ca1, ca2, ca3, ca4 = st.columns(4)
         
         jugs_unicos = ["TODOS"] + sorted(df_antro['jugador'].unique())
         filtro_jug = ca1.selectbox("Jugador:", jugs_unicos, key="ant_jug")
@@ -58,7 +58,21 @@ with tab_antro_res:
         df_filt = df_antro.copy()
         if filtro_jug != "TODOS": df_filt = df_filt[df_filt['jugador'] == filtro_jug]
         if filtro_pos != "TODOS": df_filt = df_filt[df_filt['POS'] == filtro_pos]
-        if filtro_mes != "TODOS Anual": df_filt = df_filt[df_filt['Mes'] == filtro_mes]
+        
+        if filtro_mes != "TODOS Anual": 
+            df_filt = df_filt[df_filt['Mes'] == filtro_mes]
+            fechas_mes = sorted(df_filt['fecha'].dropna().unique())
+            if fechas_mes:
+                opciones_fecha = ["Promedio"]
+                for i, f in enumerate(fechas_mes):
+                    opciones_fecha.append(f"Medición {i+1} ({f})")
+                
+                filtro_fecha = ca4.selectbox("Medición exacta:", opciones_fecha, key="ant_fecha")
+                
+                if filtro_fecha != "Promedio":
+                    # Extraer la fecha del string "Medición X (YYYY-MM-DD)"
+                    fecha_seleccionada = filtro_fecha.split("(")[1].replace(")", "")
+                    df_filt = df_filt[df_filt['fecha'] == fecha_seleccionada]
         
         if df_filt.empty:
             st.warning("No hay datos para esta combinación.")
@@ -124,8 +138,8 @@ with tab_antro_res:
             # 1. Obtener la altura de los jugadores desde la plantilla
             dict_altura = {limpiar_nombre(p['JUGADOR']): safe_float(p.get('altura', 175)) for p in st.session_state.plantilla}
 
-            # 2. Quedarnos solo con el último pesaje de cada jugador (dentro del filtro actual)
-            df_latest = df_filt_clean.sort_values('fecha_dt', ascending=False).drop_duplicates(subset=['jugador']).copy()
+            # 2. Calcular los datos matemáticos del jugador (Respeta la Medición exacta si se seleccionó, o hace la media matemática si es Promedio)
+            df_latest = df_filt_clean.groupby(['jugador', 'POS'])[['Peso', '% Graso', 'Kg Magros']].mean().reset_index()
 
             # 3. Calcular FFMI (Kg Magros / (Altura en metros)^2)
             def calcular_ffmi(row):
