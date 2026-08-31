@@ -604,6 +604,26 @@ def generar_pdf_antropometria_jugador(jugador_nombre, jugador_info, fecha_pesaje
     if 'per3' in img_paths: pdf.image(img_paths['per3'], x=x1, y=y_row3, w=w_chart, h=h_chart)
     if 'per4' in img_paths: pdf.image(img_paths['per4'], x=x2, y=y_row3, w=w_chart, h=h_chart)
     
+    # --- NUEVA PÁGINA 3: CUADRANTE INDIVIDUAL ---
+    if 'quadrante' in img_paths:
+        pdf.add_page()
+        pdf.set_font("Arial", 'B', 14)
+        pdf.cell(297, 10, clean_txt("Evaluacion Estructural (FFMI vs % Grasa)"), ln=True, align='C')
+        
+        # Centrar el gráfico de cuadrante
+        w_quad = 170
+        h_quad = 90
+        offset_quad = (297 - w_quad) / 2
+        pdf.image(img_paths['quadrante'], x=offset_quad, y=30, w=w_quad, h=h_quad)
+        
+        # Añadir leyenda técnica abajo
+        pdf.set_xy(offset_quad, 30 + h_quad + 15)
+        pdf.set_font("Arial", 'I', 10)
+        pdf.set_text_color(100, 100, 100)
+        texto_leyenda = "El recuadro verde delimita la Zona de Elite referencial en el futbol profesional (7.5% - 10.0% Grasa y 20 - 23 de FFMI). Este grafico aísla la masa muscular real anulando el sesgo de la estatura del jugador, permitiendo focalizar el objetivo nutricional."
+        pdf.multi_cell(w_quad, 5, clean_txt(texto_leyenda), align='C')
+        pdf.set_text_color(0, 0, 0)
+        
     for path in img_paths.values():
         if os.path.exists(path): os.unlink(path)
         
