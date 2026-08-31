@@ -100,7 +100,29 @@ def guardar_datos(modulo="todo"):
     if "equipo_id" not in st.session_state: return
     eq_id = st.session_state.equipo_id
     
+    # --- NUEVA FUNCIÓN DE SEGURIDAD (ANTI PÉRDIDA DE DATOS) ---
+    def safe_sync(tabla, datos_nuevos):
+        # 1. Hacemos backup rápido de lo que hay en la BD ahora mismo
+        backup = supabase.table(tabla).select("*").eq("equipo_id", eq_id).execute().data
+        try:
+            # 2. Borramos
+            supabase.table(tabla).delete().eq("equipo_id", eq_id).execute()
+            # 3. Insertamos en bloques de 100 para evitar que el payload sea muy grande y pete
+            if datos_nuevos:
+                for i in range(0, len(datos_nuevos), 100):
+                    supabase.table(tabla).insert(datos_nuevos[i:i+100]).execute()
+        except Exception as e:
+            # 4. Si ALGO falla (internet, límite, formato...), restauramos el backup inmediatamente
+            print(f"Error crítico en {tabla}: {e}. Restaurando backup...")
+            if backup:
+                # Partimos el backup también en bloques por seguridad
+                for i in range(0, len(backup), 100):
+                    supabase.table(tabla).insert(backup[i:i+100]).execute()
+            raise e # Relanzamos el error para que Streamlit muestre el aviso rojo al usuario
+    # -----------------------------------------------------------
+
     try:
+        # 1. GUARDAR EQUIPO Y CONFIGURACIÓN
         # 1. GUARDAR EQUIPO Y CONFIGURACIÓN
         if modulo in ["todo", "equipo", "configuracion"]:
             
@@ -159,8 +181,7 @@ def guardar_datos(modulo="todo"):
                     "dorsal": p.get("dorsal"), "altura": p.get("altura"),
                     "lateralidad": p.get("lateralidad"), "foto_url": foto_url
                 })
-            supabase.table("plantilla").delete().eq("equipo_id", eq_id).execute()
-            if plantilla_db: supabase.table("plantilla").insert(plantilla_db).execute()
+            safe_sync("plantilla", plantilla_db)
 
         # 3. GUARDAR SESIONES
         if modulo in ["todo", "sesiones"]:
@@ -174,8 +195,7 @@ def guardar_datos(modulo="todo"):
                     "estadisticas_invitados": s.get("estadisticas_invitados", []), "informe_generado": s.get("informe_generado", False),
                     "datos_informe": s.get("datos_informe", [])
                 })
-            supabase.table("sesiones").delete().eq("equipo_id", eq_id).execute()
-            if sesiones_db: supabase.table("sesiones").insert(sesiones_db).execute()
+            safe_sync("sesiones", sesiones_db)
 
         # 4. GUARDAR LESIONES
         if modulo in ["todo", "lesiones"]:
@@ -188,14 +208,12 @@ def guardar_datos(modulo="todo"):
                     "contacto": l.get("contacto"), "cesped": l.get("cesped"), "recidiva": l.get("recidiva"),
                     "estado": l.get("estado"), "dias_baja": l.get("dias_baja"), "comentarios": l.get("comentarios")
                 })
-            supabase.table("lesiones_historial").delete().eq("equipo_id", eq_id).execute()
-            if lesiones_db: supabase.table("lesiones_historial").insert(lesiones_db).execute()
+            safe_sync("lesiones_historial", lesiones_db)
 
         # 5. GUARDAR ANTROPOMETRÍA
         if modulo in ["todo", "antropometria"]:
             antro_db = [{"equipo_id": eq_id, "fecha": a.get("fecha"), "jugador": a.get("jugador"), "datos": a} for a in st.session_state.antropometria]
-            supabase.table("antropometria_historial").delete().eq("equipo_id", eq_id).execute()
-            if antro_db: supabase.table("antropometria_historial").insert(antro_db).execute()
+            safe_sync("antropometria_historial", antro_db)
 
         # LIMPIEZA DE CACHÉ OBLIGATORIA:
         # Siempre que guardemos un dato en la BD (sea el módulo que sea), 
