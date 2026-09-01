@@ -666,6 +666,8 @@ if st.session_state.get("equipo_seleccionado", False):
     with c4:
         if st.button("📡 GPS", use_container_width=True):
             st.switch_page("pages/4_GPS.py")
+        if st.button("🧠 Predicción de lesiones", use_container_width=True):
+            st.switch_page("pages/8_Predicción_de_lesiones.py")
 
     st.markdown("---")
     render_panel_principal()
