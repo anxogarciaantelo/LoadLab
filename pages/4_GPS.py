@@ -220,7 +220,13 @@ if "df_master_informes" in st.session_state and not st.session_state.df_master_i
     
     # 3. Recreamos las columnas específicas que necesita esta vista (Microciclo, Nombre Sesión, POS_ESP)
     df_gps['Microciclo'] = df_gps['FECHA'].apply(lambda f: f"Microciclo {mapa_micros.get(obtener_numero_semana(f), obtener_numero_semana(f))}")
-    df_gps['Nombre_Sesion'] = df_gps['FECHA'] + " | " + df_gps['TIPO_SESION'] + " (" + df_gps['MD'] + ")"
+    
+    # Creamos un string para el rival (solo si existe, añadimos "vs Rival")
+    if 'RIVAL' not in df_gps.columns: df_gps['RIVAL'] = ""
+    df_gps['Rival_Str'] = np.where(df_gps['RIVAL'].astype(str).str.strip() != "", " vs " + df_gps['RIVAL'].astype(str), "")
+    
+    # Construimos el nombre final: Fecha | Tipo vs Rival (MD)
+    df_gps['Nombre_Sesion'] = df_gps['FECHA'] + " | " + df_gps['TIPO_SESION'] + df_gps['Rival_Str'] + " (" + df_gps['MD'] + ")"
     
     # Diccionarios rápidos para cruzar las posiciones específicas
     dict_pos_esp = {limpiar_nombre(p["JUGADOR"]): p.get("pos_1", p.get("POS", "")) for p in st.session_state.get("plantilla", [])}
