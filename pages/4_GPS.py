@@ -256,6 +256,7 @@ else:
             res = res[res['Nombre_Sesion'] == target_sel_sesion]
             
         if target_tipo != "Todas":
+            # Ahora busca la coincidencia exacta de la categoría elegida
             res = res[res['TIPO'] == target_tipo]
             if target_tipo == "Entrenamiento" and target_md != "TODOS":
                 res = res[res['MD'] == target_md]
@@ -284,7 +285,7 @@ else:
             with c_f2:
                 f_tipo = st.radio(
                     "Tipo de Sesión:", 
-                    ["Todas", "Entrenamiento", "Partido"], 
+                    ["Todas", "Entrenamiento", "Partido Oficial", "Partido Amistoso"], 
                     key="p_tipo"
                 )
 
@@ -307,15 +308,15 @@ else:
                     else:
                         st.info("No hay entrenamientos registrados.")
                         
-                elif f_tipo == "Partido":
-                    lista_partidos = sorted(df_gps[df_gps['TIPO'] == 'Partido']['Nombre_Sesion'].unique(), reverse=True)
+                elif f_tipo in ["Partido Oficial", "Partido Amistoso"]:
+                    lista_partidos = sorted(df_gps[df_gps['TIPO'] == f_tipo]['Nombre_Sesion'].unique(), reverse=True)
                     if lista_partidos:
                         if f_tiempo == "Sesión":
-                            f_sel_sesion = st.selectbox("Seleccionar partido:", lista_partidos, key="p_sel_partido")
+                            f_sel_sesion = st.selectbox(f"Seleccionar {f_tipo.lower()}:", lista_partidos, key="p_sel_partido")
                         else:
-                            f_sel_sesion = st.selectbox("Seleccionar partido (Opcional):", ["TODOS"] + lista_partidos, key="p_sel_partido")
+                            f_sel_sesion = st.selectbox(f"Seleccionar {f_tipo.lower()} (Opcional):", ["TODOS"] + lista_partidos, key="p_sel_partido")
                     else:
-                        st.info("No hay partidos registrados.")
+                        st.info(f"No hay registros de {f_tipo.lower()}.")
 
                 elif f_tiempo == "Sesión" and f_tipo == "Todas":
                     lista_todas_ses = sorted(df_gps['Nombre_Sesion'].unique(), reverse=True)
@@ -433,8 +434,9 @@ else:
                         df_base_nivel = df_base_nivel[(df_base_nivel['TIPO'] == "Entrenamiento") & (df_base_nivel['MD'] == md_sesion_sel)]
                         criterio_str = f"{md_sesion_sel}"
                     else:
-                        df_base_nivel = df_base_nivel[df_base_nivel['TIPO'] == "Partido"]
-                        criterio_str = "Partidos"
+                        # La referencia será exactamente el mismo tipo de partido que estás analizando
+                        df_base_nivel = df_base_nivel[df_base_nivel['TIPO'] == tipo_sesion_sel]
+                        criterio_str = f"{tipo_sesion_sel}s"
 
                     if f_nivel == "Por posición general":
                         df_base_nivel = df_base_nivel[df_base_nivel['POS'] == f_pos]
@@ -518,7 +520,7 @@ else:
                 st.markdown(f"**<span style='color:{color_hex}'>■</span> {titulo}**", unsafe_allow_html=True)
                 
                 t_tiempo = st.selectbox("Analizar:", ["Promedio total", "Promedio de microciclo", "Sesión"], key=f"c_{prefijo}_tiempo")
-                t_tipo = st.selectbox("Tipo de Sesión:", ["Todas", "Entrenamiento", "Partido"], key=f"c_{prefijo}_tipo")
+                t_tipo = st.selectbox("Tipo de Sesión:", ["Todas", "Entrenamiento", "Partido Oficial", "Partido Amistoso"], key=f"c_{prefijo}_tipo")
                 
                 t_sel_micro, t_sel_sesion = "TODOS", "TODOS"
                 
@@ -528,9 +530,9 @@ else:
                 elif t_tipo == "Entrenamiento":
                     lista_entrenos = sorted(df_gps[df_gps['TIPO'] == 'Entrenamiento']['Nombre_Sesion'].unique(), reverse=True)
                     t_sel_sesion = st.selectbox("Entrenamiento:", lista_entrenos if t_tiempo=="Sesión" else ["TODOS"]+lista_entrenos, key=f"c_{prefijo}_entreno")
-                elif t_tipo == "Partido":
-                    lista_partidos = sorted(df_gps[df_gps['TIPO'] == 'Partido']['Nombre_Sesion'].unique(), reverse=True)
-                    t_sel_sesion = st.selectbox("Partido:", lista_partidos if t_tiempo=="Sesión" else ["TODOS"]+lista_partidos, key=f"c_{prefijo}_partido")
+                elif t_tipo in ["Partido Oficial", "Partido Amistoso"]:
+                    lista_partidos = sorted(df_gps[df_gps['TIPO'] == t_tipo]['Nombre_Sesion'].unique(), reverse=True)
+                    t_sel_sesion = st.selectbox(f"{t_tipo}:", lista_partidos if t_tiempo=="Sesión" else ["TODOS"]+lista_partidos, key=f"c_{prefijo}_partido")
                 elif t_tiempo == "Sesión" and t_tipo == "Todas":
                     lista_todas_ses = sorted(df_gps['Nombre_Sesion'].unique(), reverse=True)
                     t_sel_sesion = st.selectbox("Sesión:", lista_todas_ses, key=f"c_{prefijo}_ses_todas")
