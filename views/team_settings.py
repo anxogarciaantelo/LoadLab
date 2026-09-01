@@ -197,17 +197,24 @@ def render_panel_principal():
                         for e in errores[:10]:  # Mostramos los 10 primeros para no saturar
                             st.write(e)
 
-    if st.button("🔄 Borrar datos y empezar de cero", use_container_width=True):
-        st.session_state.plantilla = []
-        st.session_state.sesiones = []
-        st.session_state.lesiones = []
-        st.session_state.antropometria = []
-        st.session_state.val_inicial = []
-        st.session_state.val_rom = []
-        st.session_state.val_1rm = []
-        guardar_datos()
-        st.success("Datos vaciados. El equipo está limpio.")
-        st.rerun()
+    with st.expander("⚠️ Zona de Peligro: Borrado total de datos"):
+        st.error("¡CUIDADO! Esta acción eliminará permanentemente la plantilla, todas las sesiones, historial médico y valoraciones de este equipo. No se puede deshacer.")
+        
+        # Checkbox de seguridad
+        confirmacion_borrado = st.checkbox("Entiendo las consecuencias y quiero vaciar la base de datos de este equipo.")
+        
+        # El botón solo se activará si se ha marcado el checkbox (disabled=not confirmacion_borrado)
+        if st.button("🔄 Sí, borrar todos los datos", use_container_width=True, disabled=not confirmacion_borrado):
+            st.session_state.plantilla = []
+            st.session_state.sesiones = []
+            st.session_state.lesiones = []
+            st.session_state.antropometria = []
+            st.session_state.val_inicial = []
+            st.session_state.val_rom = []
+            st.session_state.val_1rm = []
+            guardar_datos()
+            st.success("Datos vaciados. El equipo está limpio.")
+            st.rerun()
         
     if st.button("🚪 Cerrar Sesión / Cambiar Equipo", use_container_width=True):
         try:
