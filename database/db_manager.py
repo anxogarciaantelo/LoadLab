@@ -272,8 +272,15 @@ def reconstruir_dataframes_globales():
                     row = d.copy() 
                     row["FECHA"] = s.get("fecha")
                     row["TIPO_SESION"] = s.get("tipo")
-                    row["MD"] = s.get("descripcion")
+                    
+                    # Si es un partido, forzamos que el Match Day sea "MD"
+                    if "Partido" in str(s.get("tipo", "")):
+                        row["MD"] = "MD"
+                    else:
+                        row["MD"] = s.get("descripcion", "")
+                        
                     row["COMPETICION"] = s.get("competicion", "")
+                    row["RIVAL"] = s.get("rival", "")  # Capturamos el rival para poder mostrarlo
                     
                     # Inyectamos el estado médico/convocatoria
                     jug_key = str(d["JUGADOR"]).strip().lower()
