@@ -1767,7 +1767,7 @@ with tab_ses:
                             "fecha_registro": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         }
                         st.session_state.lesiones.append(nueva_lesion)
-                        guardar_datos(modulo="sesiones")
+                        guardar_datos(modulo="lesiones")
                         st.success(f"¡Parte médico de {les_jugador} guardado correctamente!")
                         st.rerun()
             st.markdown("---")
