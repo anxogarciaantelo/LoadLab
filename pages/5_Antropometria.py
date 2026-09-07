@@ -23,7 +23,7 @@ aplicar_color_sidebar()
 
 st.subheader("⚖️ Antropometría y Composición Corporal")
 
-tab_antro_res, tab_antro_jug, tab_antro_up = st.tabs(["📊 Resumen Analítico", "👤 Jugadores", "📂 Cargar Datos"])
+tab_antro_res, tab_antro_jug, tab_antro_up, tab_antro_edit = st.tabs(["📊 Resumen Analítico", "👤 Jugadores", "📂 Cargar Datos", "✏️ Editar Registros"])
 
 antro_data = st.session_state.get("antropometria", [])
 
@@ -810,3 +810,66 @@ with tab_antro_up:
                 st.rerun()
         except Exception as e:
             st.error(f"Error al leer el archivo. Asegúrate de que el formato es correcto. Detalle técnico: {e}")
+# ==========================================
+# PESTAÑA 4: EDICIÓN MANUAL DE REGISTROS
+# ==========================================
+with tab_antro_edit:
+    st.markdown("#### ✏️ Edición Manual de Registros")
+    st.caption("Modifica cualquier valor haciendo doble clic en la celda (como en Excel). Puedes borrar una fila seleccionándola por la izquierda y pulsando la tecla 'Suprimir' o 'Retroceso'.")
+    
+    if not st.session_state.antropometria:
+        st.info("No hay datos antropométricos registrados para editar.")
+    else:
+        # Cargar los datos actuales
+        df_edit = pd.DataFrame(st.session_state.antropometria)
+        
+        # Ordenamos las columnas lógicamente para la edición
+        cols_editar = [
+            "fecha", "jugador", "Peso", "P_Tricipital", "P_Subescapular", "P_Suprailiaco", 
+            "P_Abdominal", "Per_Pecho", "Per_Cintura", "Per_Cadera", "Per_Muslo_D", 
+            "Per_Muslo_I", "Per_Pierna_D", "Per_Pierna_I", "Per_Biceps_D", "Per_Biceps_I"
+        ]
+        
+        # Filtramos por si hay columnas extra ocultas
+        df_edit = df_edit[[c for c in cols_editar if c in df_edit.columns]]
+        
+        # Mostramos la tabla editable interactiva
+        edited_df = st.data_editor(
+            df_edit,
+            key="editor_antro_masivo",
+            use_container_width=True,
+            num_rows="dynamic", # ¡Esto activa el añadir/borrar filas!
+            hide_index=True
+        )
+        
+        # Botón para consolidar cambios
+        if st.button("💾 Guardar Cambios de la Tabla"):
+            nuevos_registros = []
+            for _, row in edited_df.iterrows():
+                # Validación de seguridad: no guardar filas vacías o sin jugador
+                if not pd.isna(row.get("jugador")) and str(row.get("jugador")).strip() != "":
+                    rec = {
+                        "fecha": str(row.get("fecha")).strip(),
+                        "jugador": str(row.get("jugador")).strip(),
+                        "Peso": safe_float(row.get("Peso")),
+                        "P_Tricipital": safe_float(row.get("P_Tricipital")),
+                        "P_Subescapular": safe_float(row.get("P_Subescapular")),
+                        "P_Suprailiaco": safe_float(row.get("P_Suprailiaco")),
+                        "P_Abdominal": safe_float(row.get("P_Abdominal")),
+                        "Per_Pecho": safe_float(row.get("Per_Pecho")),
+                        "Per_Cintura": safe_float(row.get("Per_Cintura")),
+                        "Per_Cadera": safe_float(row.get("Per_Cadera")),
+                        "Per_Muslo_D": safe_float(row.get("Per_Muslo_D")),
+                        "Per_Muslo_I": safe_float(row.get("Per_Muslo_I")),
+                        "Per_Pierna_D": safe_float(row.get("Per_Pierna_D")),
+                        "Per_Pierna_I": safe_float(row.get("Per_Pierna_I")),
+                        "Per_Biceps_D": safe_float(row.get("Per_Biceps_D")),
+                        "Per_Biceps_I": safe_float(row.get("Per_Biceps_I"))
+                    }
+                    nuevos_registros.append(rec)
+            
+            # Guardamos en la RAM y forzamos el volcado a Supabase
+            st.session_state.antropometria = nuevos_registros
+            guardar_datos(modulo="antropometria")
+            st.success("✅ ¡Registros antropométricos actualizados correctamente!")
+            st.rerun()
