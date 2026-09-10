@@ -49,7 +49,6 @@ def obtener_rango_fechas_semana(fecha_str):
     domingo = lunes + timedelta(days=6)
     return lunes.strftime("%d/%m"), domingo.strftime("%d/%m"), lunes, domingo
 
-@st.cache_data
 def calcular_ewma_historico(_sesiones, fecha_objetivo):
     registros = []
     # Añadimos el guion bajo aquí:
@@ -110,7 +109,6 @@ def categorizar_duracion(dias):
     if dias <= 28: return "Moderada (8-28d)"
     return "Grave (>28d)"
 
-@st.cache_data
 def calcular_monotonia_7d(_sesiones, jugador, fecha_objetivo):
     fecha_fin = datetime.strptime(fecha_objetivo, "%Y-%m-%d")
     fecha_ini = fecha_fin - timedelta(days=6)
