@@ -212,4 +212,29 @@ else:
                     guardar_datos(modulo="lesiones")
                     st.success("¡Comentario actualizado correctamente!")
                     st.rerun()
+        
+        # --- NUEVO: GESTOR DE ELIMINACIÓN DE LESIONES ---
+        st.markdown("---")
+        with st.expander("🗑️ Eliminar Registro de Lesión (Corrección de errores)"):
+            if st.session_state.lesiones:
+                # Usamos la misma lista ordenada por fecha de registro
+                lesiones_todas_del = sorted(st.session_state.lesiones, key=lambda x: x.get("fecha_registro", "2000-01-01"), reverse=True)
+                nombres_les_borrar = [f"{l['id_sesion']} | {l['jugador']} ({l['tipo']} - {l['zona']})" for l in lesiones_todas_del]
+                
+                with st.form("form_eliminar_lesion"):
+                    les_del_idx = st.selectbox("Selecciona la lesión duplicada o errónea:", range(len(lesiones_todas_del)), format_func=lambda x: nombres_les_borrar[x])
+                    st.warning("⚠️ Cuidado: Esta acción borrará el registro médico de la base de datos para siempre.")
+                    
+                    if st.form_submit_button("❌ Eliminar Lesión Definitivamente"):
+                        les_a_borrar = lesiones_todas_del[les_del_idx]
+                        
+                        # Buscar el índice real en la lista global y eliminar
+                        real_idx_del = st.session_state.lesiones.index(les_a_borrar)
+                        del st.session_state.lesiones[real_idx_del]
+                        
+                        guardar_datos(modulo="lesiones")
+                        st.success("¡Registro de lesión eliminado correctamente!")
+                        st.rerun()
+            else:
+                st.info("No hay lesiones en el historial para eliminar.")
 
