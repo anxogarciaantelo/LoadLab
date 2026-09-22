@@ -261,36 +261,67 @@ with tab_informes:
             vels = np.array([v for k, v in zip(p_sq_data.get('kg', []), p_sq_data.get('vel', [])) if k > 0 and v > 0])
             
             if len(kgs_barra) > 1:
+                # 1. Fuerza real del sistema
                 kgs_sistema = kgs_barra + (peso_actual * 0.89)
                 z = np.polyfit(kgs_sistema, vels, 1)
                 p = np.poly1d(z)
                 slope, intercept = z[0], z[1]
+                
+                # Fiabilidad del test (R^2)
                 ss_res = np.sum((vels - p(kgs_sistema))**2)
                 ss_tot = np.sum((vels - np.mean(vels))**2)
                 r2 = 1 - (ss_res / ss_tot) if ss_tot > 0 else 0
                 
+                # 2. Variables teóricas del deportista
                 v0 = intercept
                 f0_kg_sistema = -intercept / slope if slope < 0 else 0
                 f0_kg_barra = max(f0_kg_sistema - (peso_actual * 0.89), 0)
-                f0_rel = f0_kg_barra / peso_actual if peso_actual > 0 else 0
+                f0_rel = f0_kg_sistema / peso_actual if peso_actual > 0 else 0
                 
-                if f0_rel >= 2.2 and v0 >= 1.3: cuadrante = "🟢 Perfil Óptimo (Fuerte y Rápido)"
-                elif f0_rel < 2.2 and v0 >= 1.3: cuadrante = "🟡 Déficit de Fuerza (Rápido pero Débil)"
-                elif f0_rel >= 2.2 and v0 < 1.3: cuadrante = "🟡 Déficit de Velocidad (Fuerte pero Lento)"
-                else: cuadrante = "🔴 Déficit Global (Débil y Lento)"
+                # 3. PERFIL ÓPTIMO DE SAMOZINO Y DESEQUILIBRIO F-V
+                pmax_rel = (f0_rel * v0) / 4
+                hpo = 0.4  # Distancia de empuje estándar estimada (m) para sentadilla
+                
+                # Cálculo de la pendiente teórica perfecta para este jugador
+                f0_opt = 2 * (pmax_rel / hpo) ** 0.5
+                v0_opt = 2 * (pmax_rel * hpo) ** 0.5
+                s_fv_opt = -(f0_opt / v0_opt) if v0_opt > 0 else -1
+                
+                # Pendiente real del jugador (en N/kg/m/s para equiparar a la literatura)
+                s_fv_actual = (slope * 9.81) / peso_actual 
+                
+                # Porcentaje exacto de desequilibrio
+                desequilibrio_fv = ((s_fv_actual / s_fv_opt) - 1) * 100 if s_fv_opt != 0 else 0
+                
+                if desequilibrio_fv < -10:
+                    cuadrante = f"🔴 Déficit de Fuerza ({desequilibrio_fv:.1f}%)"
+                    pauta_fv = "Priorizar cargas pesadas (>80% 1RM)."
+                elif desequilibrio_fv > 10:
+                    cuadrante = f"🟡 Déficit de Velocidad (+{desequilibrio_fv:.1f}%)"
+                    pauta_fv = "Priorizar trabajo balístico y pliometría pura."
+                else:
+                    signo = "+" if desequilibrio_fv > 0 else ""
+                    cuadrante = f"🟢 Perfil Óptimo ({signo}{desequilibrio_fv:.1f}%)"
+                    pauta_fv = "Entrenamiento mixto para desplazar la curva completa."
 
+                # Gráfico
                 fig_sq = px.scatter(x=kgs_sistema, y=vels, labels={'x': 'Carga del Sistema (kg)', 'y': 'Velocidad (m/s)'}, title="Perfil F-V (Masa del Sistema)")
                 fig_sq.update_traces(marker=dict(size=10, color='#dc2626'))
                 x_trend = np.linspace(min(kgs_sistema), max(kgs_sistema), 50)
-                fig_sq.add_scatter(x=x_trend, y=p(x_trend), mode='lines', name='Tendencia', line=dict(dash='dash', color='#1c1c1e'))
-                fig_sq.update_layout(showlegend=False, height=300, margin=dict(l=20, r=20, t=40, b=20))
+                fig_sq.add_scatter(x=x_trend, y=p(x_trend), mode='lines', name='Tendencia Real', line=dict(color='#1c1c1e', width=2))
+                
+                # Añadir la línea óptima teórica para comparación visual
+                y_opt = v0_opt + (s_fv_opt / 9.81 * peso_actual) * x_trend
+                fig_sq.add_scatter(x=x_trend, y=y_opt, mode='lines', name='Perfil Óptimo', line=dict(dash='dash', color='#10833d', width=2))
+                
+                fig_sq.update_layout(height=300, margin=dict(l=20, r=20, t=40, b=20), legend=dict(yanchor="top", y=0.99, xanchor="right", x=0.99))
                 
                 c_fig1, c_fig2 = st.columns([1, 1])
                 with c_fig1:
                     st.plotly_chart(fig_sq, use_container_width=True)
                 with c_fig2:
                     fiabilidad_sq = "🟢 Excelente" if r2 >= 0.95 else ("🟡 Aceptable" if r2 >= 0.90 else "🔴 Pobre (Falta intención)")
-                    st.info(f"**Diagnóstico SQ:** {cuadrante}\n\n**V0 Teórica:** {round(v0, 2)} m/s | **F0 Teórica (Barra):** {round(f0_kg_barra, 1)} kg\n\n**Fiabilidad del test ($R^2$):** {round(r2, 3)} ({fiabilidad_sq})")
+                    st.info(f"**Diagnóstico $S_{{fv}}$:** {cuadrante}\n\n**V0:** {round(v0, 2)} m/s (Ópt: {round(v0_opt, 2)})\n**F0 (Barra):** {round(f0_kg_barra, 1)} kg\n\n**Fiabilidad del test ($R^2$):** {round(r2, 3)} ({fiabilidad_sq})\n\n*{pauta_fv}*")
 
             st.markdown("---")
             st.markdown("#### 🧭 Perfil Evolutivo y Asimetrías")
