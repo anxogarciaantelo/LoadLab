@@ -359,87 +359,140 @@ with tab_nuevo:
     if not jugadores:
         st.warning("Primero debes registrar deportistas en la sección de Jugadores.")
     else:
-        with st.form("form_nueva_val_detallada"):
-            st.markdown("#### ⚙️ Datos Generales")
-            cg1, cg2, cg3, cg4 = st.columns(4)
-            with cg1: jugador_sel = st.selectbox("Deportista:", options=jugadores)
-            with cg2: fecha_test = st.date_input("Fecha:", value=date.today())
-            with cg3: lesion = st.radio("¿Lesión activa?", options=["No", "Sí"], horizontal=True, index=0)
-            with cg4: peso = st.number_input("Peso (kg):", min_value=30.0, value=70.0, step=0.5)
-            
-            st.markdown("---")
-            st.markdown("#### 🤸 1. Movilidad (Grados)")
-            cf1, cf2, cf3, cf4, cf5, cf6 = st.columns(6)
-            with cf1: mov_re_d = st.number_input("Rot. Ext. Cadera D", 0.0, 150.0, 0.0)
-            with cf2: mov_re_i = st.number_input("Rot. Ext. Cadera I", 0.0, 150.0, 0.0)
-            with cf3: mov_ri_d = st.number_input("Rot. Int. Cadera D", 0.0, 150.0, 0.0)
-            with cf4: mov_ri_i = st.number_input("Rot. Int. Cadera I", 0.0, 150.0, 0.0)
-            with cf5: mov_dor_d = st.number_input("Dorsiflexión D", 0.0, 100.0, 0.0)
-            with cf6: mov_dor_i = st.number_input("Dorsiflexión I", 0.0, 100.0, 0.0)
-
-            st.markdown("---")
-            st.markdown("#### 🦘 2. Test de Salto (cm)")
-            cs1, cs2, cs3, cs4, cs5 = st.columns(5)
-            with cs1: cmj_bi = st.number_input("CMJ Bilateral", min_value=0.0, value=0.0, step=0.5)
-            with cs2: cmj_ud = st.number_input("CMJ Uni. Der.", min_value=0.0, value=0.0, step=0.5)
-            with cs3: cmj_ui = st.number_input("CMJ Uni. Izq.", min_value=0.0, value=0.0, step=0.5)
-            with cs4: sh_d = st.number_input("Salto Horiz. D", min_value=0.0, value=0.0, step=1.0)
-            with cs5: sh_i = st.number_input("Salto Horiz. I", min_value=0.0, value=0.0, step=1.0)
-
-            st.markdown("---")
-            st.markdown("#### ⚡ 3. Fuerza Máxima Isométrica (N)")
-            ci1, ci2, ci3 = st.columns(3)
-            with ci1:
-                st.markdown("**Extensión (Cuád)**")
-                c_ed, c_ei = st.columns(2)
-                with c_ed: iso_ext_d = st.number_input("Der (Ext)", min_value=0.0, value=0.0, step=1.0)
-                with c_ei: iso_ext_i = st.number_input("Izq (Ext)", min_value=0.0, value=0.0, step=1.0)
-            with ci2:
-                st.markdown("**Flexión (Isq)**")
-                c_fd, c_fi = st.columns(2)
-                with c_fd: iso_flx_d = st.number_input("Der (Flx)", min_value=0.0, value=0.0, step=1.0)
-                with c_fi: iso_flx_i = st.number_input("Izq (Flx)", min_value=0.0, value=0.0, step=1.0)
-            with ci3:
-                st.markdown("**Aducción**")
-                c_ad, c_ai = st.columns(2)
-                with c_ad: iso_add_d = st.number_input("Der (Add)", min_value=0.0, value=0.0, step=1.0)
-                with c_ai: iso_add_i = st.number_input("Izq (Add)", min_value=0.0, value=0.0, step=1.0)
-
-            st.markdown("---")
-            st.markdown("#### 🏋️‍♂️ 4. Perfil Carga-Velocidad y 1RM (Sentadilla)")
-            c_sq = st.columns(10)
-            p_sq, v_sq = [], []
-            for s in range(5):
-                with c_sq[s*2]: p_sq.append(st.number_input(f"S{s+1}(kg)", min_value=0.0, step=2.5, key=f"sq_p_{s}"))
-                with c_sq[s*2+1]: v_sq.append(st.number_input(f"S{s+1}(m/s)", min_value=0.0, step=0.01, key=f"sq_v_{s}"))
-
-            validas = [(p_sq[i], v_sq[i]) for i in range(5) if v_sq[i] > 0 and p_sq[i] > 0]
-            rm_sq = round(max(validas, key=lambda x: x[0])[0] / max(validas, key=lambda x: x[0])[1], 1) if validas else (round(max(p_sq), 1) if max(p_sq) > 0 else 0.0)
-
-            st.markdown("---")
-            comentarios = st.text_input("Observaciones Generales:")
-            
-            if st.form_submit_button("💾 Guardar Valoración Completa", use_container_width=True):
-                nuevo_test = {
-                    "id": str(uuid.uuid4()),
-                    "jugador": jugador_sel, 
-                    "fecha": str(fecha_test), 
-                    "lesion": lesion, "peso_corporal": float(peso),
-                    "mov_rot_ext_d": mov_re_d, "mov_rot_ext_i": mov_re_i,
-                    "mov_rot_int_d": mov_ri_d, "mov_rot_int_i": mov_ri_i,
-                    "mov_dorsi_d": mov_dor_d, "mov_dorsi_i": mov_dor_i,
-                    "cmj_bi": cmj_bi, "cmj_uni_d": cmj_ud, "cmj_uni_i": cmj_ui, "sh_d": sh_d, "sh_i": sh_i,
-                    "iso_ext_d": iso_ext_d, "iso_ext_i": iso_ext_i, "iso_flx_d": iso_flx_d, "iso_flx_i": iso_flx_i,
-                    "iso_add_d": iso_add_d, "iso_add_i": iso_add_i,
-                    "rm_sq": float(rm_sq),
-                    "perfil_sq": {"kg": p_sq, "vel": v_sq},
-                    "comentarios": comentarios
-                }
+        modo_ingreso = st.radio("Método de registro:", ["📝 Formulario Manual", "📁 Importar desde Excel"], horizontal=True)
+        
+        if modo_ingreso == "📝 Formulario Manual":
+            with st.form("form_nueva_val_detallada"):
+                st.markdown("#### ⚙️ Datos Generales")
+                cg1, cg2, cg3, cg4 = st.columns(4)
+                with cg1: jugador_sel = st.selectbox("Deportista:", options=jugadores)
+                with cg2: fecha_test = st.date_input("Fecha:", value=date.today())
+                with cg3: lesion = st.radio("¿Lesión activa?", options=["No", "Sí"], horizontal=True, index=0)
+                with cg4: peso = st.number_input("Peso (kg):", min_value=30.0, value=70.0, step=0.5)
                 
-                st.session_state.val_rom.append(nuevo_test)
-                guardar_datos(modulo="configuracion")
-                st.success("¡Valoración guardada correctamente!")
-                st.rerun()
+                st.markdown("---")
+                st.markdown("#### 🤸 1. Movilidad (Grados)")
+                cf1, cf2, cf3, cf4, cf5, cf6 = st.columns(6)
+                with cf1: mov_re_d = st.number_input("Rot. Ext. Cadera D", 0.0, 150.0, 0.0)
+                with cf2: mov_re_i = st.number_input("Rot. Ext. Cadera I", 0.0, 150.0, 0.0)
+                with cf3: mov_ri_d = st.number_input("Rot. Int. Cadera D", 0.0, 150.0, 0.0)
+                with cf4: mov_ri_i = st.number_input("Rot. Int. Cadera I", 0.0, 150.0, 0.0)
+                with cf5: mov_dor_d = st.number_input("Dorsiflexión D", 0.0, 100.0, 0.0)
+                with cf6: mov_dor_i = st.number_input("Dorsiflexión I", 0.0, 100.0, 0.0)
+
+                st.markdown("---")
+                st.markdown("#### 🦘 2. Test de Salto (cm)")
+                cs1, cs2, cs3, cs4, cs5 = st.columns(5)
+                with cs1: cmj_bi = st.number_input("CMJ Bilateral", min_value=0.0, value=0.0, step=0.5)
+                with cs2: cmj_ud = st.number_input("CMJ Uni. Der.", min_value=0.0, value=0.0, step=0.5)
+                with cs3: cmj_ui = st.number_input("CMJ Uni. Izq.", min_value=0.0, value=0.0, step=0.5)
+                with cs4: sh_d = st.number_input("Salto Horiz. D", min_value=0.0, value=0.0, step=1.0)
+                with cs5: sh_i = st.number_input("Salto Horiz. I", min_value=0.0, value=0.0, step=1.0)
+
+                st.markdown("---")
+                st.markdown("#### ⚡ 3. Fuerza Máxima Isométrica (N)")
+                ci1, ci2, ci3 = st.columns(3)
+                with ci1:
+                    st.markdown("**Extensión (Cuád)**")
+                    c_ed, c_ei = st.columns(2)
+                    with c_ed: iso_ext_d = st.number_input("Der (Ext)", min_value=0.0, value=0.0, step=1.0)
+                    with c_ei: iso_ext_i = st.number_input("Izq (Ext)", min_value=0.0, value=0.0, step=1.0)
+                with ci2:
+                    st.markdown("**Flexión (Isq)**")
+                    c_fd, c_fi = st.columns(2)
+                    with c_fd: iso_flx_d = st.number_input("Der (Flx)", min_value=0.0, value=0.0, step=1.0)
+                    with c_fi: iso_flx_i = st.number_input("Izq (Flx)", min_value=0.0, value=0.0, step=1.0)
+                with ci3:
+                    st.markdown("**Aducción**")
+                    c_ad, c_ai = st.columns(2)
+                    with c_ad: iso_add_d = st.number_input("Der (Add)", min_value=0.0, value=0.0, step=1.0)
+                    with c_ai: iso_add_i = st.number_input("Izq (Add)", min_value=0.0, value=0.0, step=1.0)
+
+                st.markdown("---")
+                st.markdown("#### 🏋️‍♂️ 4. Perfil Carga-Velocidad y 1RM (Sentadilla)")
+                c_sq = st.columns(10)
+                p_sq, v_sq = [], []
+                for s in range(5):
+                    with c_sq[s*2]: p_sq.append(st.number_input(f"S{s+1}(kg)", min_value=0.0, step=2.5, key=f"sq_p_{s}"))
+                    with c_sq[s*2+1]: v_sq.append(st.number_input(f"S{s+1}(m/s)", min_value=0.0, step=0.01, key=f"sq_v_{s}"))
+
+                validas = [(p_sq[i], v_sq[i]) for i in range(5) if v_sq[i] > 0 and p_sq[i] > 0]
+                rm_sq = round(max(validas, key=lambda x: x[0])[0] / max(validas, key=lambda x: x[0])[1], 1) if validas else (round(max(p_sq), 1) if max(p_sq) > 0 else 0.0)
+
+                st.markdown("---")
+                comentarios = st.text_input("Observaciones Generales:")
+                
+                if st.form_submit_button("💾 Guardar Valoración Completa", use_container_width=True):
+                    nuevo_test = {
+                        "id": str(uuid.uuid4()), "jugador": jugador_sel, "fecha": str(fecha_test), 
+                        "lesion": lesion, "peso_corporal": float(peso),
+                        "mov_rot_ext_d": mov_re_d, "mov_rot_ext_i": mov_re_i, "mov_rot_int_d": mov_ri_d, "mov_rot_int_i": mov_ri_i,
+                        "mov_dorsi_d": mov_dor_d, "mov_dorsi_i": mov_dor_i,
+                        "cmj_bi": cmj_bi, "cmj_uni_d": cmj_ud, "cmj_uni_i": cmj_ui, "sh_d": sh_d, "sh_i": sh_i,
+                        "iso_ext_d": iso_ext_d, "iso_ext_i": iso_ext_i, "iso_flx_d": iso_flx_d, "iso_flx_i": iso_flx_i, "iso_add_d": iso_add_d, "iso_add_i": iso_add_i,
+                        "rm_sq": float(rm_sq), "perfil_sq": {"kg": p_sq, "vel": v_sq}, "comentarios": comentarios
+                    }
+                    st.session_state.val_rom.append(nuevo_test)
+                    guardar_datos(modulo="configuracion")
+                    st.success("¡Valoración guardada correctamente!")
+                    st.rerun()
+
+        else:
+            st.markdown("#### 📁 Importación Masiva (Excel)")
+            st.info("⚠️ El Excel debe tener la Fila 1 de encabezados y a partir de la Fila 2 los datos en **este orden exacto** (32 columnas):\n\nJugador | Fecha | Lesión (Sí/No) | Peso | Rot. Ext D | Rot. Ext I | Rot. Int D | Rot. Int I | Dorsiflexión D | Dorsiflexión I | CMJ Bi | CMJ Uni D | CMJ Uni I | Salto Horiz. D | Salto Horiz. I | Iso Ext D | Iso Ext I | Iso Flx D | Iso Flx I | Iso Add D | Iso Add I | S1(kg) | S1(m/s) | S2(kg) | S2(m/s) | S3(kg) | S3(m/s) | S4(kg) | S4(m/s) | S5(kg) | S5(m/s) | Comentarios")
+
+            archivo = st.file_uploader("Sube tu plantilla Excel (.xlsx)", type=["xlsx"])
+            
+            if archivo and st.button("🚀 Procesar e Importar", type="primary"):
+                try:
+                    import pandas as pd
+                    df_import = pd.read_excel(archivo)
+                    registros_exitosos = 0
+                    
+                    for idx, row in df_import.iterrows():
+                        nombre_crudo = str(row.iloc[0]).strip()
+                        if pd.isna(row.iloc[0]) or not nombre_crudo: continue
+                            
+                        jug_bd = next((j for j in jugadores if j.lower() == nombre_crudo.lower()), nombre_crudo)
+                        
+                        fecha_val = str(row.iloc[1])[:10] if not pd.isna(row.iloc[1]) else str(date.today())
+                        lesion_val = "Sí" if str(row.iloc[2]).strip().lower() in ["sí", "si", "s", "1", "yes", "y"] else "No"
+                        
+                        def s(val): return 0.0 if pd.isna(val) else float(val)
+
+                        p_sq = [s(row.iloc[i]) for i in range(21, 31, 2)]
+                        v_sq = [s(row.iloc[i]) for i in range(22, 32, 2)]
+
+                        validas = [(p_sq[i], v_sq[i]) for i in range(5) if v_sq[i] > 0 and p_sq[i] > 0]
+                        rm_sq = round(max(validas, key=lambda x: x[0])[0] / max(validas, key=lambda x: x[0])[1], 1) if validas else (round(max(p_sq), 1) if max(p_sq) > 0 else 0.0)
+
+                        nuevo_test = {
+                            "id": str(uuid.uuid4()),
+                            "jugador": jug_bd,
+                            "fecha": fecha_val,
+                            "lesion": lesion_val,
+                            "peso_corporal": s(row.iloc[3]),
+                            "mov_rot_ext_d": s(row.iloc[4]), "mov_rot_ext_i": s(row.iloc[5]),
+                            "mov_rot_int_d": s(row.iloc[6]), "mov_rot_int_i": s(row.iloc[7]),
+                            "mov_dorsi_d": s(row.iloc[8]), "mov_dorsi_i": s(row.iloc[9]),
+                            "cmj_bi": s(row.iloc[10]), "cmj_uni_d": s(row.iloc[11]), "cmj_uni_i": s(row.iloc[12]),
+                            "sh_d": s(row.iloc[13]), "sh_i": s(row.iloc[14]),
+                            "iso_ext_d": s(row.iloc[15]), "iso_ext_i": s(row.iloc[16]),
+                            "iso_flx_d": s(row.iloc[17]), "iso_flx_i": s(row.iloc[18]),
+                            "iso_add_d": s(row.iloc[19]), "iso_add_i": s(row.iloc[20]),
+                            "rm_sq": float(rm_sq),
+                            "perfil_sq": {"kg": p_sq, "vel": v_sq},
+                            "comentarios": str(row.iloc[31]) if len(row.index) > 31 and not pd.isna(row.iloc[31]) else "Importado desde Excel."
+                        }
+                        st.session_state.val_rom.append(nuevo_test)
+                        registros_exitosos += 1
+                        
+                    if registros_exitosos > 0:
+                        guardar_datos(modulo="configuracion")
+                        st.success(f"✅ ¡Se han importado {registros_exitosos} valoraciones correctamente!")
+                        st.rerun()
+                except Exception as e:
+                    st.error(f"Error general al procesar el Excel. Asegúrate de tener las 32 columnas. Detalle técnico: {e}")
 
 # ==========================================
 # PESTAÑA 3: TABLA DE REGISTROS Y GESTIÓN
