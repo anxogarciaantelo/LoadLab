@@ -53,18 +53,31 @@ st.title("📊 Valoraciones Condicionales")
 
 tab_informes, tab_nuevo, tab_reg = st.tabs(["📈 Informes de valoraciones", "➕ Añadir Nueva Valoración", "📋 Tabla de registros"])
 
-# Usamos val_rom como almacenamiento unificado para evitar modificar db_manager.py
 if "val_rom" not in st.session_state:
     st.session_state.val_rom = []
 
 valoraciones = st.session_state.val_rom
 jugadores = sorted([j["JUGADOR"] for j in st.session_state.get("plantilla", [])])
 
-# --- FUNCIONES MATEMÁTICAS ---
+# --- FUNCIONES MATEMÁTICAS CIENTÍFICAS ---
 def calc_asimetria(der, izq):
     d, i = safe_float(der), safe_float(izq)
     if max(d, i) == 0: return 0.0
     return (abs(d - i) / max(d, i)) * 100
+
+def calcular_rm_cientifico(pesos, vels, peso_corp):
+    validas = [(pesos[i], vels[i]) for i in range(len(pesos)) if vels[i] > 0 and pesos[i] > 0]
+    if len(validas) > 1:
+        kgs_sistema = np.array([x[0] + (peso_corp * 0.89) for x in validas])
+        v_array = np.array([x[1] for x in validas])
+        z = np.polyfit(kgs_sistema, v_array, 1)
+        slope, intercept = z[0], z[1]
+        rm_sq_sistema = (0.30 - intercept) / slope if slope < 0 else 0
+        rm_sq_barra = round(rm_sq_sistema - (peso_corp * 0.89), 1) if rm_sq_sistema > 0 else 0.0
+        return max(rm_sq_barra, 0.0)
+    elif len(validas) == 1:
+        return round(validas[0][0], 1)
+    return 0.0
 
 def tarjeta_kpi(titulo, valor, subtitulo=""):
     st.markdown(f"""
@@ -121,7 +134,6 @@ with tab_informes:
                 vals_jugador = [v for v in valoraciones if v.get('jugador') == jug_sel]
                 vals_jugador = sorted(vals_jugador, key=lambda x: x.get('fecha', ''))
                 
-                # Asignar numeración cronológica
                 for i, v in enumerate(vals_jugador):
                     v['num_cronologico'] = i + 1
                 
@@ -154,21 +166,24 @@ with tab_informes:
             c_mov3.info(f"**Asimetría Dorsiflexión:** {badge_asi_detallado(asi_dor, v_data.get('mov_dorsi_d', 0), v_data.get('mov_dorsi_i', 0))}")
 
             st.markdown("---")
-            st.markdown("#### 🦘 Salto")
-            cs1, cs2, cs3 = st.columns(3)
-            with cs1: tarjeta_kpi("CMJ Bilateral", f"{v_data.get('cmj_bi', 0)} cm")
-            with cs2: tarjeta_kpi_doble("CMJ Unilateral", f"{v_data.get('cmj_uni_d', 0)} cm", f"{v_data.get('cmj_uni_i', 0)} cm")
-            with cs3: tarjeta_kpi_doble("Salto Horizontal", f"{v_data.get('sh_d', 0)} cm", f"{v_data.get('sh_i', 0)} cm")
+            st.markdown("#### 🦘 Salto y Perfil Vectorial")
+            cs1, cs2, cs3, cs4 = st.columns(4)
+            with cs1: tarjeta_kpi("SJ Bilateral", f"{v_data.get('sj_bi', 0)} cm")
+            with cs2: tarjeta_kpi("CMJ Bilateral", f"{v_data.get('cmj_bi', 0)} cm")
+            with cs3: tarjeta_kpi_doble("CMJ Unilateral", f"{v_data.get('cmj_uni_d', 0)} cm", f"{v_data.get('cmj_uni_i', 0)} cm")
+            with cs4: tarjeta_kpi_doble("Salto Horizontal", f"{v_data.get('sh_d', 0)} cm", f"{v_data.get('sh_i', 0)} cm")
             
-            cmj_d, cmj_i = v_data.get('cmj_uni_d', 0), v_data.get('cmj_uni_i', 0)
-            asi_cmj = calc_asimetria(cmj_d, cmj_i)
+            sj_bi = safe_float(v_data.get('sj_bi', 0))
             cmj_bi = safe_float(v_data.get('cmj_bi', 0))
+            cmj_d, cmj_i = v_data.get('cmj_uni_d', 0), v_data.get('cmj_uni_i', 0)
+            
+            asi_cmj = calc_asimetria(cmj_d, cmj_i)
             cmj_uni_sum = safe_float(cmj_d) + safe_float(cmj_i)
             dbl = round(100 * (cmj_bi / cmj_uni_sum) - 100, 1) if cmj_uni_sum > 0 else 0
             
-            if dbl < -10: dbl_txt = f"🟢 {dbl}% (Óptimo)"
+            if dbl < -10: dbl_txt = f"🟢 {dbl}% (Facilitación Bilateral Óptima)"
             elif dbl < 0: dbl_txt = f"🟡 {dbl}% (Adecuado)"
-            else: dbl_txt = f"🔴 {dbl}% (Déficit unilateral)"
+            else: dbl_txt = f"🔴 {dbl}% (Déficit Bilateral)"
             
             sh_promedio = (safe_float(v_data.get('sh_d', 0)) + safe_float(v_data.get('sh_i', 0))) / 2
             cmj_uni_promedio = cmj_uni_sum / 2
@@ -178,11 +193,18 @@ with tab_informes:
             elif ratio_vectores >= 3.5 and ratio_vectores <= 4.5: perfil_vector = "⚖️ Perfil Equilibrado"
             elif ratio_vectores > 0 and ratio_vectores < 3.5: perfil_vector = "🚀 Dominancia Vertical (Velocidad Punta)"
             else: perfil_vector = "Datos insuficientes"
+
+            eur = round(cmj_bi / sj_bi, 2) if sj_bi > 0 else 0
+            if eur > 1.15: eur_txt = f"🟢 {eur} (Excelente elasticidad)"
+            elif eur >= 1.05: eur_txt = f"🟡 {eur} (Aceptable)"
+            elif eur > 0: eur_txt = f"🔴 {eur} (Déficit elástico)"
+            else: eur_txt = "Sin datos"
             
-            ca1, ca2, ca3 = st.columns(3)
-            ca1.info(f"**Asimetría Vertical:** {badge_asi_detallado(asi_cmj, cmj_d, cmj_i)}")
-            ca2.info(f"**Déficit Bilateral (DBL):**\n\n{dbl_txt}")
-            ca3.info(f"**Teoría de Vectores (Ratio H/V):** {ratio_vectores}\n\n{perfil_vector}")
+            ca1, ca2, ca3, ca4 = st.columns(4)
+            ca1.info(f"**Asimetría Vertical:**\n{badge_asi_detallado(asi_cmj, cmj_d, cmj_i)}")
+            ca2.info(f"**Déficit Bilateral (BLD):**\n{dbl_txt}")
+            ca3.info(f"**Ratio Vectores (H/V):** {ratio_vectores}\n{perfil_vector}")
+            ca4.info(f"**Índice Utilización Excéntrica (EUR):**\n{eur_txt}")
 
             st.markdown("---")
             st.markdown("#### ⚡ Fuerza Máxima Isométrica y Fuerza Relativa")
@@ -224,39 +246,42 @@ with tab_informes:
             f_rel_sq = round(sq_rm / peso_actual, 2) if peso_actual > 0 else 0
             
             crm1, crm2, crm3 = st.columns(3)
-            with crm1: tarjeta_kpi("1RM Sentadilla", f"{sq_rm} kg")
+            with crm1: tarjeta_kpi("1RM Sentadilla (VMP 0.3 m/s)", f"{sq_rm} kg")
             with crm2: tarjeta_kpi("Fuerza Relativa Sentadilla", f"{f_rel_sq}x Peso Corporal")
             with crm3:
-                dsi_adaptado = round(cmj_bi / f_rel_sq, 1) if f_rel_sq > 0 else 0
-                if dsi_adaptado > 25: diag_dsi = "🔴 Déficit de Fuerza"
-                elif dsi_adaptado > 0 and dsi_adaptado < 18: diag_dsi = "🟡 Déficit de Potencia"
-                elif dsi_adaptado >= 18 and dsi_adaptado <= 25: diag_dsi = "🟢 Transferencia Óptima"
-                else: diag_dsi = "Sin datos"
-                tarjeta_kpi("Índice DSI", str(dsi_adaptado), diag_dsi)
+                ratio_fuerza_salto = round(cmj_bi / f_rel_sq, 1) if f_rel_sq > 0 else 0
+                if ratio_fuerza_salto > 25: diag_ratio = "🔴 Déficit de Fuerza"
+                elif ratio_fuerza_salto > 0 and ratio_fuerza_salto < 18: diag_ratio = "🟡 Déficit de Potencia"
+                elif ratio_fuerza_salto >= 18 and ratio_fuerza_salto <= 25: diag_ratio = "🟢 Transferencia Óptima"
+                else: diag_ratio = "Sin datos"
+                tarjeta_kpi("Ratio Fuerza-Salto", str(ratio_fuerza_salto), diag_ratio)
 
             p_sq_data = v_data.get('perfil_sq', {})
-            kgs = np.array([k for k, v in zip(p_sq_data.get('kg', []), p_sq_data.get('vel', [])) if k > 0 and v > 0])
+            kgs_barra = np.array([k for k, v in zip(p_sq_data.get('kg', []), p_sq_data.get('vel', [])) if k > 0 and v > 0])
             vels = np.array([v for k, v in zip(p_sq_data.get('kg', []), p_sq_data.get('vel', [])) if k > 0 and v > 0])
             
-            if len(kgs) > 1:
-                z = np.polyfit(kgs, vels, 1)
+            if len(kgs_barra) > 1:
+                kgs_sistema = kgs_barra + (peso_actual * 0.89)
+                z = np.polyfit(kgs_sistema, vels, 1)
                 p = np.poly1d(z)
                 slope, intercept = z[0], z[1]
-                ss_res = np.sum((vels - p(kgs))**2)
+                ss_res = np.sum((vels - p(kgs_sistema))**2)
                 ss_tot = np.sum((vels - np.mean(vels))**2)
                 r2 = 1 - (ss_res / ss_tot) if ss_tot > 0 else 0
+                
                 v0 = intercept
-                f0_kg = -intercept / slope if slope < 0 else 0
-                f0_rel = f0_kg / peso_actual if peso_actual > 0 else 0
+                f0_kg_sistema = -intercept / slope if slope < 0 else 0
+                f0_kg_barra = max(f0_kg_sistema - (peso_actual * 0.89), 0)
+                f0_rel = f0_kg_barra / peso_actual if peso_actual > 0 else 0
                 
                 if f0_rel >= 2.2 and v0 >= 1.3: cuadrante = "🟢 Perfil Óptimo (Fuerte y Rápido)"
                 elif f0_rel < 2.2 and v0 >= 1.3: cuadrante = "🟡 Déficit de Fuerza (Rápido pero Débil)"
                 elif f0_rel >= 2.2 and v0 < 1.3: cuadrante = "🟡 Déficit de Velocidad (Fuerte pero Lento)"
                 else: cuadrante = "🔴 Déficit Global (Débil y Lento)"
 
-                fig_sq = px.scatter(x=kgs, y=vels, labels={'x': 'Carga (kg)', 'y': 'Velocidad (m/s)'}, title="Perfil F-V Sentadilla")
+                fig_sq = px.scatter(x=kgs_sistema, y=vels, labels={'x': 'Carga del Sistema (kg)', 'y': 'Velocidad (m/s)'}, title="Perfil F-V (Masa del Sistema)")
                 fig_sq.update_traces(marker=dict(size=10, color='#dc2626'))
-                x_trend = np.linspace(min(kgs), max(kgs), 50)
+                x_trend = np.linspace(min(kgs_sistema), max(kgs_sistema), 50)
                 fig_sq.add_scatter(x=x_trend, y=p(x_trend), mode='lines', name='Tendencia', line=dict(dash='dash', color='#1c1c1e'))
                 fig_sq.update_layout(showlegend=False, height=300, margin=dict(l=20, r=20, t=40, b=20))
                 
@@ -265,10 +290,10 @@ with tab_informes:
                     st.plotly_chart(fig_sq, use_container_width=True)
                 with c_fig2:
                     fiabilidad_sq = "🟢 Excelente" if r2 >= 0.95 else ("🟡 Aceptable" if r2 >= 0.90 else "🔴 Pobre (Falta intención)")
-                    st.info(f"**Diagnóstico SQ:** {cuadrante}\n\n**V0 Teórica:** {round(v0, 2)} m/s | **F0 Teórica:** {round(f0_kg, 1)} kg\n\n**Fiabilidad del test ($R^2$):** {round(r2, 3)} ({fiabilidad_sq})")
+                    st.info(f"**Diagnóstico SQ:** {cuadrante}\n\n**V0 Teórica:** {round(v0, 2)} m/s | **F0 Teórica (Barra):** {round(f0_kg_barra, 1)} kg\n\n**Fiabilidad del test ($R^2$):** {round(r2, 3)} ({fiabilidad_sq})")
 
             st.markdown("---")
-            st.markdown("#### 🧭 Perfil de Asimetrías y Gráfico de Radar")
+            st.markdown("#### 🧭 Perfil Evolutivo y Asimetrías")
             
             def obtener_valor_isq(v, p):
                 isq_d, isq_i = v.get('iso_flx_d', 0), v.get('iso_flx_i', 0)
@@ -382,12 +407,13 @@ with tab_nuevo:
 
                 st.markdown("---")
                 st.markdown("#### 🦘 2. Test de Salto (cm)")
-                cs1, cs2, cs3, cs4, cs5 = st.columns(5)
-                with cs1: cmj_bi = st.number_input("CMJ Bilateral", min_value=0.0, value=0.0, step=0.5)
-                with cs2: cmj_ud = st.number_input("CMJ Uni. Der.", min_value=0.0, value=0.0, step=0.5)
-                with cs3: cmj_ui = st.number_input("CMJ Uni. Izq.", min_value=0.0, value=0.0, step=0.5)
-                with cs4: sh_d = st.number_input("Salto Horiz. D", min_value=0.0, value=0.0, step=1.0)
-                with cs5: sh_i = st.number_input("Salto Horiz. I", min_value=0.0, value=0.0, step=1.0)
+                cs1, cs2, cs3, cs4, cs5, cs6 = st.columns(6)
+                with cs1: sj_bi = st.number_input("SJ Bilateral", min_value=0.0, value=0.0, step=0.5)
+                with cs2: cmj_bi = st.number_input("CMJ Bilateral", min_value=0.0, value=0.0, step=0.5)
+                with cs3: cmj_ud = st.number_input("CMJ Uni D.", min_value=0.0, value=0.0, step=0.5)
+                with cs4: cmj_ui = st.number_input("CMJ Uni I.", min_value=0.0, value=0.0, step=0.5)
+                with cs5: sh_d = st.number_input("Horiz. D", min_value=0.0, value=0.0, step=1.0)
+                with cs6: sh_i = st.number_input("Horiz. I", min_value=0.0, value=0.0, step=1.0)
 
                 st.markdown("---")
                 st.markdown("#### ⚡ 3. Fuerza Máxima Isométrica (N)")
@@ -416,8 +442,7 @@ with tab_nuevo:
                     with c_sq[s*2]: p_sq.append(st.number_input(f"S{s+1}(kg)", min_value=0.0, step=2.5, key=f"sq_p_{s}"))
                     with c_sq[s*2+1]: v_sq.append(st.number_input(f"S{s+1}(m/s)", min_value=0.0, step=0.01, key=f"sq_v_{s}"))
 
-                validas = [(p_sq[i], v_sq[i]) for i in range(5) if v_sq[i] > 0 and p_sq[i] > 0]
-                rm_sq = round(max(validas, key=lambda x: x[0])[0] / max(validas, key=lambda x: x[0])[1], 1) if validas else (round(max(p_sq), 1) if max(p_sq) > 0 else 0.0)
+                rm_sq = calcular_rm_cientifico(p_sq, v_sq, peso)
 
                 st.markdown("---")
                 comentarios = st.text_input("Observaciones Generales:")
@@ -428,7 +453,7 @@ with tab_nuevo:
                         "lesion": lesion, "peso_corporal": float(peso),
                         "mov_rot_ext_d": mov_re_d, "mov_rot_ext_i": mov_re_i, "mov_rot_int_d": mov_ri_d, "mov_rot_int_i": mov_ri_i,
                         "mov_dorsi_d": mov_dor_d, "mov_dorsi_i": mov_dor_i,
-                        "cmj_bi": cmj_bi, "cmj_uni_d": cmj_ud, "cmj_uni_i": cmj_ui, "sh_d": sh_d, "sh_i": sh_i,
+                        "sj_bi": sj_bi, "cmj_bi": cmj_bi, "cmj_uni_d": cmj_ud, "cmj_uni_i": cmj_ui, "sh_d": sh_d, "sh_i": sh_i,
                         "iso_ext_d": iso_ext_d, "iso_ext_i": iso_ext_i, "iso_flx_d": iso_flx_d, "iso_flx_i": iso_flx_i, "iso_add_d": iso_add_d, "iso_add_i": iso_add_i,
                         "rm_sq": float(rm_sq), "perfil_sq": {"kg": p_sq, "vel": v_sq}, "comentarios": comentarios
                     }
@@ -439,13 +464,12 @@ with tab_nuevo:
 
         else:
             st.markdown("#### 📁 Importación Masiva (Excel)")
-            st.info("⚠️ El Excel debe tener la Fila 1 de encabezados y a partir de la Fila 2 los datos en **este orden exacto** (32 columnas):\n\nJugador | Fecha | Lesión (Sí/No) | Peso | Rot. Ext D | Rot. Ext I | Rot. Int D | Rot. Int I | Dorsiflexión D | Dorsiflexión I | CMJ Bi | CMJ Uni D | CMJ Uni I | Salto Horiz. D | Salto Horiz. I | Iso Ext D | Iso Ext I | Iso Flx D | Iso Flx I | Iso Add D | Iso Add I | S1(kg) | S1(m/s) | S2(kg) | S2(m/s) | S3(kg) | S3(m/s) | S4(kg) | S4(m/s) | S5(kg) | S5(m/s) | Comentarios")
+            st.info("⚠️ El Excel debe tener la Fila 1 de encabezados y a partir de la Fila 2 los datos en **este orden exacto** (33 columnas):\n\nJugador | Fecha | Lesión (Sí/No) | Peso | Rot. Ext D | Rot. Ext I | Rot. Int D | Rot. Int I | Dorsiflexión D | Dorsiflexión I | SJ Bi | CMJ Bi | CMJ Uni D | CMJ Uni I | Salto Horiz. D | Salto Horiz. I | Iso Ext D | Iso Ext I | Iso Flx D | Iso Flx I | Iso Add D | Iso Add I | S1(kg) | S1(m/s) | S2(kg) | S2(m/s) | S3(kg) | S3(m/s) | S4(kg) | S4(m/s) | S5(kg) | S5(m/s) | Comentarios")
 
             archivo = st.file_uploader("Sube tu plantilla Excel (.xlsx)", type=["xlsx"])
             
             if archivo and st.button("🚀 Procesar e Importar", type="primary"):
                 try:
-                    import pandas as pd
                     df_import = pd.read_excel(archivo)
                     registros_exitosos = 0
                     
@@ -460,29 +484,30 @@ with tab_nuevo:
                         
                         def s(val): return 0.0 if pd.isna(val) else float(val)
 
-                        p_sq = [s(row.iloc[i]) for i in range(21, 31, 2)]
-                        v_sq = [s(row.iloc[i]) for i in range(22, 32, 2)]
+                        peso_val = s(row.iloc[3])
+                        
+                        p_sq = [s(row.iloc[i]) for i in range(22, 32, 2)]
+                        v_sq = [s(row.iloc[i]) for i in range(23, 33, 2)]
 
-                        validas = [(p_sq[i], v_sq[i]) for i in range(5) if v_sq[i] > 0 and p_sq[i] > 0]
-                        rm_sq = round(max(validas, key=lambda x: x[0])[0] / max(validas, key=lambda x: x[0])[1], 1) if validas else (round(max(p_sq), 1) if max(p_sq) > 0 else 0.0)
+                        rm_sq = calcular_rm_cientifico(p_sq, v_sq, peso_val)
 
                         nuevo_test = {
                             "id": str(uuid.uuid4()),
                             "jugador": jug_bd,
                             "fecha": fecha_val,
                             "lesion": lesion_val,
-                            "peso_corporal": s(row.iloc[3]),
+                            "peso_corporal": peso_val,
                             "mov_rot_ext_d": s(row.iloc[4]), "mov_rot_ext_i": s(row.iloc[5]),
                             "mov_rot_int_d": s(row.iloc[6]), "mov_rot_int_i": s(row.iloc[7]),
                             "mov_dorsi_d": s(row.iloc[8]), "mov_dorsi_i": s(row.iloc[9]),
-                            "cmj_bi": s(row.iloc[10]), "cmj_uni_d": s(row.iloc[11]), "cmj_uni_i": s(row.iloc[12]),
-                            "sh_d": s(row.iloc[13]), "sh_i": s(row.iloc[14]),
-                            "iso_ext_d": s(row.iloc[15]), "iso_ext_i": s(row.iloc[16]),
-                            "iso_flx_d": s(row.iloc[17]), "iso_flx_i": s(row.iloc[18]),
-                            "iso_add_d": s(row.iloc[19]), "iso_add_i": s(row.iloc[20]),
+                            "sj_bi": s(row.iloc[10]), "cmj_bi": s(row.iloc[11]), "cmj_uni_d": s(row.iloc[12]), "cmj_uni_i": s(row.iloc[13]),
+                            "sh_d": s(row.iloc[14]), "sh_i": s(row.iloc[15]),
+                            "iso_ext_d": s(row.iloc[16]), "iso_ext_i": s(row.iloc[17]),
+                            "iso_flx_d": s(row.iloc[18]), "iso_flx_i": s(row.iloc[19]),
+                            "iso_add_d": s(row.iloc[20]), "iso_add_i": s(row.iloc[21]),
                             "rm_sq": float(rm_sq),
                             "perfil_sq": {"kg": p_sq, "vel": v_sq},
-                            "comentarios": str(row.iloc[31]) if len(row.index) > 31 and not pd.isna(row.iloc[31]) else "Importado desde Excel."
+                            "comentarios": str(row.iloc[32]) if len(row.index) > 32 and not pd.isna(row.iloc[32]) else "Importado desde Excel."
                         }
                         st.session_state.val_rom.append(nuevo_test)
                         registros_exitosos += 1
@@ -492,7 +517,7 @@ with tab_nuevo:
                         st.success(f"✅ ¡Se han importado {registros_exitosos} valoraciones correctamente!")
                         st.rerun()
                 except Exception as e:
-                    st.error(f"Error general al procesar el Excel. Asegúrate de tener las 32 columnas. Detalle técnico: {e}")
+                    st.error(f"Error general al procesar el Excel. Asegúrate de tener las 33 columnas. Detalle técnico: {e}")
 
 # ==========================================
 # PESTAÑA 3: TABLA DE REGISTROS Y GESTIÓN
@@ -517,7 +542,7 @@ with tab_reg:
             'fecha': 'Fecha', 'jugador': 'Deportista', 'lesion': 'Lesión', 'peso_corporal': 'Peso (kg)',
             'mov_rot_ext_d': 'Rot. Ext D', 'mov_rot_ext_i': 'Rot. Ext I', 'mov_rot_int_d': 'Rot. Int D', 'mov_rot_int_i': 'Rot. Int I', 
             'mov_dorsi_d': 'Dorsi. D', 'mov_dorsi_i': 'Dorsi. I',
-            'cmj_bi': 'CMJ Bi', 'cmj_uni_d': 'CMJ Uni D', 'cmj_uni_i': 'CMJ Uni I', 'sh_d': 'Salto Horiz D', 'sh_i': 'Salto Horiz I',
+            'sj_bi': 'SJ Bi', 'cmj_bi': 'CMJ Bi', 'cmj_uni_d': 'CMJ Uni D', 'cmj_uni_i': 'CMJ Uni I', 'sh_d': 'Salto Horiz D', 'sh_i': 'Salto Horiz I',
             'iso_ext_d': 'Iso Ext D (N)', 'iso_ext_i': 'Iso Ext I (N)', 'iso_flx_d': 'Iso Flex D (N)', 'iso_flx_i': 'Iso Flex I (N)',
             'iso_add_d': 'Iso Add D (N)', 'iso_add_i': 'Iso Add I (N)', 'rm_sq': '1RM Sentadilla (kg)', 'comentarios': 'Comentarios'
         }
