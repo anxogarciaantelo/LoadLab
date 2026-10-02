@@ -168,12 +168,12 @@ with tab_informes:
             st.markdown("---")
             st.markdown("#### 🦘 Salto y Perfil Vectorial")
             cs1, cs2, cs3, cs4 = st.columns(4)
-            with cs1: tarjeta_kpi("SJ Bilateral", f"{v_data.get('sj_bi', 0)} cm")
+            with cs1: tarjeta_kpi("Salto Horiz. Bilateral", f"{v_data.get('sh_bi', 0)} cm")
             with cs2: tarjeta_kpi("CMJ Bilateral", f"{v_data.get('cmj_bi', 0)} cm")
             with cs3: tarjeta_kpi_doble("CMJ Unilateral", f"{v_data.get('cmj_uni_d', 0)} cm", f"{v_data.get('cmj_uni_i', 0)} cm")
-            with cs4: tarjeta_kpi_doble("Salto Horizontal", f"{v_data.get('sh_d', 0)} cm", f"{v_data.get('sh_i', 0)} cm")
+            with cs4: tarjeta_kpi_doble("Salto Horiz. Unilateral", f"{v_data.get('sh_d', 0)} cm", f"{v_data.get('sh_i', 0)} cm")
             
-            sj_bi = safe_float(v_data.get('sj_bi', 0))
+            sh_bi = safe_float(v_data.get('sh_bi', 0))
             cmj_bi = safe_float(v_data.get('cmj_bi', 0))
             cmj_d, cmj_i = v_data.get('cmj_uni_d', 0), v_data.get('cmj_uni_i', 0)
             
@@ -185,26 +185,17 @@ with tab_informes:
             elif dbl < 0: dbl_txt = f"🟡 {dbl}% (Adecuado)"
             else: dbl_txt = f"🔴 {dbl}% (Déficit Bilateral)"
             
-            sh_promedio = (safe_float(v_data.get('sh_d', 0)) + safe_float(v_data.get('sh_i', 0))) / 2
-            cmj_uni_promedio = cmj_uni_sum / 2
-            ratio_vectores = round(sh_promedio / cmj_uni_promedio, 2) if cmj_uni_promedio > 0 else 0
+            ratio_vectores = round(sh_bi / cmj_bi, 2) if cmj_bi > 0 else 0
             
             if ratio_vectores > 4.5: perfil_vector = "🏃 Dominancia Horizontal (Acelerador)"
             elif ratio_vectores >= 3.5 and ratio_vectores <= 4.5: perfil_vector = "⚖️ Perfil Equilibrado"
             elif ratio_vectores > 0 and ratio_vectores < 3.5: perfil_vector = "🚀 Dominancia Vertical (Velocidad Punta)"
             else: perfil_vector = "Datos insuficientes"
 
-            eur = round(cmj_bi / sj_bi, 2) if sj_bi > 0 else 0
-            if eur > 1.15: eur_txt = f"🟢 {eur} (Excelente elasticidad)"
-            elif eur >= 1.05: eur_txt = f"🟡 {eur} (Aceptable)"
-            elif eur > 0: eur_txt = f"🔴 {eur} (Déficit elástico)"
-            else: eur_txt = "Sin datos"
-            
-            ca1, ca2, ca3, ca4 = st.columns(4)
+            ca1, ca2, ca3 = st.columns(3)
             ca1.info(f"**Asimetría Vertical:**\n{badge_asi_detallado(asi_cmj, cmj_d, cmj_i)}")
             ca2.info(f"**Déficit Bilateral (BLD):**\n{dbl_txt}")
             ca3.info(f"**Ratio Vectores (H/V):** {ratio_vectores}\n{perfil_vector}")
-            ca4.info(f"**Índice Utilización Excéntrica (EUR):**\n{eur_txt}")
 
             st.markdown("---")
             st.markdown("#### ⚡ Fuerza Máxima Isométrica y Fuerza Relativa")
@@ -432,7 +423,7 @@ with tab_nuevo:
                 st.markdown("---")
                 st.markdown("#### 🦘 2. Test de Salto (cm)")
                 cs1, cs2, cs3, cs4, cs5, cs6 = st.columns(6)
-                with cs1: sj_bi = st.number_input("SJ Bilateral", min_value=0.0, value=0.0, step=0.5)
+                with cs1: sh_bi = st.number_input("Salto Horiz. Bi", min_value=0.0, value=0.0, step=1.0)
                 with cs2: cmj_bi = st.number_input("CMJ Bilateral", min_value=0.0, value=0.0, step=0.5)
                 with cs3: cmj_ud = st.number_input("CMJ Uni D.", min_value=0.0, value=0.0, step=0.5)
                 with cs4: cmj_ui = st.number_input("CMJ Uni I.", min_value=0.0, value=0.0, step=0.5)
@@ -476,8 +467,8 @@ with tab_nuevo:
                         "id": str(uuid.uuid4()), "jugador": jugador_sel, "fecha": str(fecha_test), 
                         "lesion": lesion, "peso_corporal": float(peso),
                         "mov_rot_ext_d": mov_re_d, "mov_rot_ext_i": mov_re_i, "mov_rot_int_d": mov_ri_d, "mov_rot_int_i": mov_ri_i,
-                        "mov_dorsi_d": mov_dor_d, "mov_dorsi_i": mov_dor_i,
-                        "sj_bi": sj_bi, "cmj_bi": cmj_bi, "cmj_uni_d": cmj_ud, "cmj_uni_i": cmj_ui, "sh_d": sh_d, "sh_i": sh_i,
+                                                "mov_dorsi_d": mov_dor_d, "mov_dorsi_i": mov_dor_i,
+                        "sh_bi": sh_bi, "cmj_bi": cmj_bi, "cmj_uni_d": cmj_ud, "cmj_uni_i": cmj_ui, "sh_d": sh_d, "sh_i": sh_i,
                         "iso_ext_d": iso_ext_d, "iso_ext_i": iso_ext_i, "iso_flx_d": iso_flx_d, "iso_flx_i": iso_flx_i, "iso_add_d": iso_add_d, "iso_add_i": iso_add_i,
                         "rm_sq": float(rm_sq), "perfil_sq": {"kg": p_sq, "vel": v_sq}, "comentarios": comentarios
                     }
@@ -488,7 +479,7 @@ with tab_nuevo:
 
         else:
             st.markdown("#### 📁 Importación Masiva (Excel)")
-            st.info("⚠️ El Excel debe tener la Fila 1 de encabezados y a partir de la Fila 2 los datos en **este orden exacto** (33 columnas):\n\nJugador | Fecha | Lesión (Sí/No) | Peso | Rot. Ext D | Rot. Ext I | Rot. Int D | Rot. Int I | Dorsiflexión D | Dorsiflexión I | SJ Bi | CMJ Bi | CMJ Uni D | CMJ Uni I | Salto Horiz. D | Salto Horiz. I | Iso Ext D | Iso Ext I | Iso Flx D | Iso Flx I | Iso Add D | Iso Add I | S1(kg) | S1(m/s) | S2(kg) | S2(m/s) | S3(kg) | S3(m/s) | S4(kg) | S4(m/s) | S5(kg) | S5(m/s) | Comentarios")
+            st.info("⚠️ El Excel debe tener la Fila 1 de encabezados y a partir de la Fila 2 los datos en **este orden exacto** (33 columnas):\n\nJugador | Fecha | Lesión (Sí/No) | Peso | Rot. Ext D | Rot. Ext I | Rot. Int D | Rot. Int I | Dorsiflexión D | Dorsiflexión I | Salto Horiz. Bi | CMJ Bi | CMJ Uni D | CMJ Uni I | Salto Horiz. D | Salto Horiz. I | Iso Ext D | Iso Ext I | Iso Flx D | Iso Flx I | Iso Add D | Iso Add I | S1(kg) | S1(m/s) | S2(kg) | S2(m/s) | S3(kg) | S3(m/s) | S4(kg) | S4(m/s) | S5(kg) | S5(m/s) | Comentarios")
 
             archivo = st.file_uploader("Sube tu plantilla Excel (.xlsx)", type=["xlsx"])
             
@@ -524,7 +515,7 @@ with tab_nuevo:
                             "mov_rot_ext_d": s(row.iloc[4]), "mov_rot_ext_i": s(row.iloc[5]),
                             "mov_rot_int_d": s(row.iloc[6]), "mov_rot_int_i": s(row.iloc[7]),
                             "mov_dorsi_d": s(row.iloc[8]), "mov_dorsi_i": s(row.iloc[9]),
-                            "sj_bi": s(row.iloc[10]), "cmj_bi": s(row.iloc[11]), "cmj_uni_d": s(row.iloc[12]), "cmj_uni_i": s(row.iloc[13]),
+                            "sh_bi": s(row.iloc[10]), "cmj_bi": s(row.iloc[11]), "cmj_uni_d": s(row.iloc[12]), "cmj_uni_i": s(row.iloc[13]),
                             "sh_d": s(row.iloc[14]), "sh_i": s(row.iloc[15]),
                             "iso_ext_d": s(row.iloc[16]), "iso_ext_i": s(row.iloc[17]),
                             "iso_flx_d": s(row.iloc[18]), "iso_flx_i": s(row.iloc[19]),
@@ -566,7 +557,7 @@ with tab_reg:
             'fecha': 'Fecha', 'jugador': 'Deportista', 'lesion': 'Lesión', 'peso_corporal': 'Peso (kg)',
             'mov_rot_ext_d': 'Rot. Ext D', 'mov_rot_ext_i': 'Rot. Ext I', 'mov_rot_int_d': 'Rot. Int D', 'mov_rot_int_i': 'Rot. Int I', 
             'mov_dorsi_d': 'Dorsi. D', 'mov_dorsi_i': 'Dorsi. I',
-            'sj_bi': 'SJ Bi', 'cmj_bi': 'CMJ Bi', 'cmj_uni_d': 'CMJ Uni D', 'cmj_uni_i': 'CMJ Uni I', 'sh_d': 'Salto Horiz D', 'sh_i': 'Salto Horiz I',
+            'sh_bi': 'Salto Horiz Bi', 'cmj_bi': 'CMJ Bi', 'cmj_uni_d': 'CMJ Uni D', 'cmj_uni_i': 'CMJ Uni I', 'sh_d': 'Salto Horiz D', 'sh_i': 'Salto Horiz I',
             'iso_ext_d': 'Iso Ext D (N)', 'iso_ext_i': 'Iso Ext I (N)', 'iso_flx_d': 'Iso Flex D (N)', 'iso_flx_i': 'Iso Flex I (N)',
             'iso_add_d': 'Iso Add D (N)', 'iso_add_i': 'Iso Add I (N)', 'rm_sq': '1RM Sentadilla (kg)', 'comentarios': 'Comentarios'
         }
