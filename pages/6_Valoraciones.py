@@ -310,8 +310,10 @@ with tab_informes:
                 x_trend = np.linspace(min(kgs_sistema), max(kgs_sistema), 50)
                 fig_sq.add_scatter(x=x_trend, y=p(x_trend), mode='lines', name='Tendencia Real', line=dict(color='#1c1c1e', width=2))
                 
-                # Añadir la línea óptima teórica para comparación visual
-                y_opt = v0_opt + (s_fv_opt / 9.81 * peso_actual) * x_trend
+                # Añadir la línea óptima teórica adaptada a Carga-Velocidad (kg vs m/s)
+                carga_max_teorica = (f0_opt * peso_actual) / 9.81
+                slope_opt_kg = -v0_opt / carga_max_teorica if carga_max_teorica > 0 else 0
+                y_opt = v0_opt + (slope_opt_kg * x_trend)
                 fig_sq.add_scatter(x=x_trend, y=y_opt, mode='lines', name='Perfil Óptimo', line=dict(dash='dash', color='#10833d', width=2))
                 
                 fig_sq.update_layout(height=300, margin=dict(l=20, r=20, t=40, b=20), legend=dict(yanchor="top", y=0.99, xanchor="right", x=0.99))
