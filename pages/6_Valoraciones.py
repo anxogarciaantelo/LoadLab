@@ -342,7 +342,10 @@ with tab_informes:
                     df_eq = pd.DataFrame(valoraciones)
                     val_ref = {}
                     for col in ['peso_corporal', 'cmj_bi', 'sh_bi', 'sj_bi', 'rm_sq', 'rm_sentadilla', 'iso_ext_d', 'iso_ext_i', 'iso_flx_d', 'iso_flx_i', 'iso_add_d', 'iso_add_i']:
-                        val_ref[col] = df_eq[col].apply(safe_float).mean()
+                        if col in df_eq.columns:
+                            val_ref[col] = df_eq[col].apply(safe_float).mean()
+                        else:
+                            val_ref[col] = 0.0
                     peso_ini = val_ref['peso_corporal'] if val_ref['peso_corporal'] > 0 else 70.0
                     label_ref = "Media del Equipo"
                 else:
