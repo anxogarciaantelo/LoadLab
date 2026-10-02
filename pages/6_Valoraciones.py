@@ -261,7 +261,7 @@ with tab_informes:
             vels = np.array([v for k, v in zip(p_sq_data.get('kg', []), p_sq_data.get('vel', [])) if k > 0 and v > 0])
             
             if len(kgs_barra) > 1:
-                # 1. Fuerza real del sistema
+                # 1. Fuerza real del sistema (Barra + Peso corporal parcial)
                 kgs_sistema = kgs_barra + (peso_actual * 0.89)
                 z = np.polyfit(kgs_sistema, vels, 1)
                 p = np.poly1d(z)
@@ -272,25 +272,28 @@ with tab_informes:
                 ss_tot = np.sum((vels - np.mean(vels))**2)
                 r2 = 1 - (ss_res / ss_tot) if ss_tot > 0 else 0
                 
-                # 2. Variables teóricas del deportista
+                # 2. Variables teóricas del deportista (kg y m/s)
                 v0 = intercept
                 f0_kg_sistema = -intercept / slope if slope < 0 else 0
                 f0_kg_barra = max(f0_kg_sistema - (peso_actual * 0.89), 0)
-                f0_rel = f0_kg_sistema / peso_actual if peso_actual > 0 else 0
+                
+                # === CORRECCIÓN CIENTÍFICA: CONVERSIÓN A NEWTONS PARA SAMOZINO ===
+                # Samozino usa Fuerza Relativa en N/kg, no en kg. 
+                f0_rel_N = (f0_kg_sistema * 9.81) / peso_actual if peso_actual > 0 else 0
                 
                 # 3. PERFIL ÓPTIMO DE SAMOZINO Y DESEQUILIBRIO F-V
-                pmax_rel = (f0_rel * v0) / 4
-                hpo = 0.4  # Distancia de empuje estándar estimada (m) para sentadilla
+                pmax_rel_W = (f0_rel_N * v0) / 4
+                hpo = 0.4  # Distancia de empuje estimada (m)
                 
-                # Cálculo de la pendiente teórica perfecta para este jugador
-                f0_opt = 2 * (pmax_rel / hpo) ** 0.5
-                v0_opt = 2 * (pmax_rel * hpo) ** 0.5
-                s_fv_opt = -(f0_opt / v0_opt) if v0_opt > 0 else -1
+                # Cálculo óptimo (en Newtons)
+                f0_opt_N = 2 * (pmax_rel_W / hpo) ** 0.5
+                v0_opt = 2 * (pmax_rel_W * hpo) ** 0.5
                 
-                # Pendiente real del jugador (en N/kg/m/s para equiparar a la literatura)
-                s_fv_actual = (slope * 9.81) / peso_actual 
+                # Pendientes Sfv
+                s_fv_opt = -(f0_opt_N / v0_opt) if v0_opt > 0 else -1
+                s_fv_actual = -(f0_rel_N / v0) if v0 > 0 else -1
                 
-                # Porcentaje exacto de desequilibrio
+                # Porcentaje de desequilibrio
                 desequilibrio_fv = ((s_fv_actual / s_fv_opt) - 1) * 100 if s_fv_opt != 0 else 0
                 
                 if desequilibrio_fv < -10:
@@ -298,27 +301,39 @@ with tab_informes:
                     pauta_fv = "Priorizar cargas pesadas (>80% 1RM)."
                 elif desequilibrio_fv > 10:
                     cuadrante = f"🟡 Déficit de Velocidad (+{desequilibrio_fv:.1f}%)"
-                    pauta_fv = "Priorizar trabajo balístico y pliometría pura."
+                    pauta_fv = "Priorizar trabajo balístico y pliometría."
                 else:
                     signo = "+" if desequilibrio_fv > 0 else ""
                     cuadrante = f"🟢 Perfil Óptimo ({signo}{desequilibrio_fv:.1f}%)"
-                    pauta_fv = "Entrenamiento mixto para desplazar la curva completa."
+                    pauta_fv = "Entrenamiento mixto equilibrado."
 
-                # Gráfico
+                # 4. GRÁFICO CORREGIDO (Desde el Origen 0,0)
                 fig_sq = px.scatter(x=kgs_sistema, y=vels, labels={'x': 'Carga del Sistema (kg)', 'y': 'Velocidad (m/s)'}, title="Perfil F-V (Masa del Sistema)")
                 fig_sq.update_traces(marker=dict(size=10, color='#dc2626'))
-                x_trend = np.linspace(min(kgs_sistema), max(kgs_sistema), 50)
-                fig_sq.add_scatter(x=x_trend, y=p(x_trend), mode='lines', name='Tendencia Real', line=dict(color='#1c1c1e', width=2))
                 
-                # Añadir la línea óptima teórica adaptada a Carga-Velocidad (kg vs m/s)
-                carga_max_teorica = (f0_opt * peso_actual) / 9.81
-                slope_opt_kg = -v0_opt / carga_max_teorica if carga_max_teorica > 0 else 0
-                y_opt = v0_opt + (slope_opt_kg * x_trend)
-                fig_sq.add_scatter(x=x_trend, y=y_opt, mode='lines', name='Perfil Óptimo', line=dict(dash='dash', color='#10833d', width=2))
+                # Convertimos F0 óptimo de N/kg de vuelta a kg totales para poder dibujarlo en el mismo eje X
+                f0_opt_kg = (f0_opt_N * peso_actual) / 9.81
                 
-                fig_sq.update_layout(height=300, margin=dict(l=20, r=20, t=40, b=20), legend=dict(yanchor="top", y=0.99, xanchor="right", x=0.99))
+                # Línea real (hasta su F0)
+                x_trend_real = np.linspace(0, f0_kg_sistema, 50)
+                fig_sq.add_scatter(x=x_trend_real, y=p(x_trend_real), mode='lines', name='Tendencia Real', line=dict(color='#1c1c1e', width=2))
                 
-                c_fig1, c_fig2 = st.columns([1, 1])
+                # Línea óptima (hasta su F0 óptimo)
+                slope_opt_kg = -v0_opt / f0_opt_kg if f0_opt_kg > 0 else 0
+                x_trend_opt = np.linspace(0, f0_opt_kg, 50)
+                y_opt = v0_opt + (slope_opt_kg * x_trend_opt)
+                fig_sq.add_scatter(x=x_trend_opt, y=y_opt, mode='lines', name='Perfil Óptimo', line=dict(dash='dash', color='#10833d', width=2))
+                
+                # Forzar origen 0,0 para evitar que la gráfica se distorsione o baje a negativos
+                max_f0_plot = max(f0_kg_sistema, f0_opt_kg) if max(f0_kg_sistema, f0_opt_kg) > 0 else max(kgs_sistema) * 1.5
+                max_v0_plot = max(v0, v0_opt) if max(v0, v0_opt) > 0 else max(vels) * 1.5
+                
+                fig_sq.update_xaxes(range=[0, max_f0_plot * 1.05], zeroline=True, zerolinewidth=1, zerolinecolor='#e4e4e7')
+                fig_sq.update_yaxes(range=[0, max_v0_plot * 1.05], zeroline=True, zerolinewidth=1, zerolinecolor='#e4e4e7')
+                
+                fig_sq.update_layout(height=350, margin=dict(l=20, r=20, t=40, b=20), legend=dict(yanchor="top", y=0.99, xanchor="right", x=0.99))
+                
+                c_fig1, c_fig2 = st.columns([1.2, 1])
                 with c_fig1:
                     st.plotly_chart(fig_sq, use_container_width=True)
                 with c_fig2:
