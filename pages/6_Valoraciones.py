@@ -205,7 +205,7 @@ with tab_informes:
             with ca1: tarjeta_kpi("Asimetría Vertical", f"{asi_cmj:.1f}%", badge_asi_detallado(asi_cmj, cmj_d, cmj_i).split(' ', 1)[1])
             with ca2: tarjeta_kpi("Asimetría Horizontal", f"{asi_sh:.1f}%", badge_asi_detallado(asi_sh, sh_d, sh_i).split(' ', 1)[1])
             with ca3: tarjeta_kpi("Déficit Bilateral (BLD)", f"{dbl}%", dbl_txt, tooltip="Óptimo: < -10% | Adecuado: < 0% | Déficit: > 0%")
-            with ca4: tarjeta_kpi("Ratio Vectores (H/V)", str(ratio_vectores), perfil_vector, tooltip="Dom. Vertical: < 3.5 | Equilibrado: 3.5 - 4.5 | Dom. Horizontal: > 4.5"))
+            with ca4: tarjeta_kpi("Ratio Vectores (H/V)", str(ratio_vectores), perfil_vector, tooltip="Dom. Vertical: < 3.5 | Equilibrado: 3.5 - 4.5 | Dom. Horizontal: > 4.5")
 
             st.markdown("---")
             st.markdown("#### ⚡ Fuerza Máxima Isométrica y Fuerza Relativa")
