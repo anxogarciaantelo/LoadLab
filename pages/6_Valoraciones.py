@@ -342,7 +342,34 @@ with tab_informes:
                 with c_fig2:
                     fiabilidad_sq = "🟢 Excelente" if r2 >= 0.95 else ("🟡 Aceptable" if r2 >= 0.90 else "🔴 Pobre (Falta intención)")
                     st.info(f"**Diagnóstico:** {cuadrante}\n\n**V0:** {round(v0, 2)} m/s | **F0 (Barra):** {round(f0_kg_barra, 1)} kg\n\n**F0 Relativa:** {round(f0_rel_N, 1)} N/kg\n\n**Fiabilidad del test ($R^2$):** {round(r2, 3)} ({fiabilidad_sq})\n\n*{pauta_fv}*")
-
+            st.markdown("#### 🧮 Estimaciones de Cargas y Ejercicios Complementarios")
+            if sq_rm > 0:
+                pm_rm = round(sq_rm * 1.15, 1)
+                ht_rm = round(sq_rm * 1.25, 1)
+                
+                # Tabla Markdown para los ejercicios principales
+                st.markdown(f"""
+                | Ejercicio Principal | 1RM (100%) | 80% | 60% | 40% |
+                | :--- | :---: | :---: | :---: | :---: |
+                | **Sentadilla** | **{sq_rm} kg** | {round(sq_rm*0.8, 1)} kg | {round(sq_rm*0.6, 1)} kg | {round(sq_rm*0.4, 1)} kg |
+                | **Peso Muerto** *(115% SQ)* | **{pm_rm} kg** | {round(pm_rm*0.8, 1)} kg | {round(pm_rm*0.6, 1)} kg | {round(pm_rm*0.4, 1)} kg |
+                | **Empuje de Cadera** *(125% SQ)* | **{ht_rm} kg** | {round(ht_rm*0.8, 1)} kg | {round(ht_rm*0.6, 1)} kg | {round(ht_rm*0.4, 1)} kg |
+                """)
+                
+                # Lista de ejercicios accesorios
+                st.markdown("**Estimación 1RM en Ejercicios Complementarios:**")
+                
+                kettlebell_recomendada = "32-40 kg" if sq_rm >= 130 else ("24-32 kg" if sq_rm >= 90 else "16-24 kg")
+                
+                st.markdown(f"""
+                * **Peso Muerto Rumano (RDL):** {round(sq_rm * 0.90, 1)} kg *(90% SQ)*
+                * **Sentadilla Búlgara:** {round(sq_rm * 0.50, 1)} kg *(50% SQ - Por pierna)*
+                * **Zancada / Lunge:** {round(sq_rm * 0.45, 1)} kg *(45% SQ - Por pierna)*
+                * **Kettlebell Swing (Pesado):** No aplica 1RM. Carga sugerida por nivel de fuerza: **{kettlebell_recomendada}**
+                """)
+            else:
+                st.info("Registra un 1RM en Sentadilla para calcular las estimaciones de cargas.")
+                
             st.markdown("---")
             st.markdown("#### 🧭 Perfil Evolutivo y Asimetrías")
             
@@ -369,7 +396,9 @@ with tab_informes:
                     val_ref = {}
                     for col in ['peso_corporal', 'cmj_bi', 'sh_bi', 'sj_bi', 'rm_sq', 'rm_sentadilla', 'iso_ext_d', 'iso_ext_i', 'iso_flx_d', 'iso_flx_i', 'iso_add_d', 'iso_add_i']:
                         if col in df_eq.columns:
-                            val_ref[col] = df_eq[col].apply(safe_float).mean()
+                            # Filtra para hacer la media solo con valores mayores a 0
+                            valores_validos = df_eq[col].apply(safe_float)
+                            val_ref[col] = valores_validos[valores_validos > 0].mean() if not valores_validos[valores_validos > 0].empty else 0.0
                         else:
                             val_ref[col] = 0.0
                     peso_ini = val_ref['peso_corporal'] if val_ref['peso_corporal'] > 0 else 70.0
