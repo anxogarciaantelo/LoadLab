@@ -67,16 +67,42 @@ def calc_asimetria(der, izq):
 
 def calcular_rm_cientifico(pesos, vels, peso_corp):
     validas = [(pesos[i], vels[i]) for i in range(len(pesos)) if vels[i] > 0 and pesos[i] > 0]
+    
     if len(validas) > 1:
-        kgs_sistema = np.array([x[0] + (peso_corp * 0.89) for x in validas])
         v_array = np.array([x[1] for x in validas])
+        kgs_barra = np.array([x[0] for x in validas])
+        
+        # Condición para saltar al método normativo: Vel mínima muy alta o puntos muy juntos
+        rango_v = max(v_array) - min(v_array)
+        if min(v_array) > 0.85 or rango_v < 0.15:
+            # Método 2: Fórmula genérica VBT sobre la carga más pesada
+            idx_max_kg = np.argmax(kgs_barra)
+            kg_max = kgs_barra[idx_max_kg]
+            v_max_kg = v_array[idx_max_kg]
+            
+            # Ecuación normativa estándar para sentadilla (100% a 0.3 m/s | 60% a 1.0 m/s)
+            porcentaje_rm = 117.14 - (57.14 * v_max_kg)
+            porcentaje_rm = max(porcentaje_rm, 10.0) # Límite de seguridad
+            
+            rm_estimado = kg_max / (porcentaje_rm / 100.0)
+            return round(rm_estimado, 1)
+
+        # Método 1 (Original): Regresión lineal individual con masa del sistema
+        kgs_sistema = np.array([x[0] + (peso_corp * 0.89) for x in validas])
         z = np.polyfit(kgs_sistema, v_array, 1)
         slope, intercept = z[0], z[1]
+        
         rm_sq_sistema = (0.30 - intercept) / slope if slope < 0 else 0
         rm_sq_barra = round(rm_sq_sistema - (peso_corp * 0.89), 1) if rm_sq_sistema > 0 else 0.0
         return max(rm_sq_barra, 0.0)
+        
     elif len(validas) == 1:
-        return round(validas[0][0], 1)
+        # Si solo hay un levantamiento, aplicamos directamente la normativa
+        kg_unico = validas[0][0]
+        v_unica = validas[0][1]
+        porcentaje_rm = 117.14 - (57.14 * v_unica)
+        return round(kg_unico / (max(porcentaje_rm, 10.0) / 100.0), 1)
+        
     return 0.0
 
 def tarjeta_kpi(titulo, valor, subtitulo="", tooltip=""):
