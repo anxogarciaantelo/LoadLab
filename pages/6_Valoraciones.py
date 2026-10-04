@@ -375,41 +375,41 @@ with tab_informes:
                 fig_rad.update_layout(polar=dict(radialaxis=dict(visible=False, range=[0, 100])), height=350, margin=dict(l=20, r=20, t=30, b=20), legend=dict(yanchor="top", y=-0.1, xanchor="center", x=0.5, orientation="h"))
                 st.plotly_chart(fig_rad, use_container_width=True)
                 
-                with col_tor:
-                pruebas_uni = [
-                    ("Mov: Rot. Ext Cadera", v_data.get('mov_rot_ext_d',0), v_data.get('mov_rot_ext_i',0)),
-                    ("Mov: Rot. Int Cadera", v_data.get('mov_rot_int_d',0), v_data.get('mov_rot_int_i',0)),
-                    ("Mov: Dorsiflexión", v_data.get('mov_dorsi_d',0), v_data.get('mov_dorsi_i',0)),
-                    ("CMJ Unilateral", v_data.get('cmj_uni_d',0), v_data.get('cmj_uni_i',0)),
-                    ("Salto Horizontal", v_data.get('sh_d',0), v_data.get('sh_i',0)),
-                    ("Fuerza ISO Cuádriceps", v_data.get('iso_ext_d',0), v_data.get('iso_ext_i',0)),
-                    ("Fuerza ISO Isquiosurales", v_data.get('iso_flx_d',0), v_data.get('iso_flx_i',0)),
-                    ("Fuerza ISO Aductores", v_data.get('iso_add_d',0), v_data.get('iso_add_i',0))
-                ]
-                
-                val_t, txt_t, col_t, pr_t = [], [], [], []
-                for n, der, izq in pruebas_uni:
-                    d, i_val = safe_float(der), safe_float(izq)
-                    max_v = max(d, i_val)
-                    if max_v == 0:
-                        val_t.append(0); txt_t.append("0%"); col_t.append('#64748b'); pr_t.append(n)
+            with col_tor:
+            pruebas_uni = [
+                ("Mov: Rot. Ext Cadera", v_data.get('mov_rot_ext_d',0), v_data.get('mov_rot_ext_i',0)),
+                ("Mov: Rot. Int Cadera", v_data.get('mov_rot_int_d',0), v_data.get('mov_rot_int_i',0)),
+                ("Mov: Dorsiflexión", v_data.get('mov_dorsi_d',0), v_data.get('mov_dorsi_i',0)),
+                ("CMJ Unilateral", v_data.get('cmj_uni_d',0), v_data.get('cmj_uni_i',0)),
+                ("Salto Horizontal", v_data.get('sh_d',0), v_data.get('sh_i',0)),
+                ("Fuerza ISO Cuádriceps", v_data.get('iso_ext_d',0), v_data.get('iso_ext_i',0)),
+                ("Fuerza ISO Isquiosurales", v_data.get('iso_flx_d',0), v_data.get('iso_flx_i',0)),
+                ("Fuerza ISO Aductores", v_data.get('iso_add_d',0), v_data.get('iso_add_i',0))
+            ]
+            
+            val_t, txt_t, col_t, pr_t = [], [], [], []
+            for n, der, izq in pruebas_uni:
+                d, i_val = safe_float(der), safe_float(izq)
+                max_v = max(d, i_val)
+                if max_v == 0:
+                    val_t.append(0); txt_t.append("0%"); col_t.append('#64748b'); pr_t.append(n)
+                else:
+                    diff = (abs(d - i_val) / max_v) * 100
+                    if d > i_val:
+                        val_t.append(diff); txt_t.append(f"{diff:.1f}%"); col_t.append('#10833d'); pr_t.append(n)
+                    elif i_val > d:
+                        val_t.append(-diff); txt_t.append(f"{diff:.1f}%"); col_t.append('#09274e'); pr_t.append(n)
                     else:
-                        diff = (abs(d - i_val) / max_v) * 100
-                        if d > i_val:
-                            val_t.append(diff); txt_t.append(f"{diff:.1f}%"); col_t.append('#10833d'); pr_t.append(n)
-                        elif i_val > d:
-                            val_t.append(-diff); txt_t.append(f"{diff:.1f}%"); col_t.append('#09274e'); pr_t.append(n)
-                        else:
-                            val_t.append(0); txt_t.append("0%"); col_t.append('#64748b'); pr_t.append(n)
-                            
-                df_tor = pd.DataFrame({'Prueba': pr_t, 'Asimetria': val_t, 'Texto': txt_t, 'Color': col_t}).iloc[::-1]
-                fig_tor = go.Figure()
-                fig_tor.add_trace(go.Bar(y=df_tor['Prueba'], x=df_tor['Asimetria'], orientation='h', marker_color=df_tor['Color'], text=df_tor['Texto'], textposition='outside'))
-                max_x = max(abs(df_tor['Asimetria']).max() + 8, 20)
-                fig_tor.update_layout(title="Asimetrías Clínicas", xaxis=dict(title="<-- Dom IZQ (Azul)  |  Dom DER (Verde) -->", range=[-max_x, max_x]), height=350, margin=dict(l=10, r=10, t=40, b=10), showlegend=False)
-                fig_tor.add_vline(x=10, line_width=1.5, line_dash="dash", line_color="#dc2626")
-                fig_tor.add_vline(x=-10, line_width=1.5, line_dash="dash", line_color="#dc2626")
-                st.plotly_chart(fig_tor, use_container_width=True)
+                        val_t.append(0); txt_t.append("0%"); col_t.append('#64748b'); pr_t.append(n)
+                        
+            df_tor = pd.DataFrame({'Prueba': pr_t, 'Asimetria': val_t, 'Texto': txt_t, 'Color': col_t}).iloc[::-1]
+            fig_tor = go.Figure()
+            fig_tor.add_trace(go.Bar(y=df_tor['Prueba'], x=df_tor['Asimetria'], orientation='h', marker_color=df_tor['Color'], text=df_tor['Texto'], textposition='outside'))
+            max_x = max(abs(df_tor['Asimetria']).max() + 8, 20)
+            fig_tor.update_layout(title="Asimetrías Clínicas", xaxis=dict(title="<-- Dom IZQ (Azul)  |  Dom DER (Verde) -->", range=[-max_x, max_x]), height=350, margin=dict(l=10, r=10, t=40, b=10), showlegend=False)
+            fig_tor.add_vline(x=10, line_width=1.5, line_dash="dash", line_color="#dc2626")
+            fig_tor.add_vline(x=-10, line_width=1.5, line_dash="dash", line_color="#dc2626")
+            st.plotly_chart(fig_tor, use_container_width=True)
 # ==========================================
 # PESTAÑA 2: AÑADIR NUEVA VALORACIÓN
 # ==========================================
