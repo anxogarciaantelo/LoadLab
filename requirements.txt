@@ -9,5 +9,3 @@ supabase
 pillow
 geopy
 requests
-xgboost
-scikit-learn
