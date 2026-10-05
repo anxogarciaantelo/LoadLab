@@ -13,7 +13,7 @@ from PIL import Image
 import io
 from fpdf import FPDF
 import tempfile
-
+ 
 # --- NUESTRAS LIBRERÍAS LOCALES ---
 from utils.math_helpers import *
 from utils.pdf_generator import *
