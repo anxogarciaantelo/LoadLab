@@ -4,14 +4,10 @@ numpy
 plotly==5.24.1
 fpdf2
 openpyxl
-kaleido==0.2.1
+kaleido==0.1.0.post1
 supabase
-matplotlib
-google-generativeai
-starlette<0.40.0
 pillow
 geopy
 requests
 xgboost
 scikit-learn
- 
