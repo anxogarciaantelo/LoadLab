@@ -1,10 +1,10 @@
 streamlit
 pandas
 numpy
-plotly==5.24.1
+plotly
 fpdf2
 openpyxl
-kaleido==0.1.0.post1
+kaleido
 supabase
 pillow
 geopy
