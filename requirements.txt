@@ -13,4 +13,3 @@ geopy
 requests
 xgboost
 scikit-learn
-pdfkit==1.0.0
