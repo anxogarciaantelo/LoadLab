@@ -53,8 +53,8 @@ st.title("📊 Valoraciones Condicionales")
 
 tab_informes, tab_nuevo, tab_reg = st.tabs(["📈 Informes de valoraciones", "➕ Añadir Nueva Valoración", "📋 Tabla de registros"])
 
-if "val_rom" not in st.session_state:
-    st.session_state.val_rom = []
+st.session_state.val_rom = []
+guardar_datos(modulo="configuracion")
 
 valoraciones = st.session_state.val_rom
 jugadores = sorted([j["JUGADOR"] for j in st.session_state.get("plantilla", [])])
