@@ -473,12 +473,13 @@ with tab_informes:
                 st.plotly_chart(fig_tor, use_container_width=True)
             # (El código anterior termina donde se dibuja el gráfico fig_tor)
             
+            # --- PEGAR JUSTO DEBAJO DE st.plotly_chart(fig_tor, use_container_width=True) ---
             st.markdown("---")
             st.markdown("#### 🗂️ Descarga Masiva (Toda la Plantilla)")
-            st.caption("Genera un archivo ZIP que contendrá los informes individuales en PDF con el diseño exacto de la plataforma para todos los jugadores evaluados.")
+            st.caption("Genera un archivo ZIP que contendrá los informes individuales en PDF con el diseño idéntico al de la plataforma para todos los jugadores evaluados.")
             
             if st.button("📦 Generar ZIP con valoraciones de todo el equipo", use_container_width=True):
-                with st.status("Generando informes PDF para todo el equipo...", expanded=True) as status:
+                with st.status("Generando informes PDF maquetados para todo el equipo...", expanded=True) as status:
                     zip_buffer = io.BytesIO()
                     
                     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
@@ -486,7 +487,7 @@ with tab_informes:
                         df_eq = pd.DataFrame(valoraciones)
                         
                         for jug_masivo in jugadores_unicos:
-                            st.write(f"Procesando informe de {jug_masivo}...")
+                            st.write(f"Procesando informe maquetado de {jug_masivo}...")
                             vals_j = [v for v in valoraciones if v['jugador'] == jug_masivo]
                             vals_j = sorted(vals_j, key=lambda x: x.get('fecha', ''))
                             for i, v in enumerate(vals_j): v['num_cronologico'] = i + 1
@@ -503,18 +504,34 @@ with tab_informes:
                             v_sq = v_latest.get('perfil_sq', {}).get('vel', [])
                             kgs_barra = np.array([k for k, v in zip(p_sq, v_sq) if k > 0 and v > 0])
                             vels = np.array([v for k, v in zip(p_sq, v_sq) if k > 0 and v > 0])
+                            
+                            v0, f0_kg_sistema, f0_kg_barra, f0_rel_N, r2 = 0, 0, 0, 0, 0
+                            cuadrante, pauta_fv = "Sin datos", ""
+                            
                             if len(kgs_barra) > 1:
                                 kgs_sistema = kgs_barra + (peso_act * 0.89)
                                 z = np.polyfit(kgs_sistema, vels, 1)
                                 p = np.poly1d(z)
                                 f0_kg_sistema = -z[1] / z[0] if z[0] < 0 else 0
                                 v0 = z[1]
-                                fig_sq_m = px.scatter(x=kgs_sistema, y=vels, title="Perfil F-V (Masa del Sistema)")
+                                f0_kg_barra = max(f0_kg_sistema - (peso_act * 0.89), 0)
+                                f0_rel_N = (f0_kg_sistema * 9.81) / peso_act if peso_act > 0 else 0
+                                
+                                ss_res = np.sum((vels - p(kgs_sistema))**2)
+                                ss_tot = np.sum((vels - np.mean(vels))**2)
+                                r2 = 1 - (ss_res / ss_tot) if ss_tot > 0 else 0
+                                
+                                if f0_rel_N >= 25.0 and v0 >= 1.5: cuadrante, pauta_fv = "🟢 Perfil F-V Equilibrado", "Mantenimiento general."
+                                elif f0_rel_N < 25.0 and v0 >= 1.5: cuadrante, pauta_fv = "🔴 Déficit de Fuerza", "Priorizar cargas pesadas (>80% 1RM) y fuerza máxima."
+                                elif f0_rel_N >= 25.0 and v0 < 1.5: cuadrante, pauta_fv = "🟡 Déficit de Velocidad", "Priorizar trabajo de potencia, balísticos y pliometría."
+                                else: cuadrante, pauta_fv = "🔴 Déficit Global", "Requiere mejora integral de fuerza y velocidad."
+                                
+                                fig_sq_m = px.scatter(x=kgs_sistema, y=vels, title="Perfil F-V (Masa del Sistema)", labels={'x': 'Carga del Sistema (kg)', 'y': 'Velocidad (m/s)'})
                                 fig_sq_m.update_traces(marker=dict(size=10, color='#dc2626'))
                                 x_tr = np.linspace(0, f0_kg_sistema, 50)
                                 fig_sq_m.add_scatter(x=x_tr, y=p(x_tr), mode='lines', name='Tendencia Real', line=dict(color='#1c1c1e', width=2))
-                                fig_sq_m.update_xaxes(range=[0, f0_kg_sistema * 1.05], zeroline=True, zerolinecolor='#e4e4e7')
-                                fig_sq_m.update_yaxes(range=[0, v0 * 1.05], zeroline=True, zerolinecolor='#e4e4e7')
+                                fig_sq_m.update_xaxes(range=[0, f0_kg_sistema * 1.05], zeroline=True, zerolinewidth=1, zerolinecolor='#e4e4e7')
+                                fig_sq_m.update_yaxes(range=[0, v0 * 1.05], zeroline=True, zerolinewidth=1, zerolinecolor='#e4e4e7')
                                 fig_sq_m.update_layout(height=350, margin=dict(l=20, r=20, t=40, b=20), showlegend=False)
 
                             def ext_kpis(v_obj, p_ref):
@@ -580,13 +597,16 @@ with tab_informes:
                                     f_obj.write_image(tmp.name, engine="kaleido", width=700, height=350, format="jpg")
                                     img_paths[name] = tmp.name
 
-                            # --- 2. GENERACIÓN DEL PDF MAQUETADO ---
+                            # --- 2. GENERACIÓN DEL PDF MAQUETADO (IGUAL A LA APP) ---
                             pdf = FPDF(orientation='L', unit='mm', format='A4')
                             pdf.set_auto_page_break(auto=True, margin=10)
+                            
                             def cln(t): return str(t).encode('latin-1', 'ignore').decode('latin-1').strip()
+                            def no_emo(t): return cln(str(t)[2:].strip() if len(str(t))>2 and str(t)[0] in '🟢🟡🔴' else str(t))
                             
                             pdf.add_page()
                             
+                            # Cabecera (Nombre + Foto)
                             pdf.set_font("Arial", 'B', 18)
                             pdf.cell(200, 10, cln(jug_masivo.upper()), ln=False)
                             
@@ -600,67 +620,78 @@ with tab_informes:
                                 else:
                                     tmp_foto.write(base64.b64decode(fb64.split(',')[1] if ',' in fb64 else fb64))
                                 tmp_foto.close()
-                                pdf.image(tmp_foto.name, x=250, y=10, w=25)
+                                pdf.image(tmp_foto.name, x=260, y=8, w=22)
                                 os.unlink(tmp_foto.name)
                             
-                            pdf.ln(15)
-
-                            def draw_box(pdf_obj, x, y, w, h, title, val_left, val_right=None, lbl_left="", lbl_right="", bottom_txt=""):
+                            pdf.ln(12)
+                            
+                            # Función auxiliar para dibujar las tarjetas visuales
+                            def draw_card(pdf_obj, x, y, w, h, title, v_left, v_right=None, l_left="", l_right="", b_lbl="", b_val=""):
                                 pdf_obj.set_xy(x, y)
                                 pdf_obj.set_fill_color(255, 255, 255)
                                 pdf_obj.set_draw_color(220, 220, 220)
                                 pdf_obj.cell(w, h, "", border=1, fill=True)
-                                pdf_obj.set_fill_color(220, 38, 38)
-                                pdf_obj.set_xy(x, y)
-                                pdf_obj.cell(2, h, "", border=0, fill=True)
                                 
-                                pdf_obj.set_xy(x+5, y+3)
-                                pdf_obj.set_font("Arial", 'B', 7)
-                                pdf_obj.set_text_color(100, 100, 100)
-                                pdf_obj.cell(w-10, 4, cln(title.upper()), ln=True)
+                                pdf_obj.set_xy(x+3, y+2)
+                                pdf_obj.set_font("Arial", 'B', 6)
+                                pdf_obj.set_text_color(80, 80, 80)
+                                pdf_obj.cell(w-6, 4, cln(title.upper()), ln=0)
                                 
-                                pdf_obj.set_xy(x+5, y+10)
-                                pdf_obj.set_font("Arial", 'B', 12)
-                                pdf_obj.set_text_color(0, 0, 0)
-                                if val_right:
-                                    pdf_obj.set_font("Arial", '', 8)
-                                    pdf_obj.set_text_color(100, 100, 100)
-                                    pdf_obj.cell(8, 6, cln(lbl_left), ln=False)
-                                    pdf_obj.set_font("Arial", 'B', 12)
+                                pdf_obj.set_xy(x+3, y+8)
+                                if v_right is not None:
+                                    pdf_obj.set_font("Arial", '', 7)
+                                    pdf_obj.set_text_color(120, 120, 120)
+                                    pdf_obj.cell(6, 6, cln(l_left), ln=0)
+                                    pdf_obj.set_font("Arial", 'B', 11)
                                     pdf_obj.set_text_color(220, 38, 38)
-                                    pdf_obj.cell(w/2 - 15, 6, cln(val_left), ln=False)
-                                    
-                                    pdf_obj.set_font("Arial", '', 8)
-                                    pdf_obj.set_text_color(100, 100, 100)
-                                    pdf_obj.cell(8, 6, cln(lbl_right), ln=False)
-                                    pdf_obj.set_font("Arial", 'B', 12)
+                                    pdf_obj.cell(w/2 - 12, 6, cln(v_left), ln=0)
+                                    pdf_obj.set_font("Arial", '', 7)
+                                    pdf_obj.set_text_color(120, 120, 120)
+                                    pdf_obj.cell(6, 6, cln(l_right), ln=0)
+                                    pdf_obj.set_font("Arial", 'B', 11)
                                     pdf_obj.set_text_color(220, 38, 38)
-                                    pdf_obj.cell(w/2 - 15, 6, cln(val_right), ln=True)
+                                    pdf_obj.cell(w/2 - 12, 6, cln(v_right), ln=0)
                                 else:
-                                    pdf_obj.cell(w-10, 6, cln(val_left), ln=True)
+                                    pdf_obj.set_font("Arial", 'B', 12)
+                                    pdf_obj.set_text_color(0, 0, 0)
+                                    pdf_obj.cell(w-6, 6, cln(v_left), ln=0)
                                     
-                                if bottom_txt:
-                                    pdf_obj.set_xy(x+5, y+20)
-                                    pdf_obj.set_font("Arial", '', 8)
-                                    pdf_obj.set_text_color(50, 50, 50)
-                                    pdf_obj.cell(w-10, 4, cln(bottom_txt), ln=True)
+                                if b_lbl:
+                                    pdf_obj.set_xy(x, y + h)
+                                    pdf_obj.set_fill_color(240, 248, 255)
+                                    pdf_obj.cell(w, 6, "", border=1, fill=True)
+                                    pdf_obj.set_xy(x+3, y + h + 1)
+                                    pdf_obj.set_font("Arial", 'B', 7)
+                                    pdf_obj.set_text_color(30, 80, 140)
+                                    lbl_w = pdf_obj.get_string_width(cln(b_lbl)) + 1
+                                    pdf_obj.cell(lbl_w, 4, cln(b_lbl), ln=0)
+                                    pdf_obj.set_font("Arial", '', 7)
+                                    pdf_obj.set_text_color(80, 80, 80)
+                                    pdf_obj.cell(10, 4, cln(b_val), ln=0)
 
+                            # --- SECCIÓN 1: Movilidad ---
                             pdf.set_font("Arial", 'B', 12)
                             pdf.set_text_color(0, 0, 0)
                             pdf.cell(200, 8, "Movilidad (Grados)", ln=True)
                             y_mov = pdf.get_y()
-                            w_b = 90
+                            w_3 = 89
                             
                             m_re_d, m_re_i = v_latest.get('mov_rot_ext_d',0), v_latest.get('mov_rot_ext_i',0)
                             m_ri_d, m_ri_i = v_latest.get('mov_rot_int_d',0), v_latest.get('mov_rot_int_i',0)
                             m_do_d, m_do_i = v_latest.get('mov_dorsi_d',0), v_latest.get('mov_dorsi_i',0)
                             
-                            draw_box(pdf, 10, y_mov, w_b, 26, "Rot. Ext. Cadera", str(m_re_d), str(m_re_i), "Der:", "Izq:", f"Asim: {calc_asimetria(m_re_d, m_re_i):.1f}%")
-                            draw_box(pdf, 105, y_mov, w_b, 26, "Rot. Int. Cadera", str(m_ri_d), str(m_ri_i), "Der:", "Izq:", f"Asim: {calc_asimetria(m_ri_d, m_ri_i):.1f}%")
-                            draw_box(pdf, 200, y_mov, w_b, 26, "Dorsiflexion Tobillo", str(m_do_d), str(m_do_i), "Der:", "Izq:", f"Asim: {calc_asimetria(m_do_d, m_do_i):.1f}%")
+                            a_re = calc_asimetria(m_re_d, m_re_i)
+                            a_ri = calc_asimetria(m_ri_d, m_ri_i)
+                            a_do = calc_asimetria(m_do_d, m_do_i)
                             
-                            pdf.set_xy(10, y_mov + 32)
+                            draw_card(pdf, 10, y_mov, w_3, 16, "Rot. Ext. Cadera", str(m_re_d), str(m_re_i), "Der:", "Izq:", "Asimetria Rot. Ext:", no_emo(badge_asi_detallado(a_re, m_re_d, m_re_i)))
+                            draw_card(pdf, 10+w_3+5, y_mov, w_3, 16, "Rot. Int. Cadera", str(m_ri_d), str(m_ri_i), "Der:", "Izq:", "Asimetria Rot. Int:", no_emo(badge_asi_detallado(a_ri, m_ri_d, m_ri_i)))
+                            draw_card(pdf, 10+(w_3*2)+10, y_mov, w_3, 16, "Dorsiflexion Tobillo", str(m_do_d), str(m_do_i), "Der:", "Izq:", "Asimetria Dorsiflexion:", no_emo(badge_asi_detallado(a_do, m_do_d, m_do_i)))
+                            
+                            # --- SECCIÓN 2: Salto y Perfil Vectorial ---
+                            pdf.set_xy(10, y_mov + 28)
                             pdf.set_font("Arial", 'B', 12)
+                            pdf.set_text_color(0, 0, 0)
                             pdf.cell(200, 8, "Salto y Perfil Vectorial", ln=True)
                             y_salto = pdf.get_y()
                             
@@ -669,54 +700,192 @@ with tab_informes:
                             s_cd, s_ci = v_latest.get('cmj_uni_d',0), v_latest.get('cmj_uni_i',0)
                             s_hd, s_hi = v_latest.get('sh_d',0), v_latest.get('sh_i',0)
                             
-                            w_s = 67.5
-                            draw_box(pdf, 10, y_salto, w_s, 26, "Salto Horiz. Bilateral", f"{s_hb} cm")
-                            draw_box(pdf, 10+w_s+5, y_salto, w_s, 26, "CMJ Bilateral", f"{s_cb} cm")
-                            draw_box(pdf, 10+(w_s*2)+10, y_salto, w_s, 26, "CMJ Unilateral", f"{s_cd}", f"{s_ci}", "D:", "I:", f"Asim: {calc_asimetria(s_cd, s_ci):.1f}%")
-                            draw_box(pdf, 10+(w_s*3)+15, y_salto, w_s, 26, "Salto Horiz. Uni", f"{s_hd}", f"{s_hi}", "D:", "I:", f"Asim: {calc_asimetria(s_hd, s_hi):.1f}%")
-
-                            pdf.set_xy(10, y_salto + 32)
+                            a_cmj = calc_asimetria(s_cd, s_ci)
+                            a_sh = calc_asimetria(s_hd, s_hi)
+                            c_sum = s_cd + s_ci
+                            dbl = round(100*(s_cb/c_sum)-100, 1) if c_sum>0 else 0
+                            rv = round(s_hb/s_cb, 2) if s_cb>0 else 0
+                            
+                            w_4 = 65.5
+                            draw_card(pdf, 10, y_salto, w_4, 16, "Salto Horiz. Bilateral", f"{s_hb} cm", None, "", "", "Asimetria Vertical:", f"{a_cmj:.1f}%")
+                            draw_card(pdf, 10+w_4+5, y_salto, w_4, 16, "CMJ Bilateral", f"{s_cb} cm", None, "", "", "Asimetria Horizontal:", f"{a_sh:.1f}%")
+                            draw_card(pdf, 10+(w_4*2)+10, y_salto, w_4, 16, "CMJ Unilateral", f"{s_cd} cm", f"{s_ci} cm", "Der:", "Izq:", "Deficit Bilateral (BLD):", f"{dbl}%")
+                            draw_card(pdf, 10+(w_4*3)+15, y_salto, w_4, 16, "Salto Horiz. Unilateral", f"{s_hd} cm", f"{s_hi} cm", "Der:", "Izq:", "Ratio Vectores (H/V):", f"{rv}")
+                            
+                            # --- SECCIÓN 3: Fuerza Iso ---
+                            pdf.set_xy(10, y_salto + 28)
                             pdf.set_font("Arial", 'B', 12)
-                            pdf.cell(200, 8, "Fuerza Maxima Isometrica", ln=True)
+                            pdf.set_text_color(0, 0, 0)
+                            pdf.cell(200, 8, "Fuerza Maxima Isometrica y Fuerza Relativa", ln=True)
                             y_iso = pdf.get_y()
                             
                             f_ed, f_ei = v_latest.get('iso_ext_d',0), v_latest.get('iso_ext_i',0)
                             f_fd, f_fi = v_latest.get('iso_flx_d',0), v_latest.get('iso_flx_i',0)
                             f_ad, f_ai = v_latest.get('iso_add_d',0), v_latest.get('iso_add_i',0)
                             
-                            draw_box(pdf, 10, y_iso, w_b, 26, "Extension (Cuad)", f"{f_ed} N", f"{f_ei} N", "D:", "I:", f"Asim: {calc_asimetria(f_ed, f_ei):.1f}%")
-                            draw_box(pdf, 105, y_iso, w_b, 26, "Flexion (Isq)", f"{f_fd} N", f"{f_fi} N", "D:", "I:", f"Asim: {calc_asimetria(f_fd, f_fi):.1f}%")
-                            draw_box(pdf, 200, y_iso, w_b, 26, "Aduccion", f"{f_ad} N", f"{f_ai} N", "D:", "I:", f"Asim: {calc_asimetria(f_ad, f_ai):.1f}%")
+                            a_e = calc_asimetria(f_ed, f_ei)
+                            a_f = calc_asimetria(f_fd, f_fi)
+                            a_a = calc_asimetria(f_ad, f_ai)
                             
+                            draw_card(pdf, 10, y_iso, w_3, 16, "Extension (Cuad)", f"{f_ed} N", f"{f_ei} N", "Der:", "Izq:", "Asim. Cuadriceps:", no_emo(badge_asi_detallado(a_e, f_ed, f_ei)))
+                            draw_card(pdf, 10+w_3+5, y_iso, w_3, 16, "Flexion (Isq)", f"{f_fd} N", f"{f_fi} N", "Der:", "Izq:", "Asim. Isquiosurales:", no_emo(badge_asi_detallado(a_f, f_fd, f_fi)))
+                            draw_card(pdf, 10+(w_3*2)+10, y_iso, w_3, 16, "Aduccion", f"{f_ad} N", f"{f_ai} N", "Der:", "Izq:", "Asim. Aduccion:", no_emo(badge_asi_detallado(a_a, f_ad, f_ai)))
+                            
+                            y_rat = y_iso + 28
+                            r_hq_d = round(f_fd/f_ed, 2) if f_ed>0 else 0
+                            r_hq_i = round(f_fi/f_ei, 2) if f_ei>0 else 0
+                            r_e_d = round(f_ed/peso_act, 2) if peso_act>0 else 0
+                            r_e_i = round(f_ei/peso_act, 2) if peso_act>0 else 0
+                            r_f_d = round(f_fd/peso_act, 2) if peso_act>0 else 0
+                            r_f_i = round(f_fi/peso_act, 2) if peso_act>0 else 0
+                            
+                            pdf.set_xy(10, y_rat-2)
+                            pdf.set_font("Arial", 'B', 8)
+                            pdf.set_text_color(100, 100, 100)
+                            pdf.cell(200, 4, "Ratios Clinicos de Equilibrio y Fuerza Relativa (N/kg)", ln=True)
+                            
+                            draw_card(pdf, 10, y_rat+4, w_4, 16, "ISQ/CUAD (D)", f"{r_hq_d}")
+                            draw_card(pdf, 10+w_4+5, y_rat+4, w_4, 16, "ISQ/CUAD (I)", f"{r_hq_i}")
+                            draw_card(pdf, 10+(w_4*2)+10, y_rat+4, w_4, 16, "CUADRICEPS (D/I)", f"{r_e_d} | {r_e_i} N/kg")
+                            draw_card(pdf, 10+(w_4*3)+15, y_rat+4, w_4, 16, "ISQUIOSURAL (D/I)", f"{r_f_d} | {r_f_i} N/kg")
+                            
+                            # --- PÁGINA 2: Perfil F-V ---
                             pdf.add_page()
                             pdf.set_font("Arial", 'B', 12)
+                            pdf.set_text_color(0, 0, 0)
                             pdf.cell(200, 8, "Fuerza Maxima (Sentadilla)", ln=True)
                             y_sq = pdf.get_y()
                             
                             rm_sq = safe_float(v_latest.get('rm_sq', v_latest.get('rm_sentadilla', 0)))
-                            draw_box(pdf, 10, y_sq, w_b, 20, "1RM Sentadilla", f"{rm_sq} kg")
-                            draw_box(pdf, 105, y_sq, w_b, 20, "Fuerza Relativa", f"{(rm_sq/peso_act):.2f}x Peso")
-                            draw_box(pdf, 200, y_sq, w_b, 20, "Ratio Fuerza-Salto", f"{(s_cb / (rm_sq/peso_act) if rm_sq>0 else 0):.1f}")
+                            rel_sq = rm_sq/peso_act if peso_act>0 else 0
+                            rfs = s_cb / rel_sq if rel_sq>0 else 0
                             
-                            y_chart = y_sq + 25
+                            draw_card(pdf, 10, y_sq, w_3, 16, "1RM Sentadilla (VMP 0.3 M/S)", f"{rm_sq} kg")
+                            draw_card(pdf, 10+w_3+5, y_sq, w_3, 16, "Fuerza Relativa Sentadilla", f"{rel_sq:.2f}x Peso")
+                            draw_card(pdf, 10+(w_3*2)+10, y_sq, w_3, 16, "Ratio Fuerza-Salto", f"{rfs:.1f}")
+                            
+                            y_fv = y_sq + 20
                             if 'fv' in img_paths:
-                                pdf.image(img_paths['fv'], x=10, y=y_chart, w=140)
+                                pdf.image(img_paths['fv'], x=5, y=y_fv, w=145)
+                                
+                            pdf.set_xy(150, y_fv+10)
+                            pdf.set_fill_color(240, 248, 255)
+                            pdf.set_draw_color(220, 220, 220)
+                            pdf.cell(127, 45, "", border=1, fill=True)
                             
-                            pdf.set_xy(10, y_chart + 80)
+                            pdf.set_xy(155, y_fv+15)
+                            pdf.set_font("Arial", 'B', 8)
+                            pdf.set_text_color(30, 80, 140)
+                            pdf.cell(20, 6, "Diagnostico:", ln=0)
+                            pdf.set_font("Arial", '', 8)
+                            pdf.set_text_color(0, 0, 0)
+                            pdf.cell(100, 6, cln(no_emo(cuadrante)), ln=1)
+                            
+                            pdf.set_x(155)
+                            pdf.set_font("Arial", 'B', 8)
+                            pdf.set_text_color(30, 80, 140)
+                            pdf.cell(6, 6, "V0:", ln=0)
+                            pdf.set_font("Arial", '', 8)
+                            pdf.set_text_color(0, 0, 0)
+                            pdf.cell(18, 6, f"{v0:.2f} m/s |", ln=0)
+                            pdf.set_font("Arial", 'B', 8)
+                            pdf.set_text_color(30, 80, 140)
+                            pdf.cell(16, 6, "F0 (Barra):", ln=0)
+                            pdf.set_font("Arial", '', 8)
+                            pdf.set_text_color(0, 0, 0)
+                            pdf.cell(20, 6, f"{f0_kg_barra:.1f} kg", ln=1)
+                            
+                            pdf.set_x(155)
+                            pdf.set_font("Arial", 'B', 8)
+                            pdf.set_text_color(30, 80, 140)
+                            pdf.cell(18, 6, "F0 Relativa:", ln=0)
+                            pdf.set_font("Arial", '', 8)
+                            pdf.set_text_color(0, 0, 0)
+                            pdf.cell(20, 6, f"{f0_rel_N:.1f} N/kg", ln=1)
+                            
+                            pdf.set_x(155)
+                            pdf.set_font("Arial", 'B', 8)
+                            pdf.set_text_color(30, 80, 140)
+                            pdf.cell(25, 6, "Fiabilidad del test:", ln=0)
+                            pdf.set_font("Arial", '', 8)
+                            pdf.set_text_color(0, 0, 0)
+                            fiab_txt = "Excelente" if r2>=0.95 else ("Aceptable" if r2>=0.90 else "Pobre")
+                            pdf.cell(50, 6, f"{r2:.3f} ({fiab_txt})", ln=1)
+                            
+                            pdf.set_xy(155, pdf.get_y() + 2)
+                            pdf.set_font("Arial", 'I', 8)
+                            pdf.set_text_color(80, 80, 80)
+                            pdf.multi_cell(115, 5, cln(pauta_fv))
+                            
+                            # --- SECCIÓN 4: Estimación Cargas ---
+                            y_cargas = y_fv + 75
+                            pdf.set_xy(10, y_cargas)
                             pdf.set_font("Arial", 'B', 12)
-                            pdf.cell(200, 8, "Estimacion de Cargas y Ejercicios", ln=True)
-                            pdf.set_font("Arial", '', 10)
-                            pdf.cell(200, 6, f"- Sentadilla: {rm_sq} kg", ln=True)
-                            pdf.cell(200, 6, f"- Peso Muerto (115%): {round(rm_sq*1.15, 1)} kg", ln=True)
-                            pdf.cell(200, 6, f"- Hip Thrust (125%): {round(rm_sq*1.25, 1)} kg", ln=True)
+                            pdf.set_text_color(0, 0, 0)
+                            pdf.cell(200, 8, "Estimacion de Cargas y Ejercicios Complementarios", ln=True)
                             
+                            pdf.set_fill_color(245, 245, 245)
+                            pdf.set_draw_color(220, 220, 220)
+                            pdf.set_font("Arial", 'B', 8)
+                            pdf.cell(50, 8, "Ejercicio Principal", border=1, fill=True)
+                            pdf.cell(25, 8, "1RM (100%)", border=1, fill=True, align='C')
+                            pdf.cell(20, 8, "80%", border=1, fill=True, align='C')
+                            pdf.cell(20, 8, "60%", border=1, fill=True, align='C')
+                            pdf.cell(20, 8, "40%", border=1, fill=True, align='C')
+                            pdf.ln()
+                            
+                            pdf.set_font("Arial", '', 8)
+                            pdf.cell(50, 8, "Sentadilla", border=1)
+                            pdf.set_font("Arial", 'B', 8)
+                            pdf.cell(25, 8, f"{rm_sq} kg", border=1, align='C')
+                            pdf.set_font("Arial", '', 8)
+                            pdf.cell(20, 8, f"{round(rm_sq*0.8,1)} kg", border=1, align='C')
+                            pdf.cell(20, 8, f"{round(rm_sq*0.6,1)} kg", border=1, align='C')
+                            pdf.cell(20, 8, f"{round(rm_sq*0.4,1)} kg", border=1, align='C')
+                            pdf.ln()
+                            
+                            pm_rm = round(rm_sq*1.15, 1)
+                            pdf.cell(50, 8, "Peso Muerto (115% SQ)", border=1)
+                            pdf.set_font("Arial", 'B', 8)
+                            pdf.cell(25, 8, f"{pm_rm} kg", border=1, align='C')
+                            pdf.set_font("Arial", '', 8)
+                            pdf.cell(20, 8, f"{round(pm_rm*0.8,1)} kg", border=1, align='C')
+                            pdf.cell(20, 8, f"{round(pm_rm*0.6,1)} kg", border=1, align='C')
+                            pdf.cell(20, 8, f"{round(pm_rm*0.4,1)} kg", border=1, align='C')
+                            pdf.ln()
+                            
+                            ht_rm = round(rm_sq*1.25, 1)
+                            pdf.cell(50, 8, "Empuje de Cadera (125% SQ)", border=1)
+                            pdf.set_font("Arial", 'B', 8)
+                            pdf.cell(25, 8, f"{ht_rm} kg", border=1, align='C')
+                            pdf.set_font("Arial", '', 8)
+                            pdf.cell(20, 8, f"{round(ht_rm*0.8,1)} kg", border=1, align='C')
+                            pdf.cell(20, 8, f"{round(ht_rm*0.6,1)} kg", border=1, align='C')
+                            pdf.cell(20, 8, f"{round(ht_rm*0.4,1)} kg", border=1, align='C')
+                            pdf.ln(12)
+                            
+                            pdf.set_font("Arial", 'B', 8)
+                            pdf.cell(200, 6, "Estimacion 1RM en Ejercicios Complementarios:", ln=True)
+                            pdf.set_font("Arial", '', 8)
+                            kettle = "32-40 kg" if rm_sq >= 130 else ("24-32 kg" if rm_sq >= 90 else "16-24 kg")
+                            pdf.cell(200, 5, f" - Peso Muerto Rumano (RDL): {round(rm_sq*0.9,1)} kg (90% SQ)", ln=True)
+                            pdf.cell(200, 5, f" - Sentadilla Bulgara: {round(rm_sq*0.5,1)} kg (50% SQ - Por pierna)", ln=True)
+                            pdf.cell(200, 5, f" - Zancada / Lunge: {round(rm_sq*0.45,1)} kg (45% SQ - Por pierna)", ln=True)
+                            pdf.cell(200, 5, f" - Kettlebell Swing (Pesado): No aplica 1RM. Carga sugerida por nivel de fuerza: {kettle}", ln=True)
+                            
+                            # --- PÁGINA 3: Radar y Tornado ---
                             pdf.add_page()
                             pdf.set_font("Arial", 'B', 12)
                             pdf.cell(200, 8, "Perfil Evolutivo y Asimetrias", ln=True)
                             
+                            pdf.set_font("Arial", '', 8)
+                            pdf.set_text_color(100, 100, 100)
+                            pdf.cell(200, 4, "Comparar evolucion actual contra: Media del Equipo", ln=True)
+                            
                             if 'rad' in img_paths: pdf.image(img_paths['rad'], x=10, y=25, w=130)
                             if 'tor' in img_paths: pdf.image(img_paths['tor'], x=150, y=25, w=130)
                             
+                            # Limpieza y escritura final en ZIP
                             for path in img_paths.values():
                                 if os.path.exists(path): os.unlink(path)
                                 
