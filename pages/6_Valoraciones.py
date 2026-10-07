@@ -720,7 +720,9 @@ with tab_informes:
                             for path in img_paths.values():
                                 if os.path.exists(path): os.unlink(path)
                                 
-                            zip_file.writestr(f"Valoracion_{jug_masivo}.pdf", pdf.output(dest='S').encode('latin-1'))
+                            out_pdf = pdf.output(dest='S')
+                            pdf_bytes_final = out_pdf.encode('latin-1') if isinstance(out_pdf, str) else bytes(out_pdf)
+                            zip_file.writestr(f"Valoracion_{jug_masivo}.pdf", pdf_bytes_final)
 
                     st.session_state["zip_val_all"] = zip_buffer.getvalue()
                     status.update(label="¡ZIP generado con éxito!", state="complete", expanded=False)
