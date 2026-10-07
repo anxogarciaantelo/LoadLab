@@ -5,6 +5,12 @@ from datetime import date, datetime
 import uuid
 import plotly.express as px
 import plotly.graph_objects as go
+import io
+import os
+import base64
+import tempfile
+import zipfile
+from fpdf import FPDF
 
 # Importaciones del ecosistema LoadLab
 from utils.math_helpers import safe_float, limpiar_nombre
@@ -465,6 +471,275 @@ with tab_informes:
                 fig_tor.add_vline(x=10, line_width=1.5, line_dash="dash", line_color="#dc2626")
                 fig_tor.add_vline(x=-10, line_width=1.5, line_dash="dash", line_color="#dc2626")
                 st.plotly_chart(fig_tor, use_container_width=True)
+            # (El código anterior termina donde se dibuja el gráfico fig_tor)
+            
+            st.markdown("---")
+            st.markdown("#### 🗂️ Descarga Masiva (Toda la Plantilla)")
+            st.caption("Genera un archivo ZIP que contendrá los informes individuales en PDF con el diseño exacto de la plataforma para todos los jugadores evaluados.")
+            
+            if st.button("📦 Generar ZIP con valoraciones de todo el equipo", use_container_width=True):
+                with st.status("Generando informes PDF para todo el equipo...", expanded=True) as status:
+                    zip_buffer = io.BytesIO()
+                    
+                    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+                        jugadores_unicos = list(set([v['jugador'] for v in valoraciones]))
+                        df_eq = pd.DataFrame(valoraciones)
+                        
+                        for jug_masivo in jugadores_unicos:
+                            st.write(f"Procesando informe de {jug_masivo}...")
+                            vals_j = [v for v in valoraciones if v['jugador'] == jug_masivo]
+                            vals_j = sorted(vals_j, key=lambda x: x.get('fecha', ''))
+                            for i, v in enumerate(vals_j): v['num_cronologico'] = i + 1
+                            
+                            v_latest = vals_j[-1]
+                            peso_act = safe_float(v_latest.get('peso_corporal', 70.0))
+                            if peso_act == 0: peso_act = 70.0
+                            
+                            jug_datos = next((j for j in st.session_state.plantilla if j["JUGADOR"] == jug_masivo), None)
+                            
+                            # --- 1. RECALCULAR GRÁFICOS (F-V, Radar, Tornado) ---
+                            fig_sq_m = None
+                            p_sq = v_latest.get('perfil_sq', {}).get('kg', [])
+                            v_sq = v_latest.get('perfil_sq', {}).get('vel', [])
+                            kgs_barra = np.array([k for k, v in zip(p_sq, v_sq) if k > 0 and v > 0])
+                            vels = np.array([v for k, v in zip(p_sq, v_sq) if k > 0 and v > 0])
+                            if len(kgs_barra) > 1:
+                                kgs_sistema = kgs_barra + (peso_act * 0.89)
+                                z = np.polyfit(kgs_sistema, vels, 1)
+                                p = np.poly1d(z)
+                                f0_kg_sistema = -z[1] / z[0] if z[0] < 0 else 0
+                                v0 = z[1]
+                                fig_sq_m = px.scatter(x=kgs_sistema, y=vels, title="Perfil F-V (Masa del Sistema)")
+                                fig_sq_m.update_traces(marker=dict(size=10, color='#dc2626'))
+                                x_tr = np.linspace(0, f0_kg_sistema, 50)
+                                fig_sq_m.add_scatter(x=x_tr, y=p(x_tr), mode='lines', name='Tendencia Real', line=dict(color='#1c1c1e', width=2))
+                                fig_sq_m.update_xaxes(range=[0, f0_kg_sistema * 1.05], zeroline=True, zerolinecolor='#e4e4e7')
+                                fig_sq_m.update_yaxes(range=[0, v0 * 1.05], zeroline=True, zerolinecolor='#e4e4e7')
+                                fig_sq_m.update_layout(height=350, margin=dict(l=20, r=20, t=40, b=20), showlegend=False)
+
+                            def ext_kpis(v_obj, p_ref):
+                                return (safe_float(v_obj.get('cmj_bi', 0)), 
+                                        safe_float(v_obj.get('sh_bi', v_obj.get('sj_bi', 0))), 
+                                        safe_float(v_obj.get('rm_sq', v_obj.get('rm_sentadilla', 0))) / p_ref if p_ref > 0 else 0, 
+                                        ((safe_float(v_obj.get('iso_ext_d', 0)) + safe_float(v_obj.get('iso_ext_i', 0))) / 2) / p_ref if p_ref > 0 else 0, 
+                                        ((safe_float(v_obj.get('iso_flx_d', 0)) + safe_float(v_obj.get('iso_flx_i', 0))) / 2) / p_ref if p_ref > 0 else 0, 
+                                        ((safe_float(v_obj.get('iso_add_d', 0)) + safe_float(v_obj.get('iso_add_i', 0))) / 2) / p_ref if p_ref > 0 else 0)
+
+                            v_ref = {}
+                            for col in ['peso_corporal', 'cmj_bi', 'sh_bi', 'sj_bi', 'rm_sq', 'rm_sentadilla', 'iso_ext_d', 'iso_ext_i', 'iso_flx_d', 'iso_flx_i', 'iso_add_d', 'iso_add_i']:
+                                if col in df_eq.columns:
+                                    val_v = df_eq[col].apply(safe_float)
+                                    v_ref[col] = val_v[val_v > 0].mean() if not val_v[val_v > 0].empty else 0.0
+                                else: v_ref[col] = 0.0
+                            p_ini = v_ref['peso_corporal'] if v_ref['peso_corporal'] > 0 else 70.0
+                            
+                            c_r, sh_r, sq_r, e_r, i_r, a_r = ext_kpis(v_ref, p_ini)
+                            c_a, sh_a, sq_a, e_a, i_a, a_a = ext_kpis(v_latest, peso_act)
+                            mc, ms, mq, me, mi, ma = max(c_r, c_a, 1), max(sh_r, sh_a, 1), max(sq_r, sq_a, 0.1), max(e_r, e_a, 0.1), max(i_r, i_a, 0.1), max(a_r, a_a, 0.1)
+                            
+                            df_rad_m = pd.DataFrame({
+                                'Métrica': ['CMJ', 'Salto Horiz.', '1RM SQ', 'F. Cuádriceps', 'F. Isquios', 'F. Aductores'] * 2,
+                                'Valor': [(c_r/mc)*100, (sh_r/ms)*100, (sq_r/mq)*100, (e_r/me)*100, (i_r/mi)*100, (a_r/ma)*100] + [(c_a/mc)*100, (sh_a/ms)*100, (sq_a/mq)*100, (e_a/me)*100, (i_a/mi)*100, (a_a/ma)*100],
+                                'Test': ['Media del Equipo'] * 6 + ['Actual'] * 6
+                            })
+                            fig_rad_m = px.line_polar(df_rad_m, r='Valor', theta='Métrica', color='Test', line_close=True, color_discrete_map={'Media del Equipo': '#1c1c1e', 'Actual': '#dc2626'})
+                            fig_rad_m.update_traces(fill='toself', opacity=0.4)
+                            fig_rad_m.update_layout(polar=dict(radialaxis=dict(visible=False, range=[0, 100])), height=350, margin=dict(l=20, r=20, t=30, b=20), showlegend=False)
+
+                            pr_uni = [
+                                ("Mov: Rot. Ext Cadera", v_latest.get('mov_rot_ext_d',0), v_latest.get('mov_rot_ext_i',0)),
+                                ("Mov: Rot. Int Cadera", v_latest.get('mov_rot_int_d',0), v_latest.get('mov_rot_int_i',0)),
+                                ("Mov: Dorsiflexión", v_latest.get('mov_dorsi_d',0), v_latest.get('mov_dorsi_i',0)),
+                                ("CMJ Unilateral", v_latest.get('cmj_uni_d',0), v_latest.get('cmj_uni_i',0)),
+                                ("Salto Horizontal", v_latest.get('sh_d',0), v_latest.get('sh_i',0)),
+                                ("Fuerza ISO Cuádriceps", v_latest.get('iso_ext_d',0), v_latest.get('iso_ext_i',0)),
+                                ("Fuerza ISO Isquiosurales", v_latest.get('iso_flx_d',0), v_latest.get('iso_flx_i',0)),
+                                ("Fuerza ISO Aductores", v_latest.get('iso_add_d',0), v_latest.get('iso_add_i',0))
+                            ]
+                            vt, tt, ct, pt = [], [], [], []
+                            for n, d_val, i_val in pr_uni:
+                                d, i_v = safe_float(d_val), safe_float(i_val)
+                                mx = max(d, i_v)
+                                if mx == 0: vt.append(0); tt.append("0%"); ct.append('#64748b'); pt.append(n)
+                                else:
+                                    df_asim = (abs(d - i_v) / mx) * 100
+                                    if d > i_v: vt.append(df_asim); tt.append(f"{df_asim:.1f}%"); ct.append('#10833d'); pt.append(n)
+                                    elif i_v > d: vt.append(-df_asim); tt.append(f"{df_asim:.1f}%"); ct.append('#09274e'); pt.append(n)
+                                    else: vt.append(0); tt.append("0%"); ct.append('#64748b'); pt.append(n)
+                            df_tor_m = pd.DataFrame({'Prueba': pt, 'Asimetria': vt, 'Texto': tt, 'Color': ct}).iloc[::-1]
+                            fig_tor_m = go.Figure(go.Bar(y=df_tor_m['Prueba'], x=df_tor_m['Asimetria'], orientation='h', marker_color=df_tor_m['Color'], text=df_tor_m['Texto'], textposition='outside'))
+                            max_x = max(abs(df_tor_m['Asimetria']).max() + 8, 20)
+                            fig_tor_m.update_layout(title="Asimetrías Clínicas", xaxis=dict(range=[-max_x, max_x]), height=350, margin=dict(l=10, r=10, t=40, b=10))
+                            
+                            img_paths = {}
+                            for name, f_obj in [('fv', fig_sq_m), ('rad', fig_rad_m), ('tor', fig_tor_m)]:
+                                if f_obj:
+                                    f_obj.update_layout(paper_bgcolor="white", plot_bgcolor="white", font=dict(color="black"))
+                                    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
+                                    tmp.close()
+                                    f_obj.write_image(tmp.name, engine="kaleido", width=700, height=350, format="jpg")
+                                    img_paths[name] = tmp.name
+
+                            # --- 2. GENERACIÓN DEL PDF MAQUETADO ---
+                            pdf = FPDF(orientation='L', unit='mm', format='A4')
+                            pdf.set_auto_page_break(auto=True, margin=10)
+                            def cln(t): return str(t).encode('latin-1', 'ignore').decode('latin-1').strip()
+                            
+                            pdf.add_page()
+                            
+                            pdf.set_font("Arial", 'B', 18)
+                            pdf.cell(200, 10, cln(jug_masivo.upper()), ln=False)
+                            
+                            if jug_datos and jug_datos.get("foto"):
+                                tmp_foto = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
+                                fb64 = jug_datos["foto"]
+                                if str(fb64).startswith("http"):
+                                    import requests
+                                    r = requests.get(fb64)
+                                    tmp_foto.write(r.content)
+                                else:
+                                    tmp_foto.write(base64.b64decode(fb64.split(',')[1] if ',' in fb64 else fb64))
+                                tmp_foto.close()
+                                pdf.image(tmp_foto.name, x=250, y=10, w=25)
+                                os.unlink(tmp_foto.name)
+                            
+                            pdf.ln(15)
+
+                            def draw_box(pdf_obj, x, y, w, h, title, val_left, val_right=None, lbl_left="", lbl_right="", bottom_txt=""):
+                                pdf_obj.set_xy(x, y)
+                                pdf_obj.set_fill_color(255, 255, 255)
+                                pdf_obj.set_draw_color(220, 220, 220)
+                                pdf_obj.cell(w, h, "", border=1, fill=True)
+                                pdf_obj.set_fill_color(220, 38, 38)
+                                pdf_obj.set_xy(x, y)
+                                pdf_obj.cell(2, h, "", border=0, fill=True)
+                                
+                                pdf_obj.set_xy(x+5, y+3)
+                                pdf_obj.set_font("Arial", 'B', 7)
+                                pdf_obj.set_text_color(100, 100, 100)
+                                pdf_obj.cell(w-10, 4, cln(title.upper()), ln=True)
+                                
+                                pdf_obj.set_xy(x+5, y+10)
+                                pdf_obj.set_font("Arial", 'B', 12)
+                                pdf_obj.set_text_color(0, 0, 0)
+                                if val_right:
+                                    pdf_obj.set_font("Arial", '', 8)
+                                    pdf_obj.set_text_color(100, 100, 100)
+                                    pdf_obj.cell(8, 6, cln(lbl_left), ln=False)
+                                    pdf_obj.set_font("Arial", 'B', 12)
+                                    pdf_obj.set_text_color(220, 38, 38)
+                                    pdf_obj.cell(w/2 - 15, 6, cln(val_left), ln=False)
+                                    
+                                    pdf_obj.set_font("Arial", '', 8)
+                                    pdf_obj.set_text_color(100, 100, 100)
+                                    pdf_obj.cell(8, 6, cln(lbl_right), ln=False)
+                                    pdf_obj.set_font("Arial", 'B', 12)
+                                    pdf_obj.set_text_color(220, 38, 38)
+                                    pdf_obj.cell(w/2 - 15, 6, cln(val_right), ln=True)
+                                else:
+                                    pdf_obj.cell(w-10, 6, cln(val_left), ln=True)
+                                    
+                                if bottom_txt:
+                                    pdf_obj.set_xy(x+5, y+20)
+                                    pdf_obj.set_font("Arial", '', 8)
+                                    pdf_obj.set_text_color(50, 50, 50)
+                                    pdf_obj.cell(w-10, 4, cln(bottom_txt), ln=True)
+
+                            pdf.set_font("Arial", 'B', 12)
+                            pdf.set_text_color(0, 0, 0)
+                            pdf.cell(200, 8, "Movilidad (Grados)", ln=True)
+                            y_mov = pdf.get_y()
+                            w_b = 90
+                            
+                            m_re_d, m_re_i = v_latest.get('mov_rot_ext_d',0), v_latest.get('mov_rot_ext_i',0)
+                            m_ri_d, m_ri_i = v_latest.get('mov_rot_int_d',0), v_latest.get('mov_rot_int_i',0)
+                            m_do_d, m_do_i = v_latest.get('mov_dorsi_d',0), v_latest.get('mov_dorsi_i',0)
+                            
+                            draw_box(pdf, 10, y_mov, w_b, 26, "Rot. Ext. Cadera", str(m_re_d), str(m_re_i), "Der:", "Izq:", f"Asim: {calc_asimetria(m_re_d, m_re_i):.1f}%")
+                            draw_box(pdf, 105, y_mov, w_b, 26, "Rot. Int. Cadera", str(m_ri_d), str(m_ri_i), "Der:", "Izq:", f"Asim: {calc_asimetria(m_ri_d, m_ri_i):.1f}%")
+                            draw_box(pdf, 200, y_mov, w_b, 26, "Dorsiflexion Tobillo", str(m_do_d), str(m_do_i), "Der:", "Izq:", f"Asim: {calc_asimetria(m_do_d, m_do_i):.1f}%")
+                            
+                            pdf.set_xy(10, y_mov + 32)
+                            pdf.set_font("Arial", 'B', 12)
+                            pdf.cell(200, 8, "Salto y Perfil Vectorial", ln=True)
+                            y_salto = pdf.get_y()
+                            
+                            s_hb = safe_float(v_latest.get('sh_bi', v_latest.get('sj_bi', 0)))
+                            s_cb = safe_float(v_latest.get('cmj_bi', 0))
+                            s_cd, s_ci = v_latest.get('cmj_uni_d',0), v_latest.get('cmj_uni_i',0)
+                            s_hd, s_hi = v_latest.get('sh_d',0), v_latest.get('sh_i',0)
+                            
+                            w_s = 67.5
+                            draw_box(pdf, 10, y_salto, w_s, 26, "Salto Horiz. Bilateral", f"{s_hb} cm")
+                            draw_box(pdf, 10+w_s+5, y_salto, w_s, 26, "CMJ Bilateral", f"{s_cb} cm")
+                            draw_box(pdf, 10+(w_s*2)+10, y_salto, w_s, 26, "CMJ Unilateral", f"{s_cd}", f"{s_ci}", "D:", "I:", f"Asim: {calc_asimetria(s_cd, s_ci):.1f}%")
+                            draw_box(pdf, 10+(w_s*3)+15, y_salto, w_s, 26, "Salto Horiz. Uni", f"{s_hd}", f"{s_hi}", "D:", "I:", f"Asim: {calc_asimetria(s_hd, s_hi):.1f}%")
+
+                            pdf.set_xy(10, y_salto + 32)
+                            pdf.set_font("Arial", 'B', 12)
+                            pdf.cell(200, 8, "Fuerza Maxima Isometrica", ln=True)
+                            y_iso = pdf.get_y()
+                            
+                            f_ed, f_ei = v_latest.get('iso_ext_d',0), v_latest.get('iso_ext_i',0)
+                            f_fd, f_fi = v_latest.get('iso_flx_d',0), v_latest.get('iso_flx_i',0)
+                            f_ad, f_ai = v_latest.get('iso_add_d',0), v_latest.get('iso_add_i',0)
+                            
+                            draw_box(pdf, 10, y_iso, w_b, 26, "Extension (Cuad)", f"{f_ed} N", f"{f_ei} N", "D:", "I:", f"Asim: {calc_asimetria(f_ed, f_ei):.1f}%")
+                            draw_box(pdf, 105, y_iso, w_b, 26, "Flexion (Isq)", f"{f_fd} N", f"{f_fi} N", "D:", "I:", f"Asim: {calc_asimetria(f_fd, f_fi):.1f}%")
+                            draw_box(pdf, 200, y_iso, w_b, 26, "Aduccion", f"{f_ad} N", f"{f_ai} N", "D:", "I:", f"Asim: {calc_asimetria(f_ad, f_ai):.1f}%")
+                            
+                            pdf.add_page()
+                            pdf.set_font("Arial", 'B', 12)
+                            pdf.cell(200, 8, "Fuerza Maxima (Sentadilla)", ln=True)
+                            y_sq = pdf.get_y()
+                            
+                            rm_sq = safe_float(v_latest.get('rm_sq', v_latest.get('rm_sentadilla', 0)))
+                            draw_box(pdf, 10, y_sq, w_b, 20, "1RM Sentadilla", f"{rm_sq} kg")
+                            draw_box(pdf, 105, y_sq, w_b, 20, "Fuerza Relativa", f"{(rm_sq/peso_act):.2f}x Peso")
+                            draw_box(pdf, 200, y_sq, w_b, 20, "Ratio Fuerza-Salto", f"{(s_cb / (rm_sq/peso_act) if rm_sq>0 else 0):.1f}")
+                            
+                            y_chart = y_sq + 25
+                            if 'fv' in img_paths:
+                                pdf.image(img_paths['fv'], x=10, y=y_chart, w=140)
+                            
+                            pdf.set_xy(10, y_chart + 80)
+                            pdf.set_font("Arial", 'B', 12)
+                            pdf.cell(200, 8, "Estimacion de Cargas y Ejercicios", ln=True)
+                            pdf.set_font("Arial", '', 10)
+                            pdf.cell(200, 6, f"- Sentadilla: {rm_sq} kg", ln=True)
+                            pdf.cell(200, 6, f"- Peso Muerto (115%): {round(rm_sq*1.15, 1)} kg", ln=True)
+                            pdf.cell(200, 6, f"- Hip Thrust (125%): {round(rm_sq*1.25, 1)} kg", ln=True)
+                            
+                            pdf.add_page()
+                            pdf.set_font("Arial", 'B', 12)
+                            pdf.cell(200, 8, "Perfil Evolutivo y Asimetrias", ln=True)
+                            
+                            if 'rad' in img_paths: pdf.image(img_paths['rad'], x=10, y=25, w=130)
+                            if 'tor' in img_paths: pdf.image(img_paths['tor'], x=150, y=25, w=130)
+                            
+                            for path in img_paths.values():
+                                if os.path.exists(path): os.unlink(path)
+                                
+                            zip_file.writestr(f"Valoracion_{jug_masivo}.pdf", pdf.output(dest='S').encode('latin-1'))
+
+                    st.session_state["zip_val_all"] = zip_buffer.getvalue()
+                    status.update(label="¡ZIP generado con éxito!", state="complete", expanded=False)
+                st.rerun()
+
+            if "zip_val_all" in st.session_state:
+                c_z1, c_z2 = st.columns(2)
+                with c_z1:
+                    st.download_button(
+                        label="📥 Descargar archivo ZIP",
+                        data=st.session_state["zip_val_all"],
+                        file_name="Informes_Valoraciones_Equipo.zip",
+                        mime="application/zip",
+                        use_container_width=True
+                    )
+                with c_z2:
+                    if st.button("🗑️ Descartar ZIP", use_container_width=True):
+                        del st.session_state["zip_val_all"]
+                        st.rerun()
 # ==========================================
 # PESTAÑA 2: AÑADIR NUEVA VALORACIÓN
 # ==========================================
