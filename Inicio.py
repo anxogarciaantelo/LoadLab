@@ -351,6 +351,9 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
 # ==========================================
 # 4. PANTALLA PRINCIPAL (CUANDO EL EQUIPO ESTÁ SELECCIONADO)
 # ==========================================
+
+aplicar_color_sidebar()
+
 if st.session_state.get("equipo_seleccionado", False):
     st.markdown("<br>", unsafe_allow_html=True)
     
