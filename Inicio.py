@@ -365,18 +365,35 @@ if st.session_state.get("equipo_seleccionado", False):
     else:
         img_html = '<div style="font-size: 70px; margin-bottom: 15px;">🛡️</div>'
 
-    # ==========================================
+# ==========================================
     # 🚨 INFORMACIÓN DIARIA (DASHBOARD)
     # ==========================================
     st.markdown("### 🚨 Información diaria")
     
+    # 1. Recalcular numeración dinámica de las sesiones (S56, J3, etc.)
+    sesiones_crono = sorted(st.session_state.sesiones, key=lambda x: x["fecha"])
+    c_entrenos, c_liga, c_copa, c_amistosos = 0, 0, 0, 0
+    for s in sesiones_crono:
+        if s["tipo"] == "Entrenamiento":
+            c_entrenos += 1
+            s["nombre_dinamico"] = f"S{c_entrenos}"
+        elif s["tipo"] == "Partido Oficial":
+            if s.get("competicion") == "Liga":
+                c_liga += 1
+                s["nombre_dinamico"] = f"J{c_liga}"
+            else:
+                c_copa += 1
+                s["nombre_dinamico"] = f"Ronda {c_copa}"
+        elif s["tipo"] == "Partido Amistoso":
+            c_amistosos += 1
+            s["nombre_dinamico"] = f"Amistoso {c_amistosos}"
+
+    # 2. Seleccionar la sesión de referencia
     hoy_str = str(date.today())
-    sesiones_ordenadas = sorted(st.session_state.sesiones, key=lambda x: x["fecha"])
-    sesion_ref = next((s for s in sesiones_ordenadas if s["fecha"] == hoy_str), None)
-    
-    if not sesion_ref and sesiones_ordenadas:
-        pasadas = [s for s in sesiones_ordenadas if s["fecha"] <= hoy_str]
-        sesion_ref = pasadas[-1] if pasadas else sesiones_ordenadas[0]
+    sesion_ref = next((s for s in sesiones_crono if s["fecha"] == hoy_str), None)
+    if not sesion_ref and sesiones_crono:
+        pasadas = [s for s in sesiones_crono if s["fecha"] <= hoy_str]
+        sesion_ref = pasadas[-1] if pasadas else sesiones_crono[0]
 
     def get_avatar_html(jugador_nombre):
         for p in st.session_state.get("plantilla", []):
@@ -434,16 +451,21 @@ if st.session_state.get("equipo_seleccionado", False):
     
     with c_ctx:
         if sesion_ref:
-            md_txt = sesion_ref.get("descripcion", sesion_ref.get("tipo", ""))
-            rival_txt = f" vs {sesion_ref.get('rival', 'Rival')}" if "Partido" in sesion_ref.get("tipo", "") else ""
-            contexto_str = f"{md_txt}{rival_txt}"
+            nom_dyn = sesion_ref.get("nombre_dinamico", "")
+            if "Partido" in sesion_ref.get("tipo", ""):
+                contexto_str = f"{nom_dyn} vs {sesion_ref.get('rival', 'Rival')}"
+                sub_str = "Match Day"
+            else:
+                contexto_str = f"{nom_dyn} | {sesion_ref.get('descripcion', 'TD')}"
+                sub_str = "Entrenamiento"
+
             fecha_str = datetime.strptime(sesion_ref["fecha"], "%Y-%m-%d").strftime("%d %b")
             clima = sesion_ref.get("clima", {})
-            clima_icon = "🌧️" if clima and clima.get("estado") == "Lluvia" else ("☀️" if clima else "")
+            clima_icon = "🌧️" if clima and clima.get("estado") == "Lluvia" else ("☀️" if clima else "⏱️")
             
             st.markdown(f"""
             <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 12px; padding: 25px; height: 100%; border: 1px solid #334155; border-left: 5px solid #3b82f6; box-shadow: 0 10px 20px rgba(0,0,0,0.2); display: flex; flex-direction: column; justify-content: center;">
-                <span style="color: #94a3b8; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Última Referencia</span>
+                <span style="color: #94a3b8; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Última Referencia ({sub_str})</span>
                 <h2 style="color: #f8fafc; font-size: 1.8rem; font-weight: 800; margin: 0 0 12px 0; line-height: 1.2;">{contexto_str}</h2>
                 <div style="display: inline-block; background: #3b82f6; color: #ffffff; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: 700; width: fit-content;">
                     {fecha_str} {clima_icon}
@@ -473,9 +495,9 @@ if st.session_state.get("equipo_seleccionado", False):
 
     st.markdown("---")
     
-    # --- BOTÓN DE CONFIGURACIÓN MODERNO Y REDUCIDO ---
-    col_btn1, col_btn2, col_btn3 = st.columns([1.5, 1, 1.5])
-    with col_btn2:
+    # --- BOTÓN DE CONFIGURACIÓN A LA DERECHA ---
+    c_vacio, c_btn = st.columns([5, 1])
+    with c_btn:
         if st.button("⚙️ Configuración", use_container_width=True):
             st.session_state.mostrar_configuracion = not st.session_state.get("mostrar_configuracion", False)
 
