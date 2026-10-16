@@ -318,8 +318,8 @@ def aplicar_color_sidebar():
     css_dinamico = f"""
     <style>
         [data-testid="stSidebar"] {{
-            background-color: {color} !important;
-            border-right: 1px solid #262626 !important;
+            background-color: #0f172a !important; /* Forzamos Slate 900 oscuro siempre */
+            border-right: 1px solid #1e293b !important;
         }}
         [data-testid="stSidebar"] h1, 
         [data-testid="stSidebar"] h2, 
@@ -327,7 +327,7 @@ def aplicar_color_sidebar():
         [data-testid="stSidebar"] label,
         [data-testid="stSidebar"] p,
         [data-testid="stSidebar"] span {{
-            color: #000000 !important;
+            color: #f8fafc !important; /* Texto blanco en todo el sidebar */
             font-weight: 800 !important;
         }}
     </style>
