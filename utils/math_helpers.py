@@ -332,15 +332,9 @@ def aplicar_color_sidebar():
             background-color: #0f172a !important;
             border-right: 1px solid #1e293b !important;
         }
-        /* Convertir el sidebar en Flexbox para empujar elementos al fondo */
-        [data-testid="stSidebar"] > div:first-child {
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-        }
-        /* Dejar espacio arriba para que el menú no tape el escudo ni el Live Status */
+        /* Hacemos un hueco EXACTO de 230px en la parte superior del menú nativo */
         [data-testid="stSidebarNav"] {
-            padding-top: 220px !important;
+            padding-top: 230px !important;
         }
         [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3,
         [data-testid="stSidebar"] label, [data-testid="stSidebar"] p, [data-testid="stSidebar"] span {
@@ -354,13 +348,8 @@ def aplicar_color_sidebar():
             100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
         }
         .live-dot {
-            height: 8px;
-            width: 8px;
-            background-color: #10b981;
-            border-radius: 50%;
-            display: inline-block;
-            animation: pulse-green 2s infinite;
-            margin-right: 6px;
+            height: 8px; width: 8px; background-color: #10b981; border-radius: 50%;
+            display: inline-block; animation: pulse-green 2s infinite; margin-right: 6px;
         }
     </style>
     """
@@ -378,11 +367,12 @@ def aplicar_color_sidebar():
             nombre = st.session_state.get("nombre_equipo", "")
             img_src = escudo if str(escudo).startswith("http") else f"data:image/jpeg;base64,{escudo}" if escudo else ""
             
-            # 1. ESCUDO FIJO ARRIBA DE TODO + LIVE STATUS
+            # 1. Renderizamos el escudo con MARGEN NEGATIVO para subirlo al hueco creado
+            # El margin-bottom de 50px compensa el arrastre para que los botones de abajo no se monten
             html_escudo = f"""
-                <div style='position: absolute; top: 15px; left: 0; width: 100%; text-align: center; z-index: 999999;'>
-                    <div style='display: flex; justify-content: center; margin-bottom: 20px;'>
-                        <div style='background-color: rgba(15, 23, 42, 0.7); border: 1px solid #334155; padding: 4px 10px; border-radius: 12px; font-size: 0.65rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; display: flex; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.3);'>
+                <div style='position: relative; margin-top: -230px; margin-bottom: 50px; z-index: 99999; text-align: center;'>
+                    <div style='display: flex; justify-content: center; margin-bottom: 15px;'>
+                        <div style='background-color: rgba(15, 23, 42, 0.9); border: 1px solid #334155; padding: 4px 12px; border-radius: 12px; font-size: 0.65rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; display: flex; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.3);'>
                             <span class='live-dot'></span> LIVE SYNC
                         </div>
                     </div>
@@ -392,15 +382,12 @@ def aplicar_color_sidebar():
                 
             html_escudo += f"""
                     <h3 style='color: #f8fafc; margin-top: 10px; margin-bottom: 0; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 0.5px;'>{nombre}</h3>
-                    <hr style='border-color: #1e293b; margin-top: 15px; margin-bottom: 0; border-width: 1px;'>
                 </div>
             """
             st.markdown(html_escudo, unsafe_allow_html=True)
             
-            # 2. SEPARADOR FLEXIBLE (Empuja los botones hacia abajo)
-            st.markdown("<div style='margin-top: auto;'></div>", unsafe_allow_html=True)
-            
-            # 3. BOTONES PEGADOS AL FONDO
+            # 2. Los botones se renderizan de forma natural justo debajo de la navegación
+            st.markdown("<hr style='border-color: #1e293b; margin-top: 0; margin-bottom: 15px;'>", unsafe_allow_html=True)
             if st.button("🔄 Cambiar Equipo", use_container_width=True, key="btn_cambiar_eq_sb"):
                 st.session_state.equipo_seleccionado = False
                 st.rerun()
