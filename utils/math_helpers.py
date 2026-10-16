@@ -414,16 +414,35 @@ def validar_columnas_excel(df, nombre_archivo, columnas_esperadas):
         return False, msg
         
     return True, "OK"
-def render_kpi_elite(titulo, valor, subtitulo="", icono="", color_borde="#3b82f6"):
+def render_kpi_elite(titulo, valor, subtitulo="", icono="", color_borde="#3b82f6", tendencia=None):
     """
-    Genera una tarjeta KPI con diseño profesional unificado tipo 'Élite'.
-    Sustituirá a los st.metric estándar para dar cohesión visual a la app.
+    Tarjeta KPI compacta, centrada, con título adaptativo y flecha de tendencia.
+    tendencia: dict opcional {'valor': float, 'inverso': bool}
     """
+    tendencia_html = ""
+    if tendencia is not None:
+        val_t = tendencia.get('valor', 0)
+        inverso = tendencia.get('inverso', False) # Si True, subir es malo (Rojo)
+        
+        if val_t > 0.5:
+            color = "#ef4444" if inverso else "#10b981"
+            flecha = "▲"
+        elif val_t < -0.5:
+            color = "#10b981" if inverso else "#ef4444"
+            flecha = "▼"
+        else:
+            color = "#94a3b8"
+            flecha = "▬"
+            
+        tendencia_html = f"<div style='color: {color}; font-size: 0.7rem; font-weight: 800; margin-top: 2px;'>{flecha} {abs(val_t):.1f}% vs Sem. Ant.</div>"
+
     html = f"""
-    <div style="background: linear-gradient(145deg, #1e293b, #0f172a); border: 1px solid #334155; border-top: 3px solid {color_borde}; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); transition: transform 0.2s ease;">
-        <p style="color: #94a3b8; font-size: 0.85rem; font-weight: 700; margin: 0; text-transform: uppercase; letter-spacing: 0.5px;">{titulo} {icono}</p>
-        <h2 style="color: #f8fafc; font-size: 2.2rem; font-weight: 800; margin: 5px 0;">{valor}</h2>
-        <p style="color: {color_borde}; font-size: 0.85rem; font-weight: 600; margin: 0;">{subtitulo}</p>
+    <div style="background: linear-gradient(145deg, #1e293b, #0f172a); border: 1px solid #334155; border-top: 3px solid {color_borde}; border-radius: 8px; padding: 12px 2px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); height: 100%; display: flex; flex-direction: column; justify-content: center;">
+        <p style="color: #94a3b8; font-size: 0.65rem; font-weight: 800; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.1;">{titulo} {icono}</p>
+        <h2 style="color: #f8fafc; font-size: 1.3rem; font-weight: 800; margin: 0; line-height: 1;">{valor}</h2>
+        {tendencia_html}
+        {f"<p style='color: {color_borde}; font-size: 0.6rem; font-weight: 600; margin: 4px 0 0 0;'>{subtitulo}</p>" if subtitulo else ""}
     </div>
     """
+    import streamlit as st
     st.markdown(html, unsafe_allow_html=True)
