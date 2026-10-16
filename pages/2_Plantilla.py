@@ -91,11 +91,11 @@ if st.session_state.vista_plantilla == "📋 Plantilla":
                         nombre = jug['JUGADOR']
                         
                         tarjeta_html = f"""
-                        <div style="background-color: #ffffff; border: 1px solid #e4e4e7; border-top: 4px solid #dc2626; border-radius: 10px; padding: 20px 10px 15px 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.04); text-align: center; margin-bottom: 12px; transition: transform 0.2s ease;">
+                        <div style="background-color: #1e293b; border: 1px solid #334155; border-top: 4px solid #3b82f6; border-radius: 10px; padding: 20px 10px 15px 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); text-align: center; margin-bottom: 12px; transition: transform 0.2s ease;">
                             {img_html}
-                            <h3 style="color: #dc2626; font-weight: 800; font-size: 1.1rem; margin: 10px 0 2px 0;">#{dorsal}</h3>
-                            <h4 style="color: #0a0a0a; font-weight: 800; font-size: 1rem; margin: 0 0 10px 0; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{nombre}</h4>
-                            <span style="background-color: #f4f4f5; color: #475569; font-weight: 800; font-size: 0.75rem; padding: 4px 10px; border-radius: 4px; text-transform: uppercase; border: 1px solid #e4e4e7;">{posicion}</span>
+                            <h3 style="color: #3b82f6; font-weight: 800; font-size: 1.2rem; margin: 10px 0 2px 0;">#{dorsal}</h3>
+                            <h4 style="color: #f8fafc; font-weight: 800; font-size: 1.1rem; margin: 0 0 10px 0; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{nombre}</h4>
+                            <span style="background-color: #0f172a; color: #94a3b8; font-weight: 800; font-size: 0.75rem; padding: 4px 10px; border-radius: 6px; text-transform: uppercase; border: 1px solid #334155;">{posicion}</span>
                         </div>
                         """
                         st.markdown(tarjeta_html, unsafe_allow_html=True)
