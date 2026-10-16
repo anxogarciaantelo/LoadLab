@@ -214,8 +214,9 @@ with tab_cal:
                         
                         # Si el jugador no llevó GPS (distancia = 0) o min gps = 0, se anulan sus métricas de GPS
                         if min_gps > 0 and dis > 0:
-                            dis_ai_21 = get_col(row, ['DISTANCIA AI >21', 'HID distance (> 21.00 km/h)'])
-                            dis_ai_24 = get_col(row, ['DISTANCIA AI >24', 'HID distance (> 24.00 km/h)'])
+                            # Ingesta normalizada: DIS se queda en KM, el resto de distancias se guardan en Metros.
+                            dis_ai_21 = get_col(row, ['DISTANCIA AI >21', 'HID distance (> 21.00 km/h)']) * 1000.0
+                            dis_ai_24 = get_col(row, ['DISTANCIA AI >24', 'HID distance (> 24.00 km/h)']) * 1000.0
                             spr_24 = get_col(row, ['SPRINTS >24', '# of Sprints (> 24.00 km/h)'])
                             spr_27 = get_col(row, ['SPRINTS >27'])
                             v_med = get_col(row, ['V.MEDIA', 'V. MEDIA', 'Avg Speed (km/h)'])
@@ -227,13 +228,13 @@ with tab_cal:
                             dcc_2 = get_col(row, ['DCC >2 m/s', '# of Decelerations (> 2.00 m/s²)'])
                             dcc_3 = get_col(row, ['DCC >3 m/s', '# of Decelerations (> 3.00 m/s²)'])
                             dcc_4 = get_col(row, ['DCC >4 m/s', '# of Decelerations (> 4.00 m/s²)'])
-                            r_0_7 = get_col(row, ['DISTANCIA 0-7 KM/H', 'Distance Speed Range (0 - 7 km)'])
-                            r_7_14 = get_col(row, ['DISTANCIA 7-14 KM/H', 'Distance Speed Range (7 - 14 km)'])
-                            r_14_21 = get_col(row, ['DISTANCIA 14-21 KM/H', 'Distance Speed Range (14 - 21 km)'])
-                            r_21_24 = get_col(row, ['DISTANCIA 21-24 KM/H', 'Distance Speed Range (21 - 24 km)'])
-                            r_24_27 = get_col(row, ['DISTANCIA 24-27 KM/H', 'Distance Speed Range (24 - 27 km)'])
-                            r_27_30 = get_col(row, ['DISTANCIA 27-30 KM/H', 'Distance Speed Range (27 - 30 km)'])
-                            r_30 = get_col(row, ['DISTANCIA >30 KM/H', 'Distance Speed Range (30 - 45 km)'])
+                            r_0_7 = get_col(row, ['DISTANCIA 0-7 KM/H', 'Distance Speed Range (0 - 7 km)']) * 1000.0
+                            r_7_14 = get_col(row, ['DISTANCIA 7-14 KM/H', 'Distance Speed Range (7 - 14 km)']) * 1000.0
+                            r_14_21 = get_col(row, ['DISTANCIA 14-21 KM/H', 'Distance Speed Range (14 - 21 km)']) * 1000.0
+                            r_21_24 = get_col(row, ['DISTANCIA 21-24 KM/H', 'Distance Speed Range (21 - 24 km)']) * 1000.0
+                            r_24_27 = get_col(row, ['DISTANCIA 24-27 KM/H', 'Distance Speed Range (24 - 27 km)']) * 1000.0
+                            r_27_30 = get_col(row, ['DISTANCIA 27-30 KM/H', 'Distance Speed Range (27 - 30 km)']) * 1000.0
+                            r_30 = get_col(row, ['DISTANCIA >30 KM/H', 'Distance Speed Range (30 - 45 km)']) * 1000.0
                         else:
                             dis = dis_ai_21 = dis_ai_24 = spr_24 = spr_27 = v_med = v_max = acc_max = acc_2 = acc_3 = acc_4 = dcc_2 = dcc_3 = dcc_4 = r_0_7 = r_7_14 = r_14_21 = r_21_24 = r_24_27 = r_27_30 = r_30 = 0.0
                             min_gps = 0.0
@@ -1659,9 +1660,9 @@ with tab_ses:
                                         reg["MIN"] = reg["MIN_GPS"]
                                         
                                         reg["DIS"] = dis
-                                        reg["HID >21"] = safe_float(row_g.get(cfg_g.get("hid_21", ""), 0))
+                                        reg["HID >21"] = safe_float(row_g.get(cfg_g.get("hid_21", ""), 0)) * 1000.0
                                         reg["DIS AI"] = reg["HID >21"]
-                                        reg["HID >24"] = safe_float(row_g.get(cfg_g.get("hid_24", ""), 0))
+                                        reg["HID >24"] = safe_float(row_g.get(cfg_g.get("hid_24", ""), 0)) * 1000.0
                                         
                                         reg["SPR >24"] = safe_float(row_g.get(cfg_g.get("spr_24", ""), 0))
                                         reg["Nº SPR"] = reg["SPR >24"]
@@ -1681,13 +1682,13 @@ with tab_ses:
                                         reg["DCC"] = reg["DCC >3"]
                                         reg["DCC >4"] = safe_float(row_g.get(cfg_g.get("dcc_4", ""), 0))
                                         
-                                        reg["R_0_7"] = safe_float(row_g.get(cfg_g.get("r_0_7", ""), 0))
-                                        reg["R_7_14"] = safe_float(row_g.get(cfg_g.get("r_7_14", ""), 0))
-                                        reg["R_14_21"] = safe_float(row_g.get(cfg_g.get("r_14_21", ""), 0))
-                                        reg["R_21_24"] = safe_float(row_g.get(cfg_g.get("r_21_24", ""), 0))
-                                        reg["R_24_27"] = safe_float(row_g.get(cfg_g.get("r_24_27", ""), 0))
-                                        reg["R_27_30"] = safe_float(row_g.get(cfg_g.get("r_27_30", ""), 0))
-                                        reg["R_30_45"] = safe_float(row_g.get(cfg_g.get("r_30_45", ""), 0)) 
+                                        reg["R_0_7"] = safe_float(row_g.get(cfg_g.get("r_0_7", ""), 0)) * 1000.0
+                                        reg["R_7_14"] = safe_float(row_g.get(cfg_g.get("r_7_14", ""), 0)) * 1000.0
+                                        reg["R_14_21"] = safe_float(row_g.get(cfg_g.get("r_14_21", ""), 0)) * 1000.0
+                                        reg["R_21_24"] = safe_float(row_g.get(cfg_g.get("r_21_24", ""), 0)) * 1000.0
+                                        reg["R_24_27"] = safe_float(row_g.get(cfg_g.get("r_24_27", ""), 0)) * 1000.0
+                                        reg["R_27_30"] = safe_float(row_g.get(cfg_g.get("r_27_30", ""), 0)) * 1000.0
+                                        reg["R_30_45"] = safe_float(row_g.get(cfg_g.get("r_30_45", ""), 0)) * 1000.0 
                                         
                                         reg["Z1"] = reg["R_0_7"] + reg["R_7_14"]
                                         reg["Z2"] = reg["R_14_21"]
