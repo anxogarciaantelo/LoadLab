@@ -395,11 +395,11 @@ def aplicar_color_sidebar():
     """
     st.markdown(css_dinamico, unsafe_allow_html=True)
     
-    # 2. Carga automática del archivo Style.css para asegurar que el diseño 
+    # 2. Carga automática del archivo style.css para asegurar que el diseño 
     #    sea el mismo en todas las páginas de la aplicación.
     try:
         # Asegúrate de que el nombre del archivo coincida exactamente (mayúsculas/minúsculas)
-        with open("Style.css", "r") as f:
+        with open("style.css", "r") as f:
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
     except Exception as e:
         pass
