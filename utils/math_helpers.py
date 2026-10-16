@@ -325,22 +325,24 @@ def cargar_css_global():
         return ""
 
 def aplicar_color_sidebar():
-    """Inyecta el color dinámico, la tipografía de la barra lateral, el CSS global, el escudo y los botones de sesión."""
+    """Inyecta el color dinámico, la tipografía, el CSS global, el escudo y el Live Status en la barra lateral."""
     css_dinamico = """
     <style>
         [data-testid="stSidebar"] {
             background-color: #0f172a !important;
             border-right: 1px solid #1e293b !important;
+            /* Fundamental para que el absolute se quede dentro del sidebar */
+            position: relative !important; 
         }
-        /* Convertir el sidebar en Flexbox para empujar elementos al fondo */
+        /* Convertir el sidebar en Flexbox para empujar botones al fondo */
         [data-testid="stSidebar"] > div:first-child {
             display: flex;
             flex-direction: column;
             height: 100vh;
         }
-        /* Hacemos un hueco EXACTO en la parte superior del menú nativo para el escudo */
+        /* Hueco exacto arriba para el escudo y el título */
         [data-testid="stSidebarNav"] {
-            margin-top: 220px !important;
+            margin-top: 180px !important;
         }
         /* Forzar que el contenedor de nuestro contenido ocupe el resto del alto para empujar botones */
         [data-testid="stSidebarUserContent"] {
@@ -381,29 +383,32 @@ def aplicar_color_sidebar():
             nombre = st.session_state.get("nombre_equipo", "")
             img_src = escudo if str(escudo).startswith("http") else f"data:image/jpeg;base64,{escudo}" if escudo else ""
             
-            # 1. ESCUDO FIJO ARRIBA DE TODO (Usando 'fixed' anclado al sidebar)
+            # 1. ESCUDO ARRIBA DEL TODO (Con absolute anclado a los bordes laterales del sidebar)
             html_escudo = f"""
-                <div style='position: fixed; top: 30px; left: 0; width: 100%; text-align: center; z-index: 999999;'>
-                    <div style='display: flex; justify-content: center; margin-bottom: 15px;'>
-                        <div style='background-color: rgba(15, 23, 42, 0.9); border: 1px solid #334155; padding: 4px 12px; border-radius: 12px; font-size: 0.65rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; display: flex; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.3);'>
-                            <span class='live-dot'></span> LIVE SYNC
-                        </div>
-                    </div>
+                <div style='position: absolute; top: 30px; left: 0; right: 0; text-align: center; z-index: 999999;'>
             """
             if img_src:
                 html_escudo += f"<img src='{img_src}' style='width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 2px solid #3b82f6; box-shadow: 0 4px 10px rgba(0,0,0,0.3);'>"
                 
             html_escudo += f"""
                     <h3 style='color: #f8fafc; margin-top: 10px; margin-bottom: 0; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 0.5px;'>{nombre}</h3>
+                    <hr style='border-color: #1e293b; margin-top: 15px; margin-bottom: 0; border-width: 1px;'>
                 </div>
             """
             st.markdown(html_escudo, unsafe_allow_html=True)
             
-            # 2. SEPARADOR FLEXIBLE (Empuja los botones obligatoriamente hacia abajo)
+            # 2. SEPARADOR FLEXIBLE (Empuja todo lo que viene después hacia abajo)
             st.markdown("<div style='margin-top: auto;'></div>", unsafe_allow_html=True)
             
-            # 3. BOTONES PEGADOS AL FONDO
-            st.markdown("<hr style='border-color: #1e293b; margin-top: 0; margin-bottom: 15px;'>", unsafe_allow_html=True)
+            # 3. LIVE SYNC Y BOTONES ABAJO DEL TODO
+            st.markdown(f"""
+                <div style='display: flex; justify-content: center; margin-bottom: 15px;'>
+                    <div style='background-color: rgba(15, 23, 42, 0.9); border: 1px solid #334155; padding: 4px 12px; border-radius: 12px; font-size: 0.65rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; display: flex; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.3);'>
+                        <span class='live-dot'></span> LIVE SYNC
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+            
             if st.button("🔄 Cambiar Equipo", use_container_width=True, key="btn_cambiar_eq_sb"):
                 st.session_state.equipo_seleccionado = False
                 st.rerun()
