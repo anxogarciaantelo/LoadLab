@@ -34,10 +34,11 @@ def generar_grafico_radar_gps(df_target, df_ref, label_target, label_ref):
         return None
 
     for df in [df_t_val, df_r_val]:
-        min_efectivo_radar = np.where(df['MIN_GPS'] > 0, df['MIN_GPS'], df['MIN'])
-        for col in ['DIS', 'DIS AI', 'ACC', 'Nº SPR']:
-            if f'{col}/min' not in df.columns:
-                df[f'{col}/min'] = np.where(min_efectivo_radar > 0, df[col] / min_efectivo_radar, 0)
+            min_efectivo_radar = np.where(df['MIN_GPS'] > 0, df['MIN_GPS'], df['MIN'])
+            for col in ['DIS', 'DIS AI', 'ACC', 'Nº SPR']:
+                if f'{col}/min' not in df.columns:
+                    multiplicador = 1000.0 if col == 'DIS' else 1.0
+                    df[f'{col}/min'] = np.where(min_efectivo_radar > 0, (df[col] * multiplicador) / min_efectivo_radar, 0)
     
     # Corrección de la Velocidad Media para usar el tiempo de GPS real
     min_ref_sum = np.where(df_r_val['MIN_GPS'] > 0, df_r_val['MIN_GPS'], df_r_val['MIN']).sum()
@@ -246,7 +247,8 @@ else:
     for c in cols_dinamicas:
         # Usamos MIN_GPS prioritariamente. Si por algún error de subida está a 0 pero hay distancia, usamos MIN como salvavidas antibloqueo.
         min_efectivo = np.where(df_gps['MIN_GPS'] > 0, df_gps['MIN_GPS'], df_gps['MIN'])
-        df_gps[f'{c}/min'] = np.where(min_efectivo > 0, df_gps[c] / min_efectivo, 0)
+        multiplicador = 1000.0 if c == 'DIS' else 1.0
+        df_gps[f'{c}/min'] = np.where(min_efectivo > 0, (df_gps[c] * multiplicador) / min_efectivo, 0)
 
     lista_jugs = sorted(df_gps['JUGADOR'].unique())
     lista_pos = ["POR", "DEF", "MED", "ATA"]
@@ -484,7 +486,7 @@ else:
 
             st.markdown("#### ⏱️ Promedios Relativos (Por Minuto de GPS)")
             kr1, kr2, kr3, kr4 = st.columns(4)
-            kr1.metric("m / min", f"{(kpis_rel['DIS/min']*1000):.1f}")
+            kr1.metric("m / min", f"{kpis_rel['DIS/min']:.1f}")
             kr2.metric("HSR m / min", f"{kpis_rel['DIS AI/min']:.2f}")
             kr3.metric("ACC / min", f"{kpis_rel['ACC/min']:.2f}")
             kr4.metric("DCC / min", f"{kpis_rel['DCC/min']:.2f}")
@@ -634,9 +636,6 @@ else:
                 valA = mean_t_A[m] if not pd.isna(mean_t_A[m]) else 0
                 valB = mean_t_B[m] if not pd.isna(mean_t_B[m]) else 0
                 valC = mean_t_C[m] if usar_C and not pd.isna(mean_t_C[m]) else 0
-                
-                if 'DIS/min' == m: # Solo multiplicamos DIS/min a m/min, porque DIS AI/min ya viene en metros
-                    valA, valB, valC = valA * 1000, valB * 1000, valC * 1000
 
                 diff_str_B = f"{(((valB - valA) / valA) * 100):+.1f}%" if valA > 0 else "N/A"
                 diff_str_C = f"{(((valC - valA) / valA) * 100):+.1f}%" if usar_C and valA > 0 else "N/A"
