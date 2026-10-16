@@ -279,12 +279,11 @@ else:
                         j_ewma = ewma_dict.get(jugador["JUGADOR"], {"EWMA AGUDA": 0, "EWMA CRÓNICA": 0, "RATIO A/C": 0})
                         
                         # --- NUEVO: KPIs del Último Registro de Carga ---
+                        # --- CÓDIGO OPTIMIZADO: Lectura directa en milisegundos ---
                         df_ci_sorted = df_j[df_j['MIN'] > 0].sort_values("FECHA", ascending=True)
                         if not df_ci_sorted.empty:
                             ultimo_ci = df_ci_sorted.iloc[-1]
-                            
-                            dict_historico_ultimo = calcular_ewma_historico(st.session_state.sesiones, ultimo_ci['FECHA'])
-                            carga_aguda_ultima = dict_historico_ultimo.get(jugador["JUGADOR"], {}).get("EWMA AGUDA", 0.0)
+                            carga_aguda_ultima = ultimo_ci.get('EWMA AGUDA', 0.0)
                             
                             st.markdown("#### ⚡ Estado Actual (Última Sesión)")
                             cu_ci1, cu_ci2, cu_ci3, cu_ci4 = st.columns(4)
@@ -308,10 +307,8 @@ else:
                         
                         alertas_carga_ind = []
                         if carga_aguda_ind > 1000:
-                            if ratio_ac_ind >= 1.5:
-                                alertas_carga_ind.append(f"🔴 Ratio A/C en riesgo alto ({ratio_ac_ind:.2f})")
-                            elif 1.35 <= ratio_ac_ind < 1.5:
-                                alertas_carga_ind.append(f"🟡 Ratio A/C en riesgo moderado ({ratio_ac_ind:.2f})")
+                            if ratio_ac_ind >= 1.5: alertas_carga_ind.append(f"🔴 Ratio A/C en riesgo alto ({ratio_ac_ind:.2f})")
+                            elif 1.35 <= ratio_ac_ind < 1.5: alertas_carga_ind.append(f"🟡 Ratio A/C en riesgo moderado ({ratio_ac_ind:.2f})")
                                 
                         if monot_ind > 2.0 and strain_ind > 4000:
                             alertas_carga_ind.append(f"🟡 Riesgo por monotonía y fatiga acumulada (Monotonía {monot_ind:.2f}, Strain {strain_ind:.0f})")
@@ -323,15 +320,15 @@ else:
 
                         st.markdown("#### 📋 Últimos Registros de Carga Interna")
                         
+                        # Ya no hay cálculos forzados, la tabla hereda los datos calculados de forma segura
                         df_tabla_ci = df_j.copy()
+                        df_tabla_ci['AGUDA'] = df_tabla_ci.get('EWMA AGUDA', 0.0)
+                        df_tabla_ci['CRONICA'] = df_tabla_ci.get('EWMA CRÓNICA', 0.0)
+                        df_tabla_ci['EWMA'] = df_tabla_ci.get('RATIO A/C', 0.0)
 
-                        def obtener_ewma_historico_fila(fecha_sesion):
-                            dict_historico = calcular_ewma_historico(st.session_state.sesiones, fecha_sesion)
-                            return dict_historico.get(jugador["JUGADOR"], {"EWMA AGUDA": 0.0, "EWMA CRÓNICA": 0.0, "RATIO A/C": 0.0})
-
-                        df_tabla_ci['AGUDA'] = df_tabla_ci['FECHA'].apply(lambda f: obtener_ewma_historico_fila(f)['EWMA AGUDA'])
-                        df_tabla_ci['CRONICA'] = df_tabla_ci['FECHA'].apply(lambda f: obtener_ewma_historico_fila(f)['EWMA CRÓNICA'])
-                        df_tabla_ci['EWMA'] = df_tabla_ci['FECHA'].apply(lambda f: obtener_ewma_historico_fila(f)['RATIO A/C'])
+                        cols_ver_ci_indiv = ['FECHA', 'TIPO', 'RPE', 'MIN', 'CARGA', 'AGUDA', 'CRONICA', 'EWMA']
+                        df_ultimos_ci_indiv = df_tabla_ci[cols_ver_ci_indiv].sort_values("FECHA", ascending=False).head(5)
+                        mostrar_tabla_moderna(df_ultimos_ci_indiv.style.hide(axis="index").format(precision=2))
 
                         cols_ver_ci_indiv = ['FECHA', 'TIPO', 'RPE', 'MIN', 'CARGA', 'AGUDA', 'CRONICA', 'EWMA']
                         df_ultimos_ci_indiv = df_tabla_ci[cols_ver_ci_indiv].sort_values("FECHA", ascending=False).head(5)
