@@ -14,17 +14,6 @@ def safe_float(val):
     except:
         return 0.0
 
-def a_metros(val):
-    """Si la distancia viene en KM (< 25), la pasa a metros. Si ya son metros, la deja igual."""
-    try:
-        val = float(val)
-        if pd.isna(val) or val == 0: return 0.0
-        if val < 25.0:
-            return val * 1000.0
-        return val
-    except:
-        return 0.0
-
 def get_col(row, possible_names):
     # Motor de búsqueda robusto: ignora mayúsculas y espacios invisibles en el Excel
     row_keys = {str(k).strip().lower(): k for k in row.index}
