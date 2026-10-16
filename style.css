@@ -1,96 +1,137 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-html, body, [class*="css"] {
+/* --- TIPOGRAFÍA Y TAMAÑOS BASE MÁS GRANDES --- */
+html, body, [class*="css"], .stMarkdown p, .stText p {
     font-family: 'Plus Jakarta Sans', -apple-system, sans-serif !important;
     color: #e2e8f0 !important;
-    font-size: 16px !important; /* Letra base más grande */
+    font-size: 1.05rem !important; 
 }
+h1, h2, h3, h4, h5, h6 { color: #f8fafc !important; font-weight: 800 !important; }
 
-/* Fondo App */
+/* --- FONDO APP --- */
 .stApp {
     background-color: #0b1120 !important;
     background-image: radial-gradient(circle at 50% 0%, #1e293b 0%, transparent 70%);
 }
 
-/* Sidebar */
+/* --- SIDEBAR --- */
 [data-testid="stSidebar"] {
     background-color: #0f172a !important;
     border-right: 1px solid #1e293b !important;
 }
-[data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3,
-[data-testid="stSidebar"] label, [data-testid="stSidebar"] p, [data-testid="stSidebar"] span {
-    color: #f8fafc !important;
-}
 
-/* Contenedores y Expanders (Esto arregla los Microciclos) */
+/* --- CONTENEDORES Y MICROCICLOS (Ajuste de espacio) --- */
 div[data-testid="stVerticalBlock"] > div[data-testid="stContainer"],
 div[data-testid="stExpander"] details {
     background: #1e293b !important;
     border-radius: 12px !important;
     border: 1px solid #334155 !important;
-    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.5) !important;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.4) !important;
+    padding: 10px !important; /* Menos espacio desperdiciado */
 }
 div[data-testid="stExpander"] summary {
     background: #1e293b !important;
     border-radius: 8px !important;
-    padding: 10px !important;
+    padding: 15px !important;
 }
 div[data-testid="stExpander"] summary p {
     color: #f8fafc !important;
-    font-weight: 700 !important;
-    font-size: 1.1rem !important;
+    font-size: 1.15rem !important;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
-/* KPIs st.metric */
+/* --- PESTAÑAS (GRANDES Y PROFESIONALES) --- */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 10px;
+    background-color: transparent !important;
+    padding: 0 !important;
+    border-bottom: 2px solid #1e293b !important;
+}
+.stTabs [data-baseweb="tab"] {
+    height: 55px !important;
+    background-color: transparent !important;
+    color: #64748b !important;
+    font-weight: 700 !important;
+    font-size: 1.15rem !important;
+    border: none !important;
+    padding: 0 20px !important;
+    transition: all 0.3s ease;
+}
+.stTabs [aria-selected="true"] {
+    color: #3b82f6 !important;
+    background-color: transparent !important;
+    border-bottom: 3px solid #3b82f6 !important;
+    box-shadow: none !important;
+}
+
+/* --- TARJETAS KPI (st.metric) --- */
 div[data-testid="stMetric"] {
     background: #1e293b !important;
     border: 1px solid #334155 !important;
     border-top: 3px solid #3b82f6 !important;
-    padding: 16px 20px !important;
+    padding: 20px !important;
     border-radius: 10px !important;
     box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important;
 }
 div[data-testid="stMetric"] label {
     font-size: 0.85rem !important;
     color: #94a3b8 !important;
-    font-weight: 700 !important;
 }
 div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
-    font-size: 1.8rem !important;
+    font-size: 2rem !important;
     color: #f8fafc !important; 
 }
 
-/* PESTAÑAS (TABS) - Arreglo de tamaño y visibilidad */
-.stTabs [data-baseweb="tab-list"] {
-    gap: 8px;
-    background-color: #0f172a !important;
-    padding: 8px !important;
-    border-radius: 10px !important;
-    border: 1px solid #1e293b !important;
-}
-.stTabs [data-baseweb="tab"] {
-    height: 48px !important; /* Más grandes */
+/* --- BOTONES NATIVOS (MÁS ANCHOS Y VISIBLES) --- */
+.stButton > button {
     border-radius: 8px !important;
-    color: #94a3b8 !important;
     font-weight: 700 !important;
-    font-size: 1.05rem !important; /* Letra más visible */
-    border: none !important;
-    padding: 0 24px !important;
-}
-.stTabs [aria-selected="true"] {
-    background-color: #3b82f6 !important;
-    color: #ffffff !important;
-    box-shadow: 0 0 10px rgba(59, 130, 246, 0.4) !important;
-}
-
-/* Inputs y Selectores */
-div[data-testid="stTextInput"] input,
-div[data-testid="stNumberInput"] input,
-div[data-testid="stSelectbox"] div[data-baseweb="select"] {
-    background-color: #0f172a !important;
-    border: 1px solid #334155 !important;
-    color: #f8fafc !important;
     font-size: 1rem !important;
+    background-color: #1e293b !important;
+    color: #f8fafc !important;
+    border: 1px solid #334155 !important;
+    padding: 10px 20px !important;
+}
+.stButton > button:hover {
+    background-color: #3b82f6 !important;
+    border-color: #3b82f6 !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 15px rgba(59,130,246,0.3) !important;
 }
 
-h1, h2, h3, h4, h5, h6 { color: #f8fafc !important; }
+/* --- TABLAS MODERNAS (MPA STYLE) --- */
+.modern-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    border-radius: 10px;
+    overflow: hidden;
+    background-color: #1e293b;
+    margin-bottom: 20px;
+    border: 1px solid #334155;
+}
+.modern-table thead tr {
+    background-color: #0f172a;
+}
+.modern-table th {
+    padding: 16px 18px;
+    font-weight: 800;
+    font-size: 0.85rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    text-align: center !important;
+    border-bottom: 2px solid #3b82f6;
+}
+.modern-table td {
+    padding: 14px 18px;
+    font-size: 0.95rem;
+    color: #f8fafc;
+    text-align: center !important;
+    border-bottom: 1px solid #334155;
+}
+.modern-table tbody tr:hover td {
+    background-color: #0b1120;
+}
