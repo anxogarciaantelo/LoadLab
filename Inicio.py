@@ -515,7 +515,7 @@ if st.session_state.get("equipo_seleccionado", False):
     st.markdown("---")
 
     # --- 3. TARJETAS DE NAVEGACIÓN (ACCESOS RÁPIDOS) ---
-    st.markdown("<h3 style='text-align: center; color: #0f172a; font-weight: 800; margin-bottom: 25px;'>🚀 Accesos Rápidos</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='text-align: center; color: #f8fafc; font-weight: 800; margin-bottom: 25px;'>🚀 Accesos Rápidos</h3>", unsafe_allow_html=True)
     
     # CSS inyectado para que los botones parezcan tarjetas grandes y clickeables
     st.markdown("""
