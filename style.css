@@ -1,12 +1,19 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-/* --- ANIMACIÓN DE ENTRADA (FADE-IN) --- */
+/* --- ANIMACIÓN DE ENTRADA (FADE-IN SUAVE) --- */
 @keyframes fadeInScale {
-    0% { opacity: 0; transform: translateY(8px); }
-    100% { opacity: 1; transform: translateY(0); }
+    0% { 
+        opacity: 0; 
+        transform: translateY(12px); 
+    }
+    100% { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
 }
-.stApp .main .block-container {
-    animation: fadeInScale 0.4s ease-out;
+
+[data-testid="stMain"] {
+    animation: fadeInScale 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 /* --- TIPOGRAFÍA Y NÚMEROS TABULARES --- */
