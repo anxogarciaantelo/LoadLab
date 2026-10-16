@@ -51,103 +51,53 @@ st.subheader("📅 Entrenamiento")
 tab_cal, tab_temp, tab_micro, tab_ses = st.tabs(["🗓️ Calendario", "🏆 Temporada", "🔄 Microciclos", "📋 Sesiones"])
 
 with tab_cal:
-    c_dia1, c_dia2 = st.columns([1, 2])
-    with c_dia1:
-        # Diccionarios para traducir los meses y días del selector al castellano
-        meses_trad = {1: "enero", 2: "febrero", 3: "marzo", 4: "abril", 5: "mayo", 6: "junio", 7: "julio", 8: "agosto", 9: "septiembre", 10: "octubre", 11: "noviembre", 12: "diciembre"}
-        dias_trad = {0: "lunes", 1: "martes", 2: "miércoles", 3: "jueves", 4: "viernes", 5: "sábado", 6: "domingo"}
-        
-        dia_clicado = st.date_input("Selecciona un día del calendario:", date.today())
-        
-        # Formateamos la fecha seleccionada a Día-Mes-Año en texto para los mensajes
-        fecha_formateada = dia_clicado.strftime("%d-%m-%Y")
-        
-        sesiones_en_fecha = [s for s in st.session_state.sesiones if s["fecha"] == str(dia_clicado)]
-        if sesiones_en_fecha: 
-            st.success(f"¡Hay sesión programada para el {fecha_formateada}!")
-        else:
-            st.warning(f"No hay registros para el {fecha_formateada}.")
-            with st.expander("➕ Generar Sesión"):
-                tipo_nuevo = st.selectbox("Tipo de Evento:", ["Entrenamiento", "Partido Oficial", "Partido Amistoso"])
-                
-                desc_nuevo = ""
-                comp_nuevo = ""
-                rival_nuevo = ""
-                condicion_nuevo = "Casa"
-                ciudad_manual_nuevo = ""
-                
-                if tipo_nuevo == "Entrenamiento":
-                    desc_nuevo = st.selectbox("Match Day:", ["MD-6", "MD-5", "MD-4", "MD-3", "MD-2", "MD-1", "MD+1", "MD+2", "TD"])
-                else:
-                    if tipo_nuevo == "Partido Oficial":
-                        comp_nuevo = st.selectbox("Competición:", ["Liga", "Copa"])
-                    
-                    col_r1, col_r2 = st.columns(2)
-                    rival_nuevo = col_r1.text_input("Rival:")
-                    condicion_nuevo = col_r2.radio("Condición:", ["Casa", "Fuera"], horizontal=True)
-                    
-                    # --- NUEVA LÓGICA: SI ES FUERA Y EL RIVAL NO ESTÁ GUARDADO ---
-                    if condicion_nuevo == "Fuera":
-                        rivales_db = st.session_state.get("rivales_guardados", {})
-                        if rival_nuevo and rival_nuevo not in rivales_db:
-                            st.info("ℹ️ Este rival no está en tu base de datos.")
-                            ciudad_manual_nuevo = st.text_input("Ciudad del partido (Obligatorio para calcular el clima):")
-                    
-                if st.button("Guardar Sesión"):
-                    ciudad_objetivo = st.session_state.get("ubicacion_local", "")
-                    
-                    if tipo_nuevo != "Entrenamiento" and condicion_nuevo == "Fuera":
-                        rival_info = st.session_state.get("rivales_guardados", {}).get(rival_nuevo, {})
-                        if isinstance(rival_info, dict) and rival_info.get("ciudad"):
-                            ciudad_objetivo = rival_info.get("ciudad")
-                        elif ciudad_manual_nuevo:
-                            ciudad_objetivo = ciudad_manual_nuevo
-                    
-                    # Llamada a la API
-                    clima_data = None
-                    if ciudad_objetivo:
-                        with st.spinner(f"Sincronizando clima para {ciudad_objetivo}..."):
-                            from utils.math_helpers import obtener_clima
-                            clima_data = obtener_clima(ciudad_objetivo, str(dia_clicado))
+    # 1. ESTADO DE NAVEGACIÓN DEL CALENDARIO
+    if 'cal_offset' not in st.session_state:
+        st.session_state.cal_offset = 0
 
-                    st.session_state.sesiones.append({
-                        "fecha": str(dia_clicado), 
-                        "tipo": tipo_nuevo, 
-                        "descripcion": desc_nuevo,
-                        "competicion": comp_nuevo,
-                        "rival": rival_nuevo,
-                        "condicion": condicion_nuevo,
-                        "ciudad_manual": ciudad_manual_nuevo,
-                        "clima": clima_data,
-                        "disponibilidad": {},
-                        "informe_generado": False, 
-                        "datos_informe": []
-                    })
-                    guardar_datos(modulo="sesiones")
-                    st.success("¡Evento creado en el calendario!")
-                    st.rerun()
-    with c_dia2:
+    c_cal, c_form = st.columns([2.3, 1])
+    
+    # ==========================================
+    # 🗓️ COLUMNA IZQUIERDA: CALENDARIO INTERACTIVO
+    # ==========================================
+    with c_cal:
         import calendar
-        year = dia_clicado.year
-        month = dia_clicado.month
+        hoy = date.today()
+        # Lógica matemática para navegar meses infinitamente hacia atrás y adelante
+        mes_actual = hoy.month - 1 + st.session_state.cal_offset
+        year = hoy.year + mes_actual // 12
+        month = mes_actual % 12 + 1
         
         meses_nombres = ["", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
         
-        st.markdown(f"""
+        # Botones de navegación del mes
+        c_nav1, c_nav2, c_nav3 = st.columns([1, 3, 1])
+        if c_nav1.button("◀ Mes Anterior", use_container_width=True):
+            st.session_state.cal_offset -= 1
+            st.rerun()
+        with c_nav2:
+            st.markdown(f"<h3 style='text-align: center; color: #f8fafc; margin-top: 0; margin-bottom: 10px; text-transform: uppercase; font-weight: 800; letter-spacing: 1px;'>🗓️ {meses_nombres[month]} {year}</h3>", unsafe_allow_html=True)
+        if c_nav3.button("Mes Siguiente ▶", use_container_width=True):
+            st.session_state.cal_offset += 1
+            st.rerun()
+        
+        # Renderizado de la cuadrícula Élite
+        st.markdown("""
             <div style='background-color: #1e293b; border: 1px solid #334155; border-top: 3px solid #3b82f6; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);'>
-                <h4 style='text-align: center; color: #f8fafc; margin-top: 0; margin-bottom: 20px; text-transform: uppercase; font-weight: 800; letter-spacing: 1px;'>🗓️ {meses_nombres[month]} {year}</h4>
         """, unsafe_allow_html=True)
         
         cal = calendar.monthcalendar(year, month)
-        dias_semana = ["L", "M", "X", "J", "V", "S", "D"]
+        dias_semana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
         
-        html_cal = "<div style='display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; text-align: center;'>"
+        html_cal = "<div style='display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; text-align: center;'>"
         
+        # Encabezados de los días
         for d in dias_semana:
-            html_cal += f"<div style='background-color: #0f172a; color: #94a3b8; padding: 10px; font-weight: 800; font-size: 0.85rem; border-radius: 6px; border: 1px solid #334155;'>{d}</div>"
+            html_cal += f"<div style='background-color: #0f172a; color: #94a3b8; padding: 12px 5px; font-weight: 800; font-size: 0.9rem; border-radius: 8px; border: 1px solid #334155;'>{d}</div>"
             
         hoy_str = str(date.today())
         
+        # Pintar días
         for week in cal:
             for day in week:
                 if day == 0:
@@ -158,179 +108,105 @@ with tab_cal:
                     bg_color = "#0f172a" if fecha_str == hoy_str else "#1e293b"
                     
                     sesiones_dia = [s for s in st.session_state.sesiones if s["fecha"] == fecha_str]
-                    
                     contenido_extra = ""
+                    
+                    # Generación de tarjetas interiores MÁS ANCHAS y GRANDES (Rompiendo la línea en vez de ocultar texto)
                     if sesiones_dia:
                         for s in sesiones_dia:
                             nom = s.get("nombre_dinamico", s.get("tipo", ""))
                             if "Partido" in s.get("tipo", ""):
                                 color_badge = "#dc2626" 
-                                sub = s.get('rival', 'Rival')[:10] + "..." if len(s.get('rival', 'Rival')) > 10 else s.get('rival', 'Rival')
+                                sub = s.get('rival', 'Rival')
                             else:
                                 color_badge = "#10b981" 
                                 sub = s.get('descripcion', 'TD')
                                 
-                            contenido_extra += f"<div style='background-color: {color_badge}; color: white; font-size: 0.65rem; font-weight: 800; padding: 4px; border-radius: 4px; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 2px 4px rgba(0,0,0,0.2);' title='{nom} | {sub}'>{nom}<br><span style='font-size: 0.55rem; font-weight: 600;'>{sub}</span></div>"
+                            contenido_extra += f"<div style='background-color: {color_badge}; color: white; font-size: 0.8rem; font-weight: 800; padding: 8px 6px; border-radius: 6px; margin-top: 6px; width: 100%; box-sizing: border-box; word-wrap: break-word; line-height: 1.2; box-shadow: 0 2px 4px rgba(0,0,0,0.2);' title='{nom} | {sub}'>{nom}<br><span style='font-size: 0.7rem; font-weight: 600;'>{sub}</span></div>"
                     
-                    html_cal += f"<div style='background-color: {bg_color}; {es_hoy} padding: 10px 5px; border-radius: 6px; min-height: 90px; display: flex; flex-direction: column; align-items: center; transition: transform 0.2s ease;' onmouseover=\"this.style.transform='scale(1.05)'\" onmouseout=\"this.style.transform='scale(1)'\"><span style='color: #f8fafc; font-weight: 800; font-size: 1.1rem;'>{day}</span>{contenido_extra}</div>"
+                    html_cal += f"<div style='background-color: {bg_color}; {es_hoy} padding: 10px 5px; border-radius: 8px; min-height: 110px; display: flex; flex-direction: column; align-items: center; transition: transform 0.2s ease;' onmouseover=\"this.style.transform='scale(1.03)'\" onmouseout=\"this.style.transform='scale(1)'\"><span style='color: #f8fafc; font-weight: 800; font-size: 1.2rem; margin-bottom: 4px;'>{day}</span>{contenido_extra}</div>"
                     
         html_cal += "</div></div>"
         st.markdown(html_cal, unsafe_allow_html=True)
+        
+    # ==========================================
+    # ⚙️ COLUMNA DERECHA: GESTIÓN DIRECTA DE EVENTOS
+    # ==========================================
+    with c_form:
+        st.markdown("#### ⚙️ Gestión Diaria")
+        dia_clicado = st.date_input("1. Selecciona una fecha:", date.today())
+        fecha_formateada = dia_clicado.strftime("%d-%m-%Y")
+        
+        sesiones_en_fecha = [s for s in st.session_state.sesiones if s["fecha"] == str(dia_clicado)]
+        if sesiones_en_fecha: 
+            st.success(f"✅ {len(sesiones_en_fecha)} evento(s) el {fecha_formateada}")
+            for s in sesiones_en_fecha:
+                nom_d = s.get("nombre_dinamico", s.get("tipo", ""))
+                sub_d = s.get("subtitulo_dinamico", s.get("descripcion", ""))
+                st.info(f"**{nom_d}** | {sub_d}")
+        else:
+            st.warning(f"Día libre ({fecha_formateada}).")
+            
+        st.markdown("---")
+        
+        # Formulario directo (Ya no usa st.expander, siempre visible y más rápido)
+        st.markdown("##### ➕ Añadir Nueva Sesión")
+        tipo_nuevo = st.selectbox("Tipo de Evento:", ["Entrenamiento", "Partido Oficial", "Partido Amistoso"])
+        
+        desc_nuevo = ""
+        comp_nuevo = ""
+        rival_nuevo = ""
+        condicion_nuevo = "Casa"
+        ciudad_manual_nuevo = ""
+        
+        if tipo_nuevo == "Entrenamiento":
+            desc_nuevo = st.selectbox("Match Day:", ["MD-6", "MD-5", "MD-4", "MD-3", "MD-2", "MD-1", "MD+1", "MD+2", "TD"])
+        else:
+            if tipo_nuevo == "Partido Oficial":
+                comp_nuevo = st.selectbox("Competición:", ["Liga", "Copa"])
+            
+            col_r1, col_r2 = st.columns(2)
+            rival_nuevo = col_r1.text_input("Rival:")
+            condicion_nuevo = col_r2.radio("Condición:", ["Casa", "Fuera"], horizontal=True)
+            
+            if condicion_nuevo == "Fuera":
+                rivales_db = st.session_state.get("rivales_guardados", {})
+                if rival_nuevo and rival_nuevo not in rivales_db:
+                    st.info("ℹ️ Rival no guardado en la BBDD.")
+                    ciudad_manual_nuevo = st.text_input("Ciudad (Necesario para clima autom.):")
+            
+        if st.button("💾 Guardar Sesión", use_container_width=True):
+            ciudad_objetivo = st.session_state.get("ubicacion_local", "")
+            
+            if tipo_nuevo != "Entrenamiento" and condicion_nuevo == "Fuera":
+                rival_info = st.session_state.get("rivales_guardados", {}).get(rival_nuevo, {})
+                if isinstance(rival_info, dict) and rival_info.get("ciudad"):
+                    ciudad_objetivo = rival_info.get("ciudad")
+                elif ciudad_manual_nuevo:
+                    ciudad_objetivo = ciudad_manual_nuevo
+            
+            # Llamada a la API
+            clima_data = None
+            if ciudad_objetivo:
+                with st.spinner(f"Sincronizando clima para {ciudad_objetivo}..."):
+                    from utils.math_helpers import obtener_clima
+                    clima_data = obtener_clima(ciudad_objetivo, str(dia_clicado))
 
-    # --- IMPORTADOR MASIVO DE HISTÓRICO ---
-    st.markdown("---")
-    with st.expander("📥 Importar Histórico Masivo (Excel de Temporada)"):
-        st.caption("Sube tu archivo Excel con todo el histórico. El sistema creará o actualizará las sesiones automáticamente y añadirá a los jugadores nuevos si no existen.")
-        archivo_historico = st.file_uploader("Sube el Excel de histórico:", type=["xlsx"])
-        if st.button("🚀 Procesar Histórico Masivo") and archivo_historico is not None:
-            try:
-                df_hist = pd.read_excel(archivo_historico)
-                
-                # --- NUEVA VALIDACIÓN EXTREMA ---
-                cols_necesarias = ['JUGADOR', 'FECHA']
-                es_valido, msj_error = validar_columnas_excel(df_hist, "Histórico de Temporada", cols_necesarias)
-                
-                if not es_valido:
-                    st.markdown(f"<div style='background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 15px; margin-bottom: 15px; border-radius: 6px; color: #991b1b;'>{msj_error}</div>", unsafe_allow_html=True)
-                else:
-                    df_hist_valid = df_hist[df_hist['JUGADOR'] != 0].copy()
-                    df_hist_valid['FECHA_STR'] = pd.to_datetime(df_hist_valid['FECHA'], errors='coerce').dt.strftime('%Y-%m-%d')
-                    df_hist_valid = df_hist_valid.dropna(subset=['FECHA_STR'])
-                
-                sesiones_creadas_count = 0
-                for fecha_str, grupo in df_hist_valid.groupby('FECHA_STR'):
-                    sesion_obj = next((s for s in st.session_state.sesiones if s["fecha"] == fecha_str), None)
-                    if not sesion_obj:
-                        sesion_obj = {
-                            "fecha": fecha_str,
-                            "tipo": "Entrenamiento",
-                            "descripcion": "TD",
-                            "competicion": "",
-                            "rival": "",
-                            "disponibilidad": {},
-                            "informe_generado": True,
-                            "datos_informe": []
-                        }
-                        st.session_state.sesiones.append(sesion_obj)
-                        sesiones_creadas_count += 1
-                    else:
-                        sesion_obj["informe_generado"] = True
-                        
-                    registros_sesion = []
-                    for idx, row in grupo.iterrows():
-                        jug_nombre = str(row['JUGADOR']).strip()
-                        if pd.isna(row['JUGADOR']) or jug_nombre == "" or jug_nombre == "nan": continue
-                        
-                        match_p = next((p for p in st.session_state.plantilla if limpiar_nombre(p['JUGADOR']) == limpiar_nombre(jug_nombre)), None)
-                        if not match_p:
-                            st.session_state.plantilla.append({
-                                "JUGADOR": jug_nombre,
-                                "POS": "DEF",
-                                "edad": 20,
-                                "pos_1": "Central",
-                                "pos_2": "Ninguna",
-                                "dorsal": 99,
-                                "altura": 180,
-                                "lateralidad": "Diestro",
-                                "foto": None
-                            })
-                            
-                        fatiga = get_col(row, ['FATIGA', 'Fatiga'])
-                        sueño = get_col(row, ['SUEÑO', 'Sueño', 'SUENO'])
-                        dolor = get_col(row, ['DOLOR', 'Dolor'])
-                        estres = get_col(row, ['ESTRÉS', 'Estrés', 'ESTRES'])
-                        humor = get_col(row, ['HUMOR', 'Humor'])
-                        well_sum = fatiga + sueño + dolor + estres + humor
-                        
-                        min_sesion = get_col(row, ['MINUTOS SESIÓN', 'MINUTOS SESION', 'Minutos Sesión'])
-                        min_gps = get_col(row, ['MINUTOS GPS', 'Time Played', 'Minutos GPS'])
-                        rpe = get_col(row, ['RPE'])
-                        
-                        dis = get_col(row, ['DISTANCIA', 'Distance (km)'])
-                        
-                        # Si el jugador no llevó GPS (distancia = 0) o min gps = 0, se anulan sus métricas de GPS
-                        if min_gps > 0 and dis > 0:
-                            # Ingesta normalizada: DIS se queda en KM, el resto de distancias se guardan en Metros.
-                            dis_ai_21 = get_col(row, ['DISTANCIA AI >21', 'HID distance (> 21.00 km/h)']) * 1000.0
-                            dis_ai_24 = get_col(row, ['DISTANCIA AI >24', 'HID distance (> 24.00 km/h)']) * 1000.0
-                            spr_24 = get_col(row, ['SPRINTS >24', '# of Sprints (> 24.00 km/h)'])
-                            spr_27 = get_col(row, ['SPRINTS >27'])
-                            v_med = get_col(row, ['V.MEDIA', 'V. MEDIA', 'Avg Speed (km/h)'])
-                            v_max = get_col(row, ['V. MÁXIMA', 'Max Speed (km/h)'])
-                            acc_max = get_col(row, ['ACC. MÁXIMA'])
-                            acc_2 = get_col(row, ['ACC >2 m/s', '# of Accelerations (> 2.00 m/s²)'])
-                            acc_3 = get_col(row, ['ACC >3 m/s', '# of Accelerations (> 3.00 m/s²)'])
-                            acc_4 = get_col(row, ['ACC >4 m/s', '# of Accelerations (> 4.00 m/s²)'])
-                            dcc_2 = get_col(row, ['DCC >2 m/s', '# of Decelerations (> 2.00 m/s²)'])
-                            dcc_3 = get_col(row, ['DCC >3 m/s', '# of Decelerations (> 3.00 m/s²)'])
-                            dcc_4 = get_col(row, ['DCC >4 m/s', '# of Decelerations (> 4.00 m/s²)'])
-                            r_0_7 = get_col(row, ['DISTANCIA 0-7 KM/H', 'Distance Speed Range (0 - 7 km)']) * 1000.0
-                            r_7_14 = get_col(row, ['DISTANCIA 7-14 KM/H', 'Distance Speed Range (7 - 14 km)']) * 1000.0
-                            r_14_21 = get_col(row, ['DISTANCIA 14-21 KM/H', 'Distance Speed Range (14 - 21 km)']) * 1000.0
-                            r_21_24 = get_col(row, ['DISTANCIA 21-24 KM/H', 'Distance Speed Range (21 - 24 km)']) * 1000.0
-                            r_24_27 = get_col(row, ['DISTANCIA 24-27 KM/H', 'Distance Speed Range (24 - 27 km)']) * 1000.0
-                            r_27_30 = get_col(row, ['DISTANCIA 27-30 KM/H', 'Distance Speed Range (27 - 30 km)']) * 1000.0
-                            r_30 = get_col(row, ['DISTANCIA >30 KM/H', 'Distance Speed Range (30 - 45 km)']) * 1000.0
-                        else:
-                            dis = dis_ai_21 = dis_ai_24 = spr_24 = spr_27 = v_med = v_max = acc_max = acc_2 = acc_3 = acc_4 = dcc_2 = dcc_3 = dcc_4 = r_0_7 = r_7_14 = r_14_21 = r_21_24 = r_24_27 = r_27_30 = r_30 = 0.0
-                            min_gps = 0.0
-
-                        rec = {
-                            "JUGADOR": jug_nombre,
-                            "POS": next((p['POS'] for p in st.session_state.plantilla if limpiar_nombre(p['JUGADOR']) == limpiar_nombre(jug_nombre)), "DEF"),
-                            "TQR": get_col(row, ['TQR']),
-                            "WELLNESS": well_sum,
-                            "W_Humor": humor, "W_Sueño": sueño, "W_Fatiga": fatiga, "W_Dolor": dolor, "W_Estres": estres,
-                            "RPE": rpe,
-                            "MIN": min_sesion,
-                            "MIN_GPS": min_gps,
-                            "CARGA": min_sesion * rpe,
-                            
-                            # Formato Standard (Para Dashboards Globales)
-                            "DIS": dis,
-                            "DIS AI": dis_ai_21,
-                            "Nº SPR": spr_24,
-                            "ACC": acc_3,
-                            "DCC": dcc_3,
-                            "VMAX": v_max,
-                            "Z1": r_0_7 + r_7_14,
-                            "Z2": r_14_21,
-                            "Z3": r_21_24,
-                            "Z4": r_24_27,
-                            "Z5": r_27_30,
-                            "Z6": r_30,
-                            
-                            # Formato Extendido Exacto (Para la Tabla de Carga Manual y Mapeo Estricto)
-                            "HID >21": dis_ai_21,
-                            "HID >24": dis_ai_24,
-                            "SPR >24": spr_24,
-                            "SPR >27": spr_27,
-                            "V_Med": v_med,
-                            "V_Max": v_max,
-                            "ACC_Max": acc_max,
-                            "ACC >2": acc_2,
-                            "ACC >3": acc_3,
-                            "ACC >4": acc_4,
-                            "DCC >2": dcc_2,
-                            "DCC >3": dcc_3,
-                            "DCC >4": dcc_4,
-                            "R_0_7": r_0_7,
-                            "R_7_14": r_7_14,
-                            "R_14_21": r_14_21,
-                            "R_21_24": r_21_24,
-                            "R_24_27": r_24_27,
-                            "R_27_30": r_27_30,
-                            "R_30_45": r_30
-                        }
-                        registros_sesion.append(rec)
-                        
-                    sesion_obj["datos_informe"] = registros_sesion
-                    
-                guardar_datos(modulo="sesiones")
-                st.success(f"✅ ¡Histórico importado correctamente! Se procesaron {len(df_hist_valid)} registros en total.")
-                st.rerun()
-            except Exception as e:
-                st.error(f"Error al procesar el archivo histórico: {e}")
+            st.session_state.sesiones.append({
+                "fecha": str(dia_clicado), 
+                "tipo": tipo_nuevo, 
+                "descripcion": desc_nuevo,
+                "competicion": comp_nuevo,
+                "rival": rival_nuevo,
+                "condicion": condicion_nuevo,
+                "ciudad_manual": ciudad_manual_nuevo,
+                "clima": clima_data,
+                "disponibilidad": {},
+                "informe_generado": False, 
+                "datos_informe": []
+            })
+            guardar_datos(modulo="sesiones")
+            st.success("¡Evento creado en el calendario!")
+            st.rerun()
 
 with tab_temp:
     st.markdown("### 🏆 Evolución de la Temporada")
