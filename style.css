@@ -1,5 +1,5 @@
 /* ==========================================================================
-   LOADLAB AMS - ELITE DARK/RED DESIGN SYSTEM
+   LOADLAB AMS - ELITE DARK PERFORMANCE DESIGN (MPA STYLE)
    ========================================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
@@ -7,116 +7,137 @@
 /* --- Tipografía Global --- */
 html, body, [class*="css"] {
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
+    color: #e2e8f0 !important; /* Texto base gris claro */
 }
 
 /* --- Fondo General --- */
-/* Un gris pizarra ultra claro para contrastar con el blanco puro de las tarjetas */
 .stApp {
-    background-color: #f4f4f5 !important; 
+    background-color: #0b1120 !important; /* Azul marino muy oscuro / casi negro */
+    background-image: radial-gradient(circle at 50% 0%, #1e293b 0%, transparent 70%);
 }
 
 /* --- Barra Lateral (Sidebar) --- */
 [data-testid="stSidebar"] {
-    background-color: #0a0a0a !important; /* Negro profundo */
-    border-right: 1px solid #262626; /* Borde carbón */
+    background-color: #0f172a !important; /* Slate 900 */
+    border-right: 1px solid #1e293b !important;
 }
 
 [data-testid="stSidebar"] h1, 
 [data-testid="stSidebar"] h2, 
 [data-testid="stSidebar"] h3,
 [data-testid="stSidebar"] label,
-[data-testid="stSidebar"] p {
-    color: #ffffff !important; /* Texto blanco en la barra lateral */
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] span {
+    color: #f8fafc !important; /* Texto blanco puro */
 }
 
-/* --- Rediseño de Contenedores y Expander --- */
+/* --- Tarjetas, Contenedores y Expander --- */
 div[data-testid="stVerticalBlock"] > div[data-testid="stContainer"],
-div[data-testid="stExpander"] {
-    background: #ffffff !important;
-    border-radius: 10px !important;
-    border: 1px solid #e4e4e7 !important;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05) !important;
-    transition: all 0.2s ease-in-out;
+div[data-testid="stExpander"] details {
+    background: #1e293b !important; /* Slate 800 */
+    border-radius: 12px !important;
+    border: 1px solid #334155 !important; /* Borde sutil */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3) !important;
+    color: #f8fafc !important;
 }
 
 div[data-testid="stExpander"] summary p {
-    color: #1c1c1e !important; /* Texto carbón */
+    color: #f8fafc !important;
     font-weight: 700 !important;
 }
 
-div[data-testid="stExpander"]:hover {
-    border-color: #dc2626 !important; /* Hover con acento rojo */
+div[data-testid="stExpander"]:hover details {
+    border-color: #3b82f6 !important; /* Hover azul eléctrico */
 }
 
-/* --- Tarjetas st.metric Personalizadas --- */
+/* --- Tarjetas st.metric Personalizadas (KPIs) --- */
 div[data-testid="stMetric"] {
-    background: #ffffff !important;
-    border: 1px solid #e4e4e7 !important;
-    border-left: 4px solid #1c1c1e !important; /* Acento lateral carbón */
-    padding: 14px 18px !important;
-    border-radius: 8px !important;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04) !important;
+    background: #1e293b !important;
+    border: 1px solid #334155 !important;
+    border-top: 3px solid #3b82f6 !important; /* Acento superior Azul MPA */
+    padding: 16px 20px !important;
+    border-radius: 10px !important;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3) !important;
 }
 
 div[data-testid="stMetric"]:hover {
     transform: translateY(-2px);
-    border-left-color: #dc2626 !important; /* El acento pasa a rojo al pasar el ratón */
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08) !important;
+    border-top-color: #10b981 !important; /* Cambia a verde esmeralda en hover */
+    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.5) !important;
 }
 
 div[data-testid="stMetric"] label {
-    font-size: 0.75rem !important;
-    color: #475569 !important; /* Pizarra medio */
+    font-size: 0.8rem !important;
+    color: #94a3b8 !important; /* Slate 400 */
     text-transform: uppercase;
-    font-weight: 800 !important;
+    font-weight: 700 !important;
     letter-spacing: 0.05em;
 }
 
 div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
-    font-size: 1.6rem !important;
-    color: #0a0a0a !important; /* Valor en negro absoluto */
+    font-size: 1.8rem !important;
+    color: #f8fafc !important; 
     font-weight: 800 !important;
 }
 
 /* --- Pestañas Modernas (st.tabs) --- */
 .stTabs [data-baseweb="tab-list"] {
-    gap: 4px;
-    background-color: #e4e4e7; /* Pizarra claro */
-    padding: 4px;
-    border-radius: 8px;
+    gap: 8px;
+    background-color: #0f172a; /* Fondo oscuro para agrupar pestañas */
+    padding: 6px;
+    border-radius: 10px;
+    border: 1px solid #1e293b;
 }
 
 .stTabs [data-baseweb="tab"] {
-    height: 38px;
-    border-radius: 6px;
-    color: #3f3f46 !important;
-    font-weight: 700 !important;
-    font-size: 0.85rem !important;
+    height: 40px;
+    border-radius: 8px;
+    color: #94a3b8 !important;
+    font-weight: 600 !important;
+    font-size: 0.9rem !important;
     border: none !important;
-    padding: 0 16px !important;
+    padding: 0 18px !important;
+    transition: all 0.3s ease;
 }
 
 .stTabs [aria-selected="true"] {
-    background-color: #1c1c1e !important; /* Pestaña activa en Carbón */
-    color: #ffffff !important; /* Texto blanco */
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+    background-color: #3b82f6 !important; /* Azul eléctrico MPA */
+    color: #ffffff !important;
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.5) !important; /* Efecto Glow */
 }
 
 /* --- Botones Principales y Secundarios --- */
 .stButton > button {
-    border-radius: 6px !important;
+    border-radius: 8px !important;
     font-weight: 700 !important;
-    font-size: 0.9rem !important;
-    background-color: #ffffff !important;
-    color: #1c1c1e !important;
-    border: 1px solid #d4d4d8 !important;
+    font-size: 0.95rem !important;
+    background-color: #1e293b !important;
+    color: #f8fafc !important;
+    border: 1px solid #334155 !important;
     transition: all 0.2s ease !important;
 }
 
 .stButton > button:hover {
-    background-color: #dc2626 !important; /* Fondo Rojo */
-    color: #ffffff !important; /* Texto Blanco */
-    border-color: #dc2626 !important;
+    background-color: #3b82f6 !important; /* Azul MPA */
+    color: #ffffff !important;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 12px rgba(59, 130, 246, 0.6) !important;
+}
+
+/* --- Formularios y Entradas de texto (Inputs) --- */
+div[data-testid="stTextInput"] input,
+div[data-testid="stNumberInput"] input,
+div[data-testid="stSelectbox"] div[data-baseweb="select"] {
+    background-color: #0f172a !important;
+    border: 1px solid #334155 !important;
+    color: #f8fafc !important;
+    border-radius: 8px !important;
+}
+
+div[data-testid="stTextInput"] input:focus,
+div[data-testid="stNumberInput"] input:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3) !important;
 }
 
 /* --- Estilo de Tablas Modernas --- */
@@ -125,49 +146,59 @@ div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
     border-collapse: separate;
     border-spacing: 0;
     font-family: 'Plus Jakarta Sans', sans-serif;
-    border-radius: 8px;
+    border-radius: 10px;
     overflow: hidden;
-    border: 1px solid #d4d4d8;
-    background-color: #ffffff;
+    border: 1px solid #334155;
+    background-color: #1e293b;
 }
 
 .modern-table thead tr {
-    background-color: #1c1c1e; /* Cabecera en carbón oscuro */
-    color: #ffffff; /* Texto blanco */
+    background-color: #0f172a;
+    color: #94a3b8;
 }
 
 .modern-table th {
-    padding: 12px 14px;
-    font-weight: 800;
+    padding: 14px 16px;
+    font-weight: 700;
     font-size: 0.8rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     text-align: center !important;
+    border-bottom: 2px solid #3b82f6;
 }
 
 .modern-table td {
-    padding: 10px 14px;
-    font-size: 0.88rem;
-    color: #27272a; /* Texto pizarra oscuro */
+    padding: 12px 16px;
+    font-size: 0.9rem;
+    color: #f8fafc;
     text-align: center !important;
-    border-bottom: 1px solid #f4f4f5;
+    border-bottom: 1px solid #334155;
 }
 
 .modern-table tbody tr:hover td {
-    background-color: #fef2f2; /* Hover con un ligerísimo tono rojizo */
+    background-color: #0f172a;
+}
+
+/* Dataframe Nativo de Streamlit */
+[data-testid="stDataFrame"] {
+    background-color: #1e293b !important;
 }
 
 /* --- Chips / Insignias de Estado --- */
 .badge-status {
     display: inline-block;
     padding: 4px 10px;
-    border-radius: 4px;
+    border-radius: 6px;
     font-size: 0.75rem;
     font-weight: 800;
     text-transform: uppercase;
     text-align: center;
 }
-/* Reajuste de semántica combinando con la estética élite */
-.badge-success { background-color: #f4f4f5; color: #1c1c1e; border: 1px solid #1c1c1e; } /* Neutral/Black */
-.badge-danger  { background-color: #dc2626; color: #ffffff; } /* Alerta Crítica en Rojo puro */
-.badge-warning { background-color: #f4f4f5; color: #dc2626; border: 1px solid #dc2626; } /* Peligro moderado */
+.badge-success { background-color: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid #10b981; }
+.badge-danger  { background-color: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid #ef4444; }
+.badge-warning { background-color: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid #f59e0b; }
+
+/* Títulos h1, h2, h3, h4 generales */
+h1, h2, h3, h4 {
+    color: #f8fafc !important;
+}
