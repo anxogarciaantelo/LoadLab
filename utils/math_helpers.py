@@ -212,8 +212,9 @@ def mostrar_tabla_moderna(styler_obj):
     else:
         html_tabla = styler_obj.to_html()
 
-    css_personalizado = "<style>.modern-table { width: 100%; border-collapse: collapse; font-family: sans-serif; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); background-color: white; margin-bottom: 20px; } .modern-table thead tr { background-color: #000000; color: #ffffff; } .modern-table th { padding: 12px 15px; font-weight: bold; text-align: center !important; border-bottom: 2px solid #333333; } .modern-table td { padding: 10px 15px; text-align: center !important; border-bottom: 1px solid #eeeeee; } .modern-table tbody tr:hover td { filter: brightness(0.95); }</style>"
+    css_personalizado = "<style>.modern-table { width: 100%; border-collapse: separate; border-spacing: 0; font-family: 'Plus Jakarta Sans', sans-serif; border-radius: 10px; overflow: hidden; border: 1px solid #334155; background-color: #1e293b; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); } .modern-table thead tr { background-color: #0f172a; color: #94a3b8; } .modern-table th { padding: 16px 18px; font-weight: 700; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; text-align: center !important; border-bottom: 2px solid #3b82f6; } .modern-table td { padding: 14px 18px; font-size: 0.95rem; color: #f8fafc; text-align: center !important; border-bottom: 1px solid #334155; } .modern-table tbody tr:hover td { background-color: #0f172a; }</style>"
     st.markdown(css_personalizado + html_tabla, unsafe_allow_html=True)
+    
 def set_login_background(image_path):
     try:
         import base64
