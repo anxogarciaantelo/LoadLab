@@ -1,204 +1,96 @@
-/* ==========================================================================
-   LOADLAB AMS - ELITE DARK PERFORMANCE DESIGN (MPA STYLE)
-   ========================================================================== */
-
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-/* --- Tipografía Global --- */
 html, body, [class*="css"] {
-    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
-    color: #e2e8f0 !important; /* Texto base gris claro */
+    font-family: 'Plus Jakarta Sans', -apple-system, sans-serif !important;
+    color: #e2e8f0 !important;
+    font-size: 16px !important; /* Letra base más grande */
 }
 
-/* --- Fondo General --- */
+/* Fondo App */
 .stApp {
-    background-color: #0b1120 !important; /* Azul marino muy oscuro / casi negro */
+    background-color: #0b1120 !important;
     background-image: radial-gradient(circle at 50% 0%, #1e293b 0%, transparent 70%);
 }
 
-/* --- Barra Lateral (Sidebar) --- */
+/* Sidebar */
 [data-testid="stSidebar"] {
-    background-color: #0f172a !important; /* Slate 900 */
+    background-color: #0f172a !important;
     border-right: 1px solid #1e293b !important;
 }
-
-[data-testid="stSidebar"] h1, 
-[data-testid="stSidebar"] h2, 
-[data-testid="stSidebar"] h3,
-[data-testid="stSidebar"] label,
-[data-testid="stSidebar"] p,
-[data-testid="stSidebar"] span {
-    color: #f8fafc !important; /* Texto blanco puro */
-}
-
-/* --- Tarjetas, Contenedores y Expander --- */
-div[data-testid="stVerticalBlock"] > div[data-testid="stContainer"],
-div[data-testid="stExpander"] details {
-    background: #1e293b !important; /* Slate 800 */
-    border-radius: 12px !important;
-    border: 1px solid #334155 !important; /* Borde sutil */
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3) !important;
+[data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3,
+[data-testid="stSidebar"] label, [data-testid="stSidebar"] p, [data-testid="stSidebar"] span {
     color: #f8fafc !important;
 }
 
+/* Contenedores y Expanders (Esto arregla los Microciclos) */
+div[data-testid="stVerticalBlock"] > div[data-testid="stContainer"],
+div[data-testid="stExpander"] details {
+    background: #1e293b !important;
+    border-radius: 12px !important;
+    border: 1px solid #334155 !important;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.5) !important;
+}
+div[data-testid="stExpander"] summary {
+    background: #1e293b !important;
+    border-radius: 8px !important;
+    padding: 10px !important;
+}
 div[data-testid="stExpander"] summary p {
     color: #f8fafc !important;
     font-weight: 700 !important;
+    font-size: 1.1rem !important;
 }
 
-div[data-testid="stExpander"]:hover details {
-    border-color: #3b82f6 !important; /* Hover azul eléctrico */
-}
-
-/* --- Tarjetas st.metric Personalizadas (KPIs) --- */
+/* KPIs st.metric */
 div[data-testid="stMetric"] {
     background: #1e293b !important;
     border: 1px solid #334155 !important;
-    border-top: 3px solid #3b82f6 !important; /* Acento superior Azul MPA */
+    border-top: 3px solid #3b82f6 !important;
     padding: 16px 20px !important;
     border-radius: 10px !important;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3) !important;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important;
 }
-
-div[data-testid="stMetric"]:hover {
-    transform: translateY(-2px);
-    border-top-color: #10b981 !important; /* Cambia a verde esmeralda en hover */
-    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.5) !important;
-}
-
 div[data-testid="stMetric"] label {
-    font-size: 0.8rem !important;
-    color: #94a3b8 !important; /* Slate 400 */
-    text-transform: uppercase;
+    font-size: 0.85rem !important;
+    color: #94a3b8 !important;
     font-weight: 700 !important;
-    letter-spacing: 0.05em;
 }
-
 div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
     font-size: 1.8rem !important;
     color: #f8fafc !important; 
-    font-weight: 800 !important;
 }
 
-/* --- Pestañas Modernas (st.tabs) --- */
+/* PESTAÑAS (TABS) - Arreglo de tamaño y visibilidad */
 .stTabs [data-baseweb="tab-list"] {
     gap: 8px;
-    background-color: #0f172a; /* Fondo oscuro para agrupar pestañas */
-    padding: 6px;
-    border-radius: 10px;
-    border: 1px solid #1e293b;
+    background-color: #0f172a !important;
+    padding: 8px !important;
+    border-radius: 10px !important;
+    border: 1px solid #1e293b !important;
 }
-
 .stTabs [data-baseweb="tab"] {
-    height: 40px;
-    border-radius: 8px;
-    color: #94a3b8 !important;
-    font-weight: 600 !important;
-    font-size: 0.9rem !important;
-    border: none !important;
-    padding: 0 18px !important;
-    transition: all 0.3s ease;
-}
-
-.stTabs [aria-selected="true"] {
-    background-color: #3b82f6 !important; /* Azul eléctrico MPA */
-    color: #ffffff !important;
-    box-shadow: 0 0 10px rgba(59, 130, 246, 0.5) !important; /* Efecto Glow */
-}
-
-/* --- Botones Principales y Secundarios --- */
-.stButton > button {
+    height: 48px !important; /* Más grandes */
     border-radius: 8px !important;
+    color: #94a3b8 !important;
     font-weight: 700 !important;
-    font-size: 0.95rem !important;
-    background-color: #1e293b !important;
-    color: #f8fafc !important;
-    border: 1px solid #334155 !important;
-    transition: all 0.2s ease !important;
+    font-size: 1.05rem !important; /* Letra más visible */
+    border: none !important;
+    padding: 0 24px !important;
 }
-
-.stButton > button:hover {
-    background-color: #3b82f6 !important; /* Azul MPA */
+.stTabs [aria-selected="true"] {
+    background-color: #3b82f6 !important;
     color: #ffffff !important;
-    border-color: #3b82f6 !important;
-    box-shadow: 0 0 12px rgba(59, 130, 246, 0.6) !important;
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.4) !important;
 }
 
-/* --- Formularios y Entradas de texto (Inputs) --- */
+/* Inputs y Selectores */
 div[data-testid="stTextInput"] input,
 div[data-testid="stNumberInput"] input,
 div[data-testid="stSelectbox"] div[data-baseweb="select"] {
     background-color: #0f172a !important;
     border: 1px solid #334155 !important;
     color: #f8fafc !important;
-    border-radius: 8px !important;
+    font-size: 1rem !important;
 }
 
-div[data-testid="stTextInput"] input:focus,
-div[data-testid="stNumberInput"] input:focus {
-    border-color: #3b82f6 !important;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3) !important;
-}
-
-/* --- Estilo de Tablas Modernas --- */
-.modern-table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    border-radius: 10px;
-    overflow: hidden;
-    border: 1px solid #334155;
-    background-color: #1e293b;
-}
-
-.modern-table thead tr {
-    background-color: #0f172a;
-    color: #94a3b8;
-}
-
-.modern-table th {
-    padding: 14px 16px;
-    font-weight: 700;
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    text-align: center !important;
-    border-bottom: 2px solid #3b82f6;
-}
-
-.modern-table td {
-    padding: 12px 16px;
-    font-size: 0.9rem;
-    color: #f8fafc;
-    text-align: center !important;
-    border-bottom: 1px solid #334155;
-}
-
-.modern-table tbody tr:hover td {
-    background-color: #0f172a;
-}
-
-/* Dataframe Nativo de Streamlit */
-[data-testid="stDataFrame"] {
-    background-color: #1e293b !important;
-}
-
-/* --- Chips / Insignias de Estado --- */
-.badge-status {
-    display: inline-block;
-    padding: 4px 10px;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    text-align: center;
-}
-.badge-success { background-color: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid #10b981; }
-.badge-danger  { background-color: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid #ef4444; }
-.badge-warning { background-color: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid #f59e0b; }
-
-/* Títulos h1, h2, h3, h4 generales */
-h1, h2, h3, h4 {
-    color: #f8fafc !important;
-}
+h1, h2, h3, h4, h5, h6 { color: #f8fafc !important; }
