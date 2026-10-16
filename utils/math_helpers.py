@@ -14,6 +14,17 @@ def safe_float(val):
     except:
         return 0.0
 
+def a_metros(val):
+    """Si la distancia viene en KM (< 25), la pasa a metros. Si ya son metros, la deja igual."""
+    try:
+        val = float(val)
+        if pd.isna(val) or val == 0: return 0.0
+        if val < 25.0:
+            return val * 1000.0
+        return val
+    except:
+        return 0.0
+
 def get_col(row, possible_names):
     # Motor de búsqueda robusto: ignora mayúsculas y espacios invisibles en el Excel
     row_keys = {str(k).strip().lower(): k for k in row.index}
@@ -86,18 +97,12 @@ def calcular_ewma_historico(_sesiones, fecha_objetivo):
         if pd.isna(a): a = 0.0
         if pd.isna(c): c = 0.0
         
-        # Multiplicación por 7 para obtener la Carga Semanal Equivalente
+        # Carga Semanal Equivalente
         a_semanal = a * 7
         c_semanal = c * 7
         
-        # El Ratio A/C se mantiene matemáticamente idéntico
         r = a_semanal / c_semanal if c_semanal > 0 else 1.0
-        
-        res[jug] = {
-            "EWMA AGUDA": round(a_semanal, 2), 
-            "EWMA CRÓNICA": round(c_semanal, 2), 
-            "RATIO A/C": round(r, 2)
-        }
+        res[jug] = {"EWMA AGUDA": round(a_semanal, 2), "EWMA CRÓNICA": round(c_semanal, 2), "RATIO A/C": round(r, 2)}
         
     return res
 
@@ -447,11 +452,3 @@ def validar_columnas_excel(df, nombre_archivo, columnas_esperadas):
         return False, msg
         
     return True, "OK"
-
-def a_metros(val):
-    if pd.isna(val) or val == 0: return 0.0
-    # En fútbol, nadie recorre más de 20 km en una zona de velocidad específica.
-    # Si el valor es menor a 20, asumimos que viene en KM y lo multiplicamos.
-    if val < 20.0:
-        return val * 1000.0
-    return val # Si es mayor a 20, ya viene en metros, lo dejamos igual.
