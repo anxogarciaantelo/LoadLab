@@ -51,7 +51,6 @@ def obtener_rango_fechas_semana(fecha_str):
 
 def calcular_ewma_historico(_sesiones, fecha_objetivo):
     registros = []
-    # Añadimos el guion bajo aquí:
     for s in _sesiones: 
         if s.get("informe_generado") and s["fecha"] <= fecha_objetivo:
             for d in s["datos_informe"]:
@@ -67,7 +66,6 @@ def calcular_ewma_historico(_sesiones, fecha_objetivo):
     rango_fechas = pd.date_range(start=fecha_ini, end=fecha_fin, freq='D')
     df_pivot = df_pivot.reindex(rango_fechas, fill_value=0)
     
-    # Enmascarar ceros previos a la primera sesión del jugador
     for col in df_pivot.columns:
         s_cargas = df_pivot[col]
         primer_dia_valido = s_cargas[s_cargas > 0].first_valid_index()
@@ -85,12 +83,21 @@ def calcular_ewma_historico(_sesiones, fecha_objetivo):
         a = aguda_hoy.get(jug, 0.0)
         c = cronica_hoy.get(jug, 0.0)
         
-        # Limpieza de posibles NaNs si el jugador no tiene ningún dato
         if pd.isna(a): a = 0.0
         if pd.isna(c): c = 0.0
         
-        r = a / c if c > 0 else 1.0
-        res[jug] = {"EWMA AGUDA": round(a, 2), "EWMA CRÓNICA": round(c, 2), "RATIO A/C": round(r, 2)}
+        # Multiplicación por 7 para obtener la Carga Semanal Equivalente
+        a_semanal = a * 7
+        c_semanal = c * 7
+        
+        # El Ratio A/C se mantiene matemáticamente idéntico
+        r = a_semanal / c_semanal if c_semanal > 0 else 1.0
+        
+        res[jug] = {
+            "EWMA AGUDA": round(a_semanal, 2), 
+            "EWMA CRÓNICA": round(c_semanal, 2), 
+            "RATIO A/C": round(r, 2)
+        }
         
     return res
 
