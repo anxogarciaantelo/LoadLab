@@ -151,10 +151,11 @@ def construir_dataset_entrenamiento(sesiones, lesiones):
 df_master = construir_dataset_entrenamiento(st.session_state.sesiones, st.session_state.lesiones)
 
 if df_master.empty:
+    from utils.math_helpers import render_estado_vacio
     render_estado_vacio(
         icono="🧠", 
         titulo="El oráculo necesita datos", 
-        descripcion="Para que el algoritmo pueda calcular el riesgo lesional mediante Machine Learning, necesita un volumen mínimo de entrenamientos procesados con minutos, RPE o GPS.",
+        descripcion="Para que el algoritmo pueda calcular el riesgo lesional, necesita un volumen mínimo de entrenamientos procesados con minutos, RPE o GPS.",
         accion_sugerida="Vuelve a la pestaña 'Entrenamientos' y carga los datos físicos de tus sesiones."
     )
     st.stop()
@@ -167,8 +168,6 @@ lesionados_activos = [l['jugador'] for l in st.session_state.lesiones if l.get('
 df_hoy = df_hoy[~df_hoy['JUGADOR'].isin(lesionados_activos)]
 
 MIN_LESIONES_REQUERIDAS = 10
-
-# CORRECCIÓN DEL CONTEO: Contamos eventos reales, no filas de entrenamiento
 lesiones_musculares_validas = [l for l in st.session_state.lesiones if l.get('tipo') in ["Muscular", "Tendinosa"] and l.get('contacto') == "No"]
 total_lesiones_reales = len(lesiones_musculares_validas)
 
@@ -191,107 +190,145 @@ if total_lesiones_reales >= MIN_LESIONES_REQUERIDAS:
             X_hoy = scaler.transform(df_hoy[predictores])
             df_hoy['Riesgo_%'] = modelo.predict_proba(X_hoy)[:, 1] * 100
 else:
-    # MOTOR HEURÍSTICO / LITERATURA CIENTÍFICA CORREGIDO
-    st.info(f"🧠 **Motor Heurístico Científico Activo:** ({total_lesiones_reales}/{MIN_LESIONES_REQUERIDAS} lesiones musculares sin contacto). La IA requiere más histórico. Predicciones actuales calculadas mediante baremos científicos estándar.")
-    
+    # MOTOR HEURÍSTICO AVANZADO (Basado en T. Gabbett y Banister)
     def calcular_riesgo_cientifico(row):
-        riesgo = 5.0 # Riesgo base
+        riesgo = 5.0 # Riesgo base fisiológico
         
-        # 1. Ratio A/C
-        if row['Ratio_AC'] > 1.5: riesgo += 35.0
-        elif row['Ratio_AC'] > 1.3: riesgo += 15.0
-        elif row['Ratio_AC'] < 0.8: riesgo += 10.0
+        # 1. Ratio A/C (The Sweet Spot Model)
+        if row['Ratio_AC'] > 1.5: riesgo += 40.0
+        elif row['Ratio_AC'] > 1.3: riesgo += 20.0
+        elif row['Ratio_AC'] < 0.8: riesgo += 15.0 # Under-training risk
         
-        # 2. Wellness y Sueño (Escala inversa: mayor = peor)
-        if row['Sueno_3d'] >= 5: 
-            riesgo += 15.0
-            
-        if row['Wellness_3d'] >= 24: 
-            riesgo += 15.0 # Wellness crítico
-        elif row['Wellness_3d'] >= 18: 
-            riesgo += 5.0  # Wellness moderado
+        # 2. Carga Aguda Extrema (Spike)
+        if row['Carga_Aguda'] > 3000: riesgo += 10.0
         
-        # 3. Historial clínico inteligente (Últimos 60 días)
+        # 3. Wellness y Sueño (Recuperación del SNC)
+        if row['Sueno_3d'] >= 5: riesgo += 15.0
+        if row['Wellness_3d'] >= 24: riesgo += 15.0 
+        elif row['Wellness_3d'] >= 18: riesgo += 5.0 
+        
+        # 4. Historial clínico (La mayor predictibilidad de lesión es una lesión previa)
         riesgo_previo = 0.0
         for l in st.session_state.lesiones:
             if l['jugador'] == row['JUGADOR']:
                 fecha_l = datetime.strptime(l['id_sesion'], "%Y-%m-%d")
                 if (datetime.today() - fecha_l).days <= 60:
                     tipo_lesion = l.get('tipo', '')
-                    
-                    if tipo_lesion in ["Muscular", "Tendinosa"]:
-                        # Riesgo altísimo por posible recaída directa del tejido
-                        riesgo_previo = max(riesgo_previo, 20.0) 
-                    elif tipo_lesion == "Artículo-ligamentosa":
-                        # Riesgo moderado por alteraciones y compensaciones biomecánicas
-                        riesgo_previo = max(riesgo_previo, 10.0)
+                    if tipo_lesion in ["Muscular", "Tendinosa"]: riesgo_previo = max(riesgo_previo, 25.0) 
+                    elif tipo_lesion == "Artículo-ligamentosa": riesgo_previo = max(riesgo_previo, 10.0)
                         
         riesgo += riesgo_previo
-        
         return min(riesgo, 95.0)
 
     df_hoy['Riesgo_%'] = df_hoy.apply(calcular_riesgo_cientifico, axis=1)
 
 # ==========================================
-# 3. DASHBOARD TÁCTICO
+# 3. DASHBOARD TÁCTICO ÉLITE
 # ==========================================
-st.markdown("### ⚡ Panel de Riesgo a 7 Días Vista")
+st.markdown("### 🧠 Sistema de Alerta Temprana (Prevención de Lesiones)")
+
+if df_hoy.empty:
+    st.success("✅ No hay jugadores activos a evaluar o faltan datos recientes.")
+    st.stop()
 
 df_hoy = df_hoy.sort_values(by="Riesgo_%", ascending=False)
-alto_riesgo = df_hoy[df_hoy['Riesgo_%'] > 60]
+alto_riesgo = df_hoy[df_hoy['Riesgo_%'] >= 55]
 
-if alto_riesgo.empty:
-    st.success("✅ Ningún jugador activo presenta un patrón crítico de riesgo de lesión para la próxima semana.")
-else:
-    st.error(f"🚨 Se han detectado {len(alto_riesgo)} jugadores con parámetros que indican alto riesgo lesional inminente.")
+# --- 1. CABECERA DE ESTADO (Compacta y Profesional) ---
+estado_txt = "Motor de IA Predictivo (XGBoost)" if modo_ia else "Motor Algorítmico Científico (Gabbett & Banister)"
+st.caption(f"**Motor Activo:** {estado_txt} | Análisis a 7 días vista basado en fatiga residual, EWMA y cinemática.")
+
+c_kpi1, c_kpi2, c_kpi3 = st.columns(3)
+from utils.math_helpers import render_kpi_elite
+with c_kpi1: render_kpi_elite("Jugadores en Riesgo Crítico", f"{len(alto_riesgo)}", color_borde="#ef4444" if len(alto_riesgo)>0 else "#10b981")
+with c_kpi2: render_kpi_elite("Riesgo Medio Plantilla", f"{df_hoy['Riesgo_%'].mean():.1f}%", color_borde="#f59e0b" if df_hoy['Riesgo_%'].mean()>30 else "#3b82f6")
+with c_kpi3: render_kpi_elite("Ratio A/C Medio", f"{df_hoy['Ratio_AC'].mean():.2f}", color_borde="#10b981" if 0.8 <= df_hoy['Ratio_AC'].mean() <= 1.3 else "#ef4444")
+
+st.markdown("---")
+
+# --- 2. MATRIZ DE RIESGO Y ALARMAS INMINENTES ---
+c_graf, c_alertas = st.columns([2, 1])
+
+with c_graf:
+    st.markdown("#### 🎯 Matriz de Carga (Sweet Spot)")
+    # Gráfico profesional de dispersión cruzando Carga vs A/C
+    fig_matrix = px.scatter(
+        df_hoy, x='Ratio_AC', y='Carga_Aguda', color='Riesgo_%', 
+        hover_name='JUGADOR', text='JUGADOR',
+        color_continuous_scale="RdYlGn_r", range_color=[0, 100],
+        labels={"Ratio_AC": "Ratio Agudo/Crónico (A/C)", "Carga_Aguda": "Carga Aguda Acumulada (UA)"}
+    )
     
-    cols = st.columns(min(len(alto_riesgo), 3))
-    for i, (idx, row) in enumerate(alto_riesgo.head(3).iterrows()):
-        with cols[i]:
+    fig_matrix.update_traces(textposition='top center', marker=dict(size=12, line=dict(width=1, color='DarkSlateGrey')))
+    
+    # Dibujar la "Sweet Spot Zone" (Zona segura de Gabbett)
+    max_carga = df_hoy['Carga_Aguda'].max() * 1.2 if df_hoy['Carga_Aguda'].max() > 0 else 4000
+    fig_matrix.add_shape(type="rect", x0=0.8, x1=1.3, y0=0, y1=max_carga, fillcolor="#10b981", opacity=0.15, line_width=0, layer="below")
+    fig_matrix.add_annotation(x=1.05, y=max_carga*0.9, text="ZONA SEGURA (SWEET SPOT)", showarrow=False, font=dict(color="#10b981", size=12, weight="bold"))
+    
+    # Dibujar "Danger Zone"
+    fig_matrix.add_shape(type="rect", x0=1.5, x1=max(df_hoy['Ratio_AC'].max()*1.1, 2.0), y0=0, y1=max_carga, fillcolor="#ef4444", opacity=0.1, line_width=0, layer="below")
+    fig_matrix.add_annotation(x=1.75, y=max_carga*0.9, text="ZONA DE PELIGRO", showarrow=False, font=dict(color="#ef4444", size=12, weight="bold"))
+
+    fig_matrix.update_layout(height=400, margin=dict(l=10, r=10, t=30, b=10))
+    st.plotly_chart(fig_matrix, use_container_width=True)
+
+with c_alertas:
+    st.markdown("#### 🚨 Alertas Inminentes")
+    if alto_riesgo.empty:
+        st.success("Plantilla fuera de riesgo crítico. Buen trabajo de gestión de cargas.")
+    else:
+        for _, row in alto_riesgo.head(3).iterrows():
             st.markdown(f"""
-            <div style="background: #ffffff; border: 1px solid #e4e4e7; border-left: 5px solid #dc2626; padding: 18px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <h4 style="margin: 0; color: #0a0a0a; font-weight: 800; text-transform: uppercase;">{row['JUGADOR']}</h4>
-                    <span style="background: #dc2626; color: #ffffff; font-weight: 800; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; letter-spacing: 0.05em;">
-                        {row['Riesgo_%']:.1f}% RIESGO
-                    </span>
+            <div style="background: linear-gradient(145deg, #1e293b, #0f172a); border: 1px solid #334155; border-left: 4px solid #ef4444; padding: 15px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <strong style="color: #f8fafc; font-size: 1.1rem; text-transform: uppercase;">{row['JUGADOR']}</strong>
+                    <span style="background: #ef4444; color: white; padding: 3px 8px; border-radius: 4px; font-weight: 800; font-size: 0.8rem;">{row['Riesgo_%']:.0f}% RIESGO</span>
                 </div>
-                <hr style="margin: 12px 0; border-color: #f4f4f5;">
-                <div style="font-size: 0.85rem; color: #475569; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                    <div><b style="color:#1c1c1e;">Ratio A/C:</b> {row['Ratio_AC']:.2f}</div>
-                    <div><b style="color:#1c1c1e;">HSR (7d):</b> {row['HSR_7d']:.0f} m</div>
-                    <div><b style="color:#1c1c1e;">Sueño:</b> {row['Sueno_3d']:.1f}/7</div>
-                    <div><b style="color:#1c1c1e;">Fatiga/Dolor:</b> {row['Wellness_3d']:.1f}</div>
+                <div style="font-size: 0.85rem; color: #94a3b8; display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+                    <div>A/C: <b style="color: #f8fafc;">{row['Ratio_AC']:.2f}</b></div>
+                    <div>Carga: <b style="color: #f8fafc;">{row['Carga_Aguda']:.0f}</b></div>
+                    <div>Wellness: <b style="color: #f8fafc;">{row['Wellness_3d']:.1f}</b></div>
+                    <div>HSR (7d): <b style="color: #f8fafc;">{row['HSR_7d']:.0f}m</b></div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
 st.markdown("---")
 
-c_info1, c_info2 = st.columns([2, 1])
+# --- 3. TABLA DE DATOS INTERACTIVA CON BARRAS DE PROGRESO ---
+st.markdown("#### 📋 Evaluación Completa de la Plantilla")
+st.caption("Ordenado de mayor a menor riesgo lesional. Haz clic en las cabeceras para reordenar.")
 
-with c_info1:
-    if modo_ia:
-        st.markdown("#### 🔍 Explicabilidad del Modelo (XGBoost)")
-        importancias = modelo.feature_importances_
-        nombres_amigables = {'Ratio_AC': 'Ratio A/C (EWMA)', 'Carga_Aguda': 'Carga Aguda', 'HSR_7d': 'HSR Acum. (7d)', 'Sprints_7d': 'Sprints Acum. (7d)', 'ACC_7d': 'Aceleraciones (7d)', 'DCC_7d': 'Deceleraciones (7d)', 'Wellness_3d': 'Fatiga / Dolor', 'Sueno_3d': 'Falta de Sueño'}
-        
-        df_importancia = pd.DataFrame({'Variable': [nombres_amigables.get(p, p) for p in predictores], 'Impacto': importancias * 100}).sort_values('Impacto', ascending=True)
+# Preparar DataFrame para visualización
+df_display = df_hoy[['JUGADOR', 'Riesgo_%', 'Ratio_AC', 'Carga_Aguda', 'Wellness_3d', 'HSR_7d', 'Sprints_7d']].copy()
+df_display.rename(columns={
+    'Riesgo_%': 'Riesgo Global',
+    'Ratio_AC': 'Ratio A/C',
+    'Carga_Aguda': 'Carga Aguda (UA)',
+    'Wellness_3d': 'Fatiga / Dolor (Pts)',
+    'HSR_7d': 'HSR Acum. (m)',
+    'Sprints_7d': 'Sprints Acum.'
+}, inplace=True)
 
-        fig_imp = px.bar(df_importancia, x='Impacto', y='Variable', orientation='h', color_discrete_sequence=['#00b4d8'])
-        fig_imp.update_layout(xaxis_title="Peso en la predicción (%)", yaxis_title="")
-        st.plotly_chart(fig_imp, use_container_width=True)
-    else:
-        st.markdown("#### ⚖️ Baremos Científicos Aplicados")
-        st.info("**Ponderación actual:** \n\n• Ratio A/C > 1.5 (+35%)\n• Ratio A/C < 0.8 (+10%)\n• Lesión Previa en 60d (+20%)\n• Wellness Crítico > 24 (+15%)\n• Sueño Deficiente > 5 (+15%)")
-
-with c_info2:
-    st.markdown("#### 📋 Listado del Equipo (Disponibles)")
-    df_lista = df_hoy[['JUGADOR', 'Riesgo_%', 'Ratio_AC', 'HSR_7d']].copy()
-    
-    def color_riesgo(val):
-        if val > 60: return 'color: white; background-color: #e11d48; font-weight: bold;'
-        if val > 30: return 'color: black; background-color: #fcd34d;'
-        return 'color: black; background-color: #86efac;'
-        
-    st.dataframe(df_lista.style.format({"Riesgo_%": "{:.1f}%", "Ratio_AC": "{:.2f}", "HSR_7d": "{:.0f} m"}).map(color_riesgo, subset=['Riesgo_%']), use_container_width=True, hide_index=True)
+# Renderizar tabla nativa con configuraciones de columnas espectaculares
+st.dataframe(
+    df_display,
+    column_config={
+        "JUGADOR": st.column_config.TextColumn("Deportista", width="medium"),
+        "Riesgo Global": st.column_config.ProgressColumn(
+            "Riesgo Inminente (%)",
+            help="Probabilidad de sufrir una lesión muscular/tendinosa en los próximos 7 días.",
+            format="%.0f%%",
+            min_value=0,
+            max_value=100,
+        ),
+        "Ratio A/C": st.column_config.NumberColumn("Ratio A/C", format="%.2f"),
+        "Carga Aguda (UA)": st.column_config.NumberColumn("Carga (7d)", format="%.0f"),
+        "Fatiga / Dolor (Pts)": st.column_config.NumberColumn("Wellness (3d)", format="%.1f"),
+        "HSR Acum. (m)": st.column_config.NumberColumn("Alta Intensidad (7d)", format="%.0f m"),
+        "Sprints Acum.": st.column_config.NumberColumn("Sprints (7d)", format="%.0f")
+    },
+    hide_index=True,
+    use_container_width=True
+)
