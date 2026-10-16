@@ -383,3 +383,16 @@ def validar_columnas_excel(df, nombre_archivo, columnas_esperadas):
         return False, msg
         
     return True, "OK"
+def render_kpi_elite(titulo, valor, subtitulo="", icono="", color_borde="#3b82f6"):
+    """
+    Genera una tarjeta KPI con diseño profesional unificado tipo 'Élite'.
+    Sustituirá a los st.metric estándar para dar cohesión visual a la app.
+    """
+    html = f"""
+    <div style="background: linear-gradient(145deg, #1e293b, #0f172a); border: 1px solid #334155; border-top: 3px solid {color_borde}; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); transition: transform 0.2s ease;">
+        <p style="color: #94a3b8; font-size: 0.85rem; font-weight: 700; margin: 0; text-transform: uppercase; letter-spacing: 0.5px;">{titulo} {icono}</p>
+        <h2 style="color: #f8fafc; font-size: 2.2rem; font-weight: 800; margin: 5px 0;">{valor}</h2>
+        <p style="color: {color_borde}; font-size: 0.85rem; font-weight: 600; margin: 0;">{subtitulo}</p>
+    </div>
+    """
+    st.markdown(html, unsafe_allow_html=True)
