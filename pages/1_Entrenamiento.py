@@ -230,32 +230,28 @@ with tab_temp:
                 num_sem = row["num_semana"]
                 nombre_micro = f"Microciclo {i+1}"
                 ses_sem = [s for s in st.session_state.sesiones if obtener_numero_semana(s["fecha"]) == num_sem and s.get("informe_generado", False)]
-                datos_acum = []
-                # --- NUEVO FILTRADO ULTRA RÁPIDO ---
+                
                 fechas_semana = [s["fecha"] for s in ses_sem]
                 df_master = st.session_state.df_master_informes
                 
-                # Filtramos la RAM buscando los días de esta semana y a los jugadores sanos
                 df_sem = df_master[
                     (df_master['FECHA'].isin(fechas_semana)) & 
                     (df_master['ESTADO'].isin(["Disponible", "Titular", "Suplente"]))
                 ].copy()
                 
-                # Mapeo de columnas para mantener la compatibilidad con el resto de tus gráficos
                 if 'HID >21' in df_sem.columns: df_sem['DIS AI'] = df_sem['HID >21']
                 if 'SPR >24' in df_sem.columns: df_sem['Nº SPR'] = df_sem['SPR >24']
                 if 'ACC >3' in df_sem.columns: df_sem['ACC'] = df_sem['ACC >3']
                 if 'DCC >3' in df_sem.columns: df_sem['DCC'] = df_sem['DCC >3']
+                
                 if not df_sem.empty:
-                    # Reemplazar 0 por NaN en encuestas para que los no-rellenados no bajen la media
                     df_sem['TQR'] = df_sem['TQR'].replace(0, np.nan)
                     df_sem['WELLNESS'] = df_sem['WELLNESS'].replace(0, np.nan)
                     df_sem['RPE'] = df_sem['RPE'].replace(0, np.nan)
                     
                     df_jug_sum_int = df_sem.groupby('JUGADOR')[['MIN', 'CARGA']].sum().reset_index()
-                    
-                    # PARA GPS: SOLO LOS QUE TIENEN DISTANCIA > 0
                     df_sem_gps = df_sem[df_sem['DIS'] > 0]
+                    
                     if not df_sem_gps.empty:
                         df_jug_sum_ext = df_sem_gps.groupby('JUGADOR')[['DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC']].sum().reset_index()
                     else:
@@ -271,139 +267,106 @@ with tab_temp:
                         "TQR": df_jug_mean['TQR'].mean(),
                         "RPE": df_jug_mean['RPE'].mean(),
                         "Minutos": df_jug_sum_int['MIN'].mean() if not df_jug_sum_int.empty else 0,
-                        "Carga (UA)": df_jug_sum_int['CARGA'].mean() if not df_jug_sum_int.empty else 0,
-                        "DIS (km)": df_jug_sum_ext['DIS'].mean() if not df_jug_sum_ext.empty else 0,
-                        "DIS AI (m)": df_jug_sum_ext['DIS AI'].mean() if not df_jug_sum_ext.empty else 0,
-                        "Nº Sprints": df_jug_sum_ext['Nº SPR'].mean() if not df_jug_sum_ext.empty else 0,
+                        "Carga": df_jug_sum_int['CARGA'].mean() if not df_jug_sum_int.empty else 0,
+                        "DIS": df_jug_sum_ext['DIS'].mean() if not df_jug_sum_ext.empty else 0,
+                        "HSR": df_jug_sum_ext['DIS AI'].mean() if not df_jug_sum_ext.empty else 0,
+                        "Sprints": df_jug_sum_ext['Nº SPR'].mean() if not df_jug_sum_ext.empty else 0,
                         "ACC": df_jug_sum_ext['ACC'].mean() if not df_jug_sum_ext.empty else 0,
                         "DCC": df_jug_sum_ext['DCC'].mean() if not df_jug_sum_ext.empty else 0
                     })
             
             if not kpis_temporada:
-                st.warning("No hay suficientes datos de jugadores disponibles (sin contar lesiones/readaptación/no disponibles) para generar la temporada.")
+                st.warning("No hay suficientes datos válidos para generar la temporada.")
             else:
-                df_temporada = pd.DataFrame(kpis_temporada)
+                # 1. ORDENACIÓN NUMÉRICA ABSOLUTA PARA EVITAR FALLOS DE STRING (Micro 10 antes que 2)
+                df_temporada = pd.DataFrame(kpis_temporada).sort_values("ID", ascending=True).reset_index(drop=True)
                 
-                st.markdown("#### 🎯 Promedios")
-                c1, c2, c3, c4, c5 = st.columns(5)
-                c1.metric("Wellness", f"{df_temporada['Wellness'].mean():.1f}")
-                c2.metric("TQR", f"{df_temporada['TQR'].mean():.1f}")
-                c3.metric("RPE", f"{df_temporada['RPE'].mean():.1f}")
-                c4.metric("Minutos", f"{df_temporada['Minutos'].mean():.1f}")
-                c5.metric("Carga media (UA)", f"{df_temporada['Carga (UA)'].mean():.0f}")
+                # --- CÁLCULO DE TENDENCIAS (Último vs Anterior) ---
+                ultimo_m = df_temporada.iloc[-1]
+                anterior_m = df_temporada.iloc[-2] if len(df_temporada) > 1 else ultimo_m
                 
-                c6, c7, c8, c9, c10 = st.columns(5)
-                c6.metric("Distancia (km)", f"{df_temporada['DIS (km)'].mean():.2f}")
-                c7.metric("HSR (>21 km/h)", f"{df_temporada['DIS AI (m)'].mean():.2f}")
-                c8.metric("N.º Sprints (>24 km/h)", f"{df_temporada['Nº Sprints'].mean():.1f}")
-                c9.metric("ACC (>3 m/s²)", f"{df_temporada['ACC'].mean():.1f}")
-                c10.metric("DCC (>3 m/s²)", f"{df_temporada['DCC'].mean():.1f}")
+                def calc_tendencia(col):
+                    if anterior_m[col] == 0: return {'valor': 0, 'inverso': col in ['Wellness', 'RPE']}
+                    diff = ((ultimo_m[col] - anterior_m[col]) / anterior_m[col]) * 100
+                    return {'valor': diff, 'inverso': col in ['Wellness', 'RPE']}
+                
+                # --- KPIs COMPACTOS EN UNA SOLA FILA ---
+                st.markdown(f"#### 🎯 Rendimiento Actual ({ultimo_m['Microciclo']})")
+                cols_kpi = st.columns(10)
+                
+                from utils.math_helpers import render_kpi_elite
+                with cols_kpi[0]: render_kpi_elite("Wellness", f"{ultimo_m['Wellness']:.1f}", tendencia=calc_tendencia('Wellness'))
+                with cols_kpi[1]: render_kpi_elite("TQR", f"{ultimo_m['TQR']:.1f}", tendencia=calc_tendencia('TQR'))
+                with cols_kpi[2]: render_kpi_elite("RPE", f"{ultimo_m['RPE']:.1f}", tendencia=calc_tendencia('RPE'))
+                with cols_kpi[3]: render_kpi_elite("Minutos", f"{ultimo_m['Minutos']:.0f}", tendencia=calc_tendencia('Minutos'))
+                with cols_kpi[4]: render_kpi_elite("Carga", f"{ultimo_m['Carga']:.0f}", tendencia=calc_tendencia('Carga'))
+                with cols_kpi[5]: render_kpi_elite("DIS (km)", f"{ultimo_m['DIS']:.1f}", tendencia=calc_tendencia('DIS'))
+                with cols_kpi[6]: render_kpi_elite("HSR (m)", f"{ultimo_m['HSR']:.0f}", tendencia=calc_tendencia('HSR'))
+                with cols_kpi[7]: render_kpi_elite("Sprints", f"{ultimo_m['Sprints']:.1f}", tendencia=calc_tendencia('Sprints'))
+                with cols_kpi[8]: render_kpi_elite("ACC", f"{ultimo_m['ACC']:.0f}", tendencia=calc_tendencia('ACC'))
+                with cols_kpi[9]: render_kpi_elite("DCC", f"{ultimo_m['DCC']:.0f}", tendencia=calc_tendencia('DCC'))
                 
                 st.markdown("---")
-                st.markdown("#### 📋 Resumen por Microciclo")
-                cols_order = ["Microciclo", "Wellness", "TQR", "RPE", "Minutos", "Carga (UA)", "DIS (km)", "DIS AI (m)", "Nº Sprints", "ACC", "DCC"]
-                mostrar_tabla_moderna(df_temporada[cols_order].sort_values("Microciclo", ascending=False).style.hide(axis="index").format(precision=1))
+                
+                # --- GRÁFICOS SUPERIORES Y MEJORADOS ---
+                st.markdown("#### 📈 Evolución Gráfica de la Temporada")
+                cg1, cg2 = st.columns(2)
+                
+                with cg1:
+                    fig_well_tqr = go.Figure()
+                    fig_well_tqr.add_trace(go.Bar(x=df_temporada['Microciclo'], y=df_temporada['Wellness'], name="Fatiga/Dolor (Wellness)", marker_color="rgba(239, 68, 68, 0.7)", yaxis="y1"))
+                    fig_well_tqr.add_trace(go.Scatter(x=df_temporada['Microciclo'], y=df_temporada['TQR'], name="Recuperación (TQR)", mode="lines+markers", line=dict(color="#10b981", width=3), marker=dict(size=8), yaxis="y2"))
+                    fig_well_tqr.update_layout(
+                        title="Recuperación vs Fatiga",
+                        yaxis=dict(title="Puntos Wellness", range=[0, 35]),
+                        yaxis2=dict(title="TQR", overlaying="y", side="right", range=[0, 10]),
+                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                    )
+                    st.plotly_chart(fig_well_tqr, use_container_width=True)
+                    
+                with cg2:
+                    fig_carga = go.Figure()
+                    fig_carga.add_trace(go.Bar(x=df_temporada['Microciclo'], y=df_temporada['Carga'], name="Carga (UA)", marker_color="#3b82f6"))
+                    media_carga = df_temporada['Carga'].mean()
+                    fig_carga.add_hline(y=media_carga, line_dash="dash", line_color="#f59e0b", annotation_text=f"Media Acumulada: {media_carga:.0f} UA")
+                    fig_carga.update_layout(title="Carga Interna Acumulada", yaxis_title="Unidades Arbitrarias")
+                    st.plotly_chart(fig_carga, use_container_width=True)
+                    
+                cg3, cg4 = st.columns(2)
+                with cg3:
+                    fig_ext = go.Figure()
+                    fig_ext.add_trace(go.Bar(x=df_temporada['Microciclo'], y=df_temporada['DIS'], name="Volumen (km)", marker_color="rgba(59, 130, 246, 0.6)", yaxis="y1"))
+                    fig_ext.add_trace(go.Scatter(x=df_temporada['Microciclo'], y=df_temporada['HSR'], name="HSR (>21km/h)", mode="lines+markers", line=dict(color="#f59e0b", width=3), yaxis="y2"))
+                    fig_ext.update_layout(
+                        title="Volumen vs Alta Intensidad",
+                        yaxis=dict(title="Distancia (km)"),
+                        yaxis2=dict(title="HSR (m)", overlaying="y", side="right"),
+                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                    )
+                    st.plotly_chart(fig_ext, use_container_width=True)
+                    
+                with cg4:
+                    fig_mec = go.Figure()
+                    fig_mec.add_trace(go.Scatter(x=df_temporada['Microciclo'], y=df_temporada['ACC'], name="Aceleraciones", mode="lines+markers", line=dict(color="#10b981", width=2)))
+                    fig_mec.add_trace(go.Scatter(x=df_temporada['Microciclo'], y=df_temporada['DCC'], name="Deceleraciones", mode="lines+markers", line=dict(color="#ef4444", width=2)))
+                    fig_mec.update_layout(title="Carga Mecánica (ACC vs DCC)", yaxis_title="Cantidad (>3 m/s²)")
+                    st.plotly_chart(fig_mec, use_container_width=True)
 
                 st.markdown("---")
-                st.markdown("#### 🧠 Bienestar")
-                cg_b1, cg_b2 = st.columns(2)
-                with cg_b1:
-                    fig_tqr = px.bar(
-                        df_temporada, x='Microciclo', y='TQR', 
-                        color='TQR', color_continuous_scale="RdYlGn", range_color=[1, 10],
-                        title="Evolución TQR"
-                    )
-                    fig_tqr.update_yaxes(range=[1, 10])
-                    st.plotly_chart(fig_tqr, use_container_width=True, key="temp_tqr_bar")
-                with cg_b2:
-                    # Extraer los componentes de wellness directamente del DataFrame de temporada o recalculando con los datos filtrados válidos del microciclo
-                    datos_w_temp = []
-                    for i, row in df_temporada.iterrows():
-                        m_id = row["Microciclo"]
-                        num_sem = [s for s in st.session_state.sesiones if obtener_numero_semana(s["fecha"]) == row.get("num_semana", obtener_numero_semana(st.session_state.sesiones[0]["fecha"]))] # fallback seguro
-                        # Buscamos las sesiones de esta semana directamente por el número de semana guardado en el bucle principal de temporada
-                        num_sem_val = None
-                        # Recuperamos el num_semana correcto de df_m original
-                        for m_item in lista_micro:
-                            # Relacionamos por índice o nombre
-                            pass
-                        
-                        # Forma más directa y robusta usando las fechas del microciclo acumuladas:
-                        ses_sem = [s for s in st.session_state.sesiones if f"Microciclo {i+1}" == m_id and s.get("informe_generado", False)]
-                        # Si no coincide exactamente por el texto, filtramos por el número de semana de df_m correspondiente a este índice i:
-                        num_sem_real = df_m.iloc[i]["num_semana"]
-                        ses_sem = [s for s in st.session_state.sesiones if obtener_numero_semana(s["fecha"]) == num_sem_real and s.get("informe_generado", False)]
-                        
-                        f, s_lista, d_lista, e, h = [], [], [], [], []
-                        for ses in ses_sem:
-                            disp_s = ses.get("disponibilidad", {})
-                            disp_s_clean = {limpiar_nombre(k): v for k, v in disp_s.items()}
-                            for d_jug in ses["datos_informe"]:
-                                jug_name = d_jug["JUGADOR"]
-                                est_jug = disp_s_clean.get(limpiar_nombre(jug_name), "Disponible")
-                                # Mismo filtro estricto de exclusión que en las tablas y métricas
-                                if est_jug in ["Disponible", "Titular", "Suplente"] and safe_float(d_jug.get("WELLNESS")) > 0:
-                                    f.append(safe_float(d_jug.get("W_Fatiga")))
-                                    s_lista.append(safe_float(d_jug.get("W_Sueño")))
-                                    d_lista.append(safe_float(d_jug.get("W_Dolor")))
-                                    e.append(safe_float(d_jug.get("W_Estres")))
-                                    h.append(safe_float(d_jug.get("W_Humor")))
-                        
-                        datos_w_temp.append({
-                            "Microciclo": m_id, 
-                            "Fatiga": np.mean(f) if f else 0, 
-                            "Sueño": np.mean(s_lista) if s_lista else 0, 
-                            "Dolor": np.mean(d_lista) if d_lista else 0, 
-                            "Estrés": np.mean(e) if e else 0, 
-                            "Humor": np.mean(h) if h else 0
-                        })
-                    
-                    df_well_temp = pd.DataFrame(datos_w_temp)
-                    
-                    fig_well = go.Figure()
-                    colores_w = px.colors.qualitative.Set2
-                    factores = ['Fatiga', 'Sueño', 'Dolor', 'Estrés', 'Humor']
-                    
-                    for i, factor in enumerate(factores):
-                        fig_well.add_trace(go.Bar(x=df_well_temp['Microciclo'], y=df_well_temp[factor], name=factor, marker_color=colores_w[i]))
-                    
-                    fig_well.update_layout(
-                        title="Evolución Wellness por Componentes",
-                        barmode='stack',
-                        yaxis_title="Puntos",
-                        legend_title_text="Factor",
-                        yaxis_range=[0, 35]
-                    )
-                    fig_well.add_hline(y=18, line_dash="dot", line_color="orange", annotation_text="Moderado (18)", annotation_position="bottom right")
-                    fig_well.add_hline(y=24, line_dash="dash", line_color="red", annotation_text="Crítico (24)", annotation_position="top right")
-                    st.plotly_chart(fig_well, use_container_width=True, key="temp_well_bar")
-
-                st.markdown("---")
-                st.markdown("#### 🔥 Carga Interna")
-                cg_i1, cg_i2, cg_i3 = st.columns(3)
-                with cg_i1:
-                    fig_min = px.bar(df_temporada, x='Microciclo', y='Minutos', title="Evolución Minutos de Sesión", color_discrete_sequence=["#00b4d8"])
-                    st.plotly_chart(fig_min, use_container_width=True, key="temp_min_bar")
-                with cg_i2:
-                    fig_rpe = px.bar(
-                        df_temporada, x='Microciclo', y='RPE', 
-                        color='RPE', color_continuous_scale="Reds", range_color=[0, 10],
-                        title="Evolución RPE"
-                    )
-                    fig_rpe.update_yaxes(range=[1, 10])
-                    st.plotly_chart(fig_rpe, use_container_width=True, key="temp_rpe_bar")
-                with cg_i3:
-                    min_c_temp = df_temporada['Carga (UA)'].min() * 0.9 if not df_temporada.empty else 0.0
-                    max_c_temp = df_temporada['Carga (UA)'].max() * 1.1 if not df_temporada.empty else 1000.0
-
-                    fig_carga = px.bar(
-                        df_temporada, x='Microciclo', y='Carga (UA)', 
-                        color='Carga (UA)', color_continuous_scale="Reds", 
-                        range_color=[min_c_temp, max_c_temp],
-                        title="Evolución Carga (Aguda)"
-                    )
-                    fig_carga.update_yaxes(range=[min_c_temp, max_c_temp])
-                    st.plotly_chart(fig_carga, use_container_width=True, key="temp_carga_bar")
+                
+                # --- TABLA INTERACTIVA (FILTRABLE Y ORDENABLE) ---
+                st.markdown("#### 📋 Base de Datos de Microciclos")
+                st.caption("Puedes clickar en el nombre de cualquier columna para ordenar los datos de mayor a menor, o usar la lupa para buscar.")
+                
+                # Ordenamos el DataFrame de más reciente a más antiguo (por ID) pero ocultamos la columna técnica ID
+                df_temporada_show = df_temporada.sort_values("ID", ascending=False).drop(columns=["ID"])
+                
+                # Usamos st.dataframe para habilitar la funcionalidad de filtrado y ordenación nativa de Streamlit
+                st.dataframe(
+                    df_temporada_show.style.format(precision=1),
+                    use_container_width=True,
+                    hide_index=True
+                )
 
 with tab_micro:
     if not st.session_state.sesiones:
