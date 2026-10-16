@@ -41,12 +41,12 @@ def construir_dataset_entrenamiento(sesiones, lesiones):
         datos_gps_validos = []
         for d in s.get("datos_informe", []):
             # CORRECCIÓN: Convertir explícitamente los KM a METROS multiplicando por 1000
-            dis_val = safe_float(d.get("DIS")) * 1000
+            dis_val = safe_float(d.get("DIS")) * 1000.0
             min_val = safe_float(d.get("MIN", 0))
             
             if dis_val > 0 and min_val > 0:
                 jug_limpio = limpiar_nombre(d["JUGADOR"])
-                hsr_val = safe_float(d.get("DIS AI", d.get("HID >21", 0))) * 1000
+                hsr_val = safe_float(d.get("DIS AI", d.get("HID >21", 0)))
                 
                 datos_gps_validos.append({
                     "POS_ESP": dict_pos_esp.get(jug_limpio, "Desconocida"),
@@ -72,9 +72,8 @@ def construir_dataset_entrenamiento(sesiones, lesiones):
             jug_limpio = limpiar_nombre(jug_nombre)
             min_jug = safe_float(d.get("MIN", 0))
             
-            # CORRECCIÓN: Convertir explícitamente a METROS
-            dis_jug = safe_float(d.get("DIS")) * 1000
-            hsr_jug = safe_float(d.get("DIS AI", d.get("HID >21", 0))) * 1000
+            dis_jug = safe_float(d.get("DIS")) * 1000.0
+            hsr_jug = safe_float(d.get("DIS AI", d.get("HID >21", 0)))
             spr_jug = safe_float(d.get("Nº SPR", d.get("SPR >24", 0)))
             acc_jug = safe_float(d.get("ACC", d.get("ACC >3", 0)))
             dcc_jug = safe_float(d.get("DCC", d.get("DCC >3", 0)))
