@@ -30,22 +30,22 @@ opciones_vista = ["📋 Plantilla", "⚙️ Modificar Plantilla"] + [f"👤 {nom
 
 if st.session_state.vista_plantilla not in opciones_vista:
     st.session_state.vista_plantilla = "📋 Plantilla"
+
+if st.session_state.vista_plantilla == "📋 Plantilla":
     if not st.session_state.plantilla:
         render_estado_vacio(
             icono="👥", 
             titulo="Tu plantilla está vacía", 
             descripcion="El primer paso para dominar LoadLab es registrar a tus deportistas. Esto habilitará el control de cargas, estadísticas y predicción de lesiones.",
-            accion_sugerida="Ve al menú desplegable superior y selecciona '⚙️ Modificar Plantilla' para añadir tu primer jugador."
+            accion_sugerida="Haz clic en el botón 'Modificar' inferior para añadir tu primer jugador."
         )
     else:
         st.markdown("### 📋 Cuadro de Plantilla")
         st.caption("Haz clic en el botón de perfil de cualquier jugador para acceder directamente a sus datos detallados.")
         
-        # Inicializar el estado de la pestaña activa si no existe
         if "index_pestana_activa" not in st.session_state:
             st.session_state.index_pestana_activa = 0
 
-        # Usamos la plantilla_ordenada que creamos arriba en lugar de la lista en bruto
         jugadores_lista = plantilla_ordenada
         
         for i in range(0, len(jugadores_lista), 6):
@@ -79,12 +79,12 @@ if st.session_state.vista_plantilla not in opciones_vista:
                             st.rerun()
 
         # --- BOTÓN INFERIOR DERECHO PARA MODIFICAR PLANTILLA ---
-            st.markdown("---")
-            c_vacio, c_btn_mod = st.columns([6, 1])
-            with c_btn_mod:
-                if st.button("⚙️ Modificar", use_container_width=True):
-                    st.session_state.vista_plantilla = "⚙️ Modificar Plantilla"
-                    st.rerun()
+        st.markdown("---")
+        c_vacio, c_btn_mod = st.columns([6, 1])
+        with c_btn_mod:
+            if st.button("⚙️ Modificar", use_container_width=True):
+                st.session_state.vista_plantilla = "⚙️ Modificar Plantilla"
+                st.rerun()
         
 elif st.session_state.vista_plantilla == "⚙️ Modificar Plantilla":
     if st.button("⬅️ Volver a la Plantilla", key="btn_volver_mod"):
