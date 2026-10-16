@@ -382,313 +382,311 @@ with tab_micro:
         if not lista_micro:
             st.warning("Debes cargar y procesar datos en al menos una sesión para poder generar informes semanales.")
         else:
+            # 1. PREPARACIÓN DEL SELECTOR (Sustituye a la lista interminable de Expanders)
             df_m = pd.DataFrame(lista_micro).drop_duplicates(subset=["num_semana"]).sort_values("lunes_dt", ascending=True).reset_index(drop=True)
+            df_m['Micro_Num'] = df_m.index + 1
+            df_m_desc = df_m.sort_values("lunes_dt", ascending=False)
             
-            for idx_real, row in df_m.sort_values(by="lunes_dt", ascending=False).iterrows():
-                num_sem = row["num_semana"]
-                nombre_etiqueta = f"📦 Microciclo {idx_real + 1} | Semana del {row['ini']} al {row['fin']}"
+            dict_micros = {}
+            for _, r_m in df_m_desc.iterrows():
+                etiqueta = f"📦 Microciclo {r_m['Micro_Num']} | Semana del {r_m['ini']} al {r_m['fin']}"
+                dict_micros[etiqueta] = r_m
+            
+            st.markdown("### 🔄 Análisis de Microciclos")
+            
+            # Selector y Filtros en la misma línea
+            c_sel1, c_sel2 = st.columns([1, 2])
+            micro_seleccionado = c_sel1.selectbox("Selecciona un Microciclo para analizar:", list(dict_micros.keys()))
+            
+            # 2. EXTRACCIÓN DE LA FILA SELECCIONADA (Sustituye al bucle for row in df_m.iterrows())
+            row = dict_micros[micro_seleccionado]
+            num_sem = row["num_semana"]
+            idx_real = row["Micro_Num"] - 1 
+            nombre_etiqueta = micro_seleccionado
+            
+            # --- AQUÍ EMPIEZA TU LÓGICA MATEMÁTICA EXACTA ORIGINAL ---
+            sesiones_semana = [s for s in st.session_state.sesiones if obtener_numero_semana(s["fecha"]) == num_sem and s.get("informe_generado", False)]
+            rol_semanal = {j["JUGADOR"]: "Sin Partido" for j in st.session_state.plantilla}
+            hubo_partido = False
+            
+            for s in sesiones_semana:
+                if "Partido" in s['tipo']:
+                    hubo_partido = True
+                    disp = s.get("disponibilidad", {})
+                    disp_clean = {limpiar_nombre(k): v for k, v in disp.items()}
+                    for j in st.session_state.plantilla:
+                        if disp_clean.get(limpiar_nombre(j["JUGADOR"]), "") == "Titular":
+                            rol_semanal[j["JUGADOR"]] = "Titular"
+            if hubo_partido:
+                for k in rol_semanal.keys():
+                    if rol_semanal[k] == "Sin Partido": rol_semanal[k] = "Suplente"
+
+            datos_7_dias = []
+            for offset in range(7):
+                dia_actual = row["lunes_dt"] + timedelta(days=offset)
+                fecha_str = dia_actual.strftime("%Y-%m-%d")
+                dia_semana_nombre = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"][offset]
+                sesion_dia = next((s for s in sesiones_semana if s["fecha"] == fecha_str), None)
                 
-                with st.expander(nombre_etiqueta, expanded=False):
-                    sesiones_semana = [s for s in st.session_state.sesiones if obtener_numero_semana(s["fecha"]) == num_sem and s.get("informe_generado", False)]
-                    rol_semanal = {j["JUGADOR"]: "Sin Partido" for j in st.session_state.plantilla}
-                    hubo_partido = False
-                    for s in sesiones_semana:
-                        if "Partido" in s['tipo']:
-                            hubo_partido = True
-                            disp = s.get("disponibilidad", {})
-                            disp_clean = {limpiar_nombre(k): v for k, v in disp.items()}
-                            for j in st.session_state.plantilla:
-                                if disp_clean.get(limpiar_nombre(j["JUGADOR"]), "") == "Titular":
-                                    rol_semanal[j["JUGADOR"]] = "Titular"
-                    if hubo_partido:
-                        for k in rol_semanal.keys():
-                            if rol_semanal[k] == "Sin Partido": rol_semanal[k] = "Suplente"
-
-                    datos_7_dias = []
-                    for offset in range(7):
-                        dia_actual = row["lunes_dt"] + timedelta(days=offset)
-                        fecha_str = dia_actual.strftime("%Y-%m-%d")
-                        dia_semana_nombre = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"][offset]
-                        sesion_dia = next((s for s in sesiones_semana if s["fecha"] == fecha_str), None)
+                for j in st.session_state.plantilla:
+                    jugador = j["JUGADOR"]
+                    if sesion_dia:
+                        disp_s = sesion_dia.get("disponibilidad", {})
+                        disp_s_clean = {limpiar_nombre(k): v for k, v in disp_s.items()}
+                        est_jug = disp_s_clean.get(limpiar_nombre(jugador), "Disponible")
+                        d_jug = next((d for d in sesion_dia["datos_informe"] if limpiar_nombre(d["JUGADOR"]) == limpiar_nombre(jugador)), None)
                         
-                        for j in st.session_state.plantilla:
-                            jugador = j["JUGADOR"]
-                            if sesion_dia:
-                                disp_s = sesion_dia.get("disponibilidad", {})
-                                disp_s_clean = {limpiar_nombre(k): v for k, v in disp_s.items()}
-                                est_jug = disp_s_clean.get(limpiar_nombre(jugador), "Disponible")
-                                d_jug = next((d for d in sesion_dia["datos_informe"] if limpiar_nombre(d["JUGADOR"]) == limpiar_nombre(jugador)), None)
-                                
-                                if d_jug:
-                                    datos_7_dias.append({
-                                        "JUGADOR": jugador, "POS": j["POS"], "ROL": rol_semanal[jugador],
-                                        "FECHA": fecha_str, "DIA": dia_semana_nombre, "ESTADO": est_jug,
-                                        "TQR": safe_float(d_jug.get("TQR")), "WELLNESS": safe_float(d_jug.get("WELLNESS")),
-                                        "RPE": safe_float(d_jug.get("RPE")), "MIN": safe_float(d_jug.get("MIN")),
-                                        "CARGA": safe_float(d_jug.get("CARGA")),
-                                        "DIS": safe_float(d_jug.get("DIS")),
-                                        "DIS AI": safe_float(d_jug.get("HID >21", d_jug.get("DIS AI", 0))),
-                                        "Nº SPR": safe_float(d_jug.get("SPR >24", d_jug.get("Nº SPR", 0))),
-                                        "ACC": safe_float(d_jug.get("ACC >3", d_jug.get("ACC", 0))),
-                                        "DCC": safe_float(d_jug.get("DCC >3", d_jug.get("DCC", 0))),
-                                        "VMAX": safe_float(d_jug.get("V_Max", d_jug.get("VMAX", 0))), 
-                                        "ENTRENO": 1 # Anclaje clave para promediar solo a los que entrenaron
-                                    })
-                                else:
-                                    # Si no está en datos_informe, no promediará
-                                    datos_7_dias.append({"JUGADOR": jugador, "POS": j["POS"], "ROL": rol_semanal[jugador], "FECHA": fecha_str, "DIA": dia_semana_nombre, "ESTADO": est_jug, "TQR": 0, "WELLNESS": 0, "RPE": 0, "MIN": 0, "CARGA": 0, "DIS": 0, "DIS AI": 0, "Nº SPR": 0, "ACC": 0, "DCC": 0, "VMAX": 0, "ENTRENO": 0})
-                            else:
-                                datos_7_dias.append({"JUGADOR": jugador, "POS": j["POS"], "ROL": rol_semanal[jugador], "FECHA": fecha_str, "DIA": dia_semana_nombre, "ESTADO": "Sin Sesión", "TQR": 0, "WELLNESS": 0, "RPE": 0, "MIN": 0, "CARGA": 0, "DIS": 0, "DIS AI": 0, "Nº SPR": 0, "ACC": 0, "DCC": 0, "VMAX": 0, "ENTRENO": 0})
-
-                    df_semana = pd.DataFrame(datos_7_dias)
-
-                    col_f1, col_f2 = st.columns(2)
-                    with col_f1: pos_filtro = st.radio("Filtrar Posición:", ["TODOS", "POR", "DEF", "MED", "ATA"], horizontal=True, key=f"fw_p_{num_sem}")
-                    with col_f2: rol_filtro = st.radio("Filtrar Rol:", ["TODOS", "Titular", "Suplente"], horizontal=True, key=f"fw_r_{num_sem}")
-                    
-                    df_filtrado = df_semana.copy()
-                    if pos_filtro != "TODOS": df_filtrado = df_filtrado[df_filtrado["POS"] == pos_filtro]
-                    if rol_filtro != "TODOS": df_filtrado = df_filtrado[df_filtrado["ROL"] == rol_filtro]
-
-                    if df_filtrado.empty:
-                        st.warning("No hay jugadores que coincidan con estos filtros en esta semana.")
-                    else:
-                        # FILTRO EXCLUSIÓN DIARIO PARA MEDIAS DEL EQUIPO (Sincronizado con el Informe)
-                        df_disp = df_filtrado[(df_filtrado['ESTADO'].isin(["Disponible", "Titular", "Suplente"])) & (df_filtrado['ENTRENO'] == 1)].copy()
-                        
-                        df_disp['TQR'] = df_disp['TQR'].replace(0, np.nan)
-                        df_disp['WELLNESS'] = df_disp['WELLNESS'].replace(0, np.nan)
-                        df_disp['RPE'] = df_disp['RPE'].replace(0, np.nan)
-                        
-                        if not df_disp.empty:
-                            df_diario_int = df_disp.groupby('DIA', sort=False)[['WELLNESS', 'TQR', 'RPE', 'MIN', 'CARGA']].mean().reset_index()
-                            df_disp_gps = df_disp[df_disp['DIS'] > 0]
-                            if not df_disp_gps.empty:
-                                df_diario_ext = df_disp_gps.groupby('DIA', sort=False)[['DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC']].mean().reset_index()
-                            else:
-                                df_diario_ext = pd.DataFrame(columns=['DIA', 'DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC'])
-                            
-                            df_diario = pd.merge(df_diario_int, df_diario_ext, on='DIA', how='left').fillna(0)
+                        if d_jug:
+                            datos_7_dias.append({
+                                "JUGADOR": jugador, "POS": j["POS"], "ROL": rol_semanal[jugador],
+                                "FECHA": fecha_str, "DIA": dia_semana_nombre, "ESTADO": est_jug,
+                                "TQR": safe_float(d_jug.get("TQR")), "WELLNESS": safe_float(d_jug.get("WELLNESS")),
+                                "RPE": safe_float(d_jug.get("RPE")), "MIN": safe_float(d_jug.get("MIN")),
+                                "CARGA": safe_float(d_jug.get("CARGA")), "DIS": safe_float(d_jug.get("DIS")),
+                                "DIS AI": safe_float(d_jug.get("HID >21", d_jug.get("DIS AI", 0))),
+                                "Nº SPR": safe_float(d_jug.get("SPR >24", d_jug.get("Nº SPR", 0))),
+                                "ACC": safe_float(d_jug.get("ACC >3", d_jug.get("ACC", 0))),
+                                "DCC": safe_float(d_jug.get("DCC >3", d_jug.get("DCC", 0))),
+                                "VMAX": safe_float(d_jug.get("V_Max", d_jug.get("VMAX", 0))), "ENTRENO": 1 
+                            })
                         else:
-                            df_diario = pd.DataFrame(columns=['DIA', 'WELLNESS', 'TQR', 'RPE', 'MIN', 'CARGA', 'DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC'])
-
-                        orden_dias = {"Lunes":1, "Martes":2, "Miércoles":3, "Jueves":4, "Viernes":5, "Sábado":6, "Domingo":7}
-                        df_diario["Orden"] = df_diario["DIA"].map(orden_dias)
-                        df_diario = df_diario.sort_values("Orden").drop(columns=["Orden"])
-
-                        st.markdown("#### 🎯 Resumen del Microciclo")
-                        c1, c2, c3, c4, c5 = st.columns(5)
-                        c1.metric("Wellness medio", f"{df_diario['WELLNESS'].replace(0, np.nan).mean():.1f}" if not df_diario.empty else "0")
-                        c2.metric("TQR medio", f"{df_diario['TQR'].replace(0, np.nan).mean():.1f}" if not df_diario.empty else "0")
-                        c3.metric("RPE medio", f"{df_diario['RPE'].replace(0, np.nan).mean():.1f}" if not df_diario.empty else "0")
-                        c4.metric("Minutos totales", f"{df_diario['MIN'].sum():.1f}" if not df_diario.empty else "0")
-                        c5.metric("Carga total (UA)", f"{df_diario['CARGA'].sum():.0f}" if not df_diario.empty else "0")
-                        
-                        c6, c7, c8, c9, c10 = st.columns(5)
-                        c6.metric("Distancia total", f"{df_diario['DIS'].sum():.2f}" if not df_diario.empty else "0")
-                        c7.metric("HSR total (>21 km/h)", f"{df_diario['DIS AI'].sum():.2f}" if not df_diario.empty else "0")
-                        c8.metric("Sprints totales (>24 km/h)", f"{df_diario['Nº SPR'].sum():.1f}" if not df_diario.empty else "0")
-                        c9.metric("ACC totales (>3 m/s²)", f"{df_diario['ACC'].sum():.1f}" if not df_diario.empty else "0")
-                        c10.metric("DCC totales (>3 m/s²)", f"{df_diario['DCC'].sum():.1f}" if not df_diario.empty else "0")
-
-                        st.markdown("---")
-                        st.markdown("#### 📋 Resumen por Día")
-                        if not df_diario.empty:
-                            mostrar_tabla_moderna(df_diario.style.hide(axis="index").format(precision=2))
-
-                        st.markdown("---")
-                        st.markdown("#### 🧠 Bienestar")
-                        cg_b1, cg_b2 = st.columns(2)
-                        with cg_b1:
-                            df_tqr_plot = df_diario.set_index('DIA').reindex(["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]).reset_index()
-                            fig_tqr = px.bar(
-                                df_tqr_plot, x='DIA', y='TQR', 
-                                color='TQR', color_continuous_scale="RdYlGn", range_color=[1, 10],
-                                title="Calidad de Recuperación (TQR)"
-                            )
-                            fig_tqr.update_xaxes(categoryorder='array', categoryarray=["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"])
-                            fig_tqr.update_yaxes(range=[1, 10])
-                            st.plotly_chart(fig_tqr, use_container_width=True, key=f"micro_tqr_{num_sem}_{idx_real}")
-                        with cg_b2:
-                            datos_w = []
-                            for offset in range(7):
-                                dia_n = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"][offset]
-                                f_str = (row["lunes_dt"] + timedelta(days=offset)).strftime("%Y-%m-%d")
-                                ses = next((s for s in sesiones_semana if s["fecha"] == f_str), None)
-                                
-                                f_val = s_val = d_val = e_val = h_val = 0.0
-                                if ses and ses.get("datos_informe"):
-                                    j_validos = df_disp[df_disp['DIA'] == dia_n]['JUGADOR'].tolist()
-                                    d_validos = [d for d in ses["datos_informe"] if d["JUGADOR"] in j_validos and safe_float(d.get("WELLNESS")) > 0]
-                                    
-                                    if d_validos:
-                                        f_val = np.mean([safe_float(d.get("W_Fatiga")) for d in d_validos])
-                                        s_val = np.mean([safe_float(d.get("W_Sueño")) for d in d_validos])
-                                        d_val = np.mean([safe_float(d.get("W_Dolor")) for d in d_validos])
-                                        e_val = np.mean([safe_float(d.get("W_Estres")) for d in d_validos])
-                                        h_val = np.mean([safe_float(d.get("W_Humor")) for d in d_validos])
-                                        
-                                datos_w.append({"DIA": dia_n, "Fatiga": f_val, "Sueño": s_val, "Dolor": d_val, "Estrés": e_val, "Humor": h_val})
-                            
-                            fig_well = go.Figure()
-                            colores_w = px.colors.qualitative.Set2
-                            factores = ['Fatiga', 'Sueño', 'Dolor', 'Estrés', 'Humor']
-                            df_w_plot = pd.DataFrame(datos_w)
-                            
-                            for i, factor in enumerate(factores):
-                                fig_well.add_trace(go.Bar(x=df_w_plot['DIA'], y=df_w_plot[factor], name=factor, marker_color=colores_w[i]))
-                            
-                            fig_well.update_layout(
-                                title="Evolución Wellness Diario",
-                                barmode='stack',
-                                yaxis_title="Puntos",
-                                legend_title_text="Factor",
-                                yaxis_range=[0, 35],
-                                hovermode="x unified"
-                            )
-                            fig_well.update_xaxes(categoryorder='array', categoryarray=["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"])
-                            fig_well.add_hline(y=18, line_dash="dot", line_color="orange", annotation_text="Moderado (18)", annotation_position="bottom right")
-                            fig_well.add_hline(y=24, line_dash="dash", line_color="red", annotation_text="Crítico (24)", annotation_position="top right")
-                            st.plotly_chart(fig_well, use_container_width=True, key=f"micro_well_{num_sem}_{idx_real}")
-
-                        st.markdown("---")
-                        st.markdown("#### 🔥 Carga Interna")
-                        cg_i1, cg_i2, cg_i3 = st.columns(3)
-                        with cg_i1:
-                            fig_min = px.bar(df_diario, x='DIA', y='MIN', title="Evolución Minutos")
-                            st.plotly_chart(fig_min, use_container_width=True, key=f"micro_min_{num_sem}")
-                        with cg_i2:
-                            df_rpe_plot = df_diario.set_index('DIA').reindex(["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]).reset_index()
-                            fig_rpe = px.bar(df_rpe_plot, x='DIA', y='RPE', title="Evolución RPE", color='RPE', color_continuous_scale="Reds", range_color=[0, 10])
-                            fig_rpe.update_xaxes(categoryorder='array', categoryarray=["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"])
-                            fig_rpe.update_yaxes(range=[1, 10])
-                            st.plotly_chart(fig_rpe, use_container_width=True, key=f"micro_rpe_{num_sem}_{idx_real}")
-                        with cg_i3:
-                            df_carga_plot = df_diario.set_index('DIA').reindex(["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]).reset_index()
-                            
-                            min_c_temp = 0.0
-                            max_c_temp = 1000.0
-                            todas_cargas_temp = []
-                            for s_t in st.session_state.sesiones:
-                                if s_t.get("informe_generado", False) and s_t.get("datos_informe"):
-                                    for d in s_t["datos_informe"]:
-                                        val_c = safe_float(d.get("CARGA"))
-                                        if val_c > 0:
-                                            todas_cargas_temp.append(val_c)
-                                            
-                            if todas_cargas_temp:
-                                min_c_temp = min(todas_cargas_temp)
-                                max_c_temp = max(todas_cargas_temp) * 1.1
-
-                            fig_carga = px.bar(
-                                df_carga_plot, x='DIA', y='CARGA', 
-                                color='CARGA', color_continuous_scale="Reds", 
-                                range_color=[min_c_temp, max_c_temp],
-                                title="Evolución Carga"
-                            )
-                            fig_carga.update_xaxes(categoryorder='array', categoryarray=["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"])
-                            fig_carga.update_yaxes(range=[0, max_c_temp])
-                            
-                            media_equipo_semana = df_diario['CARGA'].mean()
-                            if media_equipo_semana > 0:
-                                fig_carga.add_hline(
-                                    y=media_equipo_semana, 
-                                    line_dash="dot", 
-                                    line_color="gray", 
-                                    annotation_text=f"Media Semana: {media_equipo_semana:.0f} UA", 
-                                    annotation_position="top right"
-                                )
-                                
-                            st.plotly_chart(fig_carga, use_container_width=True, key=f"micro_carga_{num_sem}_{idx_real}")
-
-                        st.markdown("---")
-                        st.markdown("#### 🏃‍♂️ Carga Externa (Solo datos GPS > 0m)")
-                        
-                        df_diario_plot = df_diario.set_index('DIA').reindex(["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]).reset_index().fillna(0)
-                        
-                        cg_e1, cg_e2, cg_e3 = st.columns(3)
-                        with cg_e1:
-                            fig_accdcc = go.Figure()
-                            fig_accdcc.add_trace(go.Scatter(x=df_diario_plot['DIA'], y=df_diario_plot['ACC'], mode='lines+markers', name='ACC (>3)', line=dict(color='blue')))
-                            fig_accdcc.add_trace(go.Scatter(x=df_diario_plot['DIA'], y=df_diario_plot['DCC'], mode='lines+markers', name='DCC (>3)', line=dict(color='red')))
-                            fig_accdcc.update_xaxes(categoryorder='array', categoryarray=["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"])
-                            fig_accdcc.update_layout(title="Evolución ACC vs DCC")
-                            st.plotly_chart(fig_accdcc, use_container_width=True, key=f"micro_accdcc_{num_sem}_{idx_real}")
-                        with cg_e2:
-                            fig_dis = px.bar(df_diario_plot, x='DIA', y='DIS', title="Evolución DIS (km)", color_discrete_sequence=['#00b4d8'])
-                            fig_dis.update_xaxes(categoryorder='array', categoryarray=["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"])
-                            st.plotly_chart(fig_dis, use_container_width=True, key=f"micro_dis_{num_sem}_{idx_real}")
-                        with cg_e3:
-                            fig_disai = px.bar(df_diario_plot, x='DIA', y='DIS AI', title="Evolución HSR (>21 km/h)", color_discrete_sequence=['#f50057'])
-                            fig_disai.update_xaxes(categoryorder='array', categoryarray=["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"])
-                            st.plotly_chart(fig_disai, use_container_width=True, key=f"micro_disai_{num_sem}_{idx_real}")
-
-                        st.markdown("---")
-                        st.markdown("#### 👤 Resumen Semanal por Jugador")
-                        # El resumen de jugador suma todas sus sesiones, aunque un día estuviera lesionado, sus datos de ese día serán 0.
-                        df_jug_sum_int = df_filtrado.groupby('JUGADOR')[['MIN', 'CARGA']].sum().reset_index()
-                        df_filtrado_gps = df_filtrado[df_filtrado['DIS'] > 0]
-                        df_jug_sum_ext = df_filtrado_gps.groupby('JUGADOR')[['DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC']].sum().reset_index() if not df_filtrado_gps.empty else pd.DataFrame(columns=['JUGADOR', 'DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC'])
-                        
-                        df_jug_sum = pd.merge(df_jug_sum_int, df_jug_sum_ext, on='JUGADOR', how='left').fillna(0)
-                        
-                        df_no_ceros = df_filtrado.replace({'TQR': 0, 'WELLNESS': 0, 'RPE': 0}, np.nan)
-                        df_jug_mean = df_no_ceros.groupby('JUGADOR')[['TQR', 'WELLNESS', 'RPE']].mean().reset_index().fillna(0)
-                        df_indiv = df_jug_sum.merge(df_jug_mean, on='JUGADOR')
-                        
-                        df_info_extra = df_filtrado[['JUGADOR', 'POS', 'ROL']].drop_duplicates()
-                        df_indiv = df_indiv.merge(df_info_extra, on='JUGADOR')
-                        cols_ordenadas = ['JUGADOR', 'POS', 'ROL', 'MIN', 'TQR', 'WELLNESS', 'RPE', 'CARGA', 'DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC']
-                        df_indiv = df_indiv[cols_ordenadas]
-                        mostrar_tabla_moderna(df_indiv.style.hide(axis="index").format(precision=2)) # <--- CORREGIDO A df_indiv
-                        
-                        # --- PEGAR A CONTINUACIÓN ---
-                        kpis_micro = {
-                            "Wellness": df_diario['WELLNESS'].replace(0, np.nan).mean() if not df_diario.empty else 0,
-                            "TQR": df_diario['TQR'].replace(0, np.nan).mean() if not df_diario.empty else 0,
-                            "RPE": df_diario['RPE'].replace(0, np.nan).mean() if not df_diario.empty else 0,
-                            "Minutos": df_diario['MIN'].sum() if not df_diario.empty else 0,
-                            "Carga": df_diario['CARGA'].sum() if not df_diario.empty else 0,
-                            "DIS": df_diario['DIS'].sum() if not df_diario.empty else 0,
-                            "HSR": df_diario['DIS AI'].sum() if not df_diario.empty else 0,
-                            "SPR": df_diario['Nº SPR'].sum() if not df_diario.empty else 0,
-                            "ACC": df_diario['ACC'].sum() if not df_diario.empty else 0,
-                            "DCC": df_diario['DCC'].sum() if not df_diario.empty else 0
-                        }
-
-                        diccionario_figuras_micro = {
-                            "TQR": fig_tqr,
-                            "Wellness": fig_well,
-                            "Minutos": fig_min,
-                            "RPE": fig_rpe,
-                            "Carga": fig_carga,
-                            "ACC_DCC": fig_accdcc,
-                            "DIS": fig_dis,
-                            "DIS_AI": fig_disai
-                        }
-
-                    st.markdown("---")
-                    pdf_key = f"pdf_listo_{num_sem}_{idx_real}"
-
-                    if pdf_key not in st.session_state:
-                        if st.button("⚙️ Generar PDF del Microciclo", key=f"btn_prepara_pdf_{num_sem}_{idx_real}"):
-                            with st.spinner("Procesando gráficos y PDF (esto puede tardar unos segundos)..."):
-                                st.session_state[pdf_key] = generar_pdf_microciclo(nombre_etiqueta, df_diario, df_indiv, kpis_micro, diccionario_figuras_micro)
-                            st.rerun()
+                            datos_7_dias.append({"JUGADOR": jugador, "POS": j["POS"], "ROL": rol_semanal[jugador], "FECHA": fecha_str, "DIA": dia_semana_nombre, "ESTADO": est_jug, "TQR": 0, "WELLNESS": 0, "RPE": 0, "MIN": 0, "CARGA": 0, "DIS": 0, "DIS AI": 0, "Nº SPR": 0, "ACC": 0, "DCC": 0, "VMAX": 0, "ENTRENO": 0})
                     else:
-                        col_pdf1, col_pdf2 = st.columns(2)
-                        with col_pdf1:
-                            st.download_button(
-                                label="📥 Descargar PDF",
-                                data=st.session_state[pdf_key],
-                                file_name=f"Microciclo_Semana_{num_sem}.pdf",
-                                mime="application/pdf",
-                                key=f"btn_descarga_pdf_{num_sem}_{idx_real}"
-                            )
-                        with col_pdf2:
-                            if st.button("🗑️ Descartar PDF", key=f"btn_borrar_pdf_{num_sem}_{idx_real}"):
-                                del st.session_state[pdf_key]
-                                st.rerun()
+                        datos_7_dias.append({"JUGADOR": jugador, "POS": j["POS"], "ROL": rol_semanal[jugador], "FECHA": fecha_str, "DIA": dia_semana_nombre, "ESTADO": "Sin Sesión", "TQR": 0, "WELLNESS": 0, "RPE": 0, "MIN": 0, "CARGA": 0, "DIS": 0, "DIS AI": 0, "Nº SPR": 0, "ACC": 0, "DCC": 0, "VMAX": 0, "ENTRENO": 0})
+
+            df_semana = pd.DataFrame(datos_7_dias)
+
+            with c_sel2:
+                col_f1, col_f2 = st.columns(2)
+                with col_f1: pos_filtro = st.radio("Filtrar Posición:", ["TODOS", "POR", "DEF", "MED", "ATA"], horizontal=True, key=f"fw_p_{num_sem}")
+                with col_f2: rol_filtro = st.radio("Filtrar Rol:", ["TODOS", "Titular", "Suplente"], horizontal=True, key=f"fw_r_{num_sem}")
+            
+            df_filtrado = df_semana.copy()
+            if pos_filtro != "TODOS": df_filtrado = df_filtrado[df_filtrado["POS"] == pos_filtro]
+            if rol_filtro != "TODOS": df_filtrado = df_filtrado[df_filtrado["ROL"] == rol_filtro]
+
+            if df_filtrado.empty:
+                st.warning("No hay jugadores que coincidan con estos filtros en esta semana.")
+            else:
+                df_disp = df_filtrado[(df_filtrado['ESTADO'].isin(["Disponible", "Titular", "Suplente"])) & (df_filtrado['ENTRENO'] == 1)].copy()
+                df_disp['TQR'] = df_disp['TQR'].replace(0, np.nan)
+                df_disp['WELLNESS'] = df_disp['WELLNESS'].replace(0, np.nan)
+                df_disp['RPE'] = df_disp['RPE'].replace(0, np.nan)
+                
+                if not df_disp.empty:
+                    df_diario_int = df_disp.groupby('DIA', sort=False)[['WELLNESS', 'TQR', 'RPE', 'MIN', 'CARGA']].mean().reset_index()
+                    df_disp_gps = df_disp[df_disp['DIS'] > 0]
+                    if not df_disp_gps.empty:
+                        df_diario_ext = df_disp_gps.groupby('DIA', sort=False)[['DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC']].mean().reset_index()
+                    else:
+                        df_diario_ext = pd.DataFrame(columns=['DIA', 'DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC'])
+                    df_diario = pd.merge(df_diario_int, df_diario_ext, on='DIA', how='left').fillna(0)
+                else:
+                    df_diario = pd.DataFrame(columns=['DIA', 'WELLNESS', 'TQR', 'RPE', 'MIN', 'CARGA', 'DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC'])
+
+                orden_dias = {"Lunes":1, "Martes":2, "Miércoles":3, "Jueves":4, "Viernes":5, "Sábado":6, "Domingo":7}
+                df_diario["Orden"] = df_diario["DIA"].map(orden_dias)
+                df_diario = df_diario.sort_values("Orden").drop(columns=["Orden"])
+
+                st.markdown("---")
+                
+                # --- NUEVOS KPIS DE DISEÑO ÉLITE EN UNA FILA ---
+                st.markdown(f"#### 🎯 Resumen Acumulado del Microciclo")
+                cols_kpi = st.columns(10)
+                from utils.math_helpers import render_kpi_elite
+                
+                with cols_kpi[0]: render_kpi_elite("Wellness", f"{df_diario['WELLNESS'].replace(0, np.nan).mean():.1f}" if not df_diario.empty else "0")
+                with cols_kpi[1]: render_kpi_elite("TQR", f"{df_diario['TQR'].replace(0, np.nan).mean():.1f}" if not df_diario.empty else "0")
+                with cols_kpi[2]: render_kpi_elite("RPE", f"{df_diario['RPE'].replace(0, np.nan).mean():.1f}" if not df_diario.empty else "0")
+                with cols_kpi[3]: render_kpi_elite("Minutos", f"{df_diario['MIN'].sum():.0f}" if not df_diario.empty else "0")
+                with cols_kpi[4]: render_kpi_elite("Carga", f"{df_diario['CARGA'].sum():.0f}" if not df_diario.empty else "0")
+                with cols_kpi[5]: render_kpi_elite("DIS (km)", f"{df_diario['DIS'].sum():.1f}" if not df_diario.empty else "0")
+                with cols_kpi[6]: render_kpi_elite("HSR (m)", f"{df_diario['DIS AI'].sum():.0f}" if not df_diario.empty else "0")
+                with cols_kpi[7]: render_kpi_elite("Sprints", f"{df_diario['Nº SPR'].sum():.1f}" if not df_diario.empty else "0")
+                with cols_kpi[8]: render_kpi_elite("ACC", f"{df_diario['ACC'].sum():.0f}" if not df_diario.empty else "0")
+                with cols_kpi[9]: render_kpi_elite("DCC", f"{df_diario['DCC'].sum():.0f}" if not df_diario.empty else "0")
+
+                st.markdown("---")
+                st.markdown("#### 📋 Resumen por Día")
+                if not df_diario.empty:
+                    mostrar_tabla_moderna(df_diario.style.hide(axis="index").format(precision=2))
+
+                st.markdown("---")
+                st.markdown("#### 🧠 Bienestar")
+                cg_b1, cg_b2 = st.columns(2)
+                with cg_b1:
+                    df_tqr_plot = df_diario.set_index('DIA').reindex(["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]).reset_index()
+                    fig_tqr = px.bar(df_tqr_plot, x='DIA', y='TQR', color='TQR', color_continuous_scale="RdYlGn", range_color=[1, 10], title="Calidad de Recuperación (TQR)")
+                    fig_tqr.update_xaxes(categoryorder='array', categoryarray=["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"])
+                    fig_tqr.update_yaxes(range=[1, 10])
+                    st.plotly_chart(fig_tqr, use_container_width=True, key=f"micro_tqr_{num_sem}_{idx_real}")
+                with cg_b2:
+                    datos_w = []
+                    for offset in range(7):
+                        dia_n = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"][offset]
+                        f_str = (row["lunes_dt"] + timedelta(days=offset)).strftime("%Y-%m-%d")
+                        ses = next((s for s in sesiones_semana if s["fecha"] == f_str), None)
+                        
+                        f_val = s_val = d_val = e_val = h_val = 0.0
+                        if ses and ses.get("datos_informe"):
+                            j_validos = df_disp[df_disp['DIA'] == dia_n]['JUGADOR'].tolist()
+                            d_validos = [d for d in ses["datos_informe"] if d["JUGADOR"] in j_validos and safe_float(d.get("WELLNESS")) > 0]
+                            
+                            if d_validos:
+                                f_val = np.mean([safe_float(d.get("W_Fatiga")) for d in d_validos])
+                                s_val = np.mean([safe_float(d.get("W_Sueño")) for d in d_validos])
+                                d_val = np.mean([safe_float(d.get("W_Dolor")) for d in d_validos])
+                                e_val = np.mean([safe_float(d.get("W_Estres")) for d in d_validos])
+                                h_val = np.mean([safe_float(d.get("W_Humor")) for d in d_validos])
+                                
+                        datos_w.append({"DIA": dia_n, "Fatiga": f_val, "Sueño": s_val, "Dolor": d_val, "Estrés": e_val, "Humor": h_val})
+                    
+                    fig_well = go.Figure()
+                    colores_w = px.colors.qualitative.Set2
+                    factores = ['Fatiga', 'Sueño', 'Dolor', 'Estrés', 'Humor']
+                    df_w_plot = pd.DataFrame(datos_w)
+                    
+                    for i, factor in enumerate(factores):
+                        fig_well.add_trace(go.Bar(x=df_w_plot['DIA'], y=df_w_plot[factor], name=factor, marker_color=colores_w[i]))
+                    
+                    fig_well.update_layout(title="Evolución Wellness Diario", barmode='stack', yaxis_title="Puntos", legend_title_text="Factor", yaxis_range=[0, 35], hovermode="x unified")
+                    fig_well.update_xaxes(categoryorder='array', categoryarray=["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"])
+                    fig_well.add_hline(y=18, line_dash="dot", line_color="orange", annotation_text="Moderado (18)", annotation_position="bottom right")
+                    fig_well.add_hline(y=24, line_dash="dash", line_color="red", annotation_text="Crítico (24)", annotation_position="top right")
+                    st.plotly_chart(fig_well, use_container_width=True, key=f"micro_well_{num_sem}_{idx_real}")
+
+                st.markdown("---")
+                st.markdown("#### 🔥 Carga Interna")
+                cg_i1, cg_i2, cg_i3 = st.columns(3)
+                with cg_i1:
+                    fig_min = px.bar(df_diario, x='DIA', y='MIN', title="Evolución Minutos")
+                    st.plotly_chart(fig_min, use_container_width=True, key=f"micro_min_{num_sem}_{idx_real}")
+                with cg_i2:
+                    df_rpe_plot = df_diario.set_index('DIA').reindex(["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]).reset_index()
+                    fig_rpe = px.bar(df_rpe_plot, x='DIA', y='RPE', title="Evolución RPE", color='RPE', color_continuous_scale="Reds", range_color=[0, 10])
+                    fig_rpe.update_xaxes(categoryorder='array', categoryarray=["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"])
+                    fig_rpe.update_yaxes(range=[1, 10])
+                    st.plotly_chart(fig_rpe, use_container_width=True, key=f"micro_rpe_{num_sem}_{idx_real}")
+                with cg_i3:
+                    df_carga_plot = df_diario.set_index('DIA').reindex(["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]).reset_index()
+                    
+                    min_c_temp = 0.0
+                    max_c_temp = 1000.0
+                    todas_cargas_temp = []
+                    for s_t in st.session_state.sesiones:
+                        if s_t.get("informe_generado", False) and s_t.get("datos_informe"):
+                            for d in s_t["datos_informe"]:
+                                val_c = safe_float(d.get("CARGA"))
+                                if val_c > 0:
+                                    todas_cargas_temp.append(val_c)
+                                    
+                    if todas_cargas_temp:
+                        min_c_temp = min(todas_cargas_temp)
+                        max_c_temp = max(todas_cargas_temp) * 1.1
+
+                    fig_carga = px.bar(
+                        df_carga_plot, x='DIA', y='CARGA', 
+                        color='CARGA', color_continuous_scale="Reds", 
+                        range_color=[min_c_temp, max_c_temp],
+                        title="Evolución Carga"
+                    )
+                    fig_carga.update_xaxes(categoryorder='array', categoryarray=["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"])
+                    fig_carga.update_yaxes(range=[0, max_c_temp])
+                    
+                    media_equipo_semana = df_diario['CARGA'].mean()
+                    if media_equipo_semana > 0:
+                        fig_carga.add_hline(
+                            y=media_equipo_semana, 
+                            line_dash="dot", 
+                            line_color="gray", 
+                            annotation_text=f"Media Semana: {media_equipo_semana:.0f} UA", 
+                            annotation_position="top right"
+                        )
+                        
+                    st.plotly_chart(fig_carga, use_container_width=True, key=f"micro_carga_{num_sem}_{idx_real}")
+
+                st.markdown("---")
+                st.markdown("#### 🏃‍♂️ Carga Externa (Solo datos GPS > 0m)")
+                
+                df_diario_plot = df_diario.set_index('DIA').reindex(["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]).reset_index().fillna(0)
+                
+                cg_e1, cg_e2, cg_e3 = st.columns(3)
+                with cg_e1:
+                    fig_accdcc = go.Figure()
+                    fig_accdcc.add_trace(go.Scatter(x=df_diario_plot['DIA'], y=df_diario_plot['ACC'], mode='lines+markers', name='ACC (>3)', line=dict(color='blue')))
+                    fig_accdcc.add_trace(go.Scatter(x=df_diario_plot['DIA'], y=df_diario_plot['DCC'], mode='lines+markers', name='DCC (>3)', line=dict(color='red')))
+                    fig_accdcc.update_xaxes(categoryorder='array', categoryarray=["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"])
+                    fig_accdcc.update_layout(title="Evolución ACC vs DCC")
+                    st.plotly_chart(fig_accdcc, use_container_width=True, key=f"micro_accdcc_{num_sem}_{idx_real}")
+                with cg_e2:
+                    fig_dis = px.bar(df_diario_plot, x='DIA', y='DIS', title="Evolución DIS (km)", color_discrete_sequence=['#00b4d8'])
+                    fig_dis.update_xaxes(categoryorder='array', categoryarray=["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"])
+                    st.plotly_chart(fig_dis, use_container_width=True, key=f"micro_dis_{num_sem}_{idx_real}")
+                with cg_e3:
+                    fig_disai = px.bar(df_diario_plot, x='DIA', y='DIS AI', title="Evolución HSR (>21 km/h)", color_discrete_sequence=['#f50057'])
+                    fig_disai.update_xaxes(categoryorder='array', categoryarray=["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"])
+                    st.plotly_chart(fig_disai, use_container_width=True, key=f"micro_disai_{num_sem}_{idx_real}")
+
+                st.markdown("---")
+                st.markdown("#### 👤 Resumen Semanal por Jugador")
+                
+                df_jug_sum_int = df_filtrado.groupby('JUGADOR')[['MIN', 'CARGA']].sum().reset_index()
+                df_filtrado_gps = df_filtrado[df_filtrado['DIS'] > 0]
+                df_jug_sum_ext = df_filtrado_gps.groupby('JUGADOR')[['DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC']].sum().reset_index() if not df_filtrado_gps.empty else pd.DataFrame(columns=['JUGADOR', 'DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC'])
+                
+                df_jug_sum = pd.merge(df_jug_sum_int, df_jug_sum_ext, on='JUGADOR', how='left').fillna(0)
+                
+                df_no_ceros = df_filtrado.replace({'TQR': 0, 'WELLNESS': 0, 'RPE': 0}, np.nan)
+                df_jug_mean = df_no_ceros.groupby('JUGADOR')[['TQR', 'WELLNESS', 'RPE']].mean().reset_index().fillna(0)
+                df_indiv = df_jug_sum.merge(df_jug_mean, on='JUGADOR')
+                
+                df_info_extra = df_filtrado[['JUGADOR', 'POS', 'ROL']].drop_duplicates()
+                df_indiv = df_indiv.merge(df_info_extra, on='JUGADOR')
+                cols_ordenadas = ['JUGADOR', 'POS', 'ROL', 'MIN', 'TQR', 'WELLNESS', 'RPE', 'CARGA', 'DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC']
+                df_indiv = df_indiv[cols_ordenadas]
+                
+                st.dataframe(df_indiv.style.format(precision=1), use_container_width=True, hide_index=True)
+                
+                kpis_micro = {
+                    "Wellness": df_diario['WELLNESS'].replace(0, np.nan).mean() if not df_diario.empty else 0,
+                    "TQR": df_diario['TQR'].replace(0, np.nan).mean() if not df_diario.empty else 0,
+                    "RPE": df_diario['RPE'].replace(0, np.nan).mean() if not df_diario.empty else 0,
+                    "Minutos": df_diario['MIN'].sum() if not df_diario.empty else 0,
+                    "Carga": df_diario['CARGA'].sum() if not df_diario.empty else 0,
+                    "DIS": df_diario['DIS'].sum() if not df_diario.empty else 0,
+                    "HSR": df_diario['DIS AI'].sum() if not df_diario.empty else 0,
+                    "SPR": df_diario['Nº SPR'].sum() if not df_diario.empty else 0,
+                    "ACC": df_diario['ACC'].sum() if not df_diario.empty else 0,
+                    "DCC": df_diario['DCC'].sum() if not df_diario.empty else 0
+                }
+
+                diccionario_figuras_micro = {
+                    "TQR": fig_tqr, "Wellness": fig_well, "Minutos": fig_min, "RPE": fig_rpe, 
+                    "Carga": fig_carga, "ACC_DCC": fig_accdcc, "DIS": fig_dis, "DIS_AI": fig_disai
+                }
+
+                st.markdown("---")
+                pdf_key = f"pdf_listo_{num_sem}_{idx_real}"
+
+                if pdf_key not in st.session_state:
+                    if st.button("⚙️ Generar PDF del Microciclo", key=f"btn_prepara_pdf_{num_sem}_{idx_real}"):
+                        with st.spinner("Procesando gráficos y PDF (esto puede tardar unos segundos)..."):
+                            st.session_state[pdf_key] = generar_pdf_microciclo(nombre_etiqueta, df_diario, df_indiv, kpis_micro, diccionario_figuras_micro)
+                        st.rerun()
+                else:
+                    col_pdf1, col_pdf2 = st.columns(2)
+                    with col_pdf1:
+                        st.download_button(
+                            label="📥 Descargar PDF",
+                            data=st.session_state[pdf_key],
+                            file_name=f"Microciclo_{num_sem}.pdf",
+                            mime="application/pdf",
+                            key=f"btn_descarga_pdf_{num_sem}_{idx_real}"
+                        )
+                    with col_pdf2:
+                        if st.button("🗑️ Descartar PDF", key=f"btn_borrar_pdf_{num_sem}_{idx_real}"):
+                            del st.session_state[pdf_key]
+                            st.rerun()
 
 with tab_ses:
     if not st.session_state.sesiones:
