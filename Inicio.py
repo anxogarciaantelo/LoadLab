@@ -21,9 +21,9 @@ from database.db_manager import *
 from views.team_settings import render_panel_principal
 
 # Configuración inicial de la página
+# SUSTITUYE POR:
 st.set_page_config(page_title="My Performance AMS", page_icon="⚽", layout="wide")
 
-# Configuración global para tema Elite Dark (MPA Style) en gráficos de Plotly
 import plotly.io as pio
 import plotly.graph_objects as go
 
@@ -34,14 +34,14 @@ pio.templates["loadlab_elite_dark"] = go.layout.Template(
         plot_bgcolor="rgba(0,0,0,0)",
         colorway=["#3b82f6", "#10b981", "#8b5cf6", "#ef4444", "#f59e0b", "#0ea5e9"],
         xaxis=dict(
-            gridcolor="#334155",
-            zerolinecolor="#475569",
+            gridcolor="#1e293b",
+            zerolinecolor="#334155",
             title=dict(font=dict(weight="bold", color="#e2e8f0")),
             tickfont=dict(color="#94a3b8")
         ),
         yaxis=dict(
-            gridcolor="#334155",
-            zerolinecolor="#475569",
+            gridcolor="#1e293b",
+            zerolinecolor="#334155",
             title=dict(font=dict(weight="bold", color="#e2e8f0")),
             tickfont=dict(color="#94a3b8")
         ),
@@ -366,11 +366,11 @@ if st.session_state.get("equipo_seleccionado", False):
     col_w1, col_w2, col_w3 = st.columns([1, 2.5, 1])
     with col_w2:
         st.markdown(f"""
-            <div style="background-color: #ffffff; padding: 40px; border-radius: 16px; border: 1px solid #e2e8f0; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.05); margin-bottom: 40px;">
+            <div style="background-color: #1e293b; padding: 40px; border-radius: 16px; border: 1px solid #334155; border-top: 4px solid #3b82f6; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-bottom: 40px;">
                 {img_html}
-                <h1 style="color: #0f172a; font-weight: 800; margin-bottom: 5px; font-size: 2.2rem;">{st.session_state.get('nombre_equipo', 'LoadLab')}</h1>
-                <p style="color: #64748b; font-size: 1.1rem; margin-top: 0;">
-            <b>{st.session_state.get('categoria_equipo', '')}</b> | {st.session_state.get('division_equipo', '')} &bull; Temp: {st.session_state.get('temporada_equipo', '')}
+                <h1 style="color: #f8fafc; font-weight: 800; margin-bottom: 5px; font-size: 2.2rem;">{st.session_state.get('nombre_equipo', 'LoadLab')}</h1>
+                <p style="color: #94a3b8; font-size: 1.1rem; margin-top: 0;">
+            <b style="color: #3b82f6;">{st.session_state.get('categoria_equipo', '')}</b> | {st.session_state.get('division_equipo', '')} &bull; Temp: {st.session_state.get('temporada_equipo', '')}
         </p>
     </div>
 """, unsafe_allow_html=True)
@@ -413,20 +413,20 @@ if st.session_state.get("equipo_seleccionado", False):
     # 2. Función Helper y Recopilación de Datos para las 3 Columnas
     def render_estado_jugador(jugador_nombre, subtexto, nivel_alerta="moderado", avatar_html=""):
         if nivel_alerta == "critico":
-            borde, bg_badge, color_badge = "#dc2626", "#dc2626", "#ffffff"
+            borde, bg_badge, color_badge = "#ef4444", "rgba(239, 68, 68, 0.2)", "#ef4444"
         elif nivel_alerta == "moderado":
-            borde, bg_badge, color_badge = "#475569", "#fef2f2", "#dc2626"
+            borde, bg_badge, color_badge = "#f59e0b", "rgba(245, 158, 11, 0.2)", "#f59e0b"
         else:
-            borde, bg_badge, color_badge = "#1c1c1e", "#f4f4f5", "#1c1c1e"
+            borde, bg_badge, color_badge = "#10b981", "rgba(16, 185, 129, 0.2)", "#10b981"
             
         html = f"""
-        <div style="background-color: #ffffff; border: 1px solid #e4e4e7; border-left: 4px solid {borde}; border-radius: 6px; padding: 12px 14px; margin-bottom: 8px;">
+        <div style="background-color: #1e293b; border: 1px solid #334155; border-left: 4px solid {borde}; border-radius: 8px; padding: 12px 14px; margin-bottom: 8px;">
             <div style="display: flex; align-items: center; justify-content: space-between;">
                 <div style="display: flex; align-items: center;">
                     {avatar_html}
-                    <strong style="color: #0a0a0a; font-size: 0.95rem; margin-left: 8px; font-weight: 700;">{jugador_nombre}</strong>
+                    <strong style="color: #f8fafc; font-size: 0.95rem; margin-left: 8px; font-weight: 700;">{jugador_nombre}</strong>
                 </div>
-                <span style="background-color: {bg_badge}; color: {color_badge}; padding: 3px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase;">
+                <span style="background-color: {bg_badge}; color: {color_badge}; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; border: 1px solid {color_badge};">
                     {subtexto}
                 </span>
             </div>
@@ -524,18 +524,19 @@ if st.session_state.get("equipo_seleccionado", False):
             height: 90px;
             font-size: 1.15rem !important;
             font-weight: 700 !important;
-            border-radius: 14px !important;
-            border: 1px solid #e2e8f0 !important;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.02) !important;
+            border-radius: 12px !important;
+            border: 1px solid #334155 !important;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important;
             transition: all 0.2s ease !important;
-            background-color: #ffffff !important;
-            color: #0f172a !important;
+            background-color: #1e293b !important;
+            color: #f8fafc !important;
         }
         div.stButton > button:hover {
             transform: translateY(-4px);
-            box-shadow: 0 12px 20px rgba(0,0,0,0.08) !important;
-            border-color: #cbd5e1 !important;
-            background-color: #f8fafc !important;
+            box-shadow: 0 10px 20px rgba(59, 130, 246, 0.4) !important;
+            border-color: #3b82f6 !important;
+            background-color: #0f172a !important;
+            color: #3b82f6 !important;
         }
         </style>
     """, unsafe_allow_html=True)
