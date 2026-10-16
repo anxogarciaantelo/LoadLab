@@ -194,8 +194,36 @@ def render_panel_principal():
                 # 3. Mostramos los errores exactos en pantalla
                 if errores:
                     with st.expander("🔍 Ver detalles del error"):
-                        for e in errores[:10]:  # Mostramos los 10 primeros para no saturar
+                        for e in errores[:10]:
                             st.write(e)
+
+    st.markdown("---")
+    st.markdown("### 🛠️ Migración de Datos (KM a Metros)")
+    st.caption("Convierte automáticamente los datos antiguos de GPS (HSR, Zonas) guardados en KM a Metros en la base de datos.")
+    
+    if st.button("🔄 Ejecutar Migración a Metros", use_container_width=True):
+        cambios = 0
+        cols_a_metros = ['HID >21', 'HID >24', 'DIS AI', 'Z1', 'Z2', 'Z3', 'Z4', 'Z5', 'Z6', 'R_0_7', 'R_7_14', 'R_14_21', 'R_21_24', 'R_24_27', 'R_27_30', 'R_30_45']
+        
+        for s in st.session_state.sesiones:
+            if s.get("datos_informe"):
+                for d in s["datos_informe"]:
+                    for col in cols_a_metros:
+                        if col in d:
+                            from utils.math_helpers import safe_float
+                            val = safe_float(d[col])
+                            # Si el valor está entre 0.01 y 25, asumimos que son KM
+                            if 0 < val < 25:
+                                d[col] = val * 1000.0
+                                cambios += 1
+                                
+        if cambios > 0:
+            from database.db_manager import guardar_datos
+            guardar_datos(modulo="sesiones")
+            st.success(f"✅ ¡Base de datos actualizada! Se convirtieron {cambios} registros a metros.")
+            st.rerun()
+        else:
+            st.info("No se encontraron registros antiguos en KM para convertir.")
 
     with st.expander("⚠️ Zona de Peligro: Borrado total de datos"):
         st.error("¡CUIDADO! Esta acción eliminará permanentemente la plantilla, todas las sesiones, historial médico y valoraciones de este equipo. No se puede deshacer.")
