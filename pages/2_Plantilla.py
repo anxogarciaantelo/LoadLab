@@ -24,33 +24,12 @@ aplicar_color_sidebar()
 if "vista_plantilla" not in st.session_state:
     st.session_state.vista_plantilla = "📋 Plantilla"
 
-# Ordenamos la plantilla globalmente por dorsal (si no tiene dorsal, lo mandamos al final con 99)
 plantilla_ordenada = sorted(st.session_state.plantilla, key=lambda x: int(x.get("dorsal", 99)))
-
 nombres_jugadores = [j["JUGADOR"] for j in plantilla_ordenada]
 opciones_vista = ["📋 Plantilla", "⚙️ Modificar Plantilla"] + [f"👤 {nombre}" for nombre in nombres_jugadores]
 
-# Prevenir errores si se elimina un jugador que estaba seleccionado
 if st.session_state.vista_plantilla not in opciones_vista:
     st.session_state.vista_plantilla = "📋 Plantilla"
-
-idx_actual = opciones_vista.index(st.session_state.vista_plantilla)
-
-# Función de callback para sincronizar el selector con el estado
-def actualizar_vista():
-    st.session_state.vista_plantilla = st.session_state.selector_vista
-
-st.selectbox(
-    "Navegación:", 
-    opciones_vista, 
-    index=idx_actual, 
-    key="selector_vista",
-    on_change=actualizar_vista
-)
-
-st.markdown("---")
-
-if st.session_state.vista_plantilla == "📋 Plantilla":
     if not st.session_state.plantilla:
         render_estado_vacio(
             icono="👥", 
@@ -98,8 +77,20 @@ if st.session_state.vista_plantilla == "📋 Plantilla":
                         if st.button("🔍 Perfil", key=f"btn_ver_perfil_{idx_global}", use_container_width=True):
                             st.session_state.vista_plantilla = f"👤 {nombre}"
                             st.rerun()
+
+        # --- BOTÓN INFERIOR DERECHO PARA MODIFICAR PLANTILLA ---
+            st.markdown("---")
+            c_vacio, c_btn_mod = st.columns([6, 1])
+            with c_btn_mod:
+                if st.button("⚙️ Modificar", use_container_width=True):
+                    st.session_state.vista_plantilla = "⚙️ Modificar Plantilla"
+                    st.rerun()
         
 elif st.session_state.vista_plantilla == "⚙️ Modificar Plantilla":
+    if st.button("⬅️ Volver a la Plantilla", key="btn_volver_mod"):
+        st.session_state.vista_plantilla = "📋 Plantilla"
+        st.rerun()
+        
     with st.expander("➕ Añadir Jugador"):
         with st.form("form_alta_jugador"):
             c_m1, c_m2, c_m3 = st.columns(3)
