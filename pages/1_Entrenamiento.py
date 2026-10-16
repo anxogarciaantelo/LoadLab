@@ -127,19 +127,55 @@ with tab_cal:
                     st.success("¡Evento creado en el calendario!")
                     st.rerun()
     with c_dia2:
-        if st.session_state.sesiones:
-            # Construimos la tabla leyendo directamente los nombres dinámicos actualizados
-            datos_tabla = []
-            for s in st.session_state.sesiones:
-                datos_tabla.append({
-                    "Fecha": s.get("fecha", ""),
-                    "Sesión": s.get("nombre_dinamico", s.get("tipo", "")),
-                    "MD / Rival": s.get("subtitulo_dinamico", s.get("descripcion", ""))
-                })
+        import calendar
+        year = dia_clicado.year
+        month = dia_clicado.month
+        
+        meses_nombres = ["", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
+        
+        st.markdown(f"""
+            <div style='background-color: #1e293b; border: 1px solid #334155; border-top: 3px solid #3b82f6; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);'>
+                <h4 style='text-align: center; color: #f8fafc; margin-top: 0; margin-bottom: 20px; text-transform: uppercase; font-weight: 800; letter-spacing: 1px;'>🗓️ {meses_nombres[month]} {year}</h4>
+        """, unsafe_allow_html=True)
+        
+        cal = calendar.monthcalendar(year, month)
+        dias_semana = ["L", "M", "X", "J", "V", "S", "D"]
+        
+        html_cal = "<div style='display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; text-align: center;'>"
+        
+        for d in dias_semana:
+            html_cal += f"<div style='background-color: #0f172a; color: #94a3b8; padding: 10px; font-weight: 800; font-size: 0.85rem; border-radius: 6px; border: 1px solid #334155;'>{d}</div>"
             
-            # Lo convertimos a DataFrame y lo ordenamos de más reciente a más antiguo
-            df_s = pd.DataFrame(datos_tabla).sort_values("Fecha", ascending=False)
-            mostrar_tabla_moderna(df_s.style.hide(axis="index"))
+        hoy_str = str(date.today())
+        
+        for week in cal:
+            for day in week:
+                if day == 0:
+                    html_cal += "<div style='padding: 10px; background-color: transparent;'></div>"
+                else:
+                    fecha_str = f"{year}-{month:02d}-{day:02d}"
+                    es_hoy = "border: 2px solid #3b82f6;" if fecha_str == hoy_str else "border: 1px solid #334155;"
+                    bg_color = "#0f172a" if fecha_str == hoy_str else "#1e293b"
+                    
+                    sesiones_dia = [s for s in st.session_state.sesiones if s["fecha"] == fecha_str]
+                    
+                    contenido_extra = ""
+                    if sesiones_dia:
+                        for s in sesiones_dia:
+                            nom = s.get("nombre_dinamico", s.get("tipo", ""))
+                            if "Partido" in s.get("tipo", ""):
+                                color_badge = "#dc2626" 
+                                sub = s.get('rival', 'Rival')[:10] + "..." if len(s.get('rival', 'Rival')) > 10 else s.get('rival', 'Rival')
+                            else:
+                                color_badge = "#10b981" 
+                                sub = s.get('descripcion', 'TD')
+                                
+                            contenido_extra += f"<div style='background-color: {color_badge}; color: white; font-size: 0.65rem; font-weight: 800; padding: 4px; border-radius: 4px; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 2px 4px rgba(0,0,0,0.2);' title='{nom} | {sub}'>{nom}<br><span style='font-size: 0.55rem; font-weight: 600;'>{sub}</span></div>"
+                    
+                    html_cal += f"<div style='background-color: {bg_color}; {es_hoy} padding: 10px 5px; border-radius: 6px; min-height: 90px; display: flex; flex-direction: column; align-items: center; transition: transform 0.2s ease;' onmouseover=\"this.style.transform='scale(1.05)'\" onmouseout=\"this.style.transform='scale(1)'\"><span style='color: #f8fafc; font-weight: 800; font-size: 1.1rem;'>{day}</span>{contenido_extra}</div>"
+                    
+        html_cal += "</div></div>"
+        st.markdown(html_cal, unsafe_allow_html=True)
 
     # --- IMPORTADOR MASIVO DE HISTÓRICO ---
     st.markdown("---")
@@ -824,9 +860,28 @@ with tab_ses:
             accion_sugerida="Ve a la pestaña '🗓️ Calendario' para generar tu primer evento o importa un Excel histórico."
         )
     
-    sesiones_ordenadas = sorted(st.session_state.sesiones, key=lambda x: x["fecha"], reverse=True)
+    hoy_str = str(date.today())
+    
+    # 1. Separar y ordenar: Futuras (ascendente, lo más inminente arriba) | Pasadas (descendente, lo más reciente arriba)
+    sesiones_futuras = sorted([s for s in st.session_state.sesiones if s["fecha"] > hoy_str], key=lambda x: x["fecha"])
+    sesiones_pasadas = sorted([s for s in st.session_state.sesiones if s["fecha"] <= hoy_str], key=lambda x: x["fecha"], reverse=True)
+    
+    sesiones_ordenadas = sesiones_futuras + sesiones_pasadas
+    
+    mostrado_futuras = False
+    mostrado_pasadas = False
         
     for idx_visual, sesion in enumerate(sesiones_ordenadas):
+        # Inyección de Títulos Separadores Dinámicos sin duplicar el bloque de renderizado
+        if sesion["fecha"] > hoy_str and not mostrado_futuras:
+            st.markdown("<div style='background-color: rgba(59, 130, 246, 0.15); border-left: 4px solid #3b82f6; padding: 12px 18px; border-radius: 8px; margin-bottom: 20px;'><h4 style='color:#3b82f6; margin:0; font-weight:800; letter-spacing:0.5px;'>⏳ SEMANA EN CURSO / PLANIFICACIÓN FUTURA</h4></div>", unsafe_allow_html=True)
+            mostrado_futuras = True
+            
+        elif sesion["fecha"] <= hoy_str and not mostrado_pasadas:
+            margin_top = "margin-top: 40px;" if mostrado_futuras else ""
+            st.markdown(f"<div style='background-color: rgba(16, 185, 129, 0.15); border-left: 4px solid #10b981; padding: 12px 18px; border-radius: 8px; margin-bottom: 20px; {margin_top}'><h4 style='color:#10b981; margin:0; font-weight:800; letter-spacing:0.5px;'>✅ HISTORIAL COMPLETADO</h4></div>", unsafe_allow_html=True)
+            mostrado_pasadas = True
+
         idx_real = st.session_state.sesiones.index(sesion)
         es_partido = "Partido" in sesion['tipo']
         nombre_ev = sesion.get("nombre_dinamico", sesion["tipo"])
