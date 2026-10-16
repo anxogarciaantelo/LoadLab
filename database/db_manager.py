@@ -2,6 +2,7 @@ import streamlit as st
 from supabase import create_client
 import base64
 import unicodedata
+import numpy as np
 
 url = st.secrets["SUPABASE_URL"]
 key = st.secrets["SUPABASE_KEY"]
@@ -264,7 +265,6 @@ def reconstruir_dataframes_globales():
     if "sesiones" in st.session_state:
         for s in st.session_state.sesiones:
             if s.get("informe_generado") and s.get("datos_informe"):
-                # Preparamos el diccionario de disponibilidad limpio
                 disp_s = s.get("disponibilidad", {})
                 disp_clean = {str(k).strip().lower(): v for k, v in disp_s.items()}
                 
@@ -272,15 +272,9 @@ def reconstruir_dataframes_globales():
                     row = d.copy() 
                     row["FECHA"] = s.get("fecha")
                     row["TIPO_SESION"] = s.get("tipo")
-                    
-                    # Si es un partido, forzamos que el Match Day sea "MD"
-                    if "Partido" in str(s.get("tipo", "")):
-                        row["MD"] = "MD"
-                    else:
-                        row["MD"] = s.get("descripcion", "")
-                        
+                    row["MD"] = "MD" if "Partido" in str(s.get("tipo", "")) else s.get("descripcion", "")
                     row["COMPETICION"] = s.get("competicion", "")
-                    row["RIVAL"] = s.get("rival", "")  # Capturamos el rival para poder mostrarlo
+                    row["RIVAL"] = s.get("rival", "")
                     
                     jug_key = str(d["JUGADOR"]).strip().lower()
                     estado_default = "Titular" if "Partido" in s.get("tipo", "") else "Disponible"
@@ -289,6 +283,40 @@ def reconstruir_dataframes_globales():
                     datos_completos.append(row)
                     
     if datos_completos:
-        st.session_state.df_master_informes = pd.DataFrame(datos_completos)
+        df_master = pd.DataFrame(datos_completos)
+        
+        # --- CÁLCULO VECTORIZADO DEL RATIO A/C (EWMA) ---
+        df_master['FECHA_DT'] = pd.to_datetime(df_master['FECHA'])
+        
+        # Crear pivote de cargas para asegurar que los días sin entreno computan como 0 (fundamental para que la media exponencial decaiga)
+        df_pivot = df_master.pivot_table(index='FECHA_DT', columns='JUGADOR', values='CARGA', aggfunc='sum').fillna(0)
+        
+        if not df_pivot.empty:
+            rango_fechas = pd.date_range(start=df_pivot.index.min(), end=df_pivot.index.max(), freq='D')
+            df_pivot = df_pivot.reindex(rango_fechas, fill_value=0)
+            
+            # Multiplicamos por 7 para obtener la Carga Semanal Equivalente
+            aguda = df_pivot.ewm(span=7, adjust=False).mean() * 7
+            cronica = df_pivot.ewm(span=28, adjust=False).mean() * 7
+            ratio = aguda / cronica.replace(0, np.nan)
+            
+            # Convertir a formato largo y fusionar
+            aguda_melt = aguda.reset_index().melt(id_vars='index', var_name='JUGADOR', value_name='EWMA AGUDA')
+            cronica_melt = cronica.reset_index().melt(id_vars='index', var_name='JUGADOR', value_name='EWMA CRÓNICA')
+            ratio_melt = ratio.reset_index().melt(id_vars='index', var_name='JUGADOR', value_name='RATIO A/C')
+            
+            for df_melt in [aguda_melt, cronica_melt, ratio_melt]:
+                df_melt.rename(columns={'index': 'FECHA_DT'}, inplace=True)
+            
+            df_master = df_master.merge(aguda_melt, on=['FECHA_DT', 'JUGADOR'], how='left')
+            df_master = df_master.merge(cronica_melt, on=['FECHA_DT', 'JUGADOR'], how='left')
+            df_master = df_master.merge(ratio_melt, on=['FECHA_DT', 'JUGADOR'], how='left')
+            
+            df_master['RATIO A/C'] = df_master['RATIO A/C'].fillna(1.0)
+            df_master['EWMA AGUDA'] = df_master['EWMA AGUDA'].fillna(0.0)
+            df_master['EWMA CRÓNICA'] = df_master['EWMA CRÓNICA'].fillna(0.0)
+            
+        df_master.drop(columns=['FECHA_DT'], inplace=True, errors='ignore')
+        st.session_state.df_master_informes = df_master
     else:
         st.session_state.df_master_informes = pd.DataFrame()
