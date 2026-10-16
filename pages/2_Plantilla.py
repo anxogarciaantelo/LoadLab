@@ -69,39 +69,33 @@ if st.session_state.vista_plantilla == "📋 Plantilla":
         # Usamos la plantilla_ordenada que creamos arriba en lugar de la lista en bruto
         jugadores_lista = plantilla_ordenada
         
-        for i in range(0, len(jugadores_lista), 4):
-            cols = st.columns(4)
-            for j in range(4):
+        for i in range(0, len(jugadores_lista), 6):
+            cols = st.columns(6)
+            for j in range(6):
                 idx_global = i + j
                 if idx_global < len(jugadores_lista):
                     jug = jugadores_lista[idx_global]
                     with cols[j]:
-                        # --- NUEVA TARJETA DE JUGADOR ÉLITE ---
                         if jug.get("foto"):
                             try:
                                 img_src = jug["foto"] if str(jug["foto"]).startswith("http") else f"data:image/jpeg;base64,{jug['foto']}"
-                                img_html = f'<img src="{img_src}" style="width:85px; height:85px; object-fit: cover; border-radius:50%; border: 3px solid #f4f4f5; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">'
+                                img_html = f'<img src="{img_src}" style="width:85px; height:85px; object-fit: cover; border-radius:50%; border: 2px solid #3b82f6; box-shadow: 0 4px 8px rgba(0,0,0,0.2); margin-bottom: 5px;">'
                             except:
-                                img_html = '<div style="font-size: 45px; margin-bottom: 5px;">👤</div>'
+                                img_html = '<div style="font-size: 65px; margin-bottom: 5px; line-height: 1;">👤</div>'
                         else:
-                            img_html = '<div style="font-size: 45px; margin-bottom: 5px;">👤</div>'
+                            img_html = '<div style="font-size: 65px; margin-bottom: 5px; line-height: 1;">👤</div>'
                         
-                        posicion = jug.get('pos_1', jug.get('POS', ''))
-                        dorsal = jug.get('dorsal', '99')
                         nombre = jug['JUGADOR']
                         
                         tarjeta_html = f"""
-                        <div style="background-color: #1e293b; border: 1px solid #334155; border-top: 4px solid #3b82f6; border-radius: 10px; padding: 20px 10px 15px 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); text-align: center; margin-bottom: 12px; transition: transform 0.2s ease;">
+                        <div style="background-color: #1e293b; border: 1px solid #334155; border-top: 3px solid #3b82f6; border-radius: 8px; padding: 15px 5px 10px 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.15); text-align: center; margin-bottom: 5px; transition: transform 0.2s ease;">
                             {img_html}
-                            <h3 style="color: #3b82f6; font-weight: 800; font-size: 1.2rem; margin: 10px 0 2px 0;">#{dorsal}</h3>
-                            <h4 style="color: #f8fafc; font-weight: 800; font-size: 1.1rem; margin: 0 0 10px 0; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{nombre}</h4>
-                            <span style="background-color: #0f172a; color: #94a3b8; font-weight: 800; font-size: 0.75rem; padding: 4px 10px; border-radius: 6px; text-transform: uppercase; border: 1px solid #334155;">{posicion}</span>
+                            <h4 style="color: #f8fafc; font-weight: 800; font-size: 1.1rem; margin: 5px 0 0 0; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{nombre}">{nombre}</h4>
                         </div>
                         """
                         st.markdown(tarjeta_html, unsafe_allow_html=True)
                         
-                        # Botón interactivo debajo de la tarjeta
-                        if st.button("🔍 Ver Perfil", key=f"btn_ver_perfil_{idx_global}", use_container_width=True):
+                        if st.button("🔍 Perfil", key=f"btn_ver_perfil_{idx_global}", use_container_width=True):
                             st.session_state.vista_plantilla = f"👤 {nombre}"
                             st.rerun()
         
