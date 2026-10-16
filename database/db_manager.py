@@ -282,14 +282,13 @@ def reconstruir_dataframes_globales():
                     row["COMPETICION"] = s.get("competicion", "")
                     row["RIVAL"] = s.get("rival", "")  # Capturamos el rival para poder mostrarlo
                     
-                    # Inyectamos el estado médico/convocatoria
                     jug_key = str(d["JUGADOR"]).strip().lower()
                     estado_default = "Titular" if "Partido" in s.get("tipo", "") else "Disponible"
                     row["ESTADO"] = disp_clean.get(jug_key, estado_default)
                     
                     datos_completos.append(row)
                     
-if datos_completos:
+    if datos_completos:
         st.session_state.df_master_informes = pd.DataFrame(datos_completos)
     else:
         st.session_state.df_master_informes = pd.DataFrame()
