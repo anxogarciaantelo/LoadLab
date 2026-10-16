@@ -315,15 +315,6 @@ def obtener_clima(ciudad, fecha_str):
         print(f"Error clima: {e}")
     return None
 
-@st.cache_data(ttl=3600, show_spinner=False)
-def cargar_css_global():
-    """Cachea la lectura del archivo CSS para evitar carga de I/O en cada recarga de página"""
-    try:
-        with open("style.css", "r") as f:
-            return f"<style>{f.read()}</style>"
-    except Exception:
-        return ""
-
 def render_estado_vacio(icono, titulo, descripcion, accion_sugerida=None):
     """Renderiza una tarjeta moderna para pantallas sin datos (Onboarding)"""
     html_accion = f'<p style="color: #dc2626; font-weight: 800; font-size: 0.85rem; margin-top: 20px; text-transform: uppercase; letter-spacing: 0.05em;">↳ {accion_sugerida}</p>' if accion_sugerida else ''
