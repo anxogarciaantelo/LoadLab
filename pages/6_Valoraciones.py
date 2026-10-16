@@ -13,7 +13,7 @@ import zipfile
 from fpdf import FPDF
 
 # Importaciones del ecosistema LoadLab
-from utils.math_helpers import safe_float, limpiar_nombre
+from utils.math_helpers import safe_float, limpiar_nombre, aplicar_color_sidebar, mostrar_tabla_moderna
 from database.db_manager import guardar_datos
 
 # --- COMPROBACIÓN DE SEGURIDAD Y SESIÓN ---
