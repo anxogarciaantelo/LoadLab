@@ -485,7 +485,7 @@ else:
             st.markdown("#### ⏱️ Promedios Relativos (Por Minuto de GPS)")
             kr1, kr2, kr3, kr4 = st.columns(4)
             kr1.metric("m / min", f"{(kpis_rel['DIS/min']*1000):.1f}")
-            kr2.metric("HSR m / min", f"{(kpis_rel['DIS AI/min']*1000):.2f}")
+            kr2.metric("HSR m / min", f"{kpis_rel['DIS AI/min']:.2f}")
             kr3.metric("ACC / min", f"{kpis_rel['ACC/min']:.2f}")
             kr4.metric("DCC / min", f"{kpis_rel['DCC/min']:.2f}")
             
@@ -635,7 +635,7 @@ else:
                 valB = mean_t_B[m] if not pd.isna(mean_t_B[m]) else 0
                 valC = mean_t_C[m] if usar_C and not pd.isna(mean_t_C[m]) else 0
                 
-                if 'DIS/min' in m or 'DIS AI/min' in m:
+                if 'DIS/min' == m: # Solo multiplicamos DIS/min a m/min, porque DIS AI/min ya viene en metros
                     valA, valB, valC = valA * 1000, valB * 1000, valC * 1000
 
                 diff_str_B = f"{(((valB - valA) / valA) * 100):+.1f}%" if valA > 0 else "N/A"
