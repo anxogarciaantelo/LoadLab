@@ -325,34 +325,23 @@ def cargar_css_global():
         return ""
 
 def aplicar_color_sidebar():
-    """Inyecta el color dinámico, la tipografía, el CSS global, el escudo y el Live Status en la barra lateral."""
+    """Inyecta el color dinámico, la tipografía de la barra lateral, el CSS global, el escudo y los botones de sesión."""
     css_dinamico = """
     <style>
         [data-testid="stSidebar"] {
             background-color: #0f172a !important;
             border-right: 1px solid #1e293b !important;
-            /* Fundamental para que el absolute se quede dentro del sidebar */
-            position: relative !important; 
         }
-        /* Convertir el sidebar en Flexbox para empujar botones al fondo */
-        [data-testid="stSidebar"] > div:first-child {
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-        }
-        /* Hueco exacto arriba para el escudo y el título */
+        /* Empujamos las páginas hacia abajo para crear un hueco en la parte superior */
         [data-testid="stSidebarNav"] {
-            margin-top: 180px !important;
+            padding-top: 200px !important;
         }
-        /* Forzar que el contenedor de nuestro contenido ocupe el resto del alto para empujar botones */
-        [data-testid="stSidebarUserContent"] {
-            display: flex;
-            flex-direction: column;
-            flex-grow: 1;
-            padding-bottom: 20px;
-        }
-        [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3,
-        [data-testid="stSidebar"] label, [data-testid="stSidebar"] p, [data-testid="stSidebar"] span {
+        [data-testid="stSidebar"] h1, 
+        [data-testid="stSidebar"] h2, 
+        [data-testid="stSidebar"] h3,
+        [data-testid="stSidebar"] label,
+        [data-testid="stSidebar"] p,
+        [data-testid="stSidebar"] span {
             color: #f8fafc !important; 
             font-weight: 800 !important;
         }
@@ -377,30 +366,27 @@ def aplicar_color_sidebar():
     except:
         pass
 
+    # Inyección de Escudo Superior y Botones Inferiores en el Sidebar
     if st.session_state.get("equipo_seleccionado", False):
         with st.sidebar:
             escudo = st.session_state.get("escudo_equipo")
             nombre = st.session_state.get("nombre_equipo", "")
-            img_src = escudo if str(escudo).startswith("http") else f"data:image/jpeg;base64,{escudo}" if escudo else ""
             
-            # 1. ESCUDO ARRIBA DEL TODO (Con absolute anclado a los bordes laterales del sidebar)
-            html_escudo = f"""
-                <div style='position: absolute; top: 30px; left: 0; right: 0; text-align: center; z-index: 999999;'>
-            """
-            if img_src:
-                html_escudo += f"<img src='{img_src}' style='width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 2px solid #3b82f6; box-shadow: 0 4px 10px rgba(0,0,0,0.3);'>"
-                
-            html_escudo += f"""
-                    <h3 style='color: #f8fafc; margin-top: 10px; margin-bottom: 0; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 0.5px;'>{nombre}</h3>
-                    <hr style='border-color: #1e293b; margin-top: 15px; margin-bottom: 0; border-width: 1px;'>
-                </div>
-            """
-            st.markdown(html_escudo, unsafe_allow_html=True)
+            # --- 1. ESCUDO CIRCULAR FIJO ARRIBA DE TODO ---
+            if escudo:
+                img_src = escudo if str(escudo).startswith("http") else f"data:image/jpeg;base64,{escudo}"
+                st.markdown(f"""
+                    <div style='position: absolute; top: -180px; left: 0; width: 100%; text-align: center; z-index: 999999;'>
+                        <img src='{img_src}' style='width: 95px; height: 95px; border-radius: 50%; object-fit: cover; border: 3px solid #3b82f6; box-shadow: 0 4px 15px rgba(0,0,0,0.4);'>
+                        <h3 style='color: #f8fafc; margin-top: 15px; margin-bottom: 0; font-size: 1.15rem; text-transform: uppercase; letter-spacing: 0.5px;'>{nombre}</h3>
+                        <hr style='border-color: #334155; margin-top: 20px; margin-bottom: 0;'>
+                    </div>
+                """, unsafe_allow_html=True)
             
-            # 2. SEPARADOR FLEXIBLE (Empuja todo lo que viene después hacia abajo)
-            st.markdown("<div style='margin-top: auto;'></div>", unsafe_allow_html=True)
+            # --- 2. ESPACIADOR FLEXIBLE (Empuja los botones hacia abajo) ---
+            st.markdown("<div style='flex-grow: 1; min-height: 40vh;'></div>", unsafe_allow_html=True)
             
-            # 3. LIVE SYNC Y BOTONES ABAJO DEL TODO
+            # --- 3. LIVE SYNC Y BOTONES ABAJO DEL TODO ---
             st.markdown(f"""
                 <div style='display: flex; justify-content: center; margin-bottom: 15px;'>
                     <div style='background-color: rgba(15, 23, 42, 0.9); border: 1px solid #334155; padding: 4px 12px; border-radius: 12px; font-size: 0.65rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; display: flex; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.3);'>
@@ -408,7 +394,7 @@ def aplicar_color_sidebar():
                     </div>
                 </div>
             """, unsafe_allow_html=True)
-            
+
             if st.button("🔄 Cambiar Equipo", use_container_width=True, key="btn_cambiar_eq_sb"):
                 st.session_state.equipo_seleccionado = False
                 st.rerun()
