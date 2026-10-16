@@ -211,12 +211,3 @@ def render_panel_principal():
             guardar_datos()
             st.success("Datos vaciados. El equipo está limpio.")
             st.rerun()
-        
-    if st.button("🚪 Cerrar Sesión / Cambiar Equipo", use_container_width=True):
-        try:
-            # Aquí iría tu código de supabase.auth.sign_out() si corresponde
-            pass
-        except:
-            pass
-        st.session_state.clear()
-        st.rerun()
