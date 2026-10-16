@@ -325,16 +325,29 @@ def cargar_css_global():
         return ""
 
 def aplicar_color_sidebar():
-    """Inyecta el color dinámico, la tipografía, el CSS global, el escudo y el Live Status."""
+    """Inyecta el color dinámico, la tipografía de la barra lateral, el CSS global, el escudo y los botones de sesión."""
     css_dinamico = """
     <style>
         [data-testid="stSidebar"] {
             background-color: #0f172a !important;
             border-right: 1px solid #1e293b !important;
         }
-        /* Hacemos un hueco EXACTO de 230px en la parte superior del menú nativo */
+        /* Convertir el sidebar en Flexbox para empujar elementos al fondo */
+        [data-testid="stSidebar"] > div:first-child {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        /* Hacemos un hueco EXACTO en la parte superior del menú nativo para el escudo */
         [data-testid="stSidebarNav"] {
-            padding-top: 230px !important;
+            margin-top: 220px !important;
+        }
+        /* Forzar que el contenedor de nuestro contenido ocupe el resto del alto para empujar botones */
+        [data-testid="stSidebarUserContent"] {
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            padding-bottom: 20px;
         }
         [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3,
         [data-testid="stSidebar"] label, [data-testid="stSidebar"] p, [data-testid="stSidebar"] span {
@@ -353,6 +366,7 @@ def aplicar_color_sidebar():
         }
     </style>
     """
+    import streamlit as st
     st.markdown(css_dinamico, unsafe_allow_html=True)
     
     try:
@@ -367,10 +381,9 @@ def aplicar_color_sidebar():
             nombre = st.session_state.get("nombre_equipo", "")
             img_src = escudo if str(escudo).startswith("http") else f"data:image/jpeg;base64,{escudo}" if escudo else ""
             
-            # 1. Renderizamos el escudo con MARGEN NEGATIVO para subirlo al hueco creado
-            # El margin-bottom de 50px compensa el arrastre para que los botones de abajo no se monten
+            # 1. ESCUDO FIJO ARRIBA DE TODO (Usando 'fixed' anclado al sidebar)
             html_escudo = f"""
-                <div style='position: relative; margin-top: -230px; margin-bottom: 50px; z-index: 99999; text-align: center;'>
+                <div style='position: fixed; top: 30px; left: 0; width: 100%; text-align: center; z-index: 999999;'>
                     <div style='display: flex; justify-content: center; margin-bottom: 15px;'>
                         <div style='background-color: rgba(15, 23, 42, 0.9); border: 1px solid #334155; padding: 4px 12px; border-radius: 12px; font-size: 0.65rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; display: flex; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.3);'>
                             <span class='live-dot'></span> LIVE SYNC
@@ -386,7 +399,10 @@ def aplicar_color_sidebar():
             """
             st.markdown(html_escudo, unsafe_allow_html=True)
             
-            # 2. Los botones se renderizan de forma natural justo debajo de la navegación
+            # 2. SEPARADOR FLEXIBLE (Empuja los botones obligatoriamente hacia abajo)
+            st.markdown("<div style='margin-top: auto;'></div>", unsafe_allow_html=True)
+            
+            # 3. BOTONES PEGADOS AL FONDO
             st.markdown("<hr style='border-color: #1e293b; margin-top: 0; margin-bottom: 15px;'>", unsafe_allow_html=True)
             if st.button("🔄 Cambiar Equipo", use_container_width=True, key="btn_cambiar_eq_sb"):
                 st.session_state.equipo_seleccionado = False
