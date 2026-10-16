@@ -315,39 +315,14 @@ def obtener_clima(ciudad, fecha_str):
         print(f"Error clima: {e}")
     return None
 
-def aplicar_color_sidebar():
-    """Inyecta el color dinámico, la tipografía de la barra lateral y el CSS global en todas las páginas"""
-    color = st.session_state.get("color_sidebar", "#0a0a0a") 
-    
-    # 1. Color dinámico y forzado de tipografía (negrita y blanco) para la barra lateral
-    css_dinamico = f"""
-    <style>
-        [data-testid="stSidebar"] {{
-            background-color: #0f172a !important; /* Forzamos Slate 900 oscuro siempre */
-            border-right: 1px solid #1e293b !important;
-        }}
-        [data-testid="stSidebar"] h1, 
-        [data-testid="stSidebar"] h2, 
-        [data-testid="stSidebar"] h3,
-        [data-testid="stSidebar"] label,
-        [data-testid="stSidebar"] p,
-        [data-testid="stSidebar"] span {{
-            color: #f8fafc !important; /* Texto blanco en todo el sidebar */
-            font-weight: 800 !important;
-        }}
-    </style>
-    """
-    st.markdown(css_dinamico, unsafe_allow_html=True)
-    
-    # 2. Carga automática del archivo style.css para asegurar que el diseño 
-    #    sea el mismo en todas las páginas de la aplicación.
+@st.cache_data(ttl=3600, show_spinner=False)
+def cargar_css_global():
+    """Cachea la lectura del archivo CSS para evitar carga de I/O en cada recarga de página"""
     try:
-        # Asegúrate de que el nombre del archivo coincida exactamente (mayúsculas/minúsculas)
         with open("style.css", "r") as f:
-            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
-    except Exception as e:
-        pass
-
+            return f"<style>{f.read()}</style>"
+    except Exception:
+        return ""
 
 def render_estado_vacio(icono, titulo, descripcion, accion_sugerida=None):
     """Renderiza una tarjeta moderna para pantallas sin datos (Onboarding)"""
@@ -384,3 +359,17 @@ def validar_columnas_excel(df, nombre_archivo, columnas_esperadas):
         return False, msg
         
     return True, "OK"
+
+def render_kpi_elite(titulo, valor, subtitulo="", icono="", color_borde="#3b82f6"):
+    """
+    Genera una tarjeta KPI con diseño profesional unificado tipo 'Élite'.
+    Sustituirá a los st.metric estándar para dar cohesión visual a la app.
+    """
+    html = f"""
+    <div style="background: linear-gradient(145deg, #1e293b, #0f172a); border: 1px solid #334155; border-top: 3px solid {color_borde}; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); transition: transform 0.2s ease;">
+        <p style="color: #94a3b8; font-size: 0.85rem; font-weight: 700; margin: 0; text-transform: uppercase; letter-spacing: 0.5px;">{titulo} {icono}</p>
+        <h2 style="color: #f8fafc; font-size: 2.2rem; font-weight: 800; margin: 5px 0;">{valor}</h2>
+        <p style="color: {color_borde}; font-size: 0.85rem; font-weight: 600; margin: 0;">{subtitulo}</p>
+    </div>
+    """
+    st.markdown(html, unsafe_allow_html=True)
