@@ -447,3 +447,11 @@ def validar_columnas_excel(df, nombre_archivo, columnas_esperadas):
         return False, msg
         
     return True, "OK"
+
+def a_metros(val):
+    if pd.isna(val) or val == 0: return 0.0
+    # En fútbol, nadie recorre más de 20 km en una zona de velocidad específica.
+    # Si el valor es menor a 20, asumimos que viene en KM y lo multiplicamos.
+    if val < 20.0:
+        return val * 1000.0
+    return val # Si es mayor a 20, ya viene en metros, lo dejamos igual.
