@@ -325,28 +325,59 @@ def cargar_css_global():
         return ""
 
 def aplicar_color_sidebar():
-    """Inyecta el color dinámico, la tipografía de la barra lateral y el CSS global en todas las páginas"""
-    color = st.session_state.get("color_sidebar", "#0a0a0a") 
-    
-    css_dinamico = f"""
+    """Inyecta el color dinámico, la tipografía de la barra lateral, el CSS global, el escudo y los botones de sesión."""
+    css_dinamico = """
     <style>
-        [data-testid="stSidebar"] {{
+        [data-testid="stSidebar"] {
             background-color: #0f172a !important;
             border-right: 1px solid #1e293b !important;
-        }}
+        }
         [data-testid="stSidebar"] h1, 
         [data-testid="stSidebar"] h2, 
         [data-testid="stSidebar"] h3,
         [data-testid="stSidebar"] label,
         [data-testid="stSidebar"] p,
-        [data-testid="stSidebar"] span {{
+        [data-testid="stSidebar"] span {
             color: #f8fafc !important; 
             font-weight: 800 !important;
-        }}
+        }
     </style>
     """
     st.markdown(css_dinamico, unsafe_allow_html=True)
-    st.markdown(cargar_css_global(), unsafe_allow_html=True)
+    
+    try:
+        with open("style.css", "r") as f:
+            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+    except:
+        pass
+
+    # Inyección de Escudo Superior y Botones Inferiores en el Sidebar
+    if st.session_state.get("equipo_seleccionado", False):
+        with st.sidebar:
+            escudo = st.session_state.get("escudo_equipo")
+            nombre = st.session_state.get("nombre_equipo", "")
+            
+            # --- Escudo Circular ---
+            if escudo:
+                img_src = escudo if str(escudo).startswith("http") else f"data:image/jpeg;base64,{escudo}"
+                st.markdown(f"""
+                    <div style='text-align: center; margin-bottom: 25px; margin-top: -20px;'>
+                        <img src='{img_src}' style='width: 95px; height: 95px; border-radius: 50%; object-fit: cover; border: 3px solid #3b82f6; box-shadow: 0 4px 15px rgba(0,0,0,0.4);'>
+                        <h3 style='color: #f8fafc; margin-top: 15px; margin-bottom: 0; font-size: 1.15rem; text-transform: uppercase; letter-spacing: 0.5px;'>{nombre}</h3>
+                        <hr style='border-color: #334155; margin-top: 20px; margin-bottom: 0;'>
+                    </div>
+                """, unsafe_allow_html=True)
+            
+            # --- Espaciador flexible para empujar los botones abajo ---
+            st.markdown("<div style='flex-grow: 1; min-height: 40vh;'></div>", unsafe_allow_html=True)
+            
+            # --- Botones de Sesión ---
+            if st.button("🔄 Cambiar Equipo", use_container_width=True, key="btn_cambiar_eq_sb"):
+                st.session_state.equipo_seleccionado = False
+                st.rerun()
+            if st.button("🚪 Cerrar Sesión", use_container_width=True, key="btn_cerrar_ses_sb"):
+                st.session_state.clear()
+                st.rerun()
 
 def render_estado_vacio(icono, titulo, descripcion, accion_sugerida=None):
     """Renderiza una tarjeta moderna para pantallas sin datos (Onboarding)"""
