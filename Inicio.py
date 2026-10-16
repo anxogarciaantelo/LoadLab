@@ -21,136 +21,35 @@ from database.db_manager import *
 from views.team_settings import render_panel_principal
 
 # Configuración inicial de la página
-st.set_page_config(page_title="LoadLab - Football Performance AMS", page_icon="⚽", layout="wide")
-st.markdown(f"""
-    <style>
-        /* Importar fuente moderna */
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+st.set_page_config(page_title="My Performance AMS", page_icon="⚽", layout="wide")
 
-        html, body, [class*="css"] {{
-            font-family: 'Plus Jakarta Sans', sans-serif;
-        }}
-
-        /* Fondo general de la app totalmente blanco */
-        .stApp {{
-            background-color: #ffffff;
-        }}
-
-        /* Barra lateral (Sidebar) con color dinámico */
-        [data-testid="stSidebar"] {{
-            background-color: {st.session_state.get("color_sidebar", "#f1f5f9")};
-            color: #000000;
-        }}
-        
-        /* Estilizar únicamente los títulos y textos de tus widgets de cuenta, 
-           respetando la navegación nativa de Streamlit para las páginas */
-        [data-testid="stSidebar"] h2, 
-        [data-testid="stSidebar"] label, 
-        [data-testid="stSidebar"] p {{
-            color: #000000 !important;
-            font-weight: 800 !important;
-        }}
-
-        [data-testid="stSidebar"] hr {{
-            border-color: rgba(0, 0, 0, 0.2);
-        }}
-
-        /* Tarjetas de contenedores con diseño flotante y sombra sutil */
-        div[data-testid="stVerticalBlock"] > div[data-testid="stContainer"] {{
-            background: #ffffff;
-            border-radius: 14px;
-            padding: 20px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.1);
-            border: 1px solid #e2e8f0;
-        }}
-
-        /* Tarjetas de métricas profesionales tipo Widget */
-        div[data-testid="stMetric"] {{
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            padding: 16px 20px;
-            border-radius: 12px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }}
-        div[data-testid="stMetric"]:hover {{
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-        }}
-        div[data-testid="stMetric"] label {{
-            font-size: 0.75rem !important;
-            color: #64748b !important;
-            text-transform: uppercase;
-            font-weight: 700;
-            letter-spacing: 0.05em;
-        }}
-        div[data-testid="stMetric"] div[data-testid="stMetricValue"] {{
-            font-size: 1.6rem !important;
-            color: #0f172a !important;
-            font-weight: 700;
-        }}
-
-        /* Botones de acción comerciales */
-        .stButton > button {{
-            background: #ffffff;
-            color: #0f172a;
-            border-radius: 8px;
-            font-weight: 600;
-            border: 1px solid #cbd5e1;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
-            transition: all 0.2s ease;
-        }}
-        .stButton > button:hover {{
-            background: #0f172a;
-            color: #ffffff;
-            border-color: #0f172a;
-        }}
-
-        /* Estilo para pestañas (Tabs) */
-        .stTabs [data-baseweb="tab-list"] {{
-            gap: 8px;
-            background-color: #f1f5f9;
-            padding: 4px;
-            border-radius: 10px;
-        }}
-        .stTabs [data-baseweb="tab"] {{
-            border-radius: 8px;
-            color: #475569;
-            font-weight: 600;
-            padding: 8px 16px;
-        }}
-        .stTabs [aria-selected="true"] {{
-            background-color: #ffffff !important;
-            color: #0f172a !important;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }}
-    </style>
-""", unsafe_allow_html=True)
-
-
-# Configuración global para tema Élite (Rojo, Carbón, Pizarra) en todos los gráficos de Plotly
+# Configuración global para tema Elite Dark (MPA Style) en gráficos de Plotly
 import plotly.io as pio
 import plotly.graph_objects as go
 
-pio.templates["loadlab_elite"] = go.layout.Template(
+pio.templates["loadlab_elite_dark"] = go.layout.Template(
     layout=go.Layout(
-        font=dict(family="Plus Jakarta Sans, sans-serif", size=12, color="#1c1c1e"),
+        font=dict(family="Plus Jakarta Sans, sans-serif", size=12, color="#94a3b8"),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        colorway=["#dc2626", "#1c1c1e", "#475569", "#a1a1aa", "#7f1d1d", "#0a0a0a"],
+        colorway=["#3b82f6", "#10b981", "#8b5cf6", "#ef4444", "#f59e0b", "#0ea5e9"],
         xaxis=dict(
-            gridcolor="#e4e4e7",
-            zerolinecolor="#d4d4d8",
-            title=dict(font=dict(weight="bold", color="#1c1c1e"))
+            gridcolor="#334155",
+            zerolinecolor="#475569",
+            title=dict(font=dict(weight="bold", color="#e2e8f0")),
+            tickfont=dict(color="#94a3b8")
         ),
         yaxis=dict(
-            gridcolor="#e4e4e7",
-            zerolinecolor="#d4d4d8",
-            title=dict(font=dict(weight="bold", color="#1c1c1e"))
-        )
+            gridcolor="#334155",
+            zerolinecolor="#475569",
+            title=dict(font=dict(weight="bold", color="#e2e8f0")),
+            tickfont=dict(color="#94a3b8")
+        ),
+        title=dict(font=dict(color="#f8fafc", size=16, weight="bold")),
+        legend=dict(font=dict(color="#e2e8f0"))
     )
 )
-pio.templates.default = "loadlab_elite"
+pio.templates.default = "loadlab_elite_dark"
 
 # --- INICIALIZACIÓN DE ESTADOS CLAVE ---
 if "autenticado" not in st.session_state:
@@ -291,36 +190,36 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
             background-color: transparent !important;
         }}
         
-        /* Botones de acceder a los equipos (Estilo Carbón -> Rojo) */
+        /* Botones de acceder a los equipos (Azul MPA) */
         div[data-testid="column"] button {{
-            background-color: #1c1c1e !important;
+            background-color: #3b82f6 !important;
             border: none !important;
             color: #ffffff !important;
             font-weight: 800 !important;
-            border-radius: 6px !important;
-            padding: 10px !important;
+            border-radius: 8px !important;
+            padding: 12px !important;
             text-transform: uppercase;
             letter-spacing: 1px;
             transition: all 0.3s ease !important;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important;
+            box-shadow: 0 4px 10px rgba(59, 130, 246, 0.4) !important;
         }}
         div[data-testid="column"] button:hover {{
-            background-color: #dc2626 !important;
+            background-color: #2563eb !important;
             transform: translateY(-2px);
-            box-shadow: 0 6px 15px rgba(220, 38, 38, 0.4) !important;
+            box-shadow: 0 6px 15px rgba(59, 130, 246, 0.6) !important;
         }}
         
         /* Fondo cristal para el desplegable de Crear Equipo */
         div[data-testid="stExpander"] details {{
-            background-color: rgba(255, 255, 255, 0.95) !important;
+            background-color: rgba(30, 41, 59, 0.95) !important;
             border-radius: 12px !important;
-            border: 1px solid #e4e4e7 !important;
-            border-top: 4px solid #dc2626 !important;
+            border: 1px solid #334155 !important;
+            border-top: 4px solid #3b82f6 !important;
             backdrop-filter: blur(10px);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6) !important;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8) !important;
         }}
         div[data-testid="stExpander"] summary p {{
-            color: #0a0a0a !important;
+            color: #f8fafc !important;
             font-weight: 800 !important;
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -372,12 +271,11 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
                         division = eq_info.get('division') or "Sin división"
                         categoria = eq_info.get('categoria') or ""
                         
-                        # Tarjeta de Equipo con Glassmorphism y Borde Rojo
                         tarjeta_html = f"""
-                        <div style="background-color: rgba(255, 255, 255, 0.95); padding: 30px 20px 20px 20px; border-radius: 12px; border: 1px solid #e4e4e7; border-top: 4px solid #dc2626; box-shadow: 0 20px 40px rgba(0,0,0,0.5); text-align: center; margin-bottom: 15px; backdrop-filter: blur(10px);">
+                        <div style="background-color: rgba(30, 41, 59, 0.85); padding: 30px 20px 20px 20px; border-radius: 12px; border: 1px solid #334155; border-top: 4px solid #3b82f6; box-shadow: 0 20px 40px rgba(0,0,0,0.6); text-align: center; margin-bottom: 15px; backdrop-filter: blur(10px);">
                             {img_html}
-                            <h3 style="color: #0a0a0a; font-weight: 800; margin-bottom: 5px; font-size: 1.3rem; text-transform: uppercase; letter-spacing: -0.5px;">{nombre}</h3>
-                            <p style="color: #475569; font-size: 0.85rem; font-weight: 700; margin-top: 0px; text-transform: uppercase; letter-spacing: 0.5px;">{categoria} | {division}</p>
+                            <h3 style="color: #f8fafc; font-weight: 800; margin-bottom: 5px; font-size: 1.3rem; text-transform: uppercase; letter-spacing: -0.5px;">{nombre}</h3>
+                            <p style="color: #94a3b8; font-size: 0.85rem; font-weight: 700; margin-top: 0px; text-transform: uppercase; letter-spacing: 0.5px;">{categoria} | {division}</p>
                         </div>
                         """
                         st.markdown(tarjeta_html, unsafe_allow_html=True)
