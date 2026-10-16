@@ -365,25 +365,11 @@ if st.session_state.get("equipo_seleccionado", False):
     else:
         img_html = '<div style="font-size: 70px; margin-bottom: 15px;">🛡️</div>'
 
-    # --- 2. CABECERA DEL EQUIPO ---
-    col_w1, col_w2, col_w3 = st.columns([1, 2.5, 1])
-    with col_w2:
-        st.markdown(f"""
-            <div style="background-color: #1e293b; padding: 40px; border-radius: 16px; border: 1px solid #334155; border-top: 4px solid #3b82f6; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-bottom: 40px;">
-                {img_html}
-                <h1 style="color: #f8fafc; font-weight: 800; margin-bottom: 5px; font-size: 2.2rem;">{st.session_state.get('nombre_equipo', 'LoadLab')}</h1>
-                <p style="color: #94a3b8; font-size: 1.1rem; margin-top: 0;">
-            <b style="color: #3b82f6;">{st.session_state.get('categoria_equipo', '')}</b> | {st.session_state.get('division_equipo', '')} &bull; Temp: {st.session_state.get('temporada_equipo', '')}
-        </p>
-    </div>
-""", unsafe_allow_html=True)
-
     # ==========================================
     # 🚨 INFORMACIÓN DIARIA (DASHBOARD)
     # ==========================================
     st.markdown("### 🚨 Información diaria")
     
-    # 1. Timeline y Clima (Buscamos la sesión más relevante)
     hoy_str = str(date.today())
     sesiones_ordenadas = sorted(st.session_state.sesiones, key=lambda x: x["fecha"])
     sesion_ref = next((s for s in sesiones_ordenadas if s["fecha"] == hoy_str), None)
@@ -392,18 +378,6 @@ if st.session_state.get("equipo_seleccionado", False):
         pasadas = [s for s in sesiones_ordenadas if s["fecha"] <= hoy_str]
         sesion_ref = pasadas[-1] if pasadas else sesiones_ordenadas[0]
 
-    contexto_txt = "No hay sesiones programadas recientemente."
-    if sesion_ref:
-        md_txt = sesion_ref.get("descripcion", sesion_ref.get("tipo", ""))
-        rival_txt = f" vs {sesion_ref.get('rival', 'Rival')}" if "Partido" in sesion_ref.get("tipo", "") else ""
-        fecha_formato = datetime.strptime(sesion_ref["fecha"], "%Y-%m-%d").strftime("%d-%m-%Y")
-        clima = sesion_ref.get("clima", {})
-        clima_txt = f" | {clima.get('estado', '')} ({clima.get('temp', '')}ºC)" if clima else ""
-        contexto_txt = f"📅 **Última Referencia: {fecha_formato}** {clima_txt} | ⏱️ Contexto: **{md_txt}{rival_txt}**"
-        
-    st.info(contexto_txt)
-
-    # Helper para cargar la foto del jugador en formato pequeño
     def get_avatar_html(jugador_nombre):
         for p in st.session_state.get("plantilla", []):
             if limpiar_nombre(p["JUGADOR"]) == limpiar_nombre(jugador_nombre):
@@ -413,14 +387,10 @@ if st.session_state.get("equipo_seleccionado", False):
                 break
         return '<span style="font-size: 22px; margin-right: 8px; vertical-align: middle;">👤</span>'
 
-    # 2. Función Helper y Recopilación de Datos para las 3 Columnas
     def render_estado_jugador(jugador_nombre, subtexto, nivel_alerta="moderado", avatar_html=""):
-        if nivel_alerta == "critico":
-            borde, bg_badge, color_badge = "#ef4444", "rgba(239, 68, 68, 0.2)", "#ef4444"
-        elif nivel_alerta == "moderado":
-            borde, bg_badge, color_badge = "#f59e0b", "rgba(245, 158, 11, 0.2)", "#f59e0b"
-        else:
-            borde, bg_badge, color_badge = "#10b981", "rgba(16, 185, 129, 0.2)", "#10b981"
+        if nivel_alerta == "critico": borde, bg_badge, color_badge = "#ef4444", "rgba(239, 68, 68, 0.2)", "#ef4444"
+        elif nivel_alerta == "moderado": borde, bg_badge, color_badge = "#f59e0b", "rgba(245, 158, 11, 0.2)", "#f59e0b"
+        else: borde, bg_badge, color_badge = "#10b981", "rgba(16, 185, 129, 0.2)", "#10b981"
             
         html = f"""
         <div style="background-color: #1e293b; border: 1px solid #334155; border-left: 4px solid {borde}; border-radius: 8px; padding: 12px 14px; margin-bottom: 8px;">
@@ -437,139 +407,77 @@ if st.session_state.get("equipo_seleccionado", False):
         """
         st.markdown(html, unsafe_allow_html=True)
 
-    bajas = []
+    bajas, a_vigilar, zona_roja = [], [], []
     if sesion_ref:
         disp = sesion_ref.get("disponibilidad", {})
         for j_nombre, estado in disp.items():
             if estado in ["Lesionado", "Enfermo", "No disponible", "Falta"]:
-                avatar = get_avatar_html(j_nombre)
-                bajas.append({"jug": j_nombre, "est": estado, "ava": avatar})
+                bajas.append({"jug": j_nombre, "est": estado, "ava": get_avatar_html(j_nombre)})
                     
-    a_vigilar = []
-    if sesion_ref and sesion_ref.get("datos_informe"):
-        for d in sesion_ref["datos_informe"]:
-            tqr = safe_float(d.get("TQR"))
-            well = safe_float(d.get("WELLNESS"))
-            alertas = []
-            if 0 < tqr <= 4: alertas.append(f"TQR {tqr}")
-            if well >= 18: alertas.append(f"Fatiga {well}")
-            
-            if alertas:
-                avatar = get_avatar_html(d["JUGADOR"])
-                a_vigilar.append({"jug": d["JUGADOR"], "est": " / ".join(alertas), "ava": avatar})
-                
-    zona_roja = []
-    if sesion_ref:
+        if sesion_ref.get("datos_informe"):
+            for d in sesion_ref["datos_informe"]:
+                tqr, well = safe_float(d.get("TQR")), safe_float(d.get("WELLNESS"))
+                alertas = []
+                if 0 < tqr <= 4: alertas.append(f"TQR {tqr}")
+                if well >= 18: alertas.append(f"Fatiga {well}")
+                if alertas:
+                    a_vigilar.append({"jug": d["JUGADOR"], "est": " / ".join(alertas), "ava": get_avatar_html(d["JUGADOR"])})
+                    
         ewma_hoy = calcular_ewma_historico(st.session_state.sesiones, sesion_ref["fecha"])
         for jug, vals in ewma_hoy.items():
-            ratio = vals.get("RATIO A/C", 0)
-            aguda = vals.get("EWMA AGUDA", 0)
+            ratio, aguda = vals.get("RATIO A/C", 0), vals.get("EWMA AGUDA", 0)
             if aguda > 1000 and ratio >= 1.35:
-                avatar = get_avatar_html(jug)
-                zona_roja.append({"jug": jug, "est": f"A/C: {ratio:.2f}", "ava": avatar})
+                zona_roja.append({"jug": jug, "est": f"A/C: {ratio:.2f}", "ava": get_avatar_html(jug)})
 
-    # 3. Renderizado de Columnas
-    c_b, c_a, c_z = st.columns(3)
+    # --- RENDERIZADO VISUAL A 4 COLUMNAS ---
+    c_ctx, c_b, c_a, c_z = st.columns([1.2, 1, 1, 1])
     
+    with c_ctx:
+        if sesion_ref:
+            md_txt = sesion_ref.get("descripcion", sesion_ref.get("tipo", ""))
+            rival_txt = f" vs {sesion_ref.get('rival', 'Rival')}" if "Partido" in sesion_ref.get("tipo", "") else ""
+            contexto_str = f"{md_txt}{rival_txt}"
+            fecha_str = datetime.strptime(sesion_ref["fecha"], "%Y-%m-%d").strftime("%d %b")
+            clima = sesion_ref.get("clima", {})
+            clima_icon = "🌧️" if clima and clima.get("estado") == "Lluvia" else ("☀️" if clima else "")
+            
+            st.markdown(f"""
+            <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 12px; padding: 25px; height: 100%; border: 1px solid #334155; border-left: 5px solid #3b82f6; box-shadow: 0 10px 20px rgba(0,0,0,0.2); display: flex; flex-direction: column; justify-content: center;">
+                <span style="color: #94a3b8; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Última Referencia</span>
+                <h2 style="color: #f8fafc; font-size: 1.8rem; font-weight: 800; margin: 0 0 12px 0; line-height: 1.2;">{contexto_str}</h2>
+                <div style="display: inline-block; background: #3b82f6; color: #ffffff; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: 700; width: fit-content;">
+                    {fecha_str} {clima_icon}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.info("No hay sesiones programadas recientemente.")
+            
     with c_b:
         st.markdown(f"**🏥 BAJAS CONFIRMADAS ({len(bajas)})**")
         if bajas:
             for b in bajas: render_estado_jugador(b["jug"], b["est"], "critico", b["ava"])
-        else:
-            st.success("✅ Plantilla sana y disponible.")
+        else: st.success("✅ Plantilla sana.")
             
     with c_a:
         st.markdown(f"**🔋 A VIGILAR ({len(a_vigilar)})**")
         if a_vigilar:
             for a in a_vigilar: render_estado_jugador(a["jug"], a["est"], "moderado", a["ava"])
-        else:
-            st.success("✅ Buena recuperación general.")
+        else: st.success("✅ Buena recuperación.")
             
     with c_z:
         st.markdown(f"**⚠️ ZONA ALTA CARGA ({len(zona_roja)})**")
         if zona_roja:
             for z in zona_roja: render_estado_jugador(z["jug"], z["est"], "critico", z["ava"])
-        else:
-            st.success("✅ Cargas controladas.")
-
-    # 4. Alertas de Sanciones (Tarjetas)
-    partidos = [s for s in st.session_state.sesiones if "Partido" in s.get("tipo", "")]
-    tarjetas_jugador = {}
-    for p in partidos:
-        stats = p.get("estadisticas_partido", {})
-        for jug, vals in stats.items():
-            tarjetas_jugador[jug] = tarjetas_jugador.get(jug, 0) + vals.get("Amarillas", 0)
-            
-    apercibidos = []
-    sancionados = []
-    for jug, ta in tarjetas_jugador.items():
-        if ta > 0:
-            if ta % 5 == 4: apercibidos.append(jug)
-            elif ta % 5 == 0: sancionados.append(jug)
-            
-    if apercibidos or sancionados:
-        st.markdown("---")
-        st.markdown("**⚖️ ALERTAS DE PARTIDO:**")
-        if sancionados:
-            st.error(f"🛑 **Sancionados (Ciclo cumplido):** {', '.join(sancionados)}")
-        if apercibidos:
-            st.warning(f"🟨 **Apercibidos (A una tarjeta de la sanción):** {', '.join(apercibidos)}")
+        else: st.success("✅ Cargas controladas.")
 
     st.markdown("---")
-
-    # --- 3. TARJETAS DE NAVEGACIÓN (ACCESOS RÁPIDOS) ---
-    st.markdown("<h3 style='text-align: center; color: #f8fafc; font-weight: 800; margin-bottom: 25px;'>🚀 Accesos Rápidos</h3>", unsafe_allow_html=True)
     
-    # CSS inyectado para que los botones parezcan tarjetas grandes y clickeables
-    st.markdown("""
-        <style>
-        div.stButton > button {
-            height: 90px;
-            font-size: 1.15rem !important;
-            font-weight: 700 !important;
-            border-radius: 12px !important;
-            border: 1px solid #334155 !important;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important;
-            transition: all 0.2s ease !important;
-            background-color: #1e293b !important;
-            color: #f8fafc !important;
-        }
-        div.stButton > button:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 10px 20px rgba(59, 130, 246, 0.4) !important;
-            border-color: #3b82f6 !important;
-            background-color: #0f172a !important;
-            color: #3b82f6 !important;
-        }
-        </style>
-    """, unsafe_allow_html=True)
+    # --- BOTÓN DE CONFIGURACIÓN MODERNO Y REDUCIDO ---
+    col_btn1, col_btn2, col_btn3 = st.columns([1.5, 1, 1.5])
+    with col_btn2:
+        if st.button("⚙️ Configuración", use_container_width=True):
+            st.session_state.mostrar_configuracion = not st.session_state.get("mostrar_configuracion", False)
 
-    # Crear una cuadrícula con 4 columnas para los 7 accesos rápidos
-    c1, c2, c3, c4 = st.columns(4)
-    
-    with c1:
-        if st.button("📅 Entrenamientos", use_container_width=True):
-            st.switch_page("pages/1_Entrenamiento.py")
-        if st.button("⚖️ Antropometría", use_container_width=True):
-            st.switch_page("pages/5_Antropometria.py")
-            
-    with c2:
-        if st.button("👥 Plantilla", use_container_width=True):
-            st.switch_page("pages/2_Plantilla.py")
-        if st.button("📊 Valoraciones", use_container_width=True):
-            st.switch_page("pages/6_Valoraciones.py")
-            
-    with c3:
-        if st.button("🚑 Lesiones", use_container_width=True):
-            st.switch_page("pages/3_Lesiones.py")
-        if st.button("📈 Estadísticas", use_container_width=True):
-            st.switch_page("pages/7_Estadisticas.py")
-
-    with c4:
-        if st.button("📡 GPS", use_container_width=True):
-            st.switch_page("pages/4_GPS.py")
-        if st.button("🧠 Predicción de lesiones", use_container_width=True):
-            st.switch_page("pages/8_Predicción_de_lesiones.py")
-
-    st.markdown("---")
-    render_panel_principal()
+    if st.session_state.get("mostrar_configuracion", False):
+        render_panel_principal()
