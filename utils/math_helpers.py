@@ -221,107 +221,45 @@ def set_login_background(image_path):
             encoded_string = base64.b64encode(img_file.read()).decode()
         css = f"""
         <style>
-        /* 1. Fondo general: Filtro oscuro sobre tu imagen para resaltar la tarjeta */
         .stApp {{
-            background-image: linear-gradient(rgba(10, 10, 10, 0.6), rgba(10, 10, 10, 0.8)), url("data:image/jpeg;base64,{encoded_string}");
+            background-image: linear-gradient(rgba(11, 17, 32, 0.8), rgba(11, 17, 32, 0.95)), url("data:image/jpeg;base64,{encoded_string}");
             background-size: cover;
             background-position: center;
-            background-repeat: no-repeat;
             background-attachment: fixed;
         }}
+        header[data-testid="stHeader"] {{ background-color: transparent !important; box-shadow: none !important; }}
+        .block-container {{ padding-top: 1rem !important; }}
         
-        /* 2. Eliminar la barra superior */
-        header[data-testid="stHeader"] {{
-            background-color: transparent !important;
-            box-shadow: none !important;
-        }}
-        
-        .block-container {{
-            padding-top: 1rem !important;
-        }}
-        
-        /* 3. LA TARJETA PRINCIPAL (Efecto Cristal + Borde Rojo) */
+        /* Tarjeta de Login Oscura */
         div[data-testid="stTabs"] {{
-            background-color: rgba(255, 255, 255, 0.95) !important;
+            background-color: rgba(30, 41, 59, 0.8) !important;
             padding: 35px 30px !important;
-            border-radius: 12px !important;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6) !important;
-            border: 1px solid #e4e4e7 !important;
-            border-top: 5px solid #dc2626 !important;
-            backdrop-filter: blur(10px);
+            border-radius: 16px !important;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8) !important;
+            border: 1px solid #334155 !important;
+            border-top: 5px solid #3b82f6 !important;
+            backdrop-filter: blur(12px);
         }}
+        div[role="tabpanel"] {{ background-color: transparent !important; }}
         
-        /* Asegurar que el fondo del contenido herede la transparencia */
-        div[role="tabpanel"] {{
-            background-color: transparent !important; 
-        }}
-        
-        /* 4. INTEGRACIÓN DE LAS PESTAÑAS (Carbón) */
         div[data-testid="stTabs"] [data-baseweb="tab-list"] {{
-            background-color: #f4f4f5 !important;
-            border-radius: 8px !important;
-            padding: 4px !important;
-            border: 1px solid #e4e4e7 !important;
-            margin-bottom: 25px !important;
+            background-color: #0f172a !important; border-radius: 8px !important; border: 1px solid #1e293b !important;
         }}
-        div[data-testid="stTabs"] [data-baseweb="tab"] {{
-            color: #475569 !important;
-            font-weight: 800 !important;
-            font-size: 0.85rem !important;
-        }}
-        div[data-testid="stTabs"] [aria-selected="true"] {{
-            background-color: #1c1c1e !important;
-            color: #ffffff !important;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
-            border-radius: 6px !important;
-        }}
+        div[data-testid="stTabs"] [data-baseweb="tab"] {{ color: #94a3b8 !important; }}
+        div[data-testid="stTabs"] [aria-selected="true"] {{ background-color: #3b82f6 !important; color: #ffffff !important; }}
         
-        /* 5. TEXTOS Y CAMPOS DE ENTRADA */
-        div[data-testid="stTabs"] label {{
-            color: #1c1c1e !important;
-            font-weight: 800 !important;
-            font-size: 0.8rem !important;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }}
+        div[data-testid="stTabs"] label {{ color: #e2e8f0 !important; }}
         
         div[data-testid="stTextInput"] input {{
-            background-color: #f4f4f5 !important;
-            border: 1px solid #d4d4d8 !important;
-            border-radius: 6px !important;
-            color: #0a0a0a !important;
-            padding: 12px !important;
-            font-weight: 600 !important;
-            transition: all 0.3s ease;
+            background-color: #0f172a !important; border: 1px solid #334155 !important; color: #f8fafc !important;
         }}
+        div[data-testid="stTextInput"] input:focus {{ border: 1px solid #3b82f6 !important; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important; }}
         
-        div[data-testid="stTextInput"] input:focus {{
-            border: 1px solid #dc2626 !important;
-            background-color: #ffffff !important;
-            box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15) !important;
-        }}
-        
-        /* 6. BOTÓN DE ACCESO (Rojo Élite) */
         div[data-testid="stFormSubmitButton"] button {{
-            background-color: #dc2626 !important;
-            color: #ffffff !important;
-            border: none !important;
-            border-radius: 6px !important;
-            font-weight: 800 !important;
-            padding: 12px !important;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            box-shadow: 0 4px 6px rgba(220, 38, 38, 0.3) !important;
-            margin-top: 10px;
-            width: 100% !important;
-            transition: all 0.3s ease;
+            background-color: #3b82f6 !important; color: #ffffff !important; border: none !important; border-radius: 8px !important;
+            box-shadow: 0 4px 10px rgba(59, 130, 246, 0.4) !important; width: 100% !important; margin-top: 15px;
         }}
-        
-        div[data-testid="stFormSubmitButton"] button:hover {{
-            background-color: #b91c1c !important;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(220, 38, 38, 0.4) !important;
-        }}
+        div[data-testid="stFormSubmitButton"] button:hover {{ background-color: #2563eb !important; transform: translateY(-2px); }}
         </style>
         """
         st.markdown(css, unsafe_allow_html=True)
