@@ -1,6 +1,15 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-/* --- TIPOGRAFÍA Y TAMAÑOS BASE MÁS GRANDES --- */
+/* --- ANIMACIÓN DE ENTRADA (FADE-IN) --- */
+@keyframes fadeInScale {
+    0% { opacity: 0; transform: translateY(8px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+.stApp .main .block-container {
+    animation: fadeInScale 0.4s ease-out;
+}
+
+/* --- TIPOGRAFÍA Y NÚMEROS TABULARES --- */
 html, body, [class*="css"], .stMarkdown p, .stText p, label, .stSelectbox, .stTextInput {
     font-family: 'Plus Jakarta Sans', -apple-system, sans-serif !important;
     color: #e2e8f0 !important;
@@ -8,26 +17,25 @@ html, body, [class*="css"], .stMarkdown p, .stText p, label, .stSelectbox, .stTe
 }
 h1, h2, h3, h4, h5, h6 { color: #f8fafc !important; font-weight: 800 !important; }
 
+/* Forzar alineación geométrica para métricas y tablas */
+div[data-testid="stMetricValue"], .modern-table td, .modern-table th, [data-testid="stDataFrame"], h2 {
+    font-variant-numeric: tabular-nums !important;
+}
+
 /* --- FONDO APP --- */
 .stApp {
     background-color: #0b1120 !important;
     background-image: radial-gradient(circle at 50% 0%, #1e293b 0%, transparent 70%);
 }
 
-/* --- SIDEBAR --- */
-[data-testid="stSidebar"] {
-    background-color: #0f172a !important;
-    border-right: 1px solid #1e293b !important;
-}
-
-/* --- CONTENEDORES Y MICROCICLOS (Ajuste de espacio) --- */
+/* --- CONTENEDORES Y MICROCICLOS --- */
 div[data-testid="stVerticalBlock"] > div[data-testid="stContainer"],
 div[data-testid="stExpander"] details {
     background: #1e293b !important;
     border-radius: 12px !important;
     border: 1px solid #334155 !important;
     box-shadow: 0 4px 10px rgba(0,0,0,0.4) !important;
-    padding: 10px !important; /* Menos espacio desperdiciado */
+    padding: 10px !important;
 }
 div[data-testid="stExpander"] summary {
     background: #1e293b !important;
@@ -41,7 +49,7 @@ div[data-testid="stExpander"] summary p {
     letter-spacing: 1px;
 }
 
-/* --- PESTAÑAS (GRANDES Y PROFESIONALES) --- */
+/* --- PESTAÑAS --- */
 .stTabs [data-baseweb="tab-list"] {
     gap: 15px;
     background-color: transparent !important;
@@ -68,7 +76,7 @@ div[data-testid="stExpander"] summary p {
     box-shadow: none !important;
 }
 
-/* --- TARJETAS KPI (st.metric) --- */
+/* --- TARJETAS KPI NATIVAS (st.metric) --- */
 div[data-testid="stMetric"] {
     background: #1e293b !important;
     border: 1px solid #334155 !important;
@@ -86,7 +94,7 @@ div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
     color: #f8fafc !important; 
 }
 
-/* --- BOTONES NATIVOS (MÁS ANCHOS Y VISIBLES) --- */
+/* --- BOTONES NATIVOS --- */
 .stButton > button {
     border-radius: 8px !important;
     font-weight: 700 !important;
@@ -103,7 +111,7 @@ div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
     box-shadow: 0 0 15px rgba(59,130,246,0.3) !important;
 }
 
-/* --- TABLAS MODERNAS (MPA STYLE) --- */
+/* --- TABLAS MODERNAS --- */
 .modern-table {
     width: 100%;
     border-collapse: separate;
@@ -115,9 +123,7 @@ div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
     margin-bottom: 20px;
     border: 1px solid #334155;
 }
-.modern-table thead tr {
-    background-color: #0f172a;
-}
+.modern-table thead tr { background-color: #0f172a; }
 .modern-table th {
     padding: 16px 18px;
     font-weight: 800;
@@ -135,6 +141,10 @@ div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
     text-align: center !important;
     border-bottom: 1px solid #334155;
 }
-.modern-table tbody tr:hover td {
-    background-color: #0b1120;
+.modern-table tbody tr:hover td { background-color: #0b1120; }
+
+/* --- RESPONSIVIDAD MÓVIL A PIE DE CAMPO --- */
+@media (max-width: 768px) {
+    .modern-table { display: block; overflow-x: auto; white-space: nowrap; }
+    .stTabs [data-baseweb="tab"] { font-size: 1rem !important; padding: 0 10px !important; }
 }
