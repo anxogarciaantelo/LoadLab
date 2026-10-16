@@ -325,23 +325,26 @@ def cargar_css_global():
         return ""
 
 def aplicar_color_sidebar():
-    """Inyecta el color dinámico, la tipografía de la barra lateral, el CSS global, el escudo y los botones de sesión."""
+    """Inyecta el color dinámico, la tipografía, el CSS global, el escudo y los botones de sesión en orden estricto."""
     css_dinamico = """
     <style>
+        /* Ocultamos el menú de páginas automático de Streamlit que alteraba el orden */
+        [data-testid="stSidebarNav"] {
+            display: none !important;
+        }
         [data-testid="stSidebar"] {
             background-color: #0f172a !important;
             border-right: 1px solid #1e293b !important;
         }
-        /* Empujamos las páginas hacia abajo para crear un hueco en la parte superior */
-        [data-testid="stSidebarNav"] {
-            padding-top: 200px !important;
+        /* Convertimos el sidebar en una caja flexible de arriba a abajo */
+        [data-testid="stSidebar"] > div:first-child {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 20px 10px;
         }
-        [data-testid="stSidebar"] h1, 
-        [data-testid="stSidebar"] h2, 
-        [data-testid="stSidebar"] h3,
-        [data-testid="stSidebar"] label,
-        [data-testid="stSidebar"] p,
-        [data-testid="stSidebar"] span {
+        [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3,
+        [data-testid="stSidebar"] label, [data-testid="stSidebar"] p, [data-testid="stSidebar"] span {
             color: #f8fafc !important; 
             font-weight: 800 !important;
         }
@@ -366,30 +369,43 @@ def aplicar_color_sidebar():
     except:
         pass
 
-    # Inyección de Escudo Superior y Botones Inferiores en el Sidebar
     if st.session_state.get("equipo_seleccionado", False):
         with st.sidebar:
             escudo = st.session_state.get("escudo_equipo")
             nombre = st.session_state.get("nombre_equipo", "")
+            img_src = escudo if str(escudo).startswith("http") else f"data:image/jpeg;base64,{escudo}" if escudo else ""
             
-            # --- 1. ESCUDO CIRCULAR FIJO ARRIBA DE TODO ---
-            if escudo:
-                img_src = escudo if str(escudo).startswith("http") else f"data:image/jpeg;base64,{escudo}"
+            # 1. ESCUDO Y NOMBRE ARRIBA DEL TODO
+            if img_src:
                 st.markdown(f"""
-                    <div style='position: absolute; top: -180px; left: 0; width: 100%; text-align: center; z-index: 999999;'>
-                        <img src='{img_src}' style='width: 95px; height: 95px; border-radius: 50%; object-fit: cover; border: 3px solid #3b82f6; box-shadow: 0 4px 15px rgba(0,0,0,0.4);'>
-                        <h3 style='color: #f8fafc; margin-top: 15px; margin-bottom: 0; font-size: 1.15rem; text-transform: uppercase; letter-spacing: 0.5px;'>{nombre}</h3>
-                        <hr style='border-color: #334155; margin-top: 20px; margin-bottom: 0;'>
+                    <div style='text-align: center; margin-bottom: 15px;'>
+                        <img src='{img_src}' style='width: 85px; height: 85px; border-radius: 50%; object-fit: cover; border: 2px solid #3b82f6; box-shadow: 0 4px 10px rgba(0,0,0,0.3);'>
+                        <h3 style='color: #f8fafc; margin-top: 10px; margin-bottom: 0; font-size: 1.05rem; text-transform: uppercase; letter-spacing: 0.5px;'>{nombre}</h3>
+                        <hr style='border-color: #1e293b; margin-top: 15px; margin-bottom: 10px; border-width: 1px;'>
                     </div>
                 """, unsafe_allow_html=True)
             
-            # --- 2. ESPACIADOR FLEXIBLE (Empuja los botones hacia abajo) ---
-            st.markdown("<div style='flex-grow: 1; min-height: 40vh;'></div>", unsafe_allow_html=True)
+            # 2. ENLACES DE PÁGINAS MANUALES (Control total de la posición central)
+            st.markdown("<p style='color: #64748b; font-size: 0.75rem; text-transform: uppercase; font-weight: 800; margin-bottom: 8px; letter-spacing: 0.5px;'>Navegación</p>", unsafe_allow_html=True)
             
-            # --- 3. LIVE SYNC Y BOTONES ABAJO DEL TODO ---
+            st.page_link("Inicio.py", label="Inicio", icon="🏠")
+            st.page_link("pages/1_Entrenamiento.py", label="Entrenamiento", icon="📅")
+            st.page_link("pages/2_Plantilla.py", label="Plantilla", icon="👥")
+            st.page_link("pages/3_Lesiones.py", label="Lesiones", icon="🚑")
+            st.page_link("pages/4_GPS.py", label="GPS", icon="📡")
+            st.page_link("pages/5_Antropometria.py", label="Antropometría", icon="⚖️")
+            st.page_link("pages/6_Valoraciones.py", label="Valoraciones", icon="📊")
+            st.page_link("pages/7_Estadisticas.py", label="Estadísticas", icon="📈")
+            st.page_link("pages/8_Predicción_de_lesiones.py", label="Predicción de lesiones", icon="🧠")
+
+            # 3. ESPACIADOR FLEXIBLE (Empuja los siguientes elementos abajo del todo)
+            st.markdown("<div style='margin-top: auto;'></div>", unsafe_allow_html=True)
+            
+            # 4. LIVE SYNC Y BOTONES ABAJO DEL TODO
+            st.markdown("<hr style='border-color: #1e293b; margin-top: 10px; margin-bottom: 10px; border-width: 1px;'>", unsafe_allow_html=True)
             st.markdown(f"""
-                <div style='display: flex; justify-content: center; margin-bottom: 15px;'>
-                    <div style='background-color: rgba(15, 23, 42, 0.9); border: 1px solid #334155; padding: 4px 12px; border-radius: 12px; font-size: 0.65rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; display: flex; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.3);'>
+                <div style='display: flex; justify-content: center; margin-bottom: 10px;'>
+                    <div style='background-color: rgba(15, 23, 42, 0.9); border: 1px solid #334155; padding: 4px 10px; border-radius: 10px; font-size: 0.6rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; display: flex; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.3);'>
                         <span class='live-dot'></span> LIVE SYNC
                     </div>
                 </div>
@@ -401,7 +417,7 @@ def aplicar_color_sidebar():
             if st.button("🚪 Cerrar Sesión", use_container_width=True, key="btn_cerrar_ses_sb"):
                 st.session_state.clear()
                 st.rerun()
-
+                
 def render_estado_vacio(icono, titulo, descripcion, accion_sugerida=None):
     """Renderiza una tarjeta moderna para pantallas sin datos (Onboarding)"""
     html_accion = f'<p style="color: #dc2626; font-weight: 800; font-size: 0.85rem; margin-top: 20px; text-transform: uppercase; letter-spacing: 0.05em;">↳ {accion_sugerida}</p>' if accion_sugerida else ''
