@@ -140,6 +140,12 @@ elif st.session_state.vista_plantilla == "⚙️ Modificar Plantilla":
 else:
     nombre_jugador_actual = st.session_state.vista_plantilla.replace("👤 ", "")
     jugador = next((j for j in st.session_state.plantilla if j["JUGADOR"] == nombre_jugador_actual), None)
+    
+    # Salvavidas: Si el jugador no existe o hubo un error de estado, devolvemos a la vista general
+    if jugador is None:
+        st.session_state.vista_plantilla = "📋 Plantilla"
+        st.rerun()
+        
     i = st.session_state.plantilla.index(jugador)
     
     if st.button("⬅️ Volver a la Plantilla", key="btn_volver_plantilla"):
