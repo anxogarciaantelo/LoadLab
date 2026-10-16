@@ -289,7 +289,17 @@ def reconstruir_dataframes_globales():
                     
                     datos_completos.append(row)
                     
-    if datos_completos:
-        st.session_state.df_master_informes = pd.DataFrame(datos_completos)
+if datos_completos:
+        from utils.math_helpers import a_metros
+        df_temp = pd.DataFrame(datos_completos)
+        
+        # Mapear solo las columnas de distancia que queremos en metros (ignorando 'DIS' que es la total en km)
+        cols_distancias = ['HID >21', 'HID >24', 'DIS AI', 'Z1', 'Z2', 'Z3', 'Z4', 'Z5', 'Z6', 'R_0_7', 'R_7_14', 'R_14_21', 'R_21_24', 'R_24_27', 'R_27_30', 'R_30_45']
+        
+        for col in cols_distancias:
+            if col in df_temp.columns:
+                df_temp[col] = df_temp[col].apply(a_metros)
+                
+        st.session_state.df_master_informes = df_temp
     else:
         st.session_state.df_master_informes = pd.DataFrame()
