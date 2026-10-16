@@ -24,36 +24,7 @@ if not st.session_state.get("autenticado", False) or not st.session_state.get("e
         st.rerun()
     st.stop()
 
-# Funciones de color y CSS global
-color_sidebar = st.session_state.get("color_sidebar", "#0a0a0a") 
-css_dinamico = f"""
-<style>
-    [data-testid="stSidebar"] {{
-        background-color: {color_sidebar} !important;
-        border-right: 1px solid #262626 !important;
-    }}
-    [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3,
-    [data-testid="stSidebar"] label, [data-testid="stSidebar"] p, [data-testid="stSidebar"] span {{
-        color: #000000 !important;
-        font-weight: 800 !important;
-    }}
-</style>
-"""
-st.markdown(css_dinamico, unsafe_allow_html=True)
-try:
-    with open("style.css", "r") as f:
-        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
-except:
-    pass
-
-def mostrar_tabla_moderna(styler_obj):
-    if hasattr(styler_obj, 'data'):
-        df_temp = styler_obj.data.copy()
-        html_tabla = df_temp.to_html(index=False, classes="modern-table", escape=False)
-    else:
-        html_tabla = styler_obj.to_html(index=False, classes="modern-table", escape=False)
-    css_personalizado = "<style>.modern-table { width: 100%; border-collapse: collapse; font-family: sans-serif; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); background-color: white; margin-bottom: 20px; } .modern-table thead tr { background-color: #000000; color: #ffffff; } .modern-table th { padding: 12px 15px; font-weight: bold; text-align: center !important; border-bottom: 2px solid #333333; } .modern-table td { padding: 10px 15px; text-align: center !important; border-bottom: 1px solid #eeeeee; } .modern-table tbody tr:hover td { filter: brightness(0.95); }</style>"
-    st.markdown(css_personalizado + html_tabla, unsafe_allow_html=True)
+aplicar_color_sidebar()
 
 st.title("📊 Valoraciones Condicionales")
 
@@ -112,27 +83,28 @@ def calcular_rm_cientifico(pesos, vels, peso_corp):
     return 0.0
 
 def tarjeta_kpi(titulo, valor, subtitulo="", tooltip=""):
-                tt_html = f" title='{tooltip}'" if tooltip else ""
-                icon = " ℹ️" if tooltip else ""
-                cursor = "help" if tooltip else "default"
-                st.markdown(f"""
-                <div{tt_html} style='background-color: white; padding: 15px; border-radius: 8px; border-left: 5px solid #dc2626; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px; border: 1px solid #e4e4e7; cursor: {cursor};'>
-                    <div style='font-size: 0.80em; color: #64748b; font-weight: 800; text-transform: uppercase;'>{titulo}{icon}</div>
-                    <div style='font-size: 1.4em; font-weight: 800; color: #0a0a0a;'>{valor}</div>
-                    {f"<div style='font-size: 0.8em; color: #64748b; margin-top: 4px;'>{subtitulo}</div>" if subtitulo else ""}
-                </div>
-                """, unsafe_allow_html=True)
+    tt_html = f" title='{tooltip}'" if tooltip else ""
+    icon = " ℹ️" if tooltip else ""
+    cursor = "help" if tooltip else "default"
+    st.markdown(f"""
+    <div{tt_html} style="background: linear-gradient(145deg, #1e293b, #0f172a); border: 1px solid #334155; border-top: 3px solid #3b82f6; border-radius: 8px; padding: 12px 2px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); height: 100%; display: flex; flex-direction: column; justify-content: center; cursor: {cursor}; margin-bottom: 15px;">
+        <p style="color: #94a3b8; font-size: 0.65rem; font-weight: 800; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.1;">{titulo}{icon}</p>
+        <h2 style="color: #f8fafc; font-size: 1.3rem; font-weight: 800; margin: 0; line-height: 1;">{valor}</h2>
+        {f"<p style='color: #3b82f6; font-size: 0.6rem; font-weight: 600; margin: 4px 0 0 0;'>{subtitulo}</p>" if subtitulo else ""}
+    </div>
+    """, unsafe_allow_html=True)
 
 def tarjeta_kpi_doble(titulo, val_d, val_i, lbl_d="Der", lbl_i="Izq", tooltip=""):
     tt_html = f" title='{tooltip}'" if tooltip else ""
     icon = " ℹ️" if tooltip else ""
     cursor = "help" if tooltip else "default"
     st.markdown(f"""
-    <div{tt_html} style='background-color: white; padding: 15px; border-radius: 8px; border-left: 5px solid #1c1c1e; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px; border: 1px solid #e4e4e7; cursor: {cursor};'>
-        <div style='font-size: 0.80em; color: #64748b; font-weight: 800; text-transform: uppercase; margin-bottom: 8px;'>{titulo}{icon}</div>
-        <div style='display: flex; justify-content: space-between;'>
-            <div><span style='font-size: 0.85em; color: #64748b;'>{lbl_d}:</span> <span style='font-size: 1.2em; font-weight: 800; color: #dc2626;'>{val_d}</span></div>
-            <div><span style='font-size: 0.85em; color: #64748b;'>{lbl_i}:</span> <span style='font-size: 1.2em; font-weight: 800; color: #dc2626;'>{val_i}</span></div>
+    <div{tt_html} style="background: linear-gradient(145deg, #1e293b, #0f172a); border: 1px solid #334155; border-top: 3px solid #3b82f6; border-radius: 8px; padding: 12px 2px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); height: 100%; display: flex; flex-direction: column; justify-content: center; cursor: {cursor}; margin-bottom: 15px;">
+        <p style="color: #94a3b8; font-size: 0.65rem; font-weight: 800; margin: 0 0 8px 0; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.1;">{titulo}{icon}</p>
+        <div style='display: flex; justify-content: space-evenly; align-items: center;'>
+            <div><span style='font-size: 0.6rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;'>{lbl_d}</span><br><span style='font-size: 1.2rem; font-weight: 800; color: #f8fafc;'>{val_d}</span></div>
+            <div style='width: 1px; height: 25px; background-color: #334155;'></div>
+            <div><span style='font-size: 0.6rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;'>{lbl_i}</span><br><span style='font-size: 1.2rem; font-weight: 800; color: #f8fafc;'>{val_i}</span></div>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -330,15 +302,11 @@ with tab_informes:
 
                 # 4. GRÁFICO LIMPIO (Desde el Origen 0,0)
                 fig_sq = px.scatter(x=kgs_sistema, y=vels, labels={'x': 'Carga del Sistema (kg)', 'y': 'Velocidad (m/s)'}, title="Perfil F-V (Masa del Sistema)")
-                fig_sq.update_traces(marker=dict(size=10, color='#dc2626'))
-                
-                # Línea real (hasta su F0 en kg)
+                fig_sq.update_traces(marker=dict(size=10, color='#3b82f6'))
                 x_trend_real = np.linspace(0, f0_kg_sistema, 50)
-                fig_sq.add_scatter(x=x_trend_real, y=p(x_trend_real), mode='lines', name='Tendencia Real', line=dict(color='#1c1c1e', width=2))
-                
-                # Ajuste de ejes para que nazca en 0,0
-                fig_sq.update_xaxes(range=[0, f0_kg_sistema * 1.05], zeroline=True, zerolinewidth=1, zerolinecolor='#e4e4e7')
-                fig_sq.update_yaxes(range=[0, v0 * 1.05], zeroline=True, zerolinewidth=1, zerolinecolor='#e4e4e7')
+                fig_sq.add_scatter(x=x_trend_real, y=p(x_trend_real), mode='lines', name='Tendencia Real', line=dict(color='#94a3b8', width=2))
+                fig_sq.update_xaxes(range=[0, f0_kg_sistema * 1.05], zeroline=True, zerolinewidth=1, zerolinecolor='#334155')
+                fig_sq.update_yaxes(range=[0, v0 * 1.05], zeroline=True, zerolinewidth=1, zerolinecolor='#334155')
                 
                 fig_sq.update_layout(height=350, margin=dict(l=20, r=20, t=40, b=20), legend=dict(yanchor="top", y=0.99, xanchor="right", x=0.99))
                 
@@ -431,7 +399,7 @@ with tab_informes:
                     'Test': [label_ref] * 6 + ['Actual'] * 6
                 })
                 
-                fig_rad = px.line_polar(df_radar, r='Valor', theta='Métrica', color='Test', line_close=True, color_discrete_map={label_ref: '#1c1c1e', 'Actual': '#dc2626'})
+                fig_rad = px.line_polar(df_radar, r='Valor', theta='Métrica', color='Test', line_close=True, color_discrete_map={label_ref: '#94a3b8', 'Actual': '#3b82f6'})
                 fig_rad.update_traces(fill='toself', opacity=0.4)
                 fig_rad.update_layout(polar=dict(radialaxis=dict(visible=False, range=[0, 100])), height=350, margin=dict(l=20, r=20, t=30, b=20), legend=dict(yanchor="top", y=-0.1, xanchor="center", x=0.5, orientation="h"))
                 st.plotly_chart(fig_rad, use_container_width=True)
@@ -457,9 +425,9 @@ with tab_informes:
                     else:
                         diff = (abs(d - i_val) / max_v) * 100
                         if d > i_val:
-                            val_t.append(diff); txt_t.append(f"{diff:.1f}%"); col_t.append('#10833d'); pr_t.append(n)
+                            val_t.append(diff); txt_t.append(f"{diff:.1f}%"); col_t.append('#10b981'); pr_t.append(n)
                         elif i_val > d:
-                            val_t.append(-diff); txt_t.append(f"{diff:.1f}%"); col_t.append('#09274e'); pr_t.append(n)
+                            val_t.append(-diff); txt_t.append(f"{diff:.1f}%"); col_t.append('#3b82f6'); pr_t.append(n)
                         else:
                             val_t.append(0); txt_t.append("0%"); col_t.append('#64748b'); pr_t.append(n)
                             
