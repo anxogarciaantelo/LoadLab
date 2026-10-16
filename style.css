@@ -1,10 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 /* --- TIPOGRAFÍA Y TAMAÑOS BASE MÁS GRANDES --- */
-html, body, [class*="css"], .stMarkdown p, .stText p {
+html, body, [class*="css"], .stMarkdown p, .stText p, label, .stSelectbox, .stTextInput {
     font-family: 'Plus Jakarta Sans', -apple-system, sans-serif !important;
     color: #e2e8f0 !important;
-    font-size: 1.05rem !important; 
+    font-size: 1.15rem !important; 
 }
 h1, h2, h3, h4, h5, h6 { color: #f8fafc !important; font-weight: 800 !important; }
 
@@ -43,19 +43,22 @@ div[data-testid="stExpander"] summary p {
 
 /* --- PESTAÑAS (GRANDES Y PROFESIONALES) --- */
 .stTabs [data-baseweb="tab-list"] {
-    gap: 10px;
+    gap: 15px;
     background-color: transparent !important;
     padding: 0 !important;
-    border-bottom: 2px solid #1e293b !important;
+    border-bottom: 2px solid #334155 !important;
+    overflow-x: visible !important;
 }
 .stTabs [data-baseweb="tab"] {
     height: 55px !important;
     background-color: transparent !important;
-    color: #64748b !important;
+    color: #94a3b8 !important;
     font-weight: 700 !important;
-    font-size: 1.15rem !important;
+    font-size: 1.25rem !important;
     border: none !important;
     padding: 0 20px !important;
+    white-space: nowrap !important;
+    min-width: max-content !important;
     transition: all 0.3s ease;
 }
 .stTabs [aria-selected="true"] {
