@@ -190,30 +190,30 @@ def get_base64_of_bin_file(bin_file):
 meses_esp = {1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril", 5: "Mayo", 6: "Junio", 7: "Julio", 8: "Agosto", 9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre"}
 
 def mostrar_tabla_moderna(styler_obj):
+    # 1. Extraemos SIEMPRE el DataFrame puro para eliminar los estilos inline blancos de Pandas
     if hasattr(styler_obj, 'data'):
         df_temp = styler_obj.data.copy()
-        
-        # 1. Limpieza y formato automático de fechas en toda la app
-        for col in df_temp.columns:
-            if 'fecha' in col.lower() or 'id_sesion' in col.lower():
-                df_temp[col] = pd.to_datetime(df_temp[col], errors='coerce').dt.strftime('%d-%m-%Y')
-            
-            # 2. Redondeo automático inteligente por nombre de columna
-            elif pd.api.types.is_numeric_dtype(df_temp[col]):
-                col_lower = col.lower()
-                if any(m in col_lower for m in ['wellness', 'tqr', 'rpe', 'ratio', 'dis (km)', 'dis ai', 'vmax', 'v_max']):
-                    df_temp[col] = df_temp[col].round(1)
-                elif any(m in col_lower for m in ['min', 'carga', 'sprint', 'acc', 'dcc', 'z1', 'z2', 'z3', 'z4', 'z5', 'z6']):
-                    df_temp[col] = df_temp[col].round(0)
-                else:
-                    df_temp[col] = df_temp[col].round(2)
-                    
-        html_tabla = df_temp.to_html(index=False, classes="modern-table", escape=False)
     else:
-        html_tabla = styler_obj.to_html()
+        df_temp = styler_obj.copy()
+        
+    # 2. Formato automático
+    for col in df_temp.columns:
+        if 'fecha' in col.lower() or 'id_sesion' in col.lower():
+            df_temp[col] = pd.to_datetime(df_temp[col], errors='coerce').dt.strftime('%d-%m-%Y')
+        elif pd.api.types.is_numeric_dtype(df_temp[col]):
+            col_lower = col.lower()
+            if any(m in col_lower for m in ['wellness', 'tqr', 'rpe', 'ratio', 'dis (km)', 'dis ai', 'vmax', 'v_max']):
+                df_temp[col] = df_temp[col].round(1)
+            elif any(m in col_lower for m in ['min', 'carga', 'sprint', 'acc', 'dcc', 'z1', 'z2', 'z3', 'z4', 'z5', 'z6']):
+                df_temp[col] = df_temp[col].round(0)
+            else:
+                df_temp[col] = df_temp[col].round(2)
+                
+    # 3. Generamos HTML LIMPIO sin <style> inline
+    html_tabla = df_temp.to_html(index=False, classes="modern-table", escape=False, border=0)
 
-    css_personalizado = "<style>.modern-table { width: 100%; border-collapse: separate; border-spacing: 0; font-family: 'Plus Jakarta Sans', sans-serif; border-radius: 10px; overflow: hidden; border: 1px solid #334155; background-color: #1e293b; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); } .modern-table thead tr { background-color: #0f172a; color: #94a3b8; } .modern-table th { padding: 16px 18px; font-weight: 700; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; text-align: center !important; border-bottom: 2px solid #3b82f6; } .modern-table td { padding: 14px 18px; font-size: 0.95rem; color: #f8fafc; text-align: center !important; border-bottom: 1px solid #334155; } .modern-table tbody tr:hover td { background-color: #0f172a; }</style>"
-    st.markdown(css_personalizado + html_tabla, unsafe_allow_html=True)
+    # 4. Inyectamos la tabla (El CSS visual ahora vive 100% en style.css)
+    st.markdown(html_tabla, unsafe_allow_html=True)
     
 def set_login_background(image_path):
     try:
