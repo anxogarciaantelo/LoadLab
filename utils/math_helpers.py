@@ -244,12 +244,16 @@ def set_login_background(image_path):
         div[role="tabpanel"] {{ background-color: transparent !important; }}
         
         div[data-testid="stTabs"] [data-baseweb="tab-list"] {{
-            background-color: #0f172a !important; border-radius: 8px !important; border: 1px solid #1e293b !important;
+            background-color: transparent !important; border: none !important; border-bottom: 2px solid #334155 !important; border-radius: 0 !important; overflow: visible !important; gap: 15px !important;
         }}
-        div[data-testid="stTabs"] [data-baseweb="tab"] {{ color: #94a3b8 !important; }}
-        div[data-testid="stTabs"] [aria-selected="true"] {{ background-color: #3b82f6 !important; color: #ffffff !important; }}
+        div[data-testid="stTabs"] [data-baseweb="tab"] {{ 
+            color: #94a3b8 !important; font-size: 1.25rem !important; white-space: nowrap !important; min-width: max-content !important; background-color: transparent !important; padding: 0 15px !important;
+        }}
+        div[data-testid="stTabs"] [aria-selected="true"] {{ 
+            color: #3b82f6 !important; border-bottom: 3px solid #3b82f6 !important; background-color: transparent !important; box-shadow: none !important;
+        }}
         
-        div[data-testid="stTabs"] label {{ color: #e2e8f0 !important; }}
+        div[data-testid="stTabs"] label {{ color: #e2e8f0 !important; font-size: 1.1rem !important; font-weight: 600 !important; margin-bottom: 5px !important; }}
         
         div[data-testid="stTextInput"] input {{
             background-color: #0f172a !important; border: 1px solid #334155 !important; color: #f8fafc !important;
