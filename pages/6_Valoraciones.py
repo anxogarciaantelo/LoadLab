@@ -41,7 +41,7 @@ css_dinamico = f"""
 """
 st.markdown(css_dinamico, unsafe_allow_html=True)
 try:
-    with open("Style.css", "r") as f:
+    with open("style.css", "r") as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 except:
     pass
