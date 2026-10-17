@@ -38,19 +38,25 @@ else:
     df_les['Gravedad'] = df_les['dias_baja'].apply(categorizar_duracion)
     
     with tab_les_res:
-        # --- REDUCCIÓN MILIMÉTRICA DE MÁRGENES VERTICALES ---
-        st.markdown("<h4 style='margin-bottom: 5px; margin-top: 0;'>🔍 Filtros Epidemiológicos</h4>", unsafe_allow_html=True)
+        # 1. RESERVA DE ESPACIOS VISUALES (Se dibujarán arriba, aunque se calculen abajo)
+        cont_kpis = st.container()
+        st.markdown("---")
+        cont_graficos = st.container()
+        st.markdown("---")
         
-        c_f1, c_f2, c_f3 = st.columns(3)
-        with c_f1:
-            meses_unicos = ["TODOS"] + list(df_les['Mes'].dropna().unique())
-            filtro_mes = st.selectbox("Mes:", meses_unicos)
-        with c_f2:
-            filtro_tipo_ses = st.selectbox("Sesión:", ["TODOS", "Entrenamiento", "Partido"])
-        with c_f3:
-            jugs_unicos = ["TODOS"] + sorted([j["JUGADOR"] for j in st.session_state.plantilla])
-            filtro_jugador = st.selectbox("Jugador:", jugs_unicos)
-            
+        # 2. FILTROS AL FONDO (Desplegables)
+        with st.expander("🔍 Filtros Epidemiológicos", expanded=False):
+            c_f1, c_f2, c_f3 = st.columns(3)
+            with c_f1:
+                meses_unicos = ["TODOS"] + list(df_les['Mes'].dropna().unique())
+                filtro_mes = st.selectbox("Mes:", meses_unicos)
+            with c_f2:
+                filtro_tipo_ses = st.selectbox("Sesión:", ["TODOS", "Entrenamiento", "Partido"])
+            with c_f3:
+                jugs_unicos = ["TODOS"] + sorted([j["JUGADOR"] for j in st.session_state.plantilla])
+                filtro_jugador = st.selectbox("Jugador:", jugs_unicos)
+                
+        # 3. LÓGICA DE CÁLCULO
         def calcular_dias_reales(row):
             if row.get('estado') == 'Activa':
                 fecha_les = datetime.strptime(row['id_sesion'], "%Y-%m-%d").date()
@@ -58,10 +64,7 @@ else:
             else:
                 return safe_float(row.get('dias_baja', 0))
 
-        # Base anual global (Baseline)
         df_anual = df_les.copy()
-        
-        # Base filtrada
         df_filtrado = df_anual.copy()
         if filtro_mes != "TODOS": df_filtrado = df_filtrado[df_filtrado['Mes'] == filtro_mes]
         if filtro_tipo_ses != "TODOS": df_filtrado = df_filtrado[df_filtrado['tipo_sesion'] == filtro_tipo_ses]
@@ -98,88 +101,67 @@ else:
             bur = (t_dias / h_tot * 1000) if h_tot > 0 else 0
             return t_les, t_dias, p_dias, inc, bur
 
-        st.markdown("<h4 style='margin-bottom: 5px; margin-top: -10px;'>🎯 Métricas Globales</h4>", unsafe_allow_html=True)
-        
-        if df_filtrado.empty:
-            st.warning("No hay lesiones que coincidan con los filtros aplicados.")
-        else:
-            # Cálculo de datos
-            total_lesiones, total_dias, promedio_dias, incidencia, burden = calcular_metricas(df_filtrado, filtro_mes, filtro_tipo_ses, filtro_jugador)
-            _, _, _, inc_anual, bur_anual = calcular_metricas(df_anual, "TODOS", "TODOS", "TODOS")
+        # 4. DIBUJAR KPIs ARRIBA (Usando el contenedor reservado)
+        with cont_kpis:
+            if df_filtrado.empty:
+                st.warning("No hay lesiones que coincidan con los filtros aplicados.")
+            else:
+                total_lesiones, total_dias, promedio_dias, incidencia, burden = calcular_metricas(df_filtrado, filtro_mes, filtro_tipo_ses, filtro_jugador)
 
-            tendencia_inc = None
-            tendencia_bur = None
-            
-            # CONTROL DE ERROR: Solo calcular tendencia si hay algún filtro activo 
-            filtros_activos = (filtro_mes != "TODOS") or (filtro_tipo_ses != "TODOS") or (filtro_jugador != "TODOS")
-            
-            if filtros_activos:
-                if inc_anual > 0:
-                    diff_inc = ((incidencia - inc_anual) / inc_anual) * 100
-                    txt_inc = "peor vs anual" if diff_inc > 0 else "mejor vs anual"
-                    tendencia_inc = {'valor': diff_inc, 'inverso': True, 'texto': txt_inc}
+                from utils.math_helpers import render_kpi_elite
+                
+                k1, k2, k3, k4, k5 = st.columns(5)
+                with k1: render_kpi_elite("Lesiones Totales", f"{total_lesiones}", color_borde="#3b82f6")
+                with k2: render_kpi_elite("Días de Baja Totales", f"{total_dias}", color_borde="#f59e0b")
+                with k3: render_kpi_elite("Días Baja / Lesión", f"{promedio_dias:.1f}", color_borde="#8b5cf6")
+                with k4: render_kpi_elite("Incidencia", f"{incidencia:.1f}", subtitulo="/1000h expos.", color_borde="#ef4444")
+                with k5: render_kpi_elite("Burden", f"{burden:.0f}", subtitulo="/1000h expos.", color_borde="#ef4444")
+                
+                st.caption("ℹ️ **Valores de Referencia (Fútbol Élite):** Incidencia: 6-9 lesiones por 1000h | Burden: 100-150 días de baja por 1000h")
+
+        # 5. DIBUJAR GRÁFICOS EN MEDIO (Usando el contenedor reservado)
+        with cont_graficos:
+            st.markdown("#### 📈 Desglose Estadístico")
+            if not df_filtrado.empty:
+                cg1, cg2, cg3 = st.columns(3)
+                with cg1:
+                    conteo_dur = df_filtrado['Gravedad'].value_counts().reset_index()
+                    fig_dur = px.pie(conteo_dur, names='Gravedad', values='count', title="1. Duración", hole=0.5)
+                    fig_dur.update_layout(showlegend=True, height=280, margin=dict(t=40, b=10, l=10, r=10), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+                    fig_dur.update_traces(textposition='inside', textinfo='percent')
+                    st.plotly_chart(fig_dur, use_container_width=True, key="les_pie_dur")
+                with cg2:
+                    conteo_tipo = df_filtrado['tipo'].value_counts().reset_index()
+                    fig_tipo = px.pie(conteo_tipo, names='tipo', values='count', title="2. Tipo", hole=0.5)
+                    fig_tipo.update_layout(showlegend=True, height=280, margin=dict(t=40, b=10, l=10, r=10), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+                    fig_tipo.update_traces(textposition='inside', textinfo='percent')
+                    st.plotly_chart(fig_tipo, use_container_width=True, key="les_pie_tipo")
+                with cg3:
+                    conteo_zona = df_filtrado['zona'].value_counts().reset_index()
+                    fig_zona = px.pie(conteo_zona, names='zona', values='count', title="3. Zona", hole=0.5)
+                    fig_zona.update_layout(showlegend=True, height=280, margin=dict(t=40, b=10, l=10, r=10), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+                    fig_zona.update_traces(textposition='inside', textinfo='percent')
+                    st.plotly_chart(fig_zona, use_container_width=True, key="les_pie_zona")
                     
-                if bur_anual > 0:
-                    diff_bur = ((burden - bur_anual) / bur_anual) * 100
-                    txt_bur = "peor vs anual" if diff_bur > 0 else "mejor vs anual"
-                    tendencia_bur = {'valor': diff_bur, 'inverso': True, 'texto': txt_bur}
-
-            from utils.math_helpers import render_kpi_elite
-            
-            # Textos Help integrados por HTML
-            help_inc = "/1000h <span title='Fútbol Élite: 6 a 9 lesiones / 1000h de exposición' style='cursor:help;'>ℹ️</span>"
-            help_bur = "/1000h <span title='Fútbol Élite: 100 a 150 días de baja / 1000h de exposición' style='cursor:help;'>ℹ️</span>"
-            
-            # Tarjetas renderizadas con texto completo
-            k1, k2, k3, k4, k5 = st.columns(5)
-            with k1: render_kpi_elite("Lesiones Totales", f"{total_lesiones}", color_borde="#3b82f6")
-            with k2: render_kpi_elite("Días de Baja Totales", f"{total_dias}", color_borde="#f59e0b")
-            with k3: render_kpi_elite("Días Baja / Lesión", f"{promedio_dias:.1f}", color_borde="#8b5cf6")
-            with k4: render_kpi_elite("Incidencia", f"{incidencia:.1f}", subtitulo=help_inc, color_borde="#ef4444", tendencia=tendencia_inc)
-            with k5: render_kpi_elite("Burden", f"{burden:.0f}", subtitulo=help_bur, color_borde="#ef4444", tendencia=tendencia_bur)
-    
-        st.markdown("---")
-        st.markdown("#### 📈 Desglose Estadístico")
-        
-        cg1, cg2, cg3 = st.columns(3)
-        with cg1:
-            conteo_dur = df_filtrado['Gravedad'].value_counts().reset_index()
-            fig_dur = px.pie(conteo_dur, names='Gravedad', values='count', title="1. Duración", hole=0.5)
-            fig_dur.update_layout(showlegend=True, height=280, margin=dict(t=40, b=10, l=10, r=10))
-            fig_dur.update_traces(textposition='inside', textinfo='percent')
-            st.plotly_chart(fig_dur, use_container_width=True, key="les_pie_dur")
-        with cg2:
-            conteo_tipo = df_filtrado['tipo'].value_counts().reset_index()
-            fig_tipo = px.pie(conteo_tipo, names='tipo', values='count', title="2. Tipo", hole=0.5)
-            fig_tipo.update_layout(showlegend=True, height=280, margin=dict(t=40, b=10, l=10, r=10))
-            fig_tipo.update_traces(textposition='inside', textinfo='percent')
-            st.plotly_chart(fig_tipo, use_container_width=True, key="les_pie_tipo")
-        with cg3:
-            conteo_zona = df_filtrado['zona'].value_counts().reset_index()
-            fig_zona = px.pie(conteo_zona, names='zona', values='count', title="3. Zona", hole=0.5)
-            fig_zona.update_layout(showlegend=True, height=280, margin=dict(t=40, b=10, l=10, r=10))
-            fig_zona.update_traces(textposition='inside', textinfo='percent')
-            st.plotly_chart(fig_zona, use_container_width=True, key="les_pie_zona")
-            
-        cg4, cg5, cg6 = st.columns(3)
-        with cg4:
-            conteo_lat = df_filtrado['lateralidad'].value_counts().reset_index()
-            fig_lat = px.pie(conteo_lat, names='lateralidad', values='count', title="4. Lateralidad", hole=0.5)
-            fig_lat.update_layout(showlegend=True, height=280, margin=dict(t=40, b=10, l=10, r=10))
-            fig_lat.update_traces(textposition='inside', textinfo='percent')
-            st.plotly_chart(fig_lat, use_container_width=True, key="les_pie_lat")
-        with cg5:
-            conteo_recidiva = df_filtrado['recidiva'].value_counts().reset_index()
-            fig_rec = px.pie(conteo_recidiva, names='recidiva', values='count', title="5. Recidiva", hole=0.5)
-            fig_rec.update_layout(showlegend=True, height=280, margin=dict(t=40, b=10, l=10, r=10))
-            fig_rec.update_traces(textposition='inside', textinfo='percent')
-            st.plotly_chart(fig_rec, use_container_width=True, key="les_pie_rec")
-        with cg6:
-            conteo_sup = df_filtrado['cesped'].value_counts().reset_index()
-            fig_sup = px.pie(conteo_sup, names='cesped', values='count', title="6. Superficie", hole=0.5)
-            fig_sup.update_layout(showlegend=True, height=280, margin=dict(t=40, b=10, l=10, r=10))
-            fig_sup.update_traces(textposition='inside', textinfo='percent')
-            st.plotly_chart(fig_sup, use_container_width=True, key="les_pie_sup")
+                cg4, cg5, cg6 = st.columns(3)
+                with cg4:
+                    conteo_lat = df_filtrado['lateralidad'].value_counts().reset_index()
+                    fig_lat = px.pie(conteo_lat, names='lateralidad', values='count', title="4. Lateralidad", hole=0.5)
+                    fig_lat.update_layout(showlegend=True, height=280, margin=dict(t=40, b=10, l=10, r=10), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+                    fig_lat.update_traces(textposition='inside', textinfo='percent')
+                    st.plotly_chart(fig_lat, use_container_width=True, key="les_pie_lat")
+                with cg5:
+                    conteo_recidiva = df_filtrado['recidiva'].value_counts().reset_index()
+                    fig_rec = px.pie(conteo_recidiva, names='recidiva', values='count', title="5. Recidiva", hole=0.5)
+                    fig_rec.update_layout(showlegend=True, height=280, margin=dict(t=40, b=10, l=10, r=10), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+                    fig_rec.update_traces(textposition='inside', textinfo='percent')
+                    st.plotly_chart(fig_rec, use_container_width=True, key="les_pie_rec")
+                with cg6:
+                    conteo_sup = df_filtrado['cesped'].value_counts().reset_index()
+                    fig_sup = px.pie(conteo_sup, names='cesped', values='count', title="6. Superficie", hole=0.5)
+                    fig_sup.update_layout(showlegend=True, height=280, margin=dict(t=40, b=10, l=10, r=10), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+                    fig_sup.update_traces(textposition='inside', textinfo='percent')
+                    st.plotly_chart(fig_sup, use_container_width=True, key="les_pie_sup")
 
     with tab_gest_med:
         st.markdown("#### 🩺 Gestor de Altas Médicas")
