@@ -1320,7 +1320,12 @@ with tab_ses:
                                 r_30_45 = safe_float(row["R_30_45"])
                             else:
                                 dis = dis_ai_21 = dis_ai_24 = spr_24 = spr_27 = v_med = v_max = acc_max = acc_2 = acc_3 = acc_4 = dcc_2 = dcc_3 = dcc_4 = r_0_7 = r_7_14 = r_14_21 = r_21_24 = r_24_27 = r_27_30 = r_30_45 = 0.0
-
+                            # Obtener valores históricos del EWMA hasta hoy
+                            ewma_actual = calcular_ewma_historico(st.session_state.sesiones, sesion["fecha"]).get(row["JUGADOR"], {})
+                            ewma_aguda = ewma_actual.get("EWMA AGUDA", min_ses * safe_float(row["RPE"]))
+                            ewma_cronica = ewma_actual.get("EWMA CRÓNICA", ewma_aguda)
+                            ratio_ac = ewma_actual.get("RATIO A/C", 1.0)
+                            
                             rec = {
                                 "JUGADOR": row["JUGADOR"],
                                 "POS": row["POS"],
@@ -1335,6 +1340,9 @@ with tab_ses:
                                 "MIN": min_ses,
                                 "MIN_GPS": min_gps_val,
                                 "CARGA": min_ses * safe_float(row["RPE"]),
+                                "EWMA AGUDA": ewma_aguda,          # <- AÑADIDO
+                                "EWMA CRÓNICA": ewma_cronica,      # <- AÑADIDO
+                                "RATIO A/C": ratio_ac,,
                                 
                                 "DIS": dis,
                                 "DIS AI": dis_ai_21,
@@ -1508,12 +1516,16 @@ with tab_ses:
                                 "TQR": 0.0, "WELLNESS": 0.0,
                                 "W_Humor": 0.0, "W_Sueño": 0.0, "W_Fatiga": 0.0, "W_Dolor": 0.0, "W_Estres": 0.0,
                                 "RPE": 0.0, "MIN": 0.0, "MIN_GPS": 0.0, "CARGA": 0.0,
+                                "EWMA AGUDA": 0.0,
+                                "EWMA CRÓNICA": 0.0,
+                                "RATIO A/C": 0.0,
                                 "DIS": 0.0, "DIS AI": 0.0, "Nº SPR": 0.0, "ACC": 0.0, "DCC": 0.0, "VMAX": 0.0,
                                 "Z1": 0.0, "Z2": 0.0, "Z3": 0.0, "Z4": 0.0, "Z5": 0.0, "Z6": 0.0,
                                 "HID >21": 0.0, "HID >24": 0.0, "SPR >24": 0.0, "SPR >27": 0.0,
                                 "V_Med": 0.0, "V_Max": 0.0, "ACC_Max": 0.0, "ACC >2": 0.0, "ACC >3": 0.0, "ACC >4": 0.0,
                                 "DCC >2": 0.0, "DCC >3": 0.0, "DCC >4": 0.0, "R_0_7": 0.0, "R_7_14": 0.0,
                                 "R_14_21": 0.0, "R_21_24": 0.0, "R_24_27": 0.0, "R_27_30": 0.0, "R_30_45": 0.0
+                                
                             })
 
                             # 3. ACTUALIZAR SÓLO LOS MÓDULOS QUE SE HAYAN SUBIDO EN ESTA TANDA
@@ -1593,6 +1605,13 @@ with tab_ses:
 
                             # 4. RECALCULAR CARGA FINAL SEGÚN LAS ACTUALIZACIONES
                             reg["CARGA"] = reg["MIN"] * reg["RPE"]
+                            
+                            # --- CÁLCULO EWMA AÑADIDO JUSTO AQUÍ ---
+                            ewma_excel = calcular_ewma_historico(st.session_state.sesiones, sesion["fecha"]).get(nombre_final, {})
+                            reg["EWMA AGUDA"] = ewma_excel.get("EWMA AGUDA", reg["CARGA"])
+                            reg["EWMA CRÓNICA"] = ewma_excel.get("EWMA CRÓNICA", reg["CARGA"])
+                            reg["RATIO A/C"] = ewma_excel.get("RATIO A/C", 1.0)
+                            # ---------------------------------------
                             
                             registros_sesion.append(reg)
                             
