@@ -74,7 +74,7 @@ with tab_cal:
         st.session_state.cal_offset += 1
         st.rerun()
     
-    # Renderizado de la cuadrícula
+    # Contenedor padre de la cuadrícula (Estilo profesional)
     st.markdown("""
         <div style='background-color: #1e293b; border: 1px solid #334155; border-top: 3px solid #3b82f6; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);'>
     """, unsafe_allow_html=True)
@@ -82,14 +82,31 @@ with tab_cal:
     cal = calendar.monthcalendar(year, month)
     dias_semana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
     
-    html_cal = "<div style='display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; text-align: center;'>"
+    # NUEVO: Cuadrícula HTML con 8 columnas (0.5fr para MXX y 1fr para los 7 días)
+    html_cal = "<div style='display: grid; grid-template-columns: 0.5fr repeat(7, 1fr); gap: 8px; text-align: center;'>"
     
+    # Espacio vacío en la esquina superior izquierda (encima de la columna de microciclos)
+    html_cal += "<div></div>"
+    
+    # Pintar cabeceras de los días
     for d in dias_semana:
         html_cal += f"<div style='background-color: #0f172a; color: #94a3b8; padding: 12px 5px; font-weight: 800; font-size: 0.9rem; border-radius: 8px; border: 1px solid #334155;'>{d}</div>"
         
     hoy_str = str(date.today())
     
+    # Pintar las semanas (filas)
     for week in cal:
+        # Detectar el número de microciclo de esta semana
+        dia_sem = next((d for d in week if d != 0), None)
+        num_sem = obtener_numero_semana(f"{year}-{month:02d}-{dia_sem:02d}") if dia_sem else 0
+        
+        # 1ª Columna: La celda del Microciclo alineada verticalmente
+        if num_sem > 0:
+            html_cal += f"<div style='display: flex; align-items: center; justify-content: center; color: #94a3b8; font-weight: 800; font-size: 1.05rem;'>M{num_sem}</div>"
+        else:
+            html_cal += "<div></div>"
+
+        # 2ª a 8ª Columna: Los días de la semana
         for day in week:
             if day == 0:
                 html_cal += "<div style='padding: 10px; background-color: transparent;'></div>"
@@ -111,9 +128,10 @@ with tab_cal:
                             color_badge = "#10b981" 
                             sub = s.get('descripcion', 'TD')
                             
-                        contenido_extra += f"<div style='background-color: {color_badge}; color: white; font-size: 0.8rem; font-weight: 800; padding: 8px 6px; border-radius: 6px; margin-top: 6px; width: 100%; box-sizing: border-box; word-wrap: break-word; line-height: 1.2; box-shadow: 0 2px 4px rgba(0,0,0,0.2);' title='{nom} | {sub}'>{nom}<br><span style='font-size: 0.7rem; font-weight: 600;'>{sub}</span></div>"
+                        # Tarjeta interior con el diseño profesional unificado
+                        contenido_extra += f"<div style='background-color: {color_badge}; color: white; font-size: 0.8rem; font-weight: 800; padding: 6px; border-radius: 6px; margin-top: 6px; width: 100%; box-sizing: border-box; line-height: 1.3; box-shadow: 0 2px 4px rgba(0,0,0,0.2); display: flex; flex-direction: column; align-items: center; justify-content: center;' title='{nom} | {sub}'><span>{nom}</span><span style='font-size: 0.65rem; font-weight: 600; margin-top: 2px;'>{sub}</span></div>"
                 
-                html_cal += f"<div style='background-color: {bg_color}; {es_hoy} padding: 10px 5px; border-radius: 8px; min-height: 110px; display: flex; flex-direction: column; align-items: center; transition: transform 0.2s ease;' onmouseover=\"this.style.transform='scale(1.03)'\" onmouseout=\"this.style.transform='scale(1)'\"><span style='color: #f8fafc; font-weight: 800; font-size: 1.2rem; margin-bottom: 4px;'>{day}</span>{contenido_extra}</div>"
+                html_cal += f"<div style='background-color: {bg_color}; {es_hoy} padding: 10px 5px; border-radius: 8px; min-height: 110px; display: flex; flex-direction: column; align-items: center; transition: transform 0.2s ease;' onmouseover=\"this.style.transform='scale(1.03)'\" onmouseout=\"this.style.transform='scale(1)'\"><span style='color: #f8fafc; font-weight: 800; font-size: 1.15rem; margin-bottom: 4px;'>{day}</span>{contenido_extra}</div>"
                 
     html_cal += "</div></div>"
     st.markdown(html_cal, unsafe_allow_html=True)
