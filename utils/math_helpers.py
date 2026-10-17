@@ -337,10 +337,10 @@ def aplicar_color_sidebar():
             border-right: 1px solid #1e293b !important;
         }
         
-        /* 1. Hacemos que el contenedor raíz del menú lateral ocupe toda la altura visible */
+        /* 1. Ajustamos la altura restando los márgenes nativos para evitar el scroll */
         [data-testid="stSidebarUserContent"] {
-            height: 100vh !important;
-            padding-bottom: 2rem !important;
+            height: calc(100vh - 6rem) !important;
+            padding-bottom: 0 !important;
         }
         
         /* 2. Convertimos el bloque interno invisible de Streamlit en un contenedor Flexbox */
