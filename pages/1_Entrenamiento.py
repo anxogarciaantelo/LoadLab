@@ -683,9 +683,27 @@ with tab_ses:
                         _, _, lunes, domingo = obtener_rango_fechas_semana(sesiones_sem[0]["fecha"])
                         micro_relativo = mapa_micros[num_sem]
                         
+                        # --- GENERADOR DEL MINI-CALENDARIO SEMANAL ---
+                        html_mini_cal = "<div style='display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 8px;'>"
+                        for d_offset in range(7):
+                            dia_actual = lunes + timedelta(days=d_offset)
+                            dia_str = dia_actual.strftime("%Y-%m-%d")
+                            ses_dia = next((s for s in sesiones_sem if s["fecha"] == dia_str), None)
+                            
+                            if ses_dia:
+                                color_ind = "#dc2626" if "Partido" in ses_dia["tipo"] else "#10b981"
+                                color_text = "#f8fafc"
+                            else:
+                                color_ind = "transparent"
+                                color_text = "#475569"
+                                
+                            html_mini_cal += f"<div style='background-color: #0f172a; border-radius: 4px; padding: 2px 0; border-bottom: 3px solid {color_ind};'><span style='color: {color_text}; font-size: 0.75rem; font-weight: 800;'>{dia_actual.day}</span></div>"
+                        html_mini_cal += "</div>"
+                        
                         st.markdown(f"""
                         <div style='background-color: #1e293b; padding: 8px 12px; border-radius: 6px; border-top: 3px solid #3b82f6; margin-top: 15px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); text-align: center;'>
                             <h4 style='margin: 0; color: #f8fafc; font-weight: 800; font-size: 0.95rem; text-transform: uppercase;'>📦 Micro {micro_relativo} <span style='font-size: 0.75rem; color: #94a3b8; font-weight: 700;'>({lunes.strftime('%d/%m')} - {domingo.strftime('%d/%m')})</span></h4>
+                            {html_mini_cal}
                         </div>
                         """, unsafe_allow_html=True)
                         
