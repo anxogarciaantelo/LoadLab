@@ -368,6 +368,8 @@ if st.session_state.get("equipo_seleccionado", False):
     # ==========================================
     # 🚨 TORRE DE CONTROL (DASHBOARD DIARIO)
     # ==========================================
+    st.markdown("### 📊 Información Diaria")
+
     hoy_dt = date.today()
     hoy_str = str(hoy_dt)
     
@@ -377,8 +379,22 @@ if st.session_state.get("equipo_seleccionado", False):
     dias_semana = [lunes + timedelta(days=i) for i in range(7)]
     nombres_dias = ["L", "M", "X", "J", "V", "S", "D"]
 
+    # --- ASIGNACIÓN DE NUMERACIÓN DINÁMICA A SESIONES ---
+    sesiones_crono = sorted(st.session_state.sesiones, key=lambda x: x["fecha"])
+    c_ent, c_ofi, c_ami = 0, 0, 0
+    for s_item in sesiones_crono:
+        t = s_item.get("tipo", "")
+        if t == "Entrenamiento":
+            c_ent += 1
+            s_item["num_rel"] = c_ent
+        elif t == "Partido Oficial":
+            c_ofi += 1
+            s_item["num_rel"] = c_ofi
+        elif t == "Partido Amistoso":
+            c_ami += 1
+            s_item["num_rel"] = c_ami
+
     # --- 1. CALENDARIO MICROCICLO ACTUAL ---
-    st.markdown("### 🗓️ Microciclo Actual")
     html_cal = "<div style='display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; text-align: center; margin-bottom: 20px;'>"
     for i, d in enumerate(dias_semana):
         d_str = str(d)
@@ -389,28 +405,28 @@ if st.session_state.get("equipo_seleccionado", False):
         contenido_extra = ""
         for s in sesiones_dia:
             tipo = s.get("tipo", "")
-            sub = s.get('descripcion', 'TD') if tipo == "Entrenamiento" else s.get('rival', 'Rival')
+            num_rel = s.get("num_rel", "X")
             
-            # Formato en una sola línea para no engordar el calendario
             if tipo == "Entrenamiento":
-                texto_badge = f"ENT - {sub}"
+                sub = s.get('descripcion', 'TD')
+                texto_badge = f"S{num_rel} - {sub}"
+                color_badge = "#10b981"
             elif tipo == "Partido Oficial":
-                texto_badge = f"OFI - {sub}"
+                sub = s.get('rival', 'Rival')
+                texto_badge = f"J{num_rel} vs {sub}"
+                color_badge = "#dc2626"
             else:
-                texto_badge = f"AMI - {sub}"
+                sub = s.get('rival', 'Rival')
+                texto_badge = f"A{num_rel} vs {sub}"
+                color_badge = "#dc2626"
             
-            color_badge = "#dc2626" if "Partido" in tipo else "#10b981"
-            
-            # Etiqueta de una línea (white-space: nowrap)
             contenido_extra += f"<div style='background-color: {color_badge}; color: white; font-size: 0.75rem; font-weight: 800; padding: 4px 6px; border-radius: 4px; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 2px 4px rgba(0,0,0,0.2);' title='{texto_badge}'>{texto_badge}</div>"
             
         html_cal += f"<div style='background-color: {bg_color}; {es_hoy} padding: 10px 5px; border-radius: 8px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.15);'><span style='color: #94a3b8; font-size: 0.8rem; font-weight: 800; text-transform: uppercase;'>{nombres_dias[i]}</span><span style='color: #f8fafc; font-weight: 800; font-size: 1.15rem; margin-bottom: 2px;'>{d.day}</span>{contenido_extra}</div>"
     html_cal += "</div>"
     st.markdown(html_cal, unsafe_allow_html=True)
 
-    # --- 2. CABECERA DE CONTEXTO Y ALERTAS (4 COLUMNAS COMPRIMIDAS) ---
-    st.markdown("### 🚨 Torre de Control (Hoy)")
-    
+    # --- 2. CABECERA DE CONTEXTO Y ALERTAS ---
     # 2.1 Variables de Contexto
     sesiones_partido = sorted([s for s in st.session_state.sesiones if "Partido" in s.get("tipo", "")], key=lambda x: x["fecha"])
     proximo_partido = next((s for s in sesiones_partido if s["fecha"] >= hoy_str), None)
@@ -502,7 +518,6 @@ if st.session_state.get("equipo_seleccionado", False):
     alertas_carga = dedup_alertas(alertas_carga)
     alertas_medicas = [{"jug": b["jug"], "txt": b["txt"], "lvl": "rojo"} for b in bajas_medicas] + [{"jug": r["jug"], "txt": r["txt"], "lvl": "verde"} for r in readaptacion]
 
-    # 2.3 Renderizador de Cuadrícula anti-rotura
     def get_avatar_html(jugador_nombre):
         for p in st.session_state.get("plantilla", []):
             if limpiar_nombre(p["JUGADOR"]) == limpiar_nombre(jugador_nombre):
@@ -519,7 +534,6 @@ if st.session_state.get("equipo_seleccionado", False):
         orden_niveles = {"rojo": 0, "amarillo": 1, "verde": 2}
         alertas_ordenadas = sorted(alertas, key=lambda x: orden_niveles.get(x.get("lvl", nivel_predeterminado), 3))
         
-        # Eliminamos por completo los saltos de línea e indentaciones en el f-string interno
         html = "<style>.alerta-scroll::-webkit-scrollbar { width: 4px; } .alerta-scroll::-webkit-scrollbar-track { background: transparent; } .alerta-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }</style>"
         html += "<div class='alerta-scroll' style='display: grid; grid-template-columns: 1fr 1fr; gap: 6px; max-height: 140px; overflow-y: auto; padding-right: 4px;'>"
         
@@ -536,7 +550,6 @@ if st.session_state.get("equipo_seleccionado", False):
 
     c_ctx, c_read, c_carga, c_med = st.columns([1.2, 1.5, 1.5, 1.5])
 
-    # MUY IMPORTANTE: Todo el HTML pegado al margen izquierdo (cero espacios)
     with c_ctx:
         html_ctx = f"""
 <div style="background: linear-gradient(135deg, #0f172a, #1e293b); border: 1px solid #334155; border-top: 4px solid #3b82f6; border-radius: 8px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); height: 100%; display: flex; flex-direction: column; justify-content: center; text-align: center;">
@@ -575,8 +588,9 @@ if st.session_state.get("equipo_seleccionado", False):
 """
         st.markdown(html_med, unsafe_allow_html=True)
 
+    st.markdown("---")
+
     # --- 3. GRÁFICOS DE EVOLUCIÓN DEL MICROCICLO ---
-    st.markdown("### 📈 Evolución del Microciclo")
     if not df_master.empty:
         df_sem = df_master[(df_master['FECHA'] >= str(lunes)) & (df_master['FECHA'] <= str(domingo))].copy()
         
@@ -584,7 +598,6 @@ if st.session_state.get("equipo_seleccionado", False):
             df_sem['TQR'] = df_sem['TQR'].replace(0, np.nan)
             df_sem['WELLNESS'] = df_sem['WELLNESS'].replace(0, np.nan)
             
-            # Agrupar datos por fecha
             df_diario_int = df_sem.groupby('FECHA')[['WELLNESS', 'TQR', 'CARGA']].mean().reset_index()
             
             df_sem_gps = df_sem[df_sem['DIS'] > 0]
@@ -605,13 +618,13 @@ if st.session_state.get("equipo_seleccionado", False):
                 fig_w = go.Figure()
                 fig_w.add_trace(go.Bar(x=df_diario['DIA_NOMBRE'], y=df_diario['WELLNESS'], name="Fatiga (Wellness)", marker_color="rgba(239, 68, 68, 0.7)", yaxis="y1"))
                 fig_w.add_trace(go.Scatter(x=df_diario['DIA_NOMBRE'], y=df_diario['TQR'], name="TQR", mode="lines+markers", line=dict(color="#10b981", width=3), yaxis="y2"))
-                fig_w.update_layout(title="🧠 Bienestar", yaxis=dict(title="Puntos Wellness", range=[0, 35]), yaxis2=dict(title="TQR", overlaying="y", side="right", range=[0, 10]), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
+                fig_w.update_layout(title="🧠 Bienestar", yaxis=dict(title="Puntos Wellness", range=[0, 35]), yaxis2=dict(title="TQR", overlaying="y", side="right", range=[0, 10]), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
                 st.plotly_chart(fig_w, use_container_width=True)
                 
             with cg2:
                 fig_c = go.Figure()
                 fig_c.add_trace(go.Bar(x=df_diario['DIA_NOMBRE'], y=df_diario['CARGA'], name="Carga (UA)", marker_color="#3b82f6"))
-                fig_c.update_layout(title="🔥 Carga Interna Acumulada", yaxis_title="UA")
+                fig_c.update_layout(title="🔥 Carga Interna Acumulada", yaxis_title="UA", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
                 st.plotly_chart(fig_c, use_container_width=True)
                 
             with cg3:
@@ -619,7 +632,7 @@ if st.session_state.get("equipo_seleccionado", False):
                 if 'DIS' in df_diario.columns:
                     fig_ext.add_trace(go.Bar(x=df_diario['DIA_NOMBRE'], y=df_diario['DIS'], name="Distancia (km)", marker_color="rgba(59, 130, 246, 0.6)", yaxis="y1"))
                     fig_ext.add_trace(go.Scatter(x=df_diario['DIA_NOMBRE'], y=df_diario['DIS AI'], name="HSR (m)", mode="lines+markers", line=dict(color="#f59e0b", width=3), yaxis="y2"))
-                fig_ext.update_layout(title="🏃‍♂️ Carga Externa", yaxis=dict(title="km"), yaxis2=dict(title="HSR (m)", overlaying="y", side="right"), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
+                fig_ext.update_layout(title="🏃‍♂️ Carga Externa", yaxis=dict(title="km"), yaxis2=dict(title="HSR (m)", overlaying="y", side="right"), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
                 st.plotly_chart(fig_ext, use_container_width=True)
         else:
             st.info("Aún no hay datos de sesión procesados para la semana actual.")
