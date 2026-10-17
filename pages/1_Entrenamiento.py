@@ -1128,9 +1128,9 @@ with tab_ses:
                                         
                             if datos_validos:
                                 df_val = pd.DataFrame(datos_validos)
-                                medias_esp = df_val.groupby("POS_ESP").mean().to_dict('index')
-                                medias_gen = df_val.groupby("POS_GEN").mean().to_dict('index')
-                                medias_eq = df_val.mean().to_dict()
+                                medias_esp = df_val.groupby("POS_ESP").mean(numeric_only=True).to_dict('index')
+                                medias_gen = df_val.groupby("POS_GEN").mean(numeric_only=True).to_dict('index')
+                                medias_eq = df_val.mean(numeric_only=True).to_dict()
                                 
                                 # 2. Imputamos a los que no tienen GPS pero entrenaron
                                 for reg in registros:
