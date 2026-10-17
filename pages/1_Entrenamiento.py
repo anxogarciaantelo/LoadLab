@@ -48,165 +48,75 @@ for s in sesiones_crono:
  
 st.subheader("📅 Entrenamiento")
 
-tab_cal, tab_temp, tab_micro, tab_ses = st.tabs(["🗓️ Calendario", "🏆 Temporada", "🔄 Microciclos", "📋 Sesiones"])
+tab_cal, tab_temp, tab_micro, tab_ses, tab_add = st.tabs(["🗓️ Calendario", "🏆 Temporada", "🔄 Microciclos", "📋 Sesiones", "➕ Añadir Sesión"])
 
 with tab_cal:
     # 1. ESTADO DE NAVEGACIÓN DEL CALENDARIO
     if 'cal_offset' not in st.session_state:
         st.session_state.cal_offset = 0
 
-    c_cal, c_form = st.columns([2.3, 1])
+    import calendar
+    hoy = date.today()
+    mes_actual = hoy.month - 1 + st.session_state.cal_offset
+    year = hoy.year + mes_actual // 12
+    month = mes_actual % 12 + 1
     
-    # ==========================================
-    # 🗓️ COLUMNA IZQUIERDA: CALENDARIO INTERACTIVO
-    # ==========================================
-    with c_cal:
-        import calendar
-        hoy = date.today()
-        # Lógica matemática para navegar meses infinitamente hacia atrás y adelante
-        mes_actual = hoy.month - 1 + st.session_state.cal_offset
-        year = hoy.year + mes_actual // 12
-        month = mes_actual % 12 + 1
+    meses_nombres = ["", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
+    
+    # Botones de navegación del mes
+    c_nav1, c_nav2, c_nav3 = st.columns([1, 3, 1])
+    if c_nav1.button("◀ Mes Anterior", use_container_width=True):
+        st.session_state.cal_offset -= 1
+        st.rerun()
+    with c_nav2:
+        st.markdown(f"<h3 style='text-align: center; color: #f8fafc; margin-top: 0; margin-bottom: 10px; text-transform: uppercase; font-weight: 800; letter-spacing: 1px;'>🗓️ {meses_nombres[month]} {year}</h3>", unsafe_allow_html=True)
+    if c_nav3.button("Mes Siguiente ▶", use_container_width=True):
+        st.session_state.cal_offset += 1
+        st.rerun()
+    
+    # Renderizado de la cuadrícula
+    st.markdown("""
+        <div style='background-color: #1e293b; border: 1px solid #334155; border-top: 3px solid #3b82f6; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);'>
+    """, unsafe_allow_html=True)
+    
+    cal = calendar.monthcalendar(year, month)
+    dias_semana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
+    
+    html_cal = "<div style='display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; text-align: center;'>"
+    
+    for d in dias_semana:
+        html_cal += f"<div style='background-color: #0f172a; color: #94a3b8; padding: 12px 5px; font-weight: 800; font-size: 0.9rem; border-radius: 8px; border: 1px solid #334155;'>{d}</div>"
         
-        meses_nombres = ["", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
-        
-        # Botones de navegación del mes
-        c_nav1, c_nav2, c_nav3 = st.columns([1, 3, 1])
-        if c_nav1.button("◀ Mes Anterior", use_container_width=True):
-            st.session_state.cal_offset -= 1
-            st.rerun()
-        with c_nav2:
-            st.markdown(f"<h3 style='text-align: center; color: #f8fafc; margin-top: 0; margin-bottom: 10px; text-transform: uppercase; font-weight: 800; letter-spacing: 1px;'>🗓️ {meses_nombres[month]} {year}</h3>", unsafe_allow_html=True)
-        if c_nav3.button("Mes Siguiente ▶", use_container_width=True):
-            st.session_state.cal_offset += 1
-            st.rerun()
-        
-        # Renderizado de la cuadrícula Élite
-        st.markdown("""
-            <div style='background-color: #1e293b; border: 1px solid #334155; border-top: 3px solid #3b82f6; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);'>
-        """, unsafe_allow_html=True)
-        
-        cal = calendar.monthcalendar(year, month)
-        dias_semana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
-        
-        html_cal = "<div style='display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; text-align: center;'>"
-        
-        # Encabezados de los días
-        for d in dias_semana:
-            html_cal += f"<div style='background-color: #0f172a; color: #94a3b8; padding: 12px 5px; font-weight: 800; font-size: 0.9rem; border-radius: 8px; border: 1px solid #334155;'>{d}</div>"
-            
-        hoy_str = str(date.today())
-        
-        # Pintar días
-        for week in cal:
-            for day in week:
-                if day == 0:
-                    html_cal += "<div style='padding: 10px; background-color: transparent;'></div>"
-                else:
-                    fecha_str = f"{year}-{month:02d}-{day:02d}"
-                    es_hoy = "border: 2px solid #3b82f6;" if fecha_str == hoy_str else "border: 1px solid #334155;"
-                    bg_color = "#0f172a" if fecha_str == hoy_str else "#1e293b"
-                    
-                    sesiones_dia = [s for s in st.session_state.sesiones if s["fecha"] == fecha_str]
-                    contenido_extra = ""
-                    
-                    # Generación de tarjetas interiores MÁS ANCHAS y GRANDES (Rompiendo la línea en vez de ocultar texto)
-                    if sesiones_dia:
-                        for s in sesiones_dia:
-                            nom = s.get("nombre_dinamico", s.get("tipo", ""))
-                            if "Partido" in s.get("tipo", ""):
-                                color_badge = "#dc2626" 
-                                sub = s.get('rival', 'Rival')
-                            else:
-                                color_badge = "#10b981" 
-                                sub = s.get('descripcion', 'TD')
-                                
-                            contenido_extra += f"<div style='background-color: {color_badge}; color: white; font-size: 0.8rem; font-weight: 800; padding: 8px 6px; border-radius: 6px; margin-top: 6px; width: 100%; box-sizing: border-box; word-wrap: break-word; line-height: 1.2; box-shadow: 0 2px 4px rgba(0,0,0,0.2);' title='{nom} | {sub}'>{nom}<br><span style='font-size: 0.7rem; font-weight: 600;'>{sub}</span></div>"
-                    
-                    html_cal += f"<div style='background-color: {bg_color}; {es_hoy} padding: 10px 5px; border-radius: 8px; min-height: 110px; display: flex; flex-direction: column; align-items: center; transition: transform 0.2s ease;' onmouseover=\"this.style.transform='scale(1.03)'\" onmouseout=\"this.style.transform='scale(1)'\"><span style='color: #f8fafc; font-weight: 800; font-size: 1.2rem; margin-bottom: 4px;'>{day}</span>{contenido_extra}</div>"
-                    
-        html_cal += "</div></div>"
-        st.markdown(html_cal, unsafe_allow_html=True)
-        
-    # ==========================================
-    # ⚙️ COLUMNA DERECHA: GESTIÓN DIRECTA DE EVENTOS
-    # ==========================================
-    with c_form:
-        st.markdown("#### ⚙️ Gestión Diaria")
-        dia_clicado = st.date_input("1. Selecciona una fecha:", date.today())
-        fecha_formateada = dia_clicado.strftime("%d-%m-%Y")
-        
-        sesiones_en_fecha = [s for s in st.session_state.sesiones if s["fecha"] == str(dia_clicado)]
-        if sesiones_en_fecha: 
-            st.success(f"✅ {len(sesiones_en_fecha)} evento(s) el {fecha_formateada}")
-            for s in sesiones_en_fecha:
-                nom_d = s.get("nombre_dinamico", s.get("tipo", ""))
-                sub_d = s.get("subtitulo_dinamico", s.get("descripcion", ""))
-                st.info(f"**{nom_d}** | {sub_d}")
-        else:
-            st.warning(f"Día libre ({fecha_formateada}).")
-            
-        st.markdown("---")
-        
-        # Formulario directo (Ya no usa st.expander, siempre visible y más rápido)
-        st.markdown("##### ➕ Añadir Nueva Sesión")
-        tipo_nuevo = st.selectbox("Tipo de Evento:", ["Entrenamiento", "Partido Oficial", "Partido Amistoso"])
-        
-        desc_nuevo = ""
-        comp_nuevo = ""
-        rival_nuevo = ""
-        condicion_nuevo = "Casa"
-        ciudad_manual_nuevo = ""
-        
-        if tipo_nuevo == "Entrenamiento":
-            desc_nuevo = st.selectbox("Match Day:", ["MD-6", "MD-5", "MD-4", "MD-3", "MD-2", "MD-1", "MD+1", "MD+2", "TD"])
-        else:
-            if tipo_nuevo == "Partido Oficial":
-                comp_nuevo = st.selectbox("Competición:", ["Liga", "Copa"])
-            
-            col_r1, col_r2 = st.columns(2)
-            rival_nuevo = col_r1.text_input("Rival:")
-            condicion_nuevo = col_r2.radio("Condición:", ["Casa", "Fuera"], horizontal=True)
-            
-            if condicion_nuevo == "Fuera":
-                rivales_db = st.session_state.get("rivales_guardados", {})
-                if rival_nuevo and rival_nuevo not in rivales_db:
-                    st.info("ℹ️ Rival no guardado en la BBDD.")
-                    ciudad_manual_nuevo = st.text_input("Ciudad (Necesario para clima autom.):")
-            
-        if st.button("💾 Guardar Sesión", use_container_width=True):
-            ciudad_objetivo = st.session_state.get("ubicacion_local", "")
-            
-            if tipo_nuevo != "Entrenamiento" and condicion_nuevo == "Fuera":
-                rival_info = st.session_state.get("rivales_guardados", {}).get(rival_nuevo, {})
-                if isinstance(rival_info, dict) and rival_info.get("ciudad"):
-                    ciudad_objetivo = rival_info.get("ciudad")
-                elif ciudad_manual_nuevo:
-                    ciudad_objetivo = ciudad_manual_nuevo
-            
-            # Llamada a la API
-            clima_data = None
-            if ciudad_objetivo:
-                with st.spinner(f"Sincronizando clima para {ciudad_objetivo}..."):
-                    from utils.math_helpers import obtener_clima
-                    clima_data = obtener_clima(ciudad_objetivo, str(dia_clicado))
-
-            st.session_state.sesiones.append({
-                "fecha": str(dia_clicado), 
-                "tipo": tipo_nuevo, 
-                "descripcion": desc_nuevo,
-                "competicion": comp_nuevo,
-                "rival": rival_nuevo,
-                "condicion": condicion_nuevo,
-                "ciudad_manual": ciudad_manual_nuevo,
-                "clima": clima_data,
-                "disponibilidad": {},
-                "informe_generado": False, 
-                "datos_informe": []
-            })
-            guardar_datos(modulo="sesiones")
-            st.success("¡Evento creado en el calendario!")
-            st.rerun()
+    hoy_str = str(date.today())
+    
+    for week in cal:
+        for day in week:
+            if day == 0:
+                html_cal += "<div style='padding: 10px; background-color: transparent;'></div>"
+            else:
+                fecha_str = f"{year}-{month:02d}-{day:02d}"
+                es_hoy = "border: 2px solid #3b82f6;" if fecha_str == hoy_str else "border: 1px solid #334155;"
+                bg_color = "#0f172a" if fecha_str == hoy_str else "#1e293b"
+                
+                sesiones_dia = [s for s in st.session_state.sesiones if s["fecha"] == fecha_str]
+                contenido_extra = ""
+                
+                if sesiones_dia:
+                    for s in sesiones_dia:
+                        nom = s.get("nombre_dinamico", s.get("tipo", ""))
+                        if "Partido" in s.get("tipo", ""):
+                            color_badge = "#dc2626" 
+                            sub = s.get('rival', 'Rival')
+                        else:
+                            color_badge = "#10b981" 
+                            sub = s.get('descripcion', 'TD')
+                            
+                        contenido_extra += f"<div style='background-color: {color_badge}; color: white; font-size: 0.8rem; font-weight: 800; padding: 8px 6px; border-radius: 6px; margin-top: 6px; width: 100%; box-sizing: border-box; word-wrap: break-word; line-height: 1.2; box-shadow: 0 2px 4px rgba(0,0,0,0.2);' title='{nom} | {sub}'>{nom}<br><span style='font-size: 0.7rem; font-weight: 600;'>{sub}</span></div>"
+                
+                html_cal += f"<div style='background-color: {bg_color}; {es_hoy} padding: 10px 5px; border-radius: 8px; min-height: 110px; display: flex; flex-direction: column; align-items: center; transition: transform 0.2s ease;' onmouseover=\"this.style.transform='scale(1.03)'\" onmouseout=\"this.style.transform='scale(1)'\"><span style='color: #f8fafc; font-weight: 800; font-size: 1.2rem; margin-bottom: 4px;'>{day}</span>{contenido_extra}</div>"
+                
+    html_cal += "</div></div>"
+    st.markdown(html_cal, unsafe_allow_html=True)
 
 with tab_temp:
     st.markdown("### 🏆 Evolución de la Temporada")
@@ -1823,3 +1733,79 @@ with tab_ses:
                     st.success(f"✅ ¡Estadísticas guardadas con éxito! (Goles en contra totales: {goles_contra_totales})")
                     st.rerun()
             st.markdown("---")
+with tab_add:
+    st.markdown("### ➕ Planificación de Sesiones")
+    st.caption("Selecciona la fecha e introduce los datos del evento para registrarlo en el calendario.")
+    
+    col_add1, col_add2, col_add3 = st.columns([1, 2, 1])
+    
+    with col_add2:
+        with st.container(border=True):
+            st.markdown("#### 📅 1. Fecha del Evento")
+            dia_clicado = st.date_input("Selecciona una fecha:", date.today())
+            fecha_formateada = dia_clicado.strftime("%d-%m-%Y")
+            
+            sesiones_en_fecha = [s for s in st.session_state.sesiones if s["fecha"] == str(dia_clicado)]
+            if sesiones_en_fecha: 
+                st.info(f"ℹ️ Ya hay {len(sesiones_en_fecha)} evento(s) el {fecha_formateada}.")
+            else:
+                st.success(f"✅ Día libre el {fecha_formateada}. Listo para programar.")
+                
+        with st.container(border=True):
+            st.markdown("#### ⚙️ 2. Detalles de la Sesión")
+            tipo_nuevo = st.selectbox("Tipo de Evento:", ["Entrenamiento", "Partido Oficial", "Partido Amistoso"])
+            
+            desc_nuevo = ""
+            comp_nuevo = ""
+            rival_nuevo = ""
+            condicion_nuevo = "Casa"
+            ciudad_manual_nuevo = ""
+            
+            if tipo_nuevo == "Entrenamiento":
+                desc_nuevo = st.selectbox("Match Day:", ["MD-6", "MD-5", "MD-4", "MD-3", "MD-2", "MD-1", "MD+1", "MD+2", "TD"])
+            else:
+                if tipo_nuevo == "Partido Oficial":
+                    comp_nuevo = st.selectbox("Competición:", ["Liga", "Copa"])
+                
+                col_r1, col_r2 = st.columns(2)
+                rival_nuevo = col_r1.text_input("Rival:")
+                condicion_nuevo = col_r2.radio("Condición:", ["Casa", "Fuera"], horizontal=True)
+                
+                if condicion_nuevo == "Fuera":
+                    rivales_db = st.session_state.get("rivales_guardados", {})
+                    if rival_nuevo and rival_nuevo not in rivales_db:
+                        st.info("ℹ️ Rival no guardado en la BBDD.")
+                        ciudad_manual_nuevo = st.text_input("Ciudad (Necesario para clima autom.):")
+                
+            if st.button("💾 Guardar Sesión", use_container_width=True, type="primary"):
+                ciudad_objetivo = st.session_state.get("ubicacion_local", "")
+                
+                if tipo_nuevo != "Entrenamiento" and condicion_nuevo == "Fuera":
+                    rival_info = st.session_state.get("rivales_guardados", {}).get(rival_nuevo, {})
+                    if isinstance(rival_info, dict) and rival_info.get("ciudad"):
+                        ciudad_objetivo = rival_info.get("ciudad")
+                    elif ciudad_manual_nuevo:
+                        ciudad_objetivo = ciudad_manual_nuevo
+                
+                clima_data = None
+                if ciudad_objetivo:
+                    with st.spinner(f"Sincronizando clima para {ciudad_objetivo}..."):
+                        from utils.math_helpers import obtener_clima
+                        clima_data = obtener_clima(ciudad_objetivo, str(dia_clicado))
+
+                st.session_state.sesiones.append({
+                    "fecha": str(dia_clicado), 
+                    "tipo": tipo_nuevo, 
+                    "descripcion": desc_nuevo,
+                    "competicion": comp_nuevo,
+                    "rival": rival_nuevo,
+                    "condicion": condicion_nuevo,
+                    "ciudad_manual": ciudad_manual_nuevo,
+                    "clima": clima_data,
+                    "disponibilidad": {},
+                    "informe_generado": False, 
+                    "datos_informe": []
+                })
+                guardar_datos(modulo="sesiones")
+                st.success("¡Evento creado en el calendario!")
+                st.rerun()
