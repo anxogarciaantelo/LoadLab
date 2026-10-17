@@ -102,7 +102,7 @@ with tab_cal:
         # Cajas interiores para cada día de la semana
         for day in week:
             if day == 0:
-                html_cal += "<div style='padding: 10px; background-color: transparent;'></div>"
+                html_cal += "<div style='padding: 9px; background-color: transparent;'></div>"
             else:
                 fecha_str = f"{year}-{month:02d}-{day:02d}"
                 es_hoy = "border: 2px solid #3b82f6;" if fecha_str == hoy_str else "border: 1px solid #1e293b;"
