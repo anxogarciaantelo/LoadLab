@@ -119,7 +119,7 @@ with tab_cal:
     st.markdown(html_cal, unsafe_allow_html=True)
 
 with tab_temp:
-    st.markdown("### 🏆 Evolución de la Temporada")
+    st.markdown("### Análisis de la Temporada")
     if not st.session_state.sesiones:
         st.info("No hay datos suficientes para generar el informe de temporada.")
     else:
@@ -221,7 +221,7 @@ with tab_temp:
                     return {'valor': diff_pct, 'inverso': inverso, 'texto': texto}
                 
                 # --- KPIs COMPACTOS EN UNA SOLA FILA ---
-                st.markdown(f"#### 🎯 Promedios de la Temporada (Tendencia vs {ultimo_m['Microciclo']})")
+                st.markdown(f"#### Promedios de la Temporada (Tendencia vs {ultimo_m['Microciclo']})")
                 cols_kpi = st.columns(10)
                 
                 from utils.math_helpers import render_kpi_elite
@@ -230,7 +230,7 @@ with tab_temp:
                 with cols_kpi[2]: render_kpi_elite("RPE", f"{medias_temp['RPE']:.1f}", tendencia=calc_tendencia_temporada('RPE'))
                 with cols_kpi[3]: render_kpi_elite("Minutos", f"{medias_temp['Minutos']:.0f}", tendencia=calc_tendencia_temporada('Minutos'))
                 with cols_kpi[4]: render_kpi_elite("Carga", f"{medias_temp['Carga']:.0f}", tendencia=calc_tendencia_temporada('Carga'))
-                with cols_kpi[5]: render_kpi_elite("DIS (km)", f"{medias_temp['DIS']:.1f}", tendencia=calc_tendencia_temporada('DIS'))
+                with cols_kpi[5]: render_kpi_elite("DISTANCIA (km)", f"{medias_temp['DIS']:.1f}", tendencia=calc_tendencia_temporada('DIS'))
                 with cols_kpi[6]: render_kpi_elite("HSR (m)", f"{medias_temp['HSR']:.0f}", tendencia=calc_tendencia_temporada('HSR'))
                 with cols_kpi[7]: render_kpi_elite("Sprints", f"{medias_temp['Sprints']:.1f}", tendencia=calc_tendencia_temporada('Sprints'))
                 with cols_kpi[8]: render_kpi_elite("ACC", f"{medias_temp['ACC']:.0f}", tendencia=calc_tendencia_temporada('ACC'))
