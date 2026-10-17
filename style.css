@@ -80,15 +80,17 @@ div[data-testid="stMetric"] {
     justify-content: center;
     height: 100%;
 }
-div[data-testid="stMetric"] label {
-    font-size: 0.8rem !important;
-    color: #94a3b8 !important;
+div[data-testid="stMetric"] label,
+div[data-testid="stMetric"] div[data-testid="stMetricLabel"] {
+    font-size: 1.05rem !important;
+    color: #f8fafc !important;
     font-weight: 800 !important;
     text-transform: uppercase !important;
     letter-spacing: 0.5px;
     text-align: left !important;
     margin-bottom: 10px !important;
     width: 100% !important;
+    display: block !important;
 }
 div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
     font-size: 1.8rem !important;
