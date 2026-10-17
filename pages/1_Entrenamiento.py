@@ -95,7 +95,7 @@ with tab_cal:
         
         # Etiqueta del Microciclo (Píldora azul a la izquierda)
         if num_sem > 0:
-            html_cal += f"<div style='background-color: #3b82f6; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.2);'><span style='font-size: 0.65rem; font-weight: 800; text-transform: uppercase; margin-bottom: 2px; opacity: 0.9;'>Micro</span><span style='font-size: 1.4rem; font-weight: 800; line-height: 1;'>{num_sem}</span></div>"
+            html_cal += f"<div style='background-color: transparent; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.2);'><span style='font-size: 0.65rem; font-weight: 800; text-transform: uppercase; margin-bottom: 2px; opacity: 0.9;'>Micro</span><span style='font-size: 1.4rem; font-weight: 800; line-height: 1;'>{num_sem}</span></div>"
         else:
             html_cal += "<div></div>"
 
