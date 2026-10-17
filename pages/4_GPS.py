@@ -408,7 +408,7 @@ else:
                 .set_table_attributes('class="modern-dark-table"')
             )
             
-            st.markdown(css_dark_table + estilo_gps.to_html(), unsafe_allow_html=True))
+            st.markdown(css_dark_table + estilo_gps.to_html(), unsafe_allow_html=True)
 
     # ==========================================
     # PESTAÑA 2: COMPARADOR (FILTROS PLEGABLES)
