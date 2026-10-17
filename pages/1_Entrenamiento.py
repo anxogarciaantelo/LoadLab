@@ -63,13 +63,26 @@ with tab_cal:
     
     meses_nombres = ["", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
     
+    # Reducción milimétrica de botones y título
+    st.markdown("""
+    <style>
+    /* Comprimir botones de navegación superior */
+    div[data-testid="column"] button {
+        min-height: 32px !important;
+        padding: 2px 8px !important;
+        font-size: 0.85rem !important;
+        margin-top: 2px !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
     # Botones de navegación del mes
     c_nav1, c_nav2, c_nav3 = st.columns([1, 3, 1])
     if c_nav1.button("◀ Mes Anterior", use_container_width=True):
         st.session_state.cal_offset -= 1
         st.rerun()
     with c_nav2:
-        st.markdown(f"<h3 style='text-align: center; color: #f8fafc; margin-top: 0; margin-bottom: 15px; text-transform: uppercase; font-weight: 800; letter-spacing: 1px;'>🗓️ {meses_nombres[month]} {year}</h3>", unsafe_allow_html=True)
+        st.markdown(f"<h4 style='text-align: center; color: #f8fafc; margin-top: 0; margin-bottom: 8px; font-size: 1.15rem; text-transform: uppercase; font-weight: 800; letter-spacing: 1px;'>🗓️ {meses_nombres[month]} {year}</h4>", unsafe_allow_html=True)
     if c_nav3.button("Mes Siguiente ▶", use_container_width=True):
         st.session_state.cal_offset += 1
         st.rerun()
