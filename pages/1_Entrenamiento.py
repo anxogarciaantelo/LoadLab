@@ -619,29 +619,12 @@ with tab_micro:
                             st.rerun()
 
 with tab_ses:
-    # --- CSS ESPECÍFICO PARA BOTONES DE SESIÓN ---
+    # --- CSS ESPECÍFICO LIGERO PARA BOTONES ---
     st.markdown("""
     <style>
-    div[data-testid="column"]:has(.sesion-toolbar-hook) div[data-testid="stHorizontalBlock"] button {
-        min-height: 42px !important; /* Altura aumentada para evitar recortes */
-        padding: 0 !important;
-        border-radius: 6px !important;
-        background-color: #0f172a !important;
-        border: 1px solid #334155 !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-    }
-    div[data-testid="column"]:has(.sesion-toolbar-hook) div[data-testid="stHorizontalBlock"] button:hover {
-        border-color: #3b82f6 !important;
-        transform: translateY(-2px);
-    }
-    /* Forzamos píxeles absolutos (px) para ignorar el escalado global del 90% */
-    div[data-testid="column"]:has(.sesion-toolbar-hook) div[data-testid="stHorizontalBlock"] button p,
-    div[data-testid="column"]:has(.sesion-toolbar-hook) div[data-testid="stHorizontalBlock"] button span {
-        font-size: 22px !important; 
-        line-height: 1 !important;
-        margin: 0 !important;
+    div[data-testid="stHorizontalBlock"] button {
+        padding: 0.1rem 0 !important;
+        min-height: 38px !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -674,81 +657,103 @@ with tab_ses:
         if "ses_activa_view" not in st.session_state:
             st.session_state.ses_activa_view = None
 
-        # Renderizar microciclos
-        for num_sem in micros_sorted:
-            sesiones_sem = sorted(micros_dict[num_sem], key=lambda x: x["fecha"])
-            _, _, lunes, domingo = obtener_rango_fechas_semana(sesiones_sem[0]["fecha"])
+        def toggle_view(target_idx, target_view):
+            if st.session_state.ses_activa_idx == target_idx and st.session_state.ses_activa_view == target_view:
+                st.session_state.ses_activa_idx = None
+                st.session_state.ses_activa_view = None
+            else:
+                st.session_state.ses_activa_idx = target_idx
+                st.session_state.ses_activa_view = target_view
+
+        # Renderizar microciclos en columnas (3 por fila para máxima legibilidad)
+        chunk_size = 3
+        for i in range(0, len(micros_sorted), chunk_size):
+            micros_chunk = micros_sorted[i:i+chunk_size]
+            cols = st.columns(chunk_size)
             
-            micro_relativo = mapa_micros[num_sem]
-            
-            st.markdown(f"""
-            <div style='background-color: #1e293b; padding: 12px 18px; border-radius: 8px; border-left: 4px solid #3b82f6; margin-top: 25px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);'>
-                <h4 style='margin: 0; color: #f8fafc; font-weight: 800; text-transform: uppercase;'>📦 MICROCICLO {micro_relativo} 
-                <span style='font-size: 0.95rem; color: #94a3b8; font-weight: 700;'>(Semana {lunes.strftime('%d/%m')} al {domingo.strftime('%d/%m')})</span></h4>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Cuadrícula horizontal para las sesiones (Máximo 7 columnas por fila)
-            cols = st.columns(7)
-            for i, sesion in enumerate(sesiones_sem):
-                col_idx = i % 7
-                idx_real = st.session_state.sesiones.index(sesion)
-                es_partido = "Partido" in sesion['tipo']
-                color_borde = "#dc2626" if es_partido else "#10b981"
-                
-                f_dt = datetime.strptime(sesion["fecha"], "%Y-%m-%d")
-                dia_semana = ["L", "M", "X", "J", "V", "S", "D"][f_dt.weekday()]
-                f_str = f"{dia_semana} {f_dt.strftime('%d/%m')}"
-                
-                nom_dyn = sesion.get("nombre_dinamico", sesion["tipo"])
-                if es_partido: sub = sesion.get('rival', 'Rival')
-                else: sub = sesion.get('descripcion', 'TD')
-                
-                with cols[col_idx]:
+            for j, num_sem in enumerate(micros_chunk):
+                with cols[j]:
+                    # Ordenadas de más reciente a más antigua en vertical
+                    sesiones_sem = sorted(micros_dict[num_sem], key=lambda x: x["fecha"], reverse=True)
+                    _, _, lunes, domingo = obtener_rango_fechas_semana(sesiones_sem[0]["fecha"])
+                    
+                    micro_relativo = mapa_micros[num_sem]
+                    
                     st.markdown(f"""
-                    <div class="sesion-toolbar-hook" style='background-color: #0f172a; border: 1px solid #334155; border-top: 3px solid {color_borde}; border-radius: 8px; padding: 10px 5px; text-align: center; margin-bottom: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); height: 70px; display: flex; flex-direction: column; justify-content: center;'>
-                        <strong style='color: #f8fafc; font-size: 0.95rem;'>{f_str}</strong>
-                        <span style='color: #94a3b8; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;' title='{sub}'>{sub}</span>
+                    <div style='background-color: #1e293b; padding: 10px 12px; border-radius: 8px; border-bottom: 3px solid #3b82f6; margin-bottom: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); text-align: center;'>
+                        <h4 style='margin: 0; color: #f8fafc; font-weight: 800; font-size: 1.05rem; text-transform: uppercase;'>📦 MICRO {micro_relativo}</h4>
+                        <span style='font-size: 0.75rem; color: #94a3b8; font-weight: 700;'>{lunes.strftime('%d/%m')} - {domingo.strftime('%d/%m')}</span>
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    # Botones de herramientas compactos en la propia tarjeta con lógica TOGGLE
-                    b_cols = st.columns(5)
-                    
-                    def toggle_view(target_idx, target_view):
-                        if st.session_state.ses_activa_idx == target_idx and st.session_state.ses_activa_view == target_view:
-                            st.session_state.ses_activa_idx = None
-                            st.session_state.ses_activa_view = None
-                        else:
-                            st.session_state.ses_activa_idx = target_idx
-                            st.session_state.ses_activa_view = target_view
+                    # Renderizar las sesiones de este microciclo en vertical
+                    for sesion in sesiones_sem:
+                        idx_real = st.session_state.sesiones.index(sesion)
+                        es_partido = "Partido" in sesion['tipo']
+                        color_borde = "#dc2626" if es_partido else "#10b981"
+                        
+                        f_dt = datetime.strptime(sesion["fecha"], "%Y-%m-%d")
+                        dia_semana = ["L", "M", "X", "J", "V", "S", "D"][f_dt.weekday()]
+                        f_str = f"{dia_semana} {f_dt.strftime('%d/%m')}"
+                        
+                        nom_dyn = sesion.get("nombre_dinamico", sesion["tipo"])
+                        if es_partido: 
+                            sub = sesion.get('rival', 'Rival')
+                            tipo_corto = "OFI" if sesion.get("competicion") else "AMI"
+                        else: 
+                            sub = sesion.get('descripcion', 'TD')
+                            tipo_corto = "ENT"
                             
-                    if b_cols[0].button("🏥", key=f"bd_{idx_real}", help="Disponibilidad"):
-                        toggle_view(idx_real, "disp"); st.rerun()
-                    if b_cols[1].button("📊", key=f"bi_{idx_real}", help="Informe"):
-                        toggle_view(idx_real, "inf"); st.rerun()
-                    if b_cols[2].button("📂", key=f"bc_{idx_real}", help="Cargar Datos"):
-                        toggle_view(idx_real, "datos"); st.rerun()
-                    if b_cols[3].button("🚑", key=f"bl_{idx_real}", help="Lesión"):
-                        toggle_view(idx_real, "les"); st.rerun()
-                    if es_partido:
-                        if b_cols[4].button("⚡", key=f"bs_{idx_real}", help="Stats Partido"):
-                            toggle_view(idx_real, "stats"); st.rerun()
-                    else:
-                        b_cols[4].write("")
+                        # Destacar visualmente la tarjeta si está activa
+                        bg_card = "#1e293b" if st.session_state.ses_activa_idx == idx_real else "#0f172a"
+                        border_card = "#3b82f6" if st.session_state.ses_activa_idx == idx_real else "#334155"
+                        
+                        st.markdown(f"""
+                        <div style='background-color: {bg_card}; border: 1px solid {border_card}; border-left: 4px solid {color_borde}; border-radius: 6px; padding: 10px; margin-bottom: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.15);'>
+                            <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;'>
+                                <strong style='color: #f8fafc; font-size: 0.95rem;'>{f_str}</strong>
+                                <span style='background-color: {color_borde}20; color: {color_borde}; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 800;'>{tipo_corto}</span>
+                            </div>
+                            <div style='color: #94a3b8; font-size: 0.8rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;' title='{sub}'>{sub}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        # Botones justo debajo de la tarjeta
+                        b_cols = st.columns(5)
+                        if b_cols[0].button("🏥", key=f"bd_{idx_real}", help="Disponibilidad", use_container_width=True):
+                            toggle_view(idx_real, "disp"); st.rerun()
+                        if b_cols[1].button("📊", key=f"bi_{idx_real}", help="Informe", use_container_width=True):
+                            toggle_view(idx_real, "inf"); st.rerun()
+                        if b_cols[2].button("📂", key=f"bc_{idx_real}", help="Cargar Datos", use_container_width=True):
+                            toggle_view(idx_real, "datos"); st.rerun()
+                        if b_cols[3].button("🚑", key=f"bl_{idx_real}", help="Lesión", use_container_width=True):
+                            toggle_view(idx_real, "les"); st.rerun()
+                        if es_partido:
+                            if b_cols[4].button("⚡", key=f"bs_{idx_real}", help="Stats Partido", use_container_width=True):
+                                toggle_view(idx_real, "stats"); st.rerun()
+                        else:
+                            b_cols[4].write("")
+                        
+                        st.write("") # Espaciador ligero entre sesiones
             
-            # --- PANEL ACTIVO PARA ESTE MICROCICLO ---
+            # --- PANEL ACTIVO PARA ESTA FILA DE MICROCICLOS ---
             active_idx = st.session_state.ses_activa_idx
             active_view = st.session_state.ses_activa_view
             
             if active_idx is not None and active_view is not None:
-                if active_idx in [st.session_state.sesiones.index(s) for s in sesiones_sem]:
+                render_panel_here = False
+                for num_sem in micros_chunk:
+                    if active_idx in [st.session_state.sesiones.index(s) for s in micros_dict[num_sem]]:
+                        render_panel_here = True
+                        break
+                        
+                if render_panel_here:
                     sesion = st.session_state.sesiones[active_idx]
                     idx_real = active_idx
                     es_partido = "Partido" in sesion['tipo']
                     
                     st.markdown("---")
-                    
+                                      
                     # ---------------------------------------------------------
                     # HERRAMIENTA 1: DISPONIBILIDAD (MULTIFILTRO OPTIMIZADO)
                     # ---------------------------------------------------------
