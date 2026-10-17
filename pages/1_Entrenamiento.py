@@ -623,18 +623,25 @@ with tab_ses:
     st.markdown("""
     <style>
     div[data-testid="column"]:has(.sesion-toolbar-hook) div[data-testid="stHorizontalBlock"] button {
-        min-height: 38px !important;
+        min-height: 42px !important; /* Altura aumentada para evitar recortes */
         padding: 0 !important;
         border-radius: 6px !important;
         background-color: #0f172a !important;
         border: 1px solid #334155 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
     }
     div[data-testid="column"]:has(.sesion-toolbar-hook) div[data-testid="stHorizontalBlock"] button:hover {
         border-color: #3b82f6 !important;
         transform: translateY(-2px);
     }
-    div[data-testid="column"]:has(.sesion-toolbar-hook) div[data-testid="stHorizontalBlock"] button p {
-        font-size: 1.4rem !important; /* Agranda el emoji */
+    /* Forzamos píxeles absolutos (px) para ignorar el escalado global del 90% */
+    div[data-testid="column"]:has(.sesion-toolbar-hook) div[data-testid="stHorizontalBlock"] button p,
+    div[data-testid="column"]:has(.sesion-toolbar-hook) div[data-testid="stHorizontalBlock"] button span {
+        font-size: 22px !important; 
+        line-height: 1 !important;
+        margin: 0 !important;
     }
     </style>
     """, unsafe_allow_html=True)
