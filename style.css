@@ -1,8 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-/* --- ESCALADO GLOBAL COMPACTO (Equivalente a 80% Zoom) --- */
+/* --- ESCALADO GLOBAL COMPACTO --- */
 html {
-    font-size: 13px !important; /* Reduce la base. Escala automáticamente todos los rem de la app */
+    font-size: 11.5px !important; 
 }
 
 html, body, [class*="css"], .stMarkdown p, .stText p, label, .stSelectbox, .stTextInput {
@@ -10,7 +10,7 @@ html, body, [class*="css"], .stMarkdown p, .stText p, label, .stSelectbox, .stTe
     color: #e2e8f0 !important;
     font-size: 0.95rem !important; 
 }
-h1, h2, h3, h4, h5, h6 { color: #f8fafc !important; font-weight: 800 !important; margin-bottom: 0.5rem !important; }
+h1, h2, h3, h4, h5, h6 { color: #f8fafc !important; font-weight: 800 !important; margin-bottom: 0.4rem !important; }
 
 /* Forzar alineación geométrica para métricas y tablas */
 div[data-testid="stMetricValue"], .modern-table td, .modern-table th, [data-testid="stDataFrame"], h2 {
@@ -19,11 +19,11 @@ div[data-testid="stMetricValue"], .modern-table td, .modern-table th, [data-test
 
 /* Reducción global de espacios entre bloques en Streamlit */
 div[data-testid="stVerticalBlock"] {
-    gap: 0.75rem !important;
+    gap: 0.6rem !important;
 }
 .block-container {
-    padding-top: 1.5rem !important;
-    padding-bottom: 1.5rem !important;
+    padding-top: 1.2rem !important;
+    padding-bottom: 1.2rem !important;
     max-width: 98% !important;
 }
 
@@ -37,15 +37,15 @@ div[data-testid="stVerticalBlock"] {
 div[data-testid="stVerticalBlock"] > div[data-testid="stContainer"],
 div[data-testid="stExpander"] details {
     background: #1e293b !important;
-    border-radius: 10px !important;
+    border-radius: 8px !important;
     border: 1px solid #334155 !important;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.4) !important;
-    padding: 8px !important;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.4) !important;
+    padding: 6px !important;
 }
 div[data-testid="stExpander"] summary {
     background: #1e293b !important;
     border-radius: 6px !important;
-    padding: 10px 12px !important;
+    padding: 8px 10px !important;
 }
 div[data-testid="stExpander"] summary p {
     color: #f8fafc !important;
@@ -56,20 +56,20 @@ div[data-testid="stExpander"] summary p {
 
 /* --- PESTAÑAS --- */
 .stTabs [data-baseweb="tab-list"] {
-    gap: 10px;
+    gap: 8px;
     background-color: transparent !important;
     padding: 0 !important;
     border-bottom: 2px solid #334155 !important;
     overflow-x: visible !important;
 }
 .stTabs [data-baseweb="tab"] {
-    height: 38px !important;
+    height: 34px !important;
     background-color: transparent !important;
     color: #94a3b8 !important;
     font-weight: 700 !important;
     font-size: 0.9rem !important;
     border: none !important;
-    padding: 0 12px !important;
+    padding: 0 10px !important;
     white-space: nowrap !important;
     min-width: max-content !important;
     transition: all 0.3s ease;
@@ -86,7 +86,7 @@ div[data-testid="stMetric"] {
     background: #1e293b !important;
     border: 1px solid #334155 !important;
     border-top: 3px solid #3b82f6 !important;
-    padding: 10px 8px !important;
+    padding: 8px 6px !important;
     border-radius: 8px !important;
     box-shadow: 0 2px 4px rgba(0,0,0,0.15) !important;
     display: flex;
@@ -105,12 +105,12 @@ div[data-testid="stMetric"] [data-testid="stMetricLabel"] p {
     letter-spacing: 0.5px !important;
     text-align: left !important;
     line-height: 1.1 !important;
-    margin-bottom: 4px !important;
+    margin-bottom: 3px !important;
     width: 100% !important;
     display: block !important;
 }
 div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
-    font-size: 1.4rem !important;
+    font-size: 1.35rem !important;
     color: #f8fafc !important;
     font-weight: 800 !important;
     text-align: center !important;
@@ -130,15 +130,15 @@ div[data-testid="stMetric"] div[data-testid="stMetricDelta"] {
     border-collapse: separate;
     border-spacing: 0;
     font-family: 'Plus Jakarta Sans', sans-serif;
-    border-radius: 8px;
+    border-radius: 6px;
     overflow: hidden;
     background-color: #1e293b;
-    margin-bottom: 15px;
+    margin-bottom: 12px;
     border: 1px solid #334155;
 }
 .modern-table thead tr { background-color: #0f172a; }
 .modern-table th {
-    padding: 8px 10px;
+    padding: 6px 8px;
     font-weight: 800;
     font-size: 0.75rem;
     color: #94a3b8;
@@ -148,7 +148,7 @@ div[data-testid="stMetric"] div[data-testid="stMetricDelta"] {
     border-bottom: 2px solid #3b82f6;
 }
 .modern-table td {
-    padding: 6px 10px;
+    padding: 5px 8px;
     font-size: 0.85rem;
     color: #f8fafc;
     text-align: center !important;
@@ -162,7 +162,7 @@ div[data-testid="stMetric"] div[data-testid="stMetricDelta"] {
     border: 1px solid #334155;
     border-top: 3px solid #3b82f6;
     border-radius: 6px;
-    padding: 8px 5px 6px 5px;
+    padding: 6px 4px 4px 4px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.15);
     text-align: center;
     margin-bottom: 4px;
@@ -170,13 +170,13 @@ div[data-testid="stMetric"] div[data-testid="stMetricDelta"] {
 }
 .card-elite:hover { transform: scale(1.03); }
 .card-elite img {
-    width: 55px; height: 55px; object-fit: cover;
+    width: 48px; height: 48px; object-fit: cover;
     border-radius: 50%; border: 2px solid #3b82f6;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.2); margin-bottom: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2); margin-bottom: 3px;
 }
 .card-elite h4 {
     color: #f8fafc; font-weight: 800; font-size: 0.8rem;
-    margin: 4px 0 0 0; text-transform: uppercase;
+    margin: 3px 0 0 0; text-transform: uppercase;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
