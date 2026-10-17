@@ -377,7 +377,7 @@ if st.session_state.get("equipo_seleccionado", False):
     lunes = hoy_dt - timedelta(days=hoy_dt.weekday())
     domingo = lunes + timedelta(days=6)
     dias_semana = [lunes + timedelta(days=i) for i in range(7)]
-    nombres_dias = ["L", "M", "X", "J", "V", "S", "D"]
+    nombres_dias = ["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES", "SÁBADO", "DOMINGO"]
 
     # --- ASIGNACIÓN DE NUMERACIÓN DINÁMICA A SESIONES ---
     sesiones_crono = sorted(st.session_state.sesiones, key=lambda x: x["fecha"])
