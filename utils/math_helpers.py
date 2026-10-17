@@ -337,23 +337,24 @@ def aplicar_color_sidebar():
             border-right: 1px solid #1e293b !important;
         }
         
-        /* Forzar flexbox para empujar elementos al fondo */
+        /* 1. Hacemos que el contenedor raíz del menú lateral ocupe toda la altura visible */
         [data-testid="stSidebarUserContent"] {
-            display: flex;
-            flex-direction: column;
-            height: calc(100vh - 4rem) !important;
+            height: 100vh !important;
+            padding-bottom: 2rem !important;
         }
         
-        /* Magia CSS: El contenedor con este div absorberá todo el espacio vacío */
+        /* 2. Convertimos el bloque interno invisible de Streamlit en un contenedor Flexbox */
+        [data-testid="stSidebarUserContent"] > div {
+            display: flex !important;
+            flex-direction: column !important;
+            height: 100% !important;
+        }
+        
+        /* 3. Magia CSS: Identificamos el espaciador y le obligamos a empujar todo hacia abajo */
         div.element-container:has(.spacer-bottom) {
             margin-top: auto !important;
         }
         
-        [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3,
-        [data-testid="stSidebar"] label, [data-testid="stSidebar"] p, [data-testid="stSidebar"] span {
-            color: #f8fafc !important; 
-            font-weight: 800 !important;
-        }
         /* Animación del Punto Verde (Live Pulse) */
         @keyframes pulse-green {
             0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
@@ -363,6 +364,12 @@ def aplicar_color_sidebar():
         .live-dot {
             height: 8px; width: 8px; background-color: #10b981; border-radius: 50%;
             display: inline-block; animation: pulse-green 2s infinite; margin-right: 6px;
+        }
+        
+        [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3,
+        [data-testid="stSidebar"] label, [data-testid="stSidebar"] p, [data-testid="stSidebar"] span {
+            color: #f8fafc !important; 
+            font-weight: 800 !important;
         }
     </style>
     """
