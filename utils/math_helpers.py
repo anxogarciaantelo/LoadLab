@@ -479,7 +479,7 @@ def render_kpi_elite(titulo, valor, subtitulo="", icono="", color_borde="#3b82f6
 
     html = f"""
     <div style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid {color_borde}; padding: 15px 12px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); display: flex; flex-direction: column; justify-content: center; height: 100%;">
-        <p style="color: #94a3b8; font-size: 0.8rem; font-weight: 800; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.2; word-wrap: break-word; text-align: left;">{titulo} {icono}</p>
+        <p style="color: #f8fafc; font-size: 1.05rem; font-weight: 800; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.2; word-wrap: break-word; text-align: left;">{titulo} {icono}</p>
         <h2 style="color: #f8fafc; font-size: 1.8rem; font-weight: 800; margin: 0; line-height: 1; text-align: center;">{valor}</h2>
         {tendencia_html}
         {f"<p style='color: {color_borde}; font-size: 0.7rem; font-weight: 600; margin: 8px 0 0 0; text-align: center;'>{subtitulo}</p>" if subtitulo else ""}
