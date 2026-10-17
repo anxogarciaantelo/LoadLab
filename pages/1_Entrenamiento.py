@@ -672,61 +672,60 @@ with tab_ses:
             mapa_micros = {num_sem: i + 1 for i, num_sem in enumerate(sorted(list(semanas_unicas)))}
             micros_sorted = sorted(micros_dict.keys(), reverse=True)
 
-            for num_sem in micros_sorted:
-                sesiones_sem = sorted(micros_dict[num_sem], key=lambda x: x["fecha"], reverse=True)
-                _, _, lunes, domingo = obtener_rango_fechas_semana(sesiones_sem[0]["fecha"])
-                micro_relativo = mapa_micros[num_sem]
+            # Agrupar en filas de 2 microciclos
+            for i in range(0, len(micros_sorted), 2):
+                micros_chunk = micros_sorted[i:i+2]
+                cols_micro = st.columns(len(micros_chunk))
                 
-                # 1. CABECERA DEL MICROCICLO (1 SOLA LÍNEA HORIZONTAL)
-                st.markdown(f"""
-                <div style='background-color: #1e293b; padding: 10px 15px; border-radius: 6px; border-left: 4px solid #3b82f6; margin-top: 15px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);'>
-                    <h4 style='margin: 0; color: #f8fafc; font-weight: 800; font-size: 1.05rem; text-transform: uppercase;'>📦 Microciclo {micro_relativo} <span style='font-size: 0.85rem; color: #94a3b8; font-weight: 700;'>({lunes.strftime('%d/%m')} - {domingo.strftime('%d/%m')})</span></h4>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                # 2. SESIONES Y BOTONES EN LA MISMA FILA
-                for sesion in sesiones_sem:
-                    idx_real = st.session_state.sesiones.index(sesion)
-                    es_partido = "Partido" in sesion['tipo']
-                    color_borde = "#dc2626" if es_partido else "#10b981"
-                    
-                    f_dt = datetime.strptime(sesion["fecha"], "%Y-%m-%d")
-                    f_str = f"{f_dt.strftime('%d/%m')}"
-                    
-                    nom_dyn = sesion.get("nombre_dinamico", "")
-                    num = ''.join(filter(str.isdigit, nom_dyn))
-                    
-                    if es_partido: 
-                        sub = sesion.get('rival', 'Rival')
-                        if "Jornada" in nom_dyn: prefix = "J"
-                        elif "Ronda" in nom_dyn: prefix = "R"
-                        elif "Amistoso" in nom_dyn: prefix = "A"
-                        else: prefix = "P"
-                        tipo_str = f"{prefix}{num} - {f_str}"
-                    else: 
-                        sub = sesion.get('descripcion', 'TD')
-                        tipo_str = f"S{num} - {f_str}"
+                for j, num_sem in enumerate(micros_chunk):
+                    with cols_micro[j]:
+                        sesiones_sem = sorted(micros_dict[num_sem], key=lambda x: x["fecha"], reverse=True)
+                        _, _, lunes, domingo = obtener_rango_fechas_semana(sesiones_sem[0]["fecha"])
+                        micro_relativo = mapa_micros[num_sem]
                         
-                    # Layout dinámico milimétrico: 4 botones para entreno, 5 para partido (anchura total equilibrada)
-                    if es_partido:
-                        col_card, c_b1, c_b2, c_b3, c_b4, c_b5 = st.columns([2.5, 1, 1, 1, 1, 1])
-                    else:
-                        col_card, c_b1, c_b2, c_b3, c_b4 = st.columns([3.5, 1, 1, 1, 1])
-                    
-                    with col_card:
                         st.markdown(f"""
-                        <div style='background-color: #0f172a; border: 1px solid #334155; border-left: 4px solid {color_borde}; border-radius: 6px; padding: 6px 12px; height: 48px; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.15); margin-bottom: 8px;'>
-                            <strong style='color: #f8fafc; font-size: 0.95rem; line-height: 1;'>{tipo_str}</strong>
-                            <span style='color: #94a3b8; font-size: 0.75rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px;'>{sub}</span>
+                        <div style='background-color: #1e293b; padding: 8px 12px; border-radius: 6px; border-top: 3px solid #3b82f6; margin-top: 15px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); text-align: center;'>
+                            <h4 style='margin: 0; color: #f8fafc; font-weight: 800; font-size: 0.95rem; text-transform: uppercase;'>📦 Micro {micro_relativo} <span style='font-size: 0.75rem; color: #94a3b8; font-weight: 700;'>({lunes.strftime('%d/%m')} - {domingo.strftime('%d/%m')})</span></h4>
                         </div>
                         """, unsafe_allow_html=True)
                         
-                    if c_b1.button("🏥", key=f"bd_{idx_real}", help="Disponibilidad", use_container_width=True): toggle_view(idx_real, "disp"); st.rerun()
-                    if c_b2.button("📊", key=f"bi_{idx_real}", help="Informe", use_container_width=True): toggle_view(idx_real, "inf"); st.rerun()
-                    if c_b3.button("📂", key=f"bc_{idx_real}", help="Cargar Datos", use_container_width=True): toggle_view(idx_real, "datos"); st.rerun()
-                    if c_b4.button("🚑", key=f"bl_{idx_real}", help="Lesión", use_container_width=True): toggle_view(idx_real, "les"); st.rerun()
-                    if es_partido:
-                        if c_b5.button("⚡", key=f"bs_{idx_real}", help="Stats Partido", use_container_width=True): toggle_view(idx_real, "stats"); st.rerun()
+                        for sesion in sesiones_sem:
+                            idx_real = st.session_state.sesiones.index(sesion)
+                            es_partido = "Partido" in sesion['tipo']
+                            color_borde = "#dc2626" if es_partido else "#10b981"
+                            
+                            f_dt = datetime.strptime(sesion["fecha"], "%Y-%m-%d")
+                            f_str = f"{f_dt.strftime('%d/%m')}"
+                            
+                            nom_dyn = sesion.get("nombre_dinamico", "")
+                            num = ''.join(filter(str.isdigit, nom_dyn))
+                            
+                            if es_partido: 
+                                sub = sesion.get('rival', 'Rival')
+                                prefix = "J" if "Jornada" in nom_dyn else ("R" if "Ronda" in nom_dyn else ("A" if "Amistoso" in nom_dyn else "P"))
+                                tipo_str = f"{prefix}{num} - {f_str}"
+                            else: 
+                                sub = sesion.get('descripcion', 'TD')
+                                tipo_str = f"S{num} - {f_str}"
+                                
+                            # 6 columnas estrictas para igualar anchuras en entrenos y partidos. 
+                            # La tarjeta ocupa un ratio de 3.2 frente al 1 de los botones (ajuste milimétrico)
+                            col_card, c_b1, c_b2, c_b3, c_b4, c_b5 = st.columns([3.2, 1, 1, 1, 1, 1])
+                            
+                            with col_card:
+                                st.markdown(f"""
+                                <div style='background-color: #0f172a; border: 1px solid #334155; border-left: 3px solid {color_borde}; border-radius: 6px; padding: 4px 8px; height: 48px; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.15); margin-bottom: 8px;'>
+                                    <strong style='color: #f8fafc; font-size: 0.9rem; line-height: 1;'>{tipo_str}</strong>
+                                    <span style='color: #94a3b8; font-size: 0.7rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px;'>{sub}</span>
+                                </div>
+                                """, unsafe_allow_html=True)
+                                
+                            if c_b1.button("🏥", key=f"bd_{idx_real}", help="Disponibilidad", use_container_width=True): toggle_view(idx_real, "disp"); st.rerun()
+                            if c_b2.button("📊", key=f"bi_{idx_real}", help="Informe", use_container_width=True): toggle_view(idx_real, "inf"); st.rerun()
+                            if c_b3.button("📂", key=f"bc_{idx_real}", help="Cargar Datos", use_container_width=True): toggle_view(idx_real, "datos"); st.rerun()
+                            if c_b4.button("🚑", key=f"bl_{idx_real}", help="Lesión", use_container_width=True): toggle_view(idx_real, "les"); st.rerun()
+                            if es_partido:
+                                if c_b5.button("⚡", key=f"bs_{idx_real}", help="Stats Partido", use_container_width=True): toggle_view(idx_real, "stats"); st.rerun()
 
         # =======================================================
         # VISTA 2: PANTALLA COMPLETA PARA HERRAMIENTAS (ROUTER)
