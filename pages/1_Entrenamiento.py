@@ -624,1136 +624,722 @@ with tab_ses:
             icono="📅", 
             titulo="Sin sesiones registradas", 
             descripcion="Aún no has planificado ningún entrenamiento o partido. LoadLab necesita este calendario para mapear la fatiga del equipo.",
-            accion_sugerida="Ve a la pestaña '🗓️ Calendario' para generar tu primer evento o importa un Excel histórico."
+            accion_sugerida="Ve a la pestaña '➕ Añadir Sesión' para generar tu primer evento."
         )
-    
-    hoy_str = str(date.today())
-    
-    # 1. Separar y ordenar: Futuras (ascendente, lo más inminente arriba) | Pasadas (descendente, lo más reciente arriba)
-    sesiones_futuras = sorted([s for s in st.session_state.sesiones if s["fecha"] > hoy_str], key=lambda x: x["fecha"])
-    sesiones_pasadas = sorted([s for s in st.session_state.sesiones if s["fecha"] <= hoy_str], key=lambda x: x["fecha"], reverse=True)
-    
-    sesiones_ordenadas = sesiones_futuras + sesiones_pasadas
-    
-    mostrado_futuras = False
-    mostrado_pasadas = False
+    else:
+        # 1. Agrupar sesiones por microciclo
+        micros_dict = {}
+        for s in st.session_state.sesiones:
+            num_sem = obtener_numero_semana(s["fecha"])
+            if num_sem not in micros_dict:
+                micros_dict[num_sem] = []
+            micros_dict[num_sem].append(s)
+            
+        micros_sorted = sorted(micros_dict.keys(), reverse=True)
         
-    for idx_visual, sesion in enumerate(sesiones_ordenadas):
-        # Inyección de Títulos Separadores Dinámicos sin duplicar el bloque de renderizado
-        if sesion["fecha"] > hoy_str and not mostrado_futuras:
-            st.markdown("<div style='background-color: rgba(59, 130, 246, 0.15); border-left: 4px solid #3b82f6; padding: 12px 18px; border-radius: 8px; margin-bottom: 20px;'><h4 style='color:#3b82f6; margin:0; font-weight:800; letter-spacing:0.5px;'>⏳ SEMANA EN CURSO / PLANIFICACIÓN FUTURA</h4></div>", unsafe_allow_html=True)
-            mostrado_futuras = True
+        # Gestión de estado de la vista activa para ultra-rendimiento (Solo carga 1 panel a la vez)
+        if "ses_activa_idx" not in st.session_state:
+            st.session_state.ses_activa_idx = None
+        if "ses_activa_view" not in st.session_state:
+            st.session_state.ses_activa_view = None
+
+        # Renderizar microciclos
+        for num_sem in micros_sorted:
+            sesiones_sem = sorted(micros_dict[num_sem], key=lambda x: x["fecha"])
+            _, _, lunes, domingo = obtener_rango_fechas_semana(sesiones_sem[0]["fecha"])
             
-        elif sesion["fecha"] <= hoy_str and not mostrado_pasadas:
-            margin_top = "margin-top: 40px;" if mostrado_futuras else ""
-            st.markdown(f"<div style='background-color: rgba(16, 185, 129, 0.15); border-left: 4px solid #10b981; padding: 12px 18px; border-radius: 8px; margin-bottom: 20px; {margin_top}'><h4 style='color:#10b981; margin:0; font-weight:800; letter-spacing:0.5px;'>✅ HISTORIAL COMPLETADO</h4></div>", unsafe_allow_html=True)
-            mostrado_pasadas = True
-
-        idx_real = st.session_state.sesiones.index(sesion)
-        es_partido = "Partido" in sesion['tipo']
-        nombre_ev = sesion.get("nombre_dinamico", sesion["tipo"])
-        detalle_ev = sesion.get("subtitulo_dinamico", sesion.get("descripcion", ""))
-        clima = sesion.get("clima")
-        if clima:
-            detalle_ev += f" | 🌡️ {clima['temp']}°C | {clima['estado']}"
-        with st.container():
-            col_s1, col_s2, col_s3, col_s4, col_s5, col_s6, col_s7 = st.columns([1.5, 2.2, 1.2, 1.2, 1.2, 1.2, 1.2])
-            fecha_formateada = datetime.strptime(sesion['fecha'], "%Y-%m-%d").strftime("%d-%m-%Y")
-            col_s1.write(f"📅 **{fecha_formateada}**")
-            col_s2.write(f"⚽ **{nombre_ev}**\n\n<small>{detalle_ev}</small>", unsafe_allow_html=True)
+            st.markdown(f"""
+            <div style='background-color: #1e293b; padding: 12px 18px; border-radius: 8px; border-left: 4px solid #3b82f6; margin-top: 25px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);'>
+                <h4 style='margin: 0; color: #f8fafc; font-weight: 800; text-transform: uppercase;'>📦 MICROCICLO {num_sem} 
+                <span style='font-size: 0.95rem; color: #94a3b8; font-weight: 700;'>(Semana {lunes.strftime('%d/%m')} al {domingo.strftime('%d/%m')})</span></h4>
+            </div>
+            """, unsafe_allow_html=True)
             
-            if col_s3.button("🏥 Disponibilidad", key=f"btn_disp_{idx_real}"):
-                st.session_state[f"mostrar_disp_{idx_real}"] = not st.session_state.get(f"mostrar_disp_{idx_real}", False)
-                st.session_state[f"mostrar_informe_{idx_real}"] = False
-                st.session_state[f"mostrar_datos_{idx_real}"] = False
-                st.session_state[f"mostrar_lesion_{idx_real}"] = False
-                st.session_state[f"mostrar_stats_partido_{idx_real}"] = False
-            
-            if col_s4.button("📊 Informe", key=f"btn_inf_{idx_real}"):
-                st.session_state[f"mostrar_informe_{idx_real}"] = not st.session_state.get(f"mostrar_informe_{idx_real}", False)
-                st.session_state[f"mostrar_disp_{idx_real}"] = False
-                st.session_state[f"mostrar_datos_{idx_real}"] = False
-                st.session_state[f"mostrar_lesion_{idx_real}"] = False
-                st.session_state[f"mostrar_stats_partido_{idx_real}"] = False
+            # Cuadrícula horizontal para las sesiones (Máximo 7 columnas por fila)
+            cols = st.columns(7)
+            for i, sesion in enumerate(sesiones_sem):
+                col_idx = i % 7
+                idx_real = st.session_state.sesiones.index(sesion)
+                es_partido = "Partido" in sesion['tipo']
+                color_borde = "#dc2626" if es_partido else "#10b981"
                 
-            if col_s5.button("📂 Cargar Datos", key=f"btn_datos_{idx_real}"):
-                st.session_state[f"mostrar_datos_{idx_real}"] = not st.session_state.get(f"mostrar_datos_{idx_real}", False)
-                st.session_state[f"mostrar_informe_{idx_real}"] = False
-                st.session_state[f"mostrar_disp_{idx_real}"] = False
-                st.session_state[f"mostrar_lesion_{idx_real}"] = False
-                st.session_state[f"mostrar_stats_partido_{idx_real}"] = False
-
-            if col_s6.button("🚑 Lesión", key=f"btn_lesion_{idx_real}"):
-                st.session_state[f"mostrar_lesion_{idx_real}"] = not st.session_state.get(f"mostrar_lesion_{idx_real}", False)
-                st.session_state[f"mostrar_informe_{idx_real}"] = False
-                st.session_state[f"mostrar_disp_{idx_real}"] = False
-                st.session_state[f"mostrar_datos_{idx_real}"] = False
-                st.session_state[f"mostrar_stats_partido_{idx_real}"] = False
+                f_dt = datetime.strptime(sesion["fecha"], "%Y-%m-%d")
+                dia_semana = ["L", "M", "X", "J", "V", "S", "D"][f_dt.weekday()]
+                f_str = f"{dia_semana} {f_dt.strftime('%d/%m')}"
                 
-            if es_partido:
-                if col_s7.button("⚡ Stats Partido", key=f"btn_stats_{idx_real}"):
-                    st.session_state[f"mostrar_stats_partido_{idx_real}"] = not st.session_state.get(f"mostrar_stats_partido_{idx_real}", False)
-                    st.session_state[f"mostrar_informe_{idx_real}"] = False
-                    st.session_state[f"mostrar_disp_{idx_real}"] = False
-                    st.session_state[f"mostrar_datos_{idx_real}"] = False
-                    st.session_state[f"mostrar_lesion_{idx_real}"] = False
-            else:
-                col_s7.write("")
+                nom_dyn = sesion.get("nombre_dinamico", sesion["tipo"])
+                if es_partido: sub = sesion.get('rival', 'Rival')
+                else: sub = sesion.get('descripcion', 'TD')
                 
-        if st.session_state.get(f"mostrar_disp_{idx_real}", False):
-            st.markdown("---")
-            st.markdown(f"#### 🏥 CONTROL DE DISPONIBILIDAD | {sesion['fecha']}")
-            if es_partido:
-                opciones_disp = ["Titular", "Suplente", "No convocado", "Lesionado", "Enfermo", "Selección", "No disponible"]
-                default_disp = "Titular"
-            else:
-                opciones_disp = ["Disponible", "Lesionado", "Readaptación", "Enfermo", "Falta", "Selección", "No disponible"]
-                default_disp = "Disponible"
-            
-            disp_dict = sesion.get("disponibilidad", {})
-            disp_dict_clean = {limpiar_nombre(k): v for k, v in disp_dict.items()}
-            
-            conteos = Counter([disp_dict_clean.get(limpiar_nombre(j["JUGADOR"]), default_disp) for j in st.session_state.plantilla])
-            cols_metricas = st.columns(len(opciones_disp))
-            for i, opc in enumerate(opciones_disp): cols_metricas[i].metric(opc, conteos.get(opc, 0))
-            
-            with st.form(key=f"form_disp_{idx_real}"):
-                for i in range(0, len(st.session_state.plantilla), 2):
-                    col_d1, col_d2 = st.columns(2)
-                    jugador1 = st.session_state.plantilla[i]["JUGADOR"]
-                    estado1 = disp_dict_clean.get(limpiar_nombre(jugador1), default_disp)
-                    if estado1 not in opciones_disp: estado1 = opciones_disp[0]
-                    nuevo1 = col_d1.selectbox(f"👤 {jugador1}", opciones_disp, index=opciones_disp.index(estado1), key=f"sel1_{idx_real}_{jugador1}")
-                    if "disponibilidad" not in st.session_state.sesiones[idx_real]: st.session_state.sesiones[idx_real]["disponibilidad"] = {}
-                    st.session_state.sesiones[idx_real]["disponibilidad"][jugador1] = nuevo1
+                with cols[col_idx]:
+                    st.markdown(f"""
+                    <div style='background-color: #0f172a; border: 1px solid #334155; border-top: 3px solid {color_borde}; border-radius: 8px; padding: 10px 5px; text-align: center; margin-bottom: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); height: 70px; display: flex; flex-direction: column; justify-content: center;'>
+                        <strong style='color: #f8fafc; font-size: 0.95rem;'>{f_str}</strong>
+                        <span style='color: #94a3b8; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;' title='{sub}'>{sub}</span>
+                    </div>
+                    """, unsafe_allow_html=True)
                     
-                    if i + 1 < len(st.session_state.plantilla):
-                        jugador2 = st.session_state.plantilla[i+1]["JUGADOR"]
-                        estado2 = disp_dict_clean.get(limpiar_nombre(jugador2), default_disp)
-                        if estado2 not in opciones_disp: estado2 = opciones_disp[0]
-                        nuevo2 = col_d2.selectbox(f"👤 {jugador2}", opciones_disp, index=opciones_disp.index(estado2), key=f"sel2_{idx_real}_{jugador2}")
-                        st.session_state.sesiones[idx_real]["disponibilidad"][jugador2] = nuevo2
-                if st.form_submit_button("💾 Guardar Cambios"):
-                    guardar_datos(modulo="sesiones")
-                    st.success("Disponibilidad guardada.")
-                    st.rerun()
-            st.markdown("---")
-
-        if st.session_state.get(f"mostrar_informe_{idx_real}", False):
-            st.markdown("---")
-            if sesion.get("informe_generado", False) and sesion.get("datos_informe"):
-                df_informe = pd.DataFrame(sesion["datos_informe"])
-                
-                # --- 1. FORZAR CONVERSIÓN NUMÉRICA ESTRICTA ---
-                cols_metricas = [
-                    'TQR', 'WELLNESS', 'W_Humor', 'W_Sueño', 'W_Fatiga', 'W_Dolor', 'W_Estres', 
-                    'RPE', 'MIN', 'CARGA', 'DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC', 'VMAX',
-                    'HID >21', 'SPR >24', 'ACC >3', 'DCC >3', 'V_Max'
-                ]
-                for c in cols_metricas:
-                    if c in df_informe.columns:
-                        df_informe[c] = pd.to_numeric(df_informe[c], errors='coerce').fillna(0.0)
-                # ---------------------------------------------
-                
-                # MAPEO ESTRICTO PARA EL INFORME: Que use los nombres de las columnas detalladas si existen
-                if 'HID >21' in df_informe.columns: df_informe['DIS AI'] = df_informe['HID >21']
-                if 'SPR >24' in df_informe.columns: df_informe['Nº SPR'] = df_informe['SPR >24']
-                if 'ACC >3' in df_informe.columns:  df_informe['ACC'] = df_informe['ACC >3']
-                if 'DCC >3' in df_informe.columns:  df_informe['DCC'] = df_informe['DCC >3']
-                if 'V_Max' in df_informe.columns:   df_informe['VMAX'] = df_informe['V_Max']
-                
-                disp_dict = sesion.get("disponibilidad", {})
-                disp_dict_clean = {limpiar_nombre(k): v for k, v in disp_dict.items()}
-                default_disp = "Titular" if es_partido else "Disponible"
-                
-                df_informe['ESTADO'] = df_informe['JUGADOR'].map(lambda j: disp_dict_clean.get(limpiar_nombre(j), default_disp))
-
-                # Extraer instantáneamente desde la base de datos central sin recalcular
-                df_master_sesion = st.session_state.df_master_informes[st.session_state.df_master_informes['FECHA'] == sesion["fecha"]]
-                df_master_sesion = df_master_sesion.drop_duplicates(subset=['JUGADOR'], keep='last')
-                dic_ewma = df_master_sesion.set_index('JUGADOR')[['EWMA AGUDA', 'EWMA CRÓNICA', 'RATIO A/C']].to_dict('index')
-                
-                df_informe['EWMA AGUDA'] = df_informe['JUGADOR'].map(lambda j: dic_ewma.get(j, {}).get('EWMA AGUDA', 0.0))
-                df_informe['EWMA CRÓNICA'] = df_informe['JUGADOR'].map(lambda j: dic_ewma.get(j, {}).get('EWMA CRÓNICA', 0.0))
-                df_informe['RATIO A/C'] = df_informe['JUGADOR'].map(lambda j: dic_ewma.get(j, {}).get('RATIO A/C', 0.0))
-
-                col_filt1, col_filt2 = st.columns(2)
-                with col_filt1:
-                    filtro_pos = st.radio("Posición:", ["TODOS", "POR", "DEF", "MED", "ATA"], horizontal=True, key=f"rp_{idx_real}")
-                    if filtro_pos != "TODOS": df_informe = df_informe[df_informe["POS"] == filtro_pos]
-                if es_partido:
-                    with col_filt2:
-                        filtro_rol = st.radio("Rol:", ["TODOS", "Titular", "Suplente"], horizontal=True, key=f"rr_{idx_real}")
-                        if filtro_rol != "TODOS": df_informe = df_informe[df_informe["ESTADO"] == filtro_rol]
-
-                # FILTRO ESTRICTO DE MEDIAS PARA EL EQUIPO (Sin Porteros)
-                estados_validos_medias = ["Disponible", "Titular", "Suplente"]
-                df_para_medias = df_informe[(df_informe['ESTADO'].isin(estados_validos_medias)) & (df_informe['POS'] != "POR")].copy()
-                
-                df_para_medias['TQR'] = df_para_medias['TQR'].replace(0, np.nan)
-                df_para_medias['WELLNESS'] = df_para_medias['WELLNESS'].replace(0, np.nan)
-                df_para_medias['RPE'] = df_para_medias['RPE'].replace(0, np.nan)
-                
-                # FILTRO ESTRICTO DE MEDIAS GPS (Solo si tienen distancia > 0)
-                df_para_medias_gps = df_para_medias[df_para_medias['DIS'] > 0].copy()
-                
-                # TABLAS Y GRÁFICOS MOSTRARÁN A TODOS LOS JUGADORES
-                df_graficos = df_informe[df_informe['JUGADOR'] != ""].copy()
-                fig_well = fig_tqr = fig2 = fig3 = fig5 = fig4 = None
-
-                if not df_informe.empty:
-                    # --- 2. CÁLCULO SEGURO DE MEDIAS GLOBALES ---
-                    tqr_m = df_para_medias['TQR'].mean()
-                    tqr_m = tqr_m if pd.notna(tqr_m) else 0.0
-                    
-                    well_m = df_para_medias['WELLNESS'].mean()
-                    well_m = well_m if pd.notna(well_m) else 0.0
-                    
-                    rpe_m = df_para_medias['RPE'].mean()
-                    rpe_m = rpe_m if pd.notna(rpe_m) else 0.0
-                    
-                    carga_m = df_para_medias['CARGA'].mean()
-                    carga_m = carga_m if pd.notna(carga_m) else 0.0
-                    
-                    min_m = df_para_medias['MIN'].mean()
-                    min_m = min_m if pd.notna(min_m) else 0.0
-
-                    # --- KPIs GLOBALES SUPERIORES DE LA SESIÓN ---
-                    kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-                    kpi1.metric("TQR Medio (Recuperación)", f"{tqr_m:.1f} / 10")
-                    kpi2.metric("Wellness Medio (Fatiga)", f"{well_m:.1f} pts")
-                    kpi3.metric("RPE Medio (Esfuerzo)", f"{rpe_m:.1f} / 10")
-                    kpi4.metric("Carga Media Sesión", f"{carga_m:.0f} UA")
-
-                    st.markdown("---")
-
-                    # --- SECCIÓN 1: BIENESTAR Y RECUPERACIÓN ---
-                    st.markdown("#### 🧠 1. Bienestar y Recuperación")
-                    cg1, cg2 = st.columns(2)
-                    
-                    with cg1:
-                        if df_graficos['WELLNESS'].sum() > 0:
-                            df_well = df_graficos[df_graficos['WELLNESS'] > 0].sort_values('WELLNESS', ascending=False).copy()
-                            nombres_limpios = {
-                                'W_Sueño': 'Sueño', 
-                                'W_Fatiga': 'Fatiga', 
-                                'W_Dolor': 'Dolor', 
-                                'W_Estres': 'Estrés', 
-                                'W_Humor': 'Humor'
-                            }
-                            df_well = df_well.rename(columns=nombres_limpios)
-                            cols_wellness = list(nombres_limpios.values())
-                            
-                            fig_well = go.Figure()
-                            colores_w = px.colors.qualitative.Set2
-                            
-                            for i, factor in enumerate(cols_wellness):
-                                fig_well.add_trace(go.Bar(x=df_well['JUGADOR'], y=df_well[factor], name=factor, marker_color=colores_w[i]))
-                            
-                            fig_well.update_layout(
-                                title="<b>Desglose de Wellness por Componentes</b>",
-                                barmode='stack',
-                                yaxis_title="Puntos",
-                                legend_title_text="Factores",
-                                yaxis_range=[0, 35],
-                                xaxis_tickangle=-45,
-                                plot_bgcolor='rgba(0,0,0,0)',
-                                paper_bgcolor='rgba(0,0,0,0)',
-                                margin=dict(t=40, b=120, l=40, r=40),
-                                hovermode="x unified"
-                            )
-                            fig_well.add_hline(y=18, line_dash="dot", line_color="orange", annotation_text="Moderado (18)", annotation_position="bottom right")
-                            fig_well.add_hline(y=24, line_dash="dash", line_color="red", annotation_text="Crítico (24)", annotation_position="top right")
-                            st.plotly_chart(fig_well, use_container_width=True, key=f"ses_well_detalle_grafico_{idx_real}")
-                    
-                    with cg2:
-                        if df_graficos['TQR'].sum() > 0:
-                            df_tqr = df_graficos[df_graficos['TQR'] > 0].sort_values('TQR')
-                            fig_tqr = px.bar(
-                                df_tqr, x='JUGADOR', y='TQR', 
-                                color='TQR', color_continuous_scale="RdYlGn", range_color=[1, 10], 
-                                title="Calidad de Recuperación (TQR)"
-                            )
-                            # AÑADIDO: Fijamos el eje Y de 1 a 10 estrictamente
-                            fig_tqr.update_yaxes(range=[1, 10])
-                            st.plotly_chart(fig_tqr, use_container_width=True, key=f"ses_tqr_grafico_{idx_real}")
-                    
-                    st.markdown("---")
-                    
-                    # --- SECCIÓN 2: CARGA INTERNA ---
-                    st.markdown("#### 🔥 2. Carga Interna")
-                    ci1, ci2, ci3 = st.columns(3)
-                    ci1.metric("Minutos Sesión (Media)", f"{min_m:.1f}")
-                    ci2.metric("RPE Medio", f"{rpe_m:.1f}")
-                    ci3.metric("Carga Media (UA)", f"{carga_m:.0f}")
-                    
-                    cols_ver_ci = ['JUGADOR', 'POS', 'ESTADO', 'MIN', 'RPE', 'CARGA', 'EWMA AGUDA', 'EWMA CRÓNICA', 'RATIO A/C']
-                    
-                    estilo_ci = (df_informe[cols_ver_ci].style
-                                 .hide(axis="index")
-                                 .format(precision=2)
-                                 .background_gradient(subset=['RPE'], cmap='Reds', vmin=0, vmax=10)
-                                 .map(lambda x: f"background-color: {color_ratio_ac(x)}; color: black;" if isinstance(x, (int, float)) else "", subset=['RATIO A/C'])
-                                 .set_table_attributes('class="modern-table"')
-                                )
-                    
-                    css_personalizado = "<style>.modern-table { width: 100%; border-collapse: collapse; font-family: sans-serif; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); background-color: white; margin-bottom: 20px; } .modern-table thead tr { background-color: #000000; color: #ffffff; } .modern-table th { padding: 12px 15px; font-weight: bold; text-align: center !important; border-bottom: 2px solid #333333; } .modern-table td { padding: 10px 15px; text-align: center !important; border-bottom: 1px solid #eeeeee; } .modern-table tbody tr:hover td { filter: brightness(0.95); }</style>"
-                    
-                    st.markdown(css_personalizado + estilo_ci.to_html(), unsafe_allow_html=True)
-                    
-                    cg3, cg4 = st.columns(2)
-                    with cg3:
-                        if df_graficos['CARGA'].sum() > 0:
-                            df_ci = df_graficos[df_graficos['CARGA'] > 0].sort_values('CARGA', ascending=False)
-                            fig2 = px.bar(
-                                df_ci, x='JUGADOR', y='CARGA', 
-                                color='RPE', color_continuous_scale="Reds", 
-                                range_color=[0, 10], title="Carga de Sesión (Min * RPE)"
-                            )
-                            if not df_para_medias.empty:
-                                media_equipo = df_para_medias['CARGA'].mean()
-                                fig2.add_hline(
-                                    y=media_equipo, 
-                                    line_dash="dot", 
-                                    line_color="gray", 
-                                    annotation_text=f"Media Equipo: {media_equipo:.0f} UA", 
-                                    annotation_position="top right"
-                                )
-                            st.plotly_chart(fig2, use_container_width=True, key=f"ses_carga_grafico_{idx_real}")
-                    with cg4:
-                        if df_graficos['RATIO A/C'].sum() > 0:
-                            df_ac = df_graficos[df_graficos['RATIO A/C'] > 0].sort_values('RATIO A/C', ascending=False).copy()
-                            df_ac['Color_AC'] = df_ac['RATIO A/C'].apply(color_ratio_ac)
-                            fig3 = go.Figure(data=[go.Bar(
-                                x=df_ac['JUGADOR'], 
-                                y=df_ac['RATIO A/C'], 
-                                marker_color=df_ac['Color_AC'], 
-                                text=df_ac['RATIO A/C'].round(2), 
-                                textposition='auto'
-                            )])
-                            fig3.update_layout(title="Riesgo de Lesión (Ratio A/C)")
-                            fig3.add_hline(y=1.4, line_dash="dash", line_color="#ff4b4b")
-                            st.plotly_chart(fig3, use_container_width=True, key=f"ses_ac_grafico_{idx_real}")
-                    
-                    st.markdown("---")
-                    
-                    # --- SECCIÓN 3: CARGA EXTERNA ---
-                    st.markdown("#### 🏃‍♂️ 3. Carga Externa (GPS) - Solo jugadores con GPS > 0m")
-                    
-                    dis_m = df_para_medias_gps['DIS'].mean()
-                    dis_m = dis_m if pd.notna(dis_m) else 0.0
-                    
-                    hsr_m = df_para_medias_gps['DIS AI'].mean()
-                    hsr_m = hsr_m if pd.notna(hsr_m) else 0.0
-                    
-                    spr_m = df_para_medias_gps['Nº SPR'].mean()
-                    spr_m = spr_m if pd.notna(spr_m) else 0.0
-                    
-                    acc_m = df_para_medias_gps['ACC'].mean()
-                    acc_m = acc_m if pd.notna(acc_m) else 0.0
-                    
-                    dcc_m = df_para_medias_gps['DCC'].mean()
-                    dcc_m = dcc_m if pd.notna(dcc_m) else 0.0
-                    
-                    ce1, ce2, ce3, ce4, ce5 = st.columns(5)
-                    ce1.metric("Distancia (km)", f"{dis_m:.2f}")
-                    ce2.metric("HSR (>21 km/h)", f"{hsr_m:.2f}")
-                    ce3.metric("Nº SPRINTS (>24 km/h)", f"{spr_m:.1f}")
-                    ce4.metric("ACC (>3 m/s²)", f"{acc_m:.0f}")
-                    ce5.metric("DCC (>3 m/s²)", f"{dcc_m:.0f}")
-                    
-                    if 'HID >21' not in df_informe.columns:
-                        df_informe['HID >21'] = df_informe.get('DIS AI', 0.0)
-                    
-                    cols_ver_ce = ['JUGADOR', 'POS', 'ESTADO', 'DIS', 'HID >21', 'Nº SPR', 'ACC', 'DCC', 'VMAX']
-                    
-                    # AÑADIDO: Filtramos el DataFrame para quedarnos solo con los jugadores que llevaron GPS (Distancia > 0)
-                    df_tabla_ce = df_informe[df_informe['DIS'] > 0]
-                    mostrar_tabla_moderna(df_tabla_ce[cols_ver_ce].style.hide(axis="index").format(precision=2))
-                    
-                    cg5, cg6 = st.columns(2)
-                    with cg5:
-                        if df_graficos['DIS'].sum() > 0:
-                            df_gps_sesion = df_graficos[df_graficos['DIS'] > 0].copy()
-                            fig5 = px.scatter(
-                                df_gps_sesion, 
-                                x='DIS', 
-                                y='DIS AI', 
-                                color='POS', 
-                                hover_name='JUGADOR', 
-                                text='JUGADOR', 
-                                title="Volumen vs Intensidad",
-                                color_discrete_map={"POR": "gray", "DEF": "#00b4d8", "MED": "#28a745", "ATA": "#ff4b4b"}
-                            )
-                            fig5.update_traces(
-                                textposition='top center', 
-                                marker=dict(size=12, opacity=0.8, line=dict(width=1, color='DarkSlateGrey'))
-                            )
-                            media_vol = df_gps_sesion['DIS'].mean()
-                            media_int = df_gps_sesion['DIS AI'].mean()
-                            fig5.add_vline(x=media_vol, line_dash="dot", line_color="gray", opacity=0.6)
-                            fig5.add_hline(y=media_int, line_dash="dot", line_color="gray", opacity=0.6)
-                            st.plotly_chart(fig5, use_container_width=True, key=f"ses_hsr_grafico_{idx_real}")
-                    with cg6:
-                        if df_graficos['ACC'].sum() > 0 or df_graficos['DCC'].sum() > 0:
-                            df_accdcc = df_graficos[df_graficos['DIS'] > 0]
-                            max_val = max(df_accdcc['ACC'].max(), df_accdcc['DCC'].max()) * 1.1 if not df_accdcc.empty else 10
-                            fig4 = px.scatter(
-                                df_accdcc, x='DCC', y='ACC', color='POS', 
-                                hover_name='JUGADOR', 
-                                text='JUGADOR', # <--- AÑADIDO: Muestra el nombre en el punto
-                                title="ACC vs DCC",
-                                color_discrete_map={"POR": "gray", "DEF": "#00b4d8", "MED": "#28a745", "ATA": "#ff4b4b"}
-                            )
-                            fig4.update_traces(
-                                textposition='top center', # <--- AÑADIDO: Coloca el texto arriba del punto
-                                marker=dict(size=12, opacity=0.8, line=dict(width=1, color='DarkSlateGrey')) # Añadimos el borde oscuro para igualarlo al otro gráfico
-                            )
-                            fig4.add_shape(type="line", x0=0, y0=0, x1=max_val, y1=max_val, line=dict(color="gray", dash="dot"))
-                            fig4.update_layout(yaxis=dict(scaleanchor="x", scaleratio=1))
-                            st.plotly_chart(fig4, use_container_width=True, key=f"ses_accdcc_grafico_{idx_real}")
-                    st.markdown("---")
-                    st.markdown("#### ⚠️ Alertas de Riesgo lesivo alto")
-                
-                    media_carga = df_para_medias['CARGA'].mean() if not df_para_medias.empty else 0
-                    std_carga = df_para_medias['CARGA'].std(ddof=0) if not df_para_medias.empty else 0
-                    umbral_carga = media_carga + (2.0 * std_carga) if std_carga > 0 else media_carga * 1.4
-
-                    alertas_jugadores = {}
-                    activos = df_informe[df_informe['ESTADO'].isin(["Disponible", "Titular", "Suplente"])]
-
-                    for idx_row, row in activos.iterrows():
-                        jug = row['JUGADOR']
-                        alertas_jugadores[jug] = {'recuperacion': [], 'carga': [], 'total': 0}
-                        
-                        tqr = safe_float(row.get('TQR'))
-                        well = safe_float(row.get('WELLNESS'))
-                        
-                        if tqr > 0:
-                            if tqr <= 3:
-                                alertas_jugadores[jug]['recuperacion'].append(f"🔴 Recuperación Crítica ({tqr:.1f})")
-                                alertas_jugadores[jug]['total'] += 1
-                            elif tqr == 4:
-                                alertas_jugadores[jug]['recuperacion'].append(f"🟡 Recuperación Moderada ({tqr:.1f})")
-                                alertas_jugadores[jug]['total'] += 1
-                                
-                        if well > 0:
-                            if well >= 24:
-                                alertas_jugadores[jug]['recuperacion'].append(f"🔴 Wellness Crítico ({well:.1f})")
-                                alertas_jugadores[jug]['total'] += 1
-                            elif 18 <= well <= 23:
-                                alertas_jugadores[jug]['recuperacion'].append(f"🟡 Wellness Moderado ({well:.1f})")
-                                alertas_jugadores[jug]['total'] += 1
-
-                        ratio_ac = safe_float(row.get('RATIO A/C'))
-                        carga_aguda = safe_float(row.get('EWMA AGUDA'))
-                        carga_sesion = safe_float(row.get('CARGA'))
-                        
-                        if carga_aguda > 1000:
-                            if ratio_ac >= 1.5:
-                                alertas_jugadores[jug]['carga'].append(f"🔴 Ratio A/C en riesgo alto ({ratio_ac:.2f})")
-                                alertas_jugadores[jug]['total'] += 1
-                            elif 1.35 <= ratio_ac < 1.5:
-                                alertas_jugadores[jug]['carga'].append(f"🟡 Ratio A/C en riesgo moderado ({ratio_ac:.2f})")
-                                alertas_jugadores[jug]['total'] += 1
-                                
-                        if media_carga > 0 and carga_sesion > umbral_carga:
-                            alertas_jugadores[jug]['carga'].append(f"🟠 Carga Anormal ({carga_sesion:.0f} UA vs Media {media_carga:.0f} UA)")
-                            alertas_jugadores[jug]['total'] += 1
-                            
-                        monot = calcular_monotonia_7d(st.session_state.sesiones, jug, sesion['fecha'])
-                        strain = carga_aguda * monot
-                        if monot > 2.0 and strain > 4000:
-                            alertas_jugadores[jug]['carga'].append(f"🟡 Riesgo por monotonía y fatiga acumulada (Monotonía {monot:.2f}, Strain {strain:.0f})")
-                            alertas_jugadores[jug]['total'] += 1
-                            
-                    alertas_multi = []
-                    alertas_rec = []
-                    alertas_car = []
-                    
-                    for jug, data in alertas_jugadores.items():
-                        if data['total'] >= 2:
-                            alertas_multi.append(f"**{jug}** ({data['total']} alertas): " + " | ".join(data['recuperacion'] + data['carga']))
-                        elif data['total'] == 1:
-                            if data['recuperacion']: alertas_rec.append(f"**{jug}**: {data['recuperacion'][0]}")
-                            if data['carga']: alertas_car.append(f"**{jug}**: {data['carga'][0]}")
-
-                    if not alertas_multi and not alertas_rec and not alertas_car:
-                        st.success("✅ Todos los marcadores de fatiga y riesgo del equipo están dentro de los parámetros normales.")
+                    # Botones de herramientas compactos en la propia tarjeta
+                    b_cols = st.columns(5)
+                    if b_cols[0].button("🏥", key=f"bd_{idx_real}", help="Disponibilidad"):
+                        st.session_state.ses_activa_idx = idx_real; st.session_state.ses_activa_view = "disp"; st.rerun()
+                    if b_cols[1].button("📊", key=f"bi_{idx_real}", help="Informe"):
+                        st.session_state.ses_activa_idx = idx_real; st.session_state.ses_activa_view = "inf"; st.rerun()
+                    if b_cols[2].button("📂", key=f"bc_{idx_real}", help="Cargar Datos"):
+                        st.session_state.ses_activa_idx = idx_real; st.session_state.ses_activa_view = "datos"; st.rerun()
+                    if b_cols[3].button("🚑", key=f"bl_{idx_real}", help="Lesión"):
+                        st.session_state.ses_activa_idx = idx_real; st.session_state.ses_activa_view = "les"; st.rerun()
+                    if es_partido:
+                        if b_cols[4].button("⚡", key=f"bs_{idx_real}", help="Stats Partido"):
+                            st.session_state.ses_activa_idx = idx_real; st.session_state.ses_activa_view = "stats"; st.rerun()
                     else:
-                        if alertas_multi:
-                            st.error("🚨 **RIESGO MULTIFACTORIAL (2 o más alertas simultáneas)**")
-                            for al in alertas_multi: st.write(f"- {al}")
-                            st.markdown("---")
-                            
-                        c_al1, c_al2 = st.columns(2)
-                        with c_al1:
-                            st.markdown("#### 🧠 Recuperación")
-                            if alertas_rec:
-                                for al in alertas_rec: st.warning(al)
-                            else:
-                                st.info("✅ Sin alertas individuales.")
-                                
-                        with c_al2:
-                            st.markdown("#### 🔥 Carga")
-                            if alertas_car:
-                                for al in alertas_car: st.warning(al)
-                            else:
-                                st.info("✅ Sin alertas individuales.")
-                    
-                    dict_figs = {
-                        "Desglose de Wellness": fig_well,
-                        "Calidad de Recuperación (TQR)": fig_tqr,
-                        "Carga de Sesión": fig2,
-                        "Riesgo de Lesión (Ratio A/C)": fig3,
-                        "Volumen vs Intensidad": fig5,
-                        "ACC vs DCC": fig4
-                    }
+                        b_cols[4].write("")
+            
+            # --- PANEL ACTIVO PARA ESTE MICROCICLO ---
+            active_idx = st.session_state.ses_activa_idx
+            active_view = st.session_state.ses_activa_view
+            
+            if active_idx is not None and active_view is not None:
+                if active_idx in [st.session_state.sesiones.index(s) for s in sesiones_sem]:
+                    sesion = st.session_state.sesiones[active_idx]
+                    idx_real = active_idx
+                    es_partido = "Partido" in sesion['tipo']
                     
                     st.markdown("---")
-                    pdf_key = f"pdf_sesion_listo_{idx_real}"
                     
-                    if pdf_key not in st.session_state:
-                        if st.button("⚙️ Generar PDF de la Sesión", key=f"btn_prepara_pdf_ses_{idx_real}"):
-                            with st.spinner("Procesando gráficos y PDF (esto puede tardar unos segundos)..."):
-                                st.session_state[pdf_key] = generar_pdf_completo(sesion, df_para_medias, df_graficos, alertas_multi, alertas_rec, alertas_car, dict_figs)
-                            st.rerun()
-                    else:
-                        col_pdf1, col_pdf2 = st.columns(2)
-                        with col_pdf1:
-                            st.download_button(
-                                label="📥 Descargar PDF",
-                                data=st.session_state[pdf_key],
-                                file_name=f"Sesion_{sesion['fecha']}.pdf",
-                                mime="application/pdf",
-                                key=f"btn_descarga_pdf_ses_{idx_real}"
-                            )
-                        with col_pdf2:
-                            if st.button("🗑️ Descartar PDF", key=f"btn_borrar_pdf_ses_{idx_real}"):
-                                del st.session_state[pdf_key]
-                                st.rerun()                                                          
-                else:
-                    st.warning("No hay datos que coincidan con los filtros seleccionados.")
-            st.markdown("---")
-        
-        # --- NUEVA CONDICIÓN AÑADIDA AQUÍ ---
-        if st.session_state.get(f"mostrar_datos_{idx_real}", False):
-            st.markdown("---")
-            st.markdown(f"#### 📂 CARGA DE DATOS DE LA SESIÓN | {sesion['fecha']}")
-            # --- NUEVO: MOSTRADOR DE MENSAJES DE SINCRONIZACIÓN ---
-            if f'msg_sync_{idx_real}' in st.session_state:
-                for msg in st.session_state[f'msg_sync_{idx_real}']:
-                    if "✅" in msg: st.success(msg)
-                    elif "⚠️" in msg: st.warning(msg)
-                    elif "❓" in msg: st.info(msg)
-                del st.session_state[f'msg_sync_{idx_real}']
-            # ------------------------------------------------------
-            with st.expander("✍️ Introducción o Edición Manual de Datos", expanded=not sesion.get("informe_generado", False)):
-                st.caption("Introduce Wellness (1-7), Minutos de Sesión, Minutos de GPS, RPE y métricas detalladas.")
-                
-                if sesion.get("datos_informe"):
-                    df_manual_base = pd.DataFrame(sesion["datos_informe"])
-                else:
-                    rows = []
-                    for p in st.session_state.plantilla:
-                        rows.append({
-                            "JUGADOR": p["JUGADOR"],
-                            "POS": p["POS"],
-                            "TQR": 0.0,
-                            "W_Humor": 0.0,
-                            "W_Sueño": 0.0,
-                            "W_Fatiga": 0.0,
-                            "W_Dolor": 0.0,
-                            "W_Estres": 0.0,
-                            "RPE": 0.0,
-                            "MIN": 0.0,
-                            "MIN_GPS": 0.0,
-                            "DIS": 0.0,
-                            "HID >21": 0.0,
-                            "HID >24": 0.0,
-                            "SPR >24": 0.0,
-                            "SPR >27": 0.0,
-                            "V_Med": 0.0,
-                            "V_Max": 0.0,
-                            "ACC_Max": 0.0,
-                            "ACC >2": 0.0,
-                            "ACC >3": 0.0,
-                            "ACC >4": 0.0,
-                            "DCC >2": 0.0,
-                            "DCC >3": 0.0,
-                            "DCC >4": 0.0,
-                            "R_0_7": 0.0,
-                            "R_7_14": 0.0,
-                            "R_14_21": 0.0,
-                            "R_21_24": 0.0,
-                            "R_24_27": 0.0,
-                            "R_27_30": 0.0,
-                            "R_30_45": 0.0
-                        })
-                    df_manual_base = pd.DataFrame(rows)
-                    
-                if "V_Max" not in df_manual_base.columns: df_manual_base["V_Max"] = df_manual_base.get("VMAX", 0.0)
-                if "HID >21" not in df_manual_base.columns: df_manual_base["HID >21"] = df_manual_base.get("DIS AI", 0.0)
-                if "SPR >24" not in df_manual_base.columns: df_manual_base["SPR >24"] = df_manual_base.get("Nº SPR", 0.0)
-                if "ACC >3" not in df_manual_base.columns: df_manual_base["ACC >3"] = df_manual_base.get("ACC", 0.0)
-                if "DCC >3" not in df_manual_base.columns: df_manual_base["DCC >3"] = df_manual_base.get("DCC", 0.0)
-
-                cols_to_show = [
-                    "JUGADOR", "POS", "TQR", 
-                    "W_Humor", "W_Sueño", "W_Fatiga", "W_Dolor", "W_Estres", 
-                    "RPE", "MIN", "MIN_GPS", "DIS", 
-                    "HID >21", "HID >24", "SPR >24", "SPR >27", "V_Med", "V_Max", "ACC_Max",
-                    "ACC >2", "ACC >3", "ACC >4", "DCC >2", "DCC >3", "DCC >4",
-                    "R_0_7", "R_7_14", "R_14_21", "R_21_24", "R_24_27", "R_27_30", "R_30_45"
-                ]
-                for c in cols_to_show:
-                    if c not in df_manual_base.columns:
-                        df_manual_base[c] = 0.0
-                        
-                edited_df = st.data_editor(
-                    df_manual_base[cols_to_show],
-                    key=f"editor_manual_{idx_real}",
-                    use_container_width=True,
-                    hide_index=True,
-                    disabled=["JUGADOR", "POS"]
-                )
-                
-                col_btn1, col_btn2 = st.columns(2)
-                with col_btn1:
-                    if st.button("💾 Guardar Datos Manuales", key=f"btn_save_manual_{idx_real}"):
-                        full_records = []
-                        for idx_row, row in edited_df.iterrows():
-                            suma_well = safe_float(row["W_Humor"]) + safe_float(row["W_Sueño"]) + safe_float(row["W_Fatiga"]) + safe_float(row["W_Dolor"]) + safe_float(row["W_Estres"])
-                            min_ses = safe_float(row["MIN"])
-                            min_gps_val = safe_float(row["MIN_GPS"])
-                            
-                            if min_gps_val > 0 and safe_float(row["DIS"]) > 0:
-                                dis = safe_float(row["DIS"])
-                                dis_ai_21 = safe_float(row["HID >21"])
-                                dis_ai_24 = safe_float(row["HID >24"])
-                                spr_24 = safe_float(row["SPR >24"])
-                                spr_27 = safe_float(row["SPR >27"])
-                                v_med = safe_float(row["V_Med"])
-                                v_max = safe_float(row["V_Max"])
-                                acc_max = safe_float(row["ACC_Max"])
-                                acc_2 = safe_float(row["ACC >2"])
-                                acc_3 = safe_float(row["ACC >3"])
-                                acc_4 = safe_float(row["ACC >4"])
-                                dcc_2 = safe_float(row["DCC >2"])
-                                dcc_3 = safe_float(row["DCC >3"])
-                                dcc_4 = safe_float(row["DCC >4"])
-                                r_0_7 = safe_float(row["R_0_7"])
-                                r_7_14 = safe_float(row["R_7_14"])
-                                r_14_21 = safe_float(row["R_14_21"])
-                                r_21_24 = safe_float(row["R_21_24"])
-                                r_24_27 = safe_float(row["R_24_27"])
-                                r_27_30 = safe_float(row["R_27_30"])
-                                r_30_45 = safe_float(row["R_30_45"])
-                            else:
-                                dis = dis_ai_21 = dis_ai_24 = spr_24 = spr_27 = v_med = v_max = acc_max = acc_2 = acc_3 = acc_4 = dcc_2 = dcc_3 = dcc_4 = r_0_7 = r_7_14 = r_14_21 = r_21_24 = r_24_27 = r_27_30 = r_30_45 = 0.0
-                            # Obtener valores históricos del EWMA hasta hoy
-                            ewma_actual = calcular_ewma_historico(st.session_state.sesiones, sesion["fecha"]).get(row["JUGADOR"], {})
-                            ewma_aguda = ewma_actual.get("EWMA AGUDA", min_ses * safe_float(row["RPE"]))
-                            ewma_cronica = ewma_actual.get("EWMA CRÓNICA", ewma_aguda)
-                            ratio_ac = ewma_actual.get("RATIO A/C", 1.0)
-                            
-                            rec = {
-                                "JUGADOR": row["JUGADOR"],
-                                "POS": row["POS"],
-                                "TQR": safe_float(row["TQR"]),
-                                "WELLNESS": suma_well,
-                                "W_Humor": safe_float(row["W_Humor"]),
-                                "W_Sueño": safe_float(row["W_Sueño"]),
-                                "W_Fatiga": safe_float(row["W_Fatiga"]),
-                                "W_Dolor": safe_float(row["W_Dolor"]),
-                                "W_Estres": safe_float(row["W_Estres"]),
-                                "RPE": safe_float(row["RPE"]),
-                                "MIN": min_ses,
-                                "MIN_GPS": min_gps_val,
-                                "CARGA": min_ses * safe_float(row["RPE"]),
-                                "EWMA AGUDA": ewma_aguda,
-                                "EWMA CRÓNICA": ewma_cronica,
-                                "RATIO A/C": ratio_ac,
-                                "DIS": dis,
-                                "DIS AI": dis_ai_21,
-                                "Nº SPR": spr_24,
-                                "ACC": acc_3,
-                                "DCC": dcc_3,
-                                "VMAX": v_max,
-                                "Z1": r_0_7 + r_7_14,
-                                "Z2": r_14_21,
-                                "Z3": r_21_24,
-                                "Z4": r_24_27,
-                                "Z5": r_27_30,
-                                "Z6": r_30_45,
-                                
-                                "HID >21": dis_ai_21,
-                                "HID >24": dis_ai_24,
-                                "SPR >24": spr_24,
-                                "SPR >27": spr_27,
-                                "V_Med": v_med,
-                                "V_Max": v_max,
-                                "ACC_Max": acc_max,
-                                "ACC >2": acc_2,
-                                "ACC >3": acc_3,
-                                "ACC >4": acc_4,
-                                "DCC >2": dcc_2,
-                                "DCC >3": dcc_3,
-                                "DCC >4": dcc_4,
-                                "R_0_7": r_0_7,
-                                "R_7_14": r_7_14,
-                                "R_14_21": r_14_21,
-                                "R_21_24": r_21_24,
-                                "R_24_27": r_24_27,
-                                "R_27_30": r_27_30,
-                                "R_30_45": r_30_45
-                            }
-                            full_records.append(rec)
-                            
-                        st.session_state.sesiones[idx_real]['datos_informe'] = full_records
-                        st.session_state.sesiones[idx_real]['informe_generado'] = True
-                        guardar_datos(modulo="sesiones")
-                        st.success("✅ ¡Datos manuales guardados correctamente!")
-                        st.rerun()
-
-                with col_btn2:
-                    if st.button("🗑️ Borrar Datos de la Sesión", key=f"btn_del_session_{idx_real}"):
-                        st.session_state.sesiones[idx_real]['datos_informe'] = []
-                        st.session_state.sesiones[idx_real]['informe_generado'] = False
-                        guardar_datos(modulo="sesiones")
-                        st.success("✅ Datos de la sesión borrados correctamente.")
-                        st.rerun()
-
-            with st.expander("📁 Importar desde Archivos Excel (Wellness, RPE, GPS)"):
-                st.caption("Sube tus archivos. El sistema integrará a toda la plantilla cruzando Wellness, RPE y los GPS disponibles.")
-                col_up1, col_up2, col_up3 = st.columns(3)
-                with col_up1: archivo_well = st.file_uploader("1. Bienestar (Wellness):", type=["xlsx"], key=f"up_well_{idx_real}")
-                with col_up2: archivo_rpe = st.file_uploader("2. Carga Interna (RPE):", type=["xlsx"], key=f"up_rpe_{idx_real}")
-                with col_up3: archivo_gps = st.file_uploader("3. Carga Externa (GPS):", type=["xlsx"], key=f"up_gps_{idx_real}")
-                
-                if st.button("⚙️ Procesar y Sincronizar Archivos", key=f"btn_proc_{idx_real}"):
-                    try:
-                        import difflib
-                        
-                        df_w_up = pd.read_excel(archivo_well) if archivo_well else pd.DataFrame()
-                        df_r_up = pd.read_excel(archivo_rpe) if archivo_rpe else pd.DataFrame()
-                        df_g_up = pd.read_excel(archivo_gps) if archivo_gps else pd.DataFrame()
-                        
-                        # Extraemos las configuraciones de mapeo
-                        cfg_w = st.session_state.get("config_mapeo", {}).get("wellness", {})
-                        cfg_r = st.session_state.get("config_mapeo", {}).get("rpe", {})
-                        cfg_g = st.session_state.get("config_mapeo", {}).get("gps", {})
-                        
-                        # --- BARRERA DE VALIDACIÓN DINÁMICA ---
-                        errores_criticos = []
-                        
-                        if not df_w_up.empty:
-                            valido, err = validar_columnas_excel(df_w_up, "Wellness", [cfg_w.get("nombre", "Nombre"), cfg_w.get("fecha", "Marca temporal")])
-                            if not valido: errores_criticos.append(err)
-                                
-                        if not df_r_up.empty:
-                            valido, err = validar_columnas_excel(df_r_up, "RPE", [cfg_r.get("nombre", "Nombre"), cfg_r.get("fecha", "Marca temporal")])
-                            if not valido: errores_criticos.append(err)
-                                
-                        if not df_g_up.empty:
-                            valido, err = validar_columnas_excel(df_g_up, "GPS", [cfg_g.get("nombre", "Player Name"), cfg_g.get("fecha", "Activity Date"), cfg_g.get("dis", "Distance (km)")])
-                            if not valido: errores_criticos.append(err)
-                                
-                        if errores_criticos:
-                            for error_msg in errores_criticos:
-                                st.markdown(f"<div style='background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 15px; margin-bottom: 10px; border-radius: 6px; color: #991b1b;'>{error_msg}</div>", unsafe_allow_html=True)
+                    # ---------------------------------------------------------
+                    # HERRAMIENTA 1: DISPONIBILIDAD (MULTIFILTRO OPTIMIZADO)
+                    # ---------------------------------------------------------
+                    if active_view == "disp":
+                        st.markdown(f"#### 🏥 CONTROL DE DISPONIBILIDAD | {sesion['fecha']}")
+                        if es_partido:
+                            opciones_disp = ["Suplente", "No convocado", "Lesionado", "Enfermo", "Selección", "No disponible"]
+                            default_disp = "Titular"
                         else:
-                            # --- SI TODO ESTÁ OK, CONTINUAMOS CON EL PROCESAMIENTO ---
-                            fecha_sesion_str = pd.to_datetime(sesion['fecha']).strftime('%Y-%m-%d')
+                            opciones_disp = ["Lesionado", "Readaptación", "Enfermo", "Falta", "Selección", "No disponible"]
+                            default_disp = "Disponible"
                         
-                        # Extraemos las configuraciones de mapeo
-                        cfg_w = st.session_state.get("config_mapeo", {}).get("wellness", {})
-                        cfg_r = st.session_state.get("config_mapeo", {}).get("rpe", {})
-                        cfg_g = st.session_state.get("config_mapeo", {}).get("gps", {})
+                        disp_dict_clean = {limpiar_nombre(k): v for k, v in sesion.get("disponibilidad", {}).items()}
+                        jugs_plantilla = [p["JUGADOR"] for p in st.session_state.plantilla]
                         
-                        # --- NUEVO FILTRO DE FECHAS DINÁMICO ---
-                        def filtrar_fecha_dinamico(df, col_fecha_config):
-                            if df.empty: return df
-                            # Buscar exactamente la columna configurada
-                            col_f = next((c for c in df.columns if str(c).strip().lower() == col_fecha_config.strip().lower()), None)
+                        jugadores_por_estado = {est: [] for est in opciones_disp}
+                        for j in jugs_plantilla:
+                            est = disp_dict_clean.get(limpiar_nombre(j), default_disp)
+                            if est in opciones_disp:
+                                jugadores_por_estado[est].append(j)
+
+                        st.info(f"💡 Por defecto, todos los jugadores de la plantilla que no añadas abajo se marcarán automáticamente como **{default_disp}**.")
+                        
+                        with st.form(key=f"form_disp_{idx_real}"):
+                            cols_disp = st.columns(3)
+                            selecciones = {}
+                            for i, est in enumerate(opciones_disp):
+                                with cols_disp[i % 3]:
+                                    selecciones[est] = st.multiselect(f"{est}", jugs_plantilla, default=jugadores_por_estado[est])
+                                    
+                            if st.form_submit_button("💾 Guardar Disponibilidad", type="primary", use_container_width=True):
+                                disp_final = {}
+                                for j in jugs_plantilla:
+                                    asignado = False
+                                    for est, lista_jugs in selecciones.items():
+                                        if j in lista_jugs:
+                                            disp_final[j] = est
+                                            asignado = True
+                                            break
+                                    if not asignado:
+                                        disp_final[j] = default_disp
+                                        
+                                st.session_state.sesiones[idx_real]["disponibilidad"] = disp_final
+                                guardar_datos(modulo="sesiones")
+                                st.success("Disponibilidad guardada correctamente.")
+                                st.rerun()
+
+                    # ---------------------------------------------------------
+                    # HERRAMIENTA 2: INFORME MAESTRO
+                    # ---------------------------------------------------------
+                    elif active_view == "inf":
+                        if sesion.get("informe_generado", False) and sesion.get("datos_informe"):
+                            df_informe = pd.DataFrame(sesion["datos_informe"])
+                            cols_metricas = ['TQR', 'WELLNESS', 'W_Humor', 'W_Sueño', 'W_Fatiga', 'W_Dolor', 'W_Estres', 'RPE', 'MIN', 'CARGA', 'DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC', 'VMAX', 'HID >21', 'SPR >24', 'ACC >3', 'DCC >3', 'V_Max']
+                            for c in cols_metricas:
+                                if c in df_informe.columns: df_informe[c] = pd.to_numeric(df_informe[c], errors='coerce').fillna(0.0)
                             
-                            # Fallback de seguridad (por si el PF la deja en blanco)
-                            if not col_f:
-                                col_f = next((c for c in df.columns if 'marca temporal' in str(c).lower() or 'activity date' in str(c).lower() or 'date' in str(c).lower() or 'fecha' in str(c).lower()), None)
+                            if 'HID >21' in df_informe.columns: df_informe['DIS AI'] = df_informe['HID >21']
+                            if 'SPR >24' in df_informe.columns: df_informe['Nº SPR'] = df_informe['SPR >24']
+                            if 'ACC >3' in df_informe.columns:  df_informe['ACC'] = df_informe['ACC >3']
+                            if 'DCC >3' in df_informe.columns:  df_informe['DCC'] = df_informe['DCC >3']
+                            if 'V_Max' in df_informe.columns:   df_informe['VMAX'] = df_informe['V_Max']
+                            
+                            disp_dict = sesion.get("disponibilidad", {})
+                            disp_dict_clean = {limpiar_nombre(k): v for k, v in disp_dict.items()}
+                            default_disp = "Titular" if es_partido else "Disponible"
+                            df_informe['ESTADO'] = df_informe['JUGADOR'].map(lambda j: disp_dict_clean.get(limpiar_nombre(j), default_disp))
+
+                            df_master_sesion = st.session_state.df_master_informes[st.session_state.df_master_informes['FECHA'] == sesion["fecha"]]
+                            df_master_sesion = df_master_sesion.drop_duplicates(subset=['JUGADOR'], keep='last')
+                            dic_ewma = df_master_sesion.set_index('JUGADOR')[['EWMA AGUDA', 'EWMA CRÓNICA', 'RATIO A/C']].to_dict('index')
+                            
+                            df_informe['EWMA AGUDA'] = df_informe['JUGADOR'].map(lambda j: dic_ewma.get(j, {}).get('EWMA AGUDA', 0.0))
+                            df_informe['EWMA CRÓNICA'] = df_informe['JUGADOR'].map(lambda j: dic_ewma.get(j, {}).get('EWMA CRÓNICA', 0.0))
+                            df_informe['RATIO A/C'] = df_informe['JUGADOR'].map(lambda j: dic_ewma.get(j, {}).get('RATIO A/C', 0.0))
+
+                            col_filt1, col_filt2 = st.columns(2)
+                            with col_filt1:
+                                filtro_pos = st.radio("Posición:", ["TODOS", "POR", "DEF", "MED", "ATA"], horizontal=True, key=f"rp_{idx_real}")
+                                if filtro_pos != "TODOS": df_informe = df_informe[df_informe["POS"] == filtro_pos]
+                            if es_partido:
+                                with col_filt2:
+                                    filtro_rol = st.radio("Rol:", ["TODOS", "Titular", "Suplente"], horizontal=True, key=f"rr_{idx_real}")
+                                    if filtro_rol != "TODOS": df_informe = df_informe[df_informe["ESTADO"] == filtro_rol]
+
+                            estados_validos_medias = ["Disponible", "Titular", "Suplente"]
+                            df_para_medias = df_informe[(df_informe['ESTADO'].isin(estados_validos_medias)) & (df_informe['POS'] != "POR")].copy()
+                            df_para_medias['TQR'] = df_para_medias['TQR'].replace(0, np.nan)
+                            df_para_medias['WELLNESS'] = df_para_medias['WELLNESS'].replace(0, np.nan)
+                            df_para_medias['RPE'] = df_para_medias['RPE'].replace(0, np.nan)
+                            df_para_medias_gps = df_para_medias[df_para_medias['DIS'] > 0].copy()
+                            
+                            df_graficos = df_informe[df_informe['JUGADOR'] != ""].copy()
+                            fig_well = fig_tqr = fig2 = fig3 = fig5 = fig4 = None
+
+                            if not df_informe.empty:
+                                tqr_m = df_para_medias['TQR'].mean() if pd.notna(df_para_medias['TQR'].mean()) else 0.0
+                                well_m = df_para_medias['WELLNESS'].mean() if pd.notna(df_para_medias['WELLNESS'].mean()) else 0.0
+                                rpe_m = df_para_medias['RPE'].mean() if pd.notna(df_para_medias['RPE'].mean()) else 0.0
+                                carga_m = df_para_medias['CARGA'].mean() if pd.notna(df_para_medias['CARGA'].mean()) else 0.0
+                                min_m = df_para_medias['MIN'].mean() if pd.notna(df_para_medias['MIN'].mean()) else 0.0
+
+                                kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+                                kpi1.metric("TQR Medio (Recuperación)", f"{tqr_m:.1f} / 10")
+                                kpi2.metric("Wellness Medio (Fatiga)", f"{well_m:.1f} pts")
+                                kpi3.metric("RPE Medio (Esfuerzo)", f"{rpe_m:.1f} / 10")
+                                kpi4.metric("Carga Media Sesión", f"{carga_m:.0f} UA")
+
+                                st.markdown("---")
+                                st.markdown("#### 🧠 1. Bienestar y Recuperación")
+                                cg1, cg2 = st.columns(2)
+                                with cg1:
+                                    if df_graficos['WELLNESS'].sum() > 0:
+                                        df_well = df_graficos[df_graficos['WELLNESS'] > 0].sort_values('WELLNESS', ascending=False).copy()
+                                        nombres_limpios = {'W_Sueño': 'Sueño', 'W_Fatiga': 'Fatiga', 'W_Dolor': 'Dolor', 'W_Estres': 'Estrés', 'W_Humor': 'Humor'}
+                                        df_well = df_well.rename(columns=nombres_limpios)
+                                        fig_well = go.Figure()
+                                        for i, factor in enumerate(list(nombres_limpios.values())):
+                                            fig_well.add_trace(go.Bar(x=df_well['JUGADOR'], y=df_well[factor], name=factor, marker_color=px.colors.qualitative.Set2[i]))
+                                        fig_well.update_layout(title="<b>Desglose de Wellness</b>", barmode='stack', yaxis_title="Puntos", legend_title_text="Factores", yaxis_range=[0, 35], plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', margin=dict(t=40, b=120, l=40, r=40), hovermode="x unified")
+                                        fig_well.add_hline(y=18, line_dash="dot", line_color="orange", annotation_text="Moderado (18)", annotation_position="bottom right")
+                                        fig_well.add_hline(y=24, line_dash="dash", line_color="red", annotation_text="Crítico (24)", annotation_position="top right")
+                                        st.plotly_chart(fig_well, use_container_width=True, key=f"ses_w_{idx_real}")
+                                with cg2:
+                                    if df_graficos['TQR'].sum() > 0:
+                                        df_tqr = df_graficos[df_graficos['TQR'] > 0].sort_values('TQR')
+                                        fig_tqr = px.bar(df_tqr, x='JUGADOR', y='TQR', color='TQR', color_continuous_scale="RdYlGn", range_color=[1, 10], title="Calidad de Recuperación (TQR)")
+                                        fig_tqr.update_yaxes(range=[1, 10])
+                                        st.plotly_chart(fig_tqr, use_container_width=True, key=f"ses_t_{idx_real}")
+
+                                st.markdown("---")
+                                st.markdown("#### 🔥 2. Carga Interna")
+                                ci1, ci2, ci3 = st.columns(3)
+                                ci1.metric("Minutos Sesión (Media)", f"{min_m:.1f}")
+                                ci2.metric("RPE Medio", f"{rpe_m:.1f}")
+                                ci3.metric("Carga Media (UA)", f"{carga_m:.0f}")
                                 
-                            if col_f:
-                                df['FECHA_TEMP'] = pd.to_datetime(df[col_f], errors='coerce').dt.strftime('%Y-%m-%d')
-                                return df[df['FECHA_TEMP'] == fecha_sesion_str].drop(columns=['FECHA_TEMP'])
-                            return df
-
-                        df_w_up = filtrar_fecha_dinamico(df_w_up, cfg_w.get("fecha", "Marca temporal"))
-                        df_r_up = filtrar_fecha_dinamico(df_r_up, cfg_r.get("fecha", "Marca temporal"))
-                        df_g_up = filtrar_fecha_dinamico(df_g_up, cfg_g.get("fecha", "Activity Date"))
-
-                        nombres_plantilla = [p['JUGADOR'] for p in st.session_state.plantilla]
-                        no_encontrados_en_app = set()
-                        
-                        def emparejar_nombre(nombre_excel):
-                            if pd.isna(nombre_excel): return None
-                            n_ex = limpiar_nombre(nombre_excel)
-                            for n_app in nombres_plantilla:
-                                if n_ex == limpiar_nombre(n_app): return n_app
-                            for n_app in nombres_plantilla:
-                                n_app_cl = limpiar_nombre(n_app)
-                                if n_ex in n_app_cl or n_app_cl in n_ex: return n_app
-                            matches = difflib.get_close_matches(n_ex, [limpiar_nombre(n) for n in nombres_plantilla], n=1, cutoff=0.7)
-                            if matches:
-                                for n_app in nombres_plantilla:
-                                    if limpiar_nombre(n_app) == matches[0]: return n_app
-                            return None
-
-                        # --- NUEVO MAPEO DE NOMBRES DINÁMICO ---
-                        faltan_w = []
-                        col_w_nom = cfg_w.get("nombre", "Nombre")
-                        if not df_w_up.empty and col_w_nom in df_w_up.columns:
-                            df_w_up['JUGADOR_MATCH'] = df_w_up[col_w_nom].apply(emparejar_nombre)
-                            no_encontrados_en_app.update(df_w_up[df_w_up['JUGADOR_MATCH'].isna()][col_w_nom].dropna().tolist())
-                            df_w_up = df_w_up.dropna(subset=['JUGADOR_MATCH'])
-                            faltan_w = [n for n in nombres_plantilla if n not in df_w_up['JUGADOR_MATCH'].tolist()]
-                        elif archivo_well: faltan_w = nombres_plantilla.copy()
-
-                        faltan_r = []
-                        col_r_nom = cfg_r.get("nombre", "Nombre")
-                        if not df_r_up.empty and col_r_nom in df_r_up.columns:
-                            df_r_up['JUGADOR_MATCH'] = df_r_up[col_r_nom].apply(emparejar_nombre)
-                            no_encontrados_en_app.update(df_r_up[df_r_up['JUGADOR_MATCH'].isna()][col_r_nom].dropna().tolist())
-                            df_r_up = df_r_up.dropna(subset=['JUGADOR_MATCH'])
-                            faltan_r = [n for n in nombres_plantilla if n not in df_r_up['JUGADOR_MATCH'].tolist()]
-                        elif archivo_rpe: faltan_r = nombres_plantilla.copy()
-
-                        col_g_nom = cfg_g.get("nombre", "Player Name")
-                        if not df_g_up.empty and col_g_nom in df_g_up.columns:
-                            df_g_up['JUGADOR_MATCH'] = df_g_up[col_g_nom].apply(emparejar_nombre)
-                            no_encontrados_en_app.update(df_g_up[df_g_up['JUGADOR_MATCH'].isna()][col_g_nom].dropna().tolist())
-                            df_g_up = df_g_up.dropna(subset=['JUGADOR_MATCH'])
-
-                        # 1. RECUPERAR DATOS EXISTENTES PARA NO SOBREESCRIBIRLOS
-                        datos_actuales = {d["JUGADOR"]: d for d in sesion.get("datos_informe", [])}
-                        
-                        registros_sesion = []
-                        for nombre_final in sorted(nombres_plantilla):
-                            match_p = next((p for p in st.session_state.plantilla if p['JUGADOR'] == nombre_final), None)
-                            pos_jug = match_p['POS'] if match_p else "DEF"
-
-                            # 2. OBTENER REGISTRO PREVIO O CREAR UNO NUEVO A CERO
-                            reg = datos_actuales.get(nombre_final, {
-                                "JUGADOR": nombre_final, "POS": pos_jug,
-                                "TQR": 0.0, "WELLNESS": 0.0,
-                                "W_Humor": 0.0, "W_Sueño": 0.0, "W_Fatiga": 0.0, "W_Dolor": 0.0, "W_Estres": 0.0,
-                                "RPE": 0.0, "MIN": 0.0, "MIN_GPS": 0.0, "CARGA": 0.0,
-                                "EWMA AGUDA": 0.0,
-                                "EWMA CRÓNICA": 0.0,
-                                "RATIO A/C": 0.0,
-                                "DIS": 0.0, "DIS AI": 0.0, "Nº SPR": 0.0, "ACC": 0.0, "DCC": 0.0, "VMAX": 0.0,
-                                "Z1": 0.0, "Z2": 0.0, "Z3": 0.0, "Z4": 0.0, "Z5": 0.0, "Z6": 0.0,
-                                "HID >21": 0.0, "HID >24": 0.0, "SPR >24": 0.0, "SPR >27": 0.0,
-                                "V_Med": 0.0, "V_Max": 0.0, "ACC_Max": 0.0, "ACC >2": 0.0, "ACC >3": 0.0, "ACC >4": 0.0,
-                                "DCC >2": 0.0, "DCC >3": 0.0, "DCC >4": 0.0, "R_0_7": 0.0, "R_7_14": 0.0,
-                                "R_14_21": 0.0, "R_21_24": 0.0, "R_24_27": 0.0, "R_27_30": 0.0, "R_30_45": 0.0
+                                cols_ver_ci = ['JUGADOR', 'POS', 'ESTADO', 'MIN', 'RPE', 'CARGA', 'EWMA AGUDA', 'EWMA CRÓNICA', 'RATIO A/C']
+                                estilo_ci = (df_informe[cols_ver_ci].style.hide(axis="index").format(precision=2).background_gradient(subset=['RPE'], cmap='Reds', vmin=0, vmax=10).map(lambda x: f"background-color: {color_ratio_ac(x)}; color: black;" if isinstance(x, (int, float)) else "", subset=['RATIO A/C']).set_table_attributes('class="modern-table"'))
+                                st.markdown(estilo_ci.to_html(), unsafe_allow_html=True)
                                 
-                            })
+                                cg3, cg4 = st.columns(2)
+                                with cg3:
+                                    if df_graficos['CARGA'].sum() > 0:
+                                        df_ci = df_graficos[df_graficos['CARGA'] > 0].sort_values('CARGA', ascending=False)
+                                        fig2 = px.bar(df_ci, x='JUGADOR', y='CARGA', color='RPE', color_continuous_scale="Reds", range_color=[0, 10], title="Carga de Sesión (Min * RPE)")
+                                        if not df_para_medias.empty:
+                                            fig2.add_hline(y=df_para_medias['CARGA'].mean(), line_dash="dot", line_color="gray", annotation_text=f"Media Equipo", annotation_position="top right")
+                                        st.plotly_chart(fig2, use_container_width=True, key=f"ses_c_{idx_real}")
+                                with cg4:
+                                    if df_graficos['RATIO A/C'].sum() > 0:
+                                        df_ac = df_graficos[df_graficos['RATIO A/C'] > 0].sort_values('RATIO A/C', ascending=False).copy()
+                                        df_ac['Color_AC'] = df_ac['RATIO A/C'].apply(color_ratio_ac)
+                                        fig3 = go.Figure(data=[go.Bar(x=df_ac['JUGADOR'], y=df_ac['RATIO A/C'], marker_color=df_ac['Color_AC'], text=df_ac['RATIO A/C'].round(2), textposition='auto')])
+                                        fig3.update_layout(title="Riesgo de Lesión (Ratio A/C)")
+                                        fig3.add_hline(y=1.4, line_dash="dash", line_color="#ff4b4b")
+                                        st.plotly_chart(fig3, use_container_width=True, key=f"ses_ac_{idx_real}")
 
-                            # 3. ACTUALIZAR SÓLO LOS MÓDULOS QUE SE HAYAN SUBIDO EN ESTA TANDA
-                            
-                            # Recuperamos la configuración del mapeador dinámico
-                            cfg_w = st.session_state.get("config_mapeo", {}).get("wellness", {})
-                            cfg_r = st.session_state.get("config_mapeo", {}).get("rpe", {})
-                            cfg_g = st.session_state.get("config_mapeo", {}).get("gps", {})
-                            
-                            # --- RPE ---
-                            if not df_r_up.empty and cfg_r:
-                                match_r = df_r_up[df_r_up['JUGADOR_MATCH'] == nombre_final]
-                                if not match_r.empty: 
-                                    reg["RPE"] = safe_float(match_r.iloc[0].get(cfg_r.get("rpe", "RPE"), 0))
-                                    if reg["MIN"] == 0: reg["MIN"] = 90.0
+                                st.markdown("---")
+                                st.markdown("#### 🏃‍♂️ 3. Carga Externa (GPS)")
+                                
+                                dis_m = df_para_medias_gps['DIS'].mean() if pd.notna(df_para_medias_gps['DIS'].mean()) else 0.0
+                                hsr_m = df_para_medias_gps['DIS AI'].mean() if pd.notna(df_para_medias_gps['DIS AI'].mean()) else 0.0
+                                spr_m = df_para_medias_gps['Nº SPR'].mean() if pd.notna(df_para_medias_gps['Nº SPR'].mean()) else 0.0
+                                acc_m = df_para_medias_gps['ACC'].mean() if pd.notna(df_para_medias_gps['ACC'].mean()) else 0.0
+                                dcc_m = df_para_medias_gps['DCC'].mean() if pd.notna(df_para_medias_gps['DCC'].mean()) else 0.0
+                                
+                                ce1, ce2, ce3, ce4, ce5 = st.columns(5)
+                                ce1.metric("Distancia (km)", f"{dis_m:.2f}")
+                                ce2.metric("HSR (>21 km/h)", f"{hsr_m:.2f}")
+                                ce3.metric("Nº SPRINTS", f"{spr_m:.1f}")
+                                ce4.metric("ACC (>3)", f"{acc_m:.0f}")
+                                ce5.metric("DCC (>3)", f"{dcc_m:.0f}")
+                                
+                                cols_ver_ce = ['JUGADOR', 'POS', 'ESTADO', 'DIS', 'HID >21', 'Nº SPR', 'ACC', 'DCC', 'VMAX']
+                                df_tabla_ce = df_informe[df_informe['DIS'] > 0]
+                                mostrar_tabla_moderna(df_tabla_ce[cols_ver_ce].style.hide(axis="index").format(precision=2))
+                                
+                                cg5, cg6 = st.columns(2)
+                                with cg5:
+                                    if df_graficos['DIS'].sum() > 0:
+                                        df_gps_sesion = df_graficos[df_graficos['DIS'] > 0].copy()
+                                        fig5 = px.scatter(df_gps_sesion, x='DIS', y='DIS AI', color='POS', hover_name='JUGADOR', text='JUGADOR', title="Volumen vs Intensidad", color_discrete_map={"POR": "gray", "DEF": "#00b4d8", "MED": "#28a745", "ATA": "#ff4b4b"})
+                                        fig5.update_traces(textposition='top center', marker=dict(size=12, opacity=0.8, line=dict(width=1, color='DarkSlateGrey')))
+                                        fig5.add_vline(x=df_gps_sesion['DIS'].mean(), line_dash="dot", line_color="gray", opacity=0.6)
+                                        fig5.add_hline(y=df_gps_sesion['DIS AI'].mean(), line_dash="dot", line_color="gray", opacity=0.6)
+                                        st.plotly_chart(fig5, use_container_width=True, key=f"ses_h_{idx_real}")
+                                with cg6:
+                                    if df_graficos['ACC'].sum() > 0 or df_graficos['DCC'].sum() > 0:
+                                        df_accdcc = df_graficos[df_graficos['DIS'] > 0]
+                                        max_val = max(df_accdcc['ACC'].max(), df_accdcc['DCC'].max()) * 1.1 if not df_accdcc.empty else 10
+                                        fig4 = px.scatter(df_accdcc, x='DCC', y='ACC', color='POS', hover_name='JUGADOR', text='JUGADOR', title="ACC vs DCC", color_discrete_map={"POR": "gray", "DEF": "#00b4d8", "MED": "#28a745", "ATA": "#ff4b4b"})
+                                        fig4.update_traces(textposition='top center', marker=dict(size=12, opacity=0.8, line=dict(width=1, color='DarkSlateGrey')))
+                                        fig4.add_shape(type="line", x0=0, y0=0, x1=max_val, y1=max_val, line=dict(color="gray", dash="dot"))
+                                        fig4.update_layout(yaxis=dict(scaleanchor="x", scaleratio=1))
+                                        st.plotly_chart(fig4, use_container_width=True, key=f"ses_a_{idx_real}")
 
-                            # --- WELLNESS ---
-                            if not df_w_up.empty and cfg_w:
-                                match_w = df_w_up[df_w_up['JUGADOR_MATCH'] == nombre_final]
-                                if not match_w.empty:
-                                    r_w = match_w.iloc[0]
-                                    reg["TQR"] = safe_float(r_w.get(cfg_w.get("tqr", "TQR"), 0))
-                                    reg["W_Fatiga"] = safe_float(r_w.get(cfg_w.get("fatiga", "W_Fatiga"), 0))
-                                    reg["W_Sueño"] = safe_float(r_w.get(cfg_w.get("sueno", "W_Sueño"), 0))
-                                    reg["W_Dolor"] = safe_float(r_w.get(cfg_w.get("dolor", "W_Dolor"), 0))
-                                    reg["W_Estres"] = safe_float(r_w.get(cfg_w.get("estres", "W_Estres"), 0))
-                                    reg["W_Humor"] = safe_float(r_w.get(cfg_w.get("humor", "W_Humor"), 0))
-                                    reg["WELLNESS"] = reg["W_Fatiga"] + reg["W_Sueño"] + reg["W_Dolor"] + reg["W_Estres"] + reg["W_Humor"]
+                                st.markdown("---")
+                                st.markdown("#### ⚠️ Alertas de Riesgo lesivo alto")
+                                media_carga = df_para_medias['CARGA'].mean() if not df_para_medias.empty else 0
+                                std_carga = df_para_medias['CARGA'].std(ddof=0) if not df_para_medias.empty else 0
+                                umbral_carga = media_carga + (2.0 * std_carga) if std_carga > 0 else media_carga * 1.4
 
-                            # --- GPS ---
-                            if not df_g_up.empty and cfg_g:
-                                match_g = df_g_up[df_g_up['JUGADOR_MATCH'] == nombre_final]
-                                if not match_g.empty:
-                                    row_g = match_g.iloc[0]
-                                    dis = safe_float(row_g.get(cfg_g.get("dis", "Distance (km)"), 0))
-                                    if dis > 0:
-                                        min_gps_excel = extraer_minutos(str(row_g.get(cfg_g.get("min_gps", "Time Played"), '0')))
-                                        reg["MIN_GPS"] = min_gps_excel if min_gps_excel > 0 else 90.0
-                                        reg["MIN"] = reg["MIN_GPS"]
+                                alertas_jugadores = {}
+                                activos = df_informe[df_informe['ESTADO'].isin(["Disponible", "Titular", "Suplente"])]
+
+                                for _, row in activos.iterrows():
+                                    jug = row['JUGADOR']
+                                    alertas_jugadores[jug] = {'recuperacion': [], 'carga': [], 'total': 0}
+                                    tqr, well = safe_float(row.get('TQR')), safe_float(row.get('WELLNESS'))
+                                    
+                                    if tqr > 0:
+                                        if tqr <= 3: alertas_jugadores[jug]['recuperacion'].append(f"🔴 Recuperación Crítica ({tqr:.1f})"); alertas_jugadores[jug]['total'] += 1
+                                        elif tqr == 4: alertas_jugadores[jug]['recuperacion'].append(f"🟡 Recuperación Moderada ({tqr:.1f})"); alertas_jugadores[jug]['total'] += 1
+                                    if well > 0:
+                                        if well >= 24: alertas_jugadores[jug]['recuperacion'].append(f"🔴 Wellness Crítico ({well:.1f})"); alertas_jugadores[jug]['total'] += 1
+                                        elif 18 <= well <= 23: alertas_jugadores[jug]['recuperacion'].append(f"🟡 Wellness Moderado ({well:.1f})"); alertas_jugadores[jug]['total'] += 1
+
+                                    ratio_ac, carga_aguda, carga_sesion = safe_float(row.get('RATIO A/C')), safe_float(row.get('EWMA AGUDA')), safe_float(row.get('CARGA'))
+                                    
+                                    if carga_aguda > 1000:
+                                        if ratio_ac >= 1.5: alertas_jugadores[jug]['carga'].append(f"🔴 Ratio A/C en riesgo alto ({ratio_ac:.2f})"); alertas_jugadores[jug]['total'] += 1
+                                        elif 1.35 <= ratio_ac < 1.5: alertas_jugadores[jug]['carga'].append(f"🟡 Ratio A/C en riesgo moderado ({ratio_ac:.2f})"); alertas_jugadores[jug]['total'] += 1
+                                    if media_carga > 0 and carga_sesion > umbral_carga:
+                                        alertas_jugadores[jug]['carga'].append(f"🟠 Carga Anormal ({carga_sesion:.0f} UA vs Media {media_carga:.0f} UA)"); alertas_jugadores[jug]['total'] += 1
                                         
-                                        reg["DIS"] = dis
-                                        reg["HID >21"] = safe_float(row_g.get(cfg_g.get("hid_21", ""), 0)) * 1000.0
-                                        reg["DIS AI"] = reg["HID >21"]
-                                        reg["HID >24"] = safe_float(row_g.get(cfg_g.get("hid_24", ""), 0)) * 1000.0
+                                    monot = calcular_monotonia_7d(st.session_state.sesiones, jug, sesion['fecha'])
+                                    strain = carga_aguda * monot
+                                    if monot > 2.0 and strain > 4000:
+                                        alertas_jugadores[jug]['carga'].append(f"🟡 Riesgo por monotonía y fatiga (Strain {strain:.0f})"); alertas_jugadores[jug]['total'] += 1
                                         
-                                        reg["SPR >24"] = safe_float(row_g.get(cfg_g.get("spr_24", ""), 0))
-                                        reg["Nº SPR"] = reg["SPR >24"]
-                                        reg["SPR >27"] = safe_float(row_g.get(cfg_g.get("spr_27", ""), 0))
-                                        
-                                        reg["V_Med"] = safe_float(row_g.get(cfg_g.get("v_med", ""), 0))
-                                        reg["VMAX"] = safe_float(row_g.get(cfg_g.get("v_max", ""), 0))
-                                        reg["V_Max"] = reg["VMAX"]
-                                        
-                                        reg["ACC >2"] = safe_float(row_g.get(cfg_g.get("acc_2", ""), 0))
-                                        reg["ACC >3"] = safe_float(row_g.get(cfg_g.get("acc_3", ""), 0))
-                                        reg["ACC"] = reg["ACC >3"]
-                                        reg["ACC >4"] = safe_float(row_g.get(cfg_g.get("acc_4", ""), 0))
-                                        
-                                        reg["DCC >2"] = safe_float(row_g.get(cfg_g.get("dcc_2", ""), 0))
-                                        reg["DCC >3"] = safe_float(row_g.get(cfg_g.get("dcc_3", ""), 0))
-                                        reg["DCC"] = reg["DCC >3"]
-                                        reg["DCC >4"] = safe_float(row_g.get(cfg_g.get("dcc_4", ""), 0))
-                                        
-                                        reg["R_0_7"] = safe_float(row_g.get(cfg_g.get("r_0_7", ""), 0)) * 1000.0
-                                        reg["R_7_14"] = safe_float(row_g.get(cfg_g.get("r_7_14", ""), 0)) * 1000.0
-                                        reg["R_14_21"] = safe_float(row_g.get(cfg_g.get("r_14_21", ""), 0)) * 1000.0
-                                        reg["R_21_24"] = safe_float(row_g.get(cfg_g.get("r_21_24", ""), 0)) * 1000.0
-                                        reg["R_24_27"] = safe_float(row_g.get(cfg_g.get("r_24_27", ""), 0)) * 1000.0
-                                        reg["R_27_30"] = safe_float(row_g.get(cfg_g.get("r_27_30", ""), 0)) * 1000.0
-                                        reg["R_30_45"] = safe_float(row_g.get(cfg_g.get("r_30_45", ""), 0)) * 1000.0 
-                                        
-                                        reg["Z1"] = reg["R_0_7"] + reg["R_7_14"]
-                                        reg["Z2"] = reg["R_14_21"]
-                                        reg["Z3"] = reg["R_21_24"]
-                                        reg["Z4"] = reg["R_24_27"]
-                                        reg["Z5"] = reg["R_27_30"]
+                                alertas_multi, alertas_rec, alertas_car = [], [], []
+                                for jug, data in alertas_jugadores.items():
+                                    if data['total'] >= 2: alertas_multi.append(f"**{jug}** ({data['total']} alertas): " + " | ".join(data['recuperacion'] + data['carga']))
+                                    elif data['total'] == 1:
+                                        if data['recuperacion']: alertas_rec.append(f"**{jug}**: {data['recuperacion'][0]}")
+                                        if data['carga']: alertas_car.append(f"**{jug}**: {data['carga'][0]}")
 
-                            # 4. RECALCULAR CARGA FINAL SEGÚN LAS ACTUALIZACIONES
-                            reg["CARGA"] = reg["MIN"] * reg["RPE"]
-                            
-                            # --- CÁLCULO EWMA AÑADIDO JUSTO AQUÍ ---
-                            ewma_excel = calcular_ewma_historico(st.session_state.sesiones, sesion["fecha"]).get(nombre_final, {})
-                            reg["EWMA AGUDA"] = ewma_excel.get("EWMA AGUDA", reg["CARGA"])
-                            reg["EWMA CRÓNICA"] = ewma_excel.get("EWMA CRÓNICA", reg["CARGA"])
-                            reg["RATIO A/C"] = ewma_excel.get("RATIO A/C", 1.0)
-                            # ---------------------------------------
-                            
-                            registros_sesion.append(reg)
-                            
-                        st.session_state.sesiones[idx_real]['datos_informe'] = registros_sesion
-                        st.session_state.sesiones[idx_real]['informe_generado'] = True
-                        guardar_datos(modulo="sesiones")
-                        
-                        msgs = [f"✅ Sincronización completada. Se generó la tabla con los {len(nombres_plantilla)} jugadores de tu plantilla."]
-                        if archivo_well and faltan_w: msgs.append(f"⚠️ **Faltan en Wellness:** {', '.join(faltan_w)}")
-                        if archivo_rpe and faltan_r: msgs.append(f"⚠️ **Faltan en RPE:** {', '.join(faltan_r)}")
-                        if no_encontrados_en_app: msgs.append(f"❓ **Están en Excel pero NO en tu App:** {', '.join(no_encontrados_en_app)}")
-                        st.session_state[f'msg_sync_{idx_real}'] = msgs
-                        
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Error al procesar: {e}")
-                        st.error(f"Error al procesar y sincronizar los archivos: {e}")
-
-        if st.session_state.get(f"mostrar_lesion_{idx_real}", False):
-            st.markdown("---")
-            st.markdown(f"#### 🚑 PARTE MÉDICO | {sesion['fecha']}")
-            st.caption("Registra aquí una incidencia ocurrida durante esta sesión.")
-            
-            if not st.session_state.plantilla:
-                st.warning("No hay jugadores en la plantilla para registrar lesiones.")
-            else:
-                with st.form(key=f"form_lesion_{idx_real}"):
-                    nombres_plantilla = [j["JUGADOR"] for j in st.session_state.plantilla]
-                    
-                    c_L1, c_L2 = st.columns(2)
-                    les_jugador = c_L1.selectbox("Jugador Afectado:", nombres_plantilla)
-                    les_tipo = c_L2.selectbox("Tipo de Lesión:", ["Muscular", "Tendinosa", "Artículo-ligamentosa", "Fractura", "Otra"])
-                    
-                    c_L3, c_L4 = st.columns(2)
-                    les_zona = c_L3.selectbox("Zona Afectada:", ["Pie", "Tobillo", "Pierna", "Rodilla", "Muslo", "Cadera - Ingles", "Extremidades Superiores", "Tronco", "Cabeza"])
-                    
-                    zonas_bilaterales = ["Pie", "Tobillo", "Pierna", "Rodilla", "Muslo", "Cadera - Ingles", "Extremidades Superiores"]
-                    if les_zona in zonas_bilaterales:
-                        les_lado = c_L4.selectbox("Lado:", ["Derecha", "Izquierda"])
-                    else:
-                        les_lado = "N/A"
-                        c_L4.write("") 
-                        
-                    c_L5, c_L6, c_L7 = st.columns(3)
-                    les_lat = c_L5.selectbox("Lateralidad de la lesión:", ["Dominante", "No dominante", "Sin lateralidad"])
-                    les_contacto = c_L6.radio("¿Hubo contacto?", ["Sí", "No"], horizontal=True)
-                    les_cesped = c_L7.radio("Superficie:", ["Natural", "Artificial"], horizontal=True)
-                    
-                    c_L8, c_L9 = st.columns([1, 3])
-                    les_recidiva = c_L8.radio("¿Es Recidiva?", ["No", "Sí"], horizontal=True)
-                    les_comentarios = c_L9.text_input("Comentarios / Mecanismo lesional:")
-                    
-                    if st.form_submit_button("💾 Registrar Lesión"):
-                        nueva_lesion = {
-                            "id_sesion": sesion["fecha"],
-                            "tipo_sesion": "Partido" if es_partido else "Entrenamiento",
-                            "jugador": les_jugador,
-                            "tipo": les_tipo,
-                            "zona": les_zona,
-                            "lado": les_lado,
-                            "lateralidad": les_lat,
-                            "contacto": les_contacto,
-                            "cesped": les_cesped,
-                            "recidiva": les_recidiva,
-                            "comentarios": les_comentarios,
-                            "dias_baja": None,
-                            "estado": "Activa",
-                            "fecha_registro": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                        }
-                        st.session_state.lesiones.append(nueva_lesion)
-                        guardar_datos(modulo="lesiones")
-                        st.success(f"¡Parte médico de {les_jugador} guardado correctamente!")
-                        st.rerun()
-            st.markdown("---")
-            
-        if st.session_state.get(f"mostrar_stats_partido_{idx_real}", False):
-            st.markdown("---")
-            st.markdown(f"#### ⚡ ESTADÍSTICAS DE PARTIDO | vs {sesion.get('rival', 'Rival')} ({sesion['fecha']})")
-            
-            # 1. Datos globales del partido
-            col_g1, col_g2 = st.columns(2)
-            condicion_actual = sesion.get("condicion", "Casa")
-            nueva_condicion = col_g1.selectbox("Condición:", ["Casa", "Fuera"], index=["Casa", "Fuera"].index(condicion_actual), key=f"cond_{idx_real}")
-            
-            goles_f_actual = sesion.get("goles_favor", 0)
-            nuevo_gf = col_g2.number_input("Goles Anotados (Favor del Equipo):", min_value=0, value=int(goles_f_actual or 0), key=f"gf_{idx_real}")
-            
-            sesion["condicion"] = nueva_condicion
-            sesion["goles_favor"] = nuevo_gf
-
-            st.markdown("##### 📋 Rendimiento de Jugadores Convocados")
-            st.caption("Anota los minutos, goles, asistencias y goles encajados. Si ha jugado alguien del filial o juvenil que no está en la plantilla, puedes añadirlo abajo.")
-            
-            # Filtrar solo jugadores convocados de la plantilla oficial según disponibilidad
-            disp_s = sesion.get("disponibilidad", {})
-            disp_clean = {limpiar_nombre(k): v for k, v in disp_s.items()}
-            
-            jugadores_convocados = []
-            for p in st.session_state.plantilla:
-                rol = disp_clean.get(limpiar_nombre(p["JUGADOR"]), "No convocado")
-                if rol in ["Titular", "Suplente"]:
-                    jugadores_convocados.append({
-                        "JUGADOR": p["JUGADOR"],
-                        "POS": p["POS"],
-                        "Rol": rol,
-                        **sesion.get("estadisticas_partido", {}).get(p["JUGADOR"], {
-                            "Minutos": 90 if rol == "Titular" else 0,
-                            "Goles": 0,
-                            "Goles Encajados": 0,
-                            "Asistencias": 0,
-                            "Amarillas": 0,
-                            "Rojas": 0
-                        })
-                    })
-            
-            # Recuperar también los jugadores invitados que se hubieran guardado previamente en este partido
-            invitados_guardados = sesion.get("estadisticas_invitados", [])
-            for inv in invitados_guardados:
-                jugadores_convocados.append({
-                    "JUGADOR": inv["JUGADOR"],
-                    "POS": inv["POS"],
-                    "Rol": inv["Rol"],
-                    "Minutos": inv["Minutos"],
-                    "Goles": inv["Goles"],
-                    "Goles Encajados": inv["Goles Encajados"],
-                    "Asistencias": inv["Asistencias"],
-                    "Amarillas": inv["Amarillas"],
-                    "Rojas": inv["Rojas"]
-                })
-
-            # Formulario rápido para añadir un jugador invitado/filial sobre la marcha
-            with st.expander("➕ Añadir jugador del filial / juvenil / invitado"):
-                c_inv1, c_inv2, c_inv3, c_inv4 = st.columns([2, 1, 1, 1])
-                nombre_invitado = c_inv1.text_input("Nombre del Jugador Invitado:", key=f"nombre_inv_{idx_real}")
-                pos_invitado = c_inv2.selectbox("Posición:", ["POR", "DEF", "MED", "ATA"], key=f"pos_inv_{idx_real}")
-                rol_invitado = c_inv3.selectbox("Rol:", ["Suplente", "Titular"], key=f"rol_inv_{idx_real}")
-                min_invitado = c_inv4.number_input("Minutos:", min_value=0, max_value=120, value=45, key=f"min_inv_{idx_real}")
-                
-                if st.button("➕ Incluir en la tabla del partido", key=f"btn_add_inv_{idx_real}"):
-                    if nombre_invitado.strip():
-                        if "estadisticas_invitados" not in sesion:
-                            sesion["estadisticas_invitados"] = []
-                        sesion["estadisticas_invitados"].append({
-                            "JUGADOR": nombre_invitado.strip() + " (Cantera)",
-                            "POS": pos_invitado,
-                            "Rol": rol_invitado,
-                            "Minutos": min_invitado,
-                            "Goles": 0, "Goles Encajados": 0, "Asistencias": 0, "Amarillas": 0, "Rojas": 0
-                        })
-                        guardar_datos(modulo="sesiones")
-                        st.success(f"✅ {nombre_invitado} añadido al partido.")
-                        st.rerun()
-                    else:
-                        st.warning("Escribe un nombre válido para el jugador.")
-
-            if not jugadores_convocados:
-                st.warning("⚠️ No hay jugadores convocados ni invitados en este partido. Configura la disponibilidad o añade un jugador invitado arriba.")
-            else:
-                df_stats_base = pd.DataFrame(jugadores_convocados)
-                
-                cols_orden_stats = ["JUGADOR", "POS", "Rol", "Minutos", "Goles", "Goles Encajados", "Asistencias", "Amarillas", "Rojas"]
-                for c in cols_orden_stats:
-                    if c not in df_stats_base.columns: df_stats_base[c] = 0
-                
-                edited_stats = st.data_editor(
-                    df_stats_base[cols_orden_stats],
-                    key=f"editor_stats_partido_{idx_real}",
-                    use_container_width=True,
-                    hide_index=True,
-                    disabled=["JUGADOR", "POS", "Rol"]
-                )
-                
-                if st.button("💾 Guardar Estadísticas de Partido", key=f"btn_save_stats_{idx_real}"):
-                    stats_dict = {}
-                    invitados_actualizados = []
-                    goles_contra_totales = 0
-                    
-                    nombres_plantilla_oficial = [p["JUGADOR"] for p in st.session_state.plantilla]
-                    
-                    for _, row in edited_stats.iterrows():
-                        jug_nombre = row["JUGADOR"]
-                        g_enc = int(safe_float(row["Goles Encajados"]))
-                        goles_contra_totales += g_enc
-                        
-                        datos_jugador = {
-                            "Minutos": safe_float(row["Minutos"]),
-                            "Goles": int(safe_float(row["Goles"])),
-                            "Goles Encajados": g_enc,
-                            "Asistencias": int(safe_float(row["Asistencias"])),
-                            "Amarillas": int(safe_float(row["Amarillas"])),
-                            "Rojas": int(safe_float(row["Rojas"]))
-                        }
-                        
-                        # Separamos si es de la plantilla oficial o un invitado de cantera
-                        if jug_nombre in nombres_plantilla_oficial:
-                            stats_dict[jug_nombre] = datos_jugador
+                                if not alertas_multi and not alertas_rec and not alertas_car:
+                                    st.success("✅ Todos los marcadores de fatiga y riesgo del equipo están dentro de los parámetros normales.")
+                                else:
+                                    if alertas_multi:
+                                        st.error("🚨 **RIESGO MULTIFACTORIAL (2 o más alertas simultáneas)**")
+                                        for al in alertas_multi: st.write(f"- {al}")
+                                    c_al1, c_al2 = st.columns(2)
+                                    with c_al1:
+                                        st.markdown("#### 🧠 Recuperación")
+                                        if alertas_rec:
+                                            for al in alertas_rec: st.warning(al)
+                                        else: st.info("✅ Sin alertas individuales.")
+                                    with c_al2:
+                                        st.markdown("#### 🔥 Carga")
+                                        if alertas_car:
+                                            for al in alertas_car: st.warning(al)
+                                        else: st.info("✅ Sin alertas individuales.")
+                                
+                                st.markdown("---")
+                                pdf_key = f"pdf_sesion_listo_{idx_real}"
+                                if pdf_key not in st.session_state:
+                                    if st.button("⚙️ Generar PDF de la Sesión", key=f"btn_prepara_pdf_ses_{idx_real}", type="primary", use_container_width=True):
+                                        with st.spinner("Procesando gráficos y PDF..."):
+                                            st.session_state[pdf_key] = generar_pdf_completo(sesion, df_para_medias, df_graficos, alertas_multi, alertas_rec, alertas_car, {"Desglose de Wellness": fig_well, "Calidad de Recuperación (TQR)": fig_tqr, "Carga de Sesión": fig2, "Riesgo de Lesión (Ratio A/C)": fig3, "Volumen vs Intensidad": fig5, "ACC vs DCC": fig4})
+                                        st.rerun()
+                                else:
+                                    col_pdf1, col_pdf2 = st.columns(2)
+                                    with col_pdf1: st.download_button("📥 Descargar PDF", data=st.session_state[pdf_key], file_name=f"Sesion_{sesion['fecha']}.pdf", mime="application/pdf", key=f"btn_descarga_pdf_ses_{idx_real}", use_container_width=True)
+                                    with col_pdf2:
+                                        if st.button("🗑️ Descartar PDF", key=f"btn_borrar_pdf_ses_{idx_real}", use_container_width=True): del st.session_state[pdf_key]; st.rerun()                                                          
                         else:
-                            invitados_actualizados.append({
-                                "JUGADOR": jug_nombre,
-                                "POS": row["POS"],
-                                "Rol": row["Rol"],
-                                **datos_jugador
-                            })
+                            st.warning("El informe de esta sesión aún no ha sido procesado.")
+
+                    # ---------------------------------------------------------
+                    # HERRAMIENTA 3: CARGA DE DATOS (FORMULARIO OPTIMIZADO)
+                    # ---------------------------------------------------------
+                    elif active_view == "datos":
+                        st.markdown(f"#### 📂 CARGA DE DATOS | {sesion['fecha']}")
+                        if f'msg_sync_{idx_real}' in st.session_state:
+                            for msg in st.session_state[f'msg_sync_{idx_real}']:
+                                if "✅" in msg: st.success(msg)
+                                elif "⚠️" in msg: st.warning(msg)
+                                elif "❓" in msg: st.info(msg)
+                            del st.session_state[f'msg_sync_{idx_real}']
+
+                        t_man, t_exc = st.tabs(["✍️ Edición Manual de Tabla", "📁 Importar desde Excel"])
                         
-                    sesion["estadisticas_partido"] = stats_dict
-                    sesion["estadisticas_invitados"] = invitados_actualizados
-                    sesion["goles_contra"] = goles_contra_totales
-                    
-                    guardar_datos(modulo="sesiones")
-                    st.success(f"✅ ¡Estadísticas guardadas con éxito! (Goles en contra totales: {goles_contra_totales})")
-                    st.rerun()
-            st.markdown("---")
+                        with t_man:
+                            st.caption("Modifica la tabla a tu ritmo. Los cálculos internos y el guardado solo se ejecutarán cuando pulses el botón de abajo.")
+                            if sesion.get("datos_informe"):
+                                df_manual_base = pd.DataFrame(sesion["datos_informe"])
+                            else:
+                                rows = []
+                                for p in st.session_state.plantilla:
+                                    rows.append({"JUGADOR": p["JUGADOR"], "POS": p["POS"], "TQR": 0.0, "W_Humor": 0.0, "W_Sueño": 0.0, "W_Fatiga": 0.0, "W_Dolor": 0.0, "W_Estres": 0.0, "RPE": 0.0, "MIN": 0.0, "MIN_GPS": 0.0, "DIS": 0.0, "HID >21": 0.0, "HID >24": 0.0, "SPR >24": 0.0, "SPR >27": 0.0, "V_Med": 0.0, "V_Max": 0.0, "ACC_Max": 0.0, "ACC >2": 0.0, "ACC >3": 0.0, "ACC >4": 0.0, "DCC >2": 0.0, "DCC >3": 0.0, "DCC >4": 0.0, "R_0_7": 0.0, "R_7_14": 0.0, "R_14_21": 0.0, "R_21_24": 0.0, "R_24_27": 0.0, "R_27_30": 0.0, "R_30_45": 0.0})
+                                df_manual_base = pd.DataFrame(rows)
+                                
+                            if "V_Max" not in df_manual_base.columns: df_manual_base["V_Max"] = df_manual_base.get("VMAX", 0.0)
+                            if "HID >21" not in df_manual_base.columns: df_manual_base["HID >21"] = df_manual_base.get("DIS AI", 0.0)
+                            if "SPR >24" not in df_manual_base.columns: df_manual_base["SPR >24"] = df_manual_base.get("Nº SPR", 0.0)
+                            if "ACC >3" not in df_manual_base.columns: df_manual_base["ACC >3"] = df_manual_base.get("ACC", 0.0)
+                            if "DCC >3" not in df_manual_base.columns: df_manual_base["DCC >3"] = df_manual_base.get("DCC", 0.0)
+
+                            cols_to_show = ["JUGADOR", "POS", "TQR", "W_Humor", "W_Sueño", "W_Fatiga", "W_Dolor", "W_Estres", "RPE", "MIN", "MIN_GPS", "DIS", "HID >21", "HID >24", "SPR >24", "SPR >27", "V_Med", "V_Max", "ACC_Max", "ACC >2", "ACC >3", "ACC >4", "DCC >2", "DCC >3", "DCC >4", "R_0_7", "R_7_14", "R_14_21", "R_21_24", "R_24_27", "R_27_30", "R_30_45"]
+                            for c in cols_to_show:
+                                if c not in df_manual_base.columns: df_manual_base[c] = 0.0
+                                    
+                            with st.form(key=f"form_manual_{idx_real}"):
+                                edited_df = st.data_editor(
+                                    df_manual_base[cols_to_show],
+                                    use_container_width=True,
+                                    hide_index=True,
+                                    disabled=["JUGADOR", "POS"]
+                                )
+                                
+                                col_btn1, col_btn2 = st.columns(2)
+                                with col_btn1:
+                                    submit_manual = st.form_submit_button("💾 Guardar y Calcular Tabla", type="primary", use_container_width=True)
+                                with col_btn2:
+                                    del_manual = st.form_submit_button("🗑️ Vaciar Datos de Sesión", use_container_width=True)
+                                    
+                                if submit_manual:
+                                    full_records = []
+                                    for idx_row, row in edited_df.iterrows():
+                                        suma_well = safe_float(row["W_Humor"]) + safe_float(row["W_Sueño"]) + safe_float(row["W_Fatiga"]) + safe_float(row["W_Dolor"]) + safe_float(row["W_Estres"])
+                                        min_ses = safe_float(row["MIN"])
+                                        min_gps_val = safe_float(row["MIN_GPS"])
+                                        
+                                        if min_gps_val > 0 and safe_float(row["DIS"]) > 0:
+                                            dis = safe_float(row["DIS"]); dis_ai_21 = safe_float(row["HID >21"]); dis_ai_24 = safe_float(row["HID >24"]); spr_24 = safe_float(row["SPR >24"]); spr_27 = safe_float(row["SPR >27"]); v_med = safe_float(row["V_Med"]); v_max = safe_float(row["V_Max"]); acc_max = safe_float(row["ACC_Max"]); acc_2 = safe_float(row["ACC >2"]); acc_3 = safe_float(row["ACC >3"]); acc_4 = safe_float(row["ACC >4"]); dcc_2 = safe_float(row["DCC >2"]); dcc_3 = safe_float(row["DCC >3"]); dcc_4 = safe_float(row["DCC >4"]); r_0_7 = safe_float(row["R_0_7"]); r_7_14 = safe_float(row["R_7_14"]); r_14_21 = safe_float(row["R_14_21"]); r_21_24 = safe_float(row["R_21_24"]); r_24_27 = safe_float(row["R_24_27"]); r_27_30 = safe_float(row["R_27_30"]); r_30_45 = safe_float(row["R_30_45"])
+                                        else:
+                                            dis = dis_ai_21 = dis_ai_24 = spr_24 = spr_27 = v_med = v_max = acc_max = acc_2 = acc_3 = acc_4 = dcc_2 = dcc_3 = dcc_4 = r_0_7 = r_7_14 = r_14_21 = r_21_24 = r_24_27 = r_27_30 = r_30_45 = 0.0
+
+                                        ewma_actual = calcular_ewma_historico(st.session_state.sesiones, sesion["fecha"]).get(row["JUGADOR"], {})
+                                        ewma_aguda = ewma_actual.get("EWMA AGUDA", min_ses * safe_float(row["RPE"]))
+                                        ewma_cronica = ewma_actual.get("EWMA CRÓNICA", ewma_aguda)
+                                        ratio_ac = ewma_actual.get("RATIO A/C", 1.0)
+                                        
+                                        full_records.append({
+                                            "JUGADOR": row["JUGADOR"], "POS": row["POS"], "TQR": safe_float(row["TQR"]), "WELLNESS": suma_well, "W_Humor": safe_float(row["W_Humor"]), "W_Sueño": safe_float(row["W_Sueño"]), "W_Fatiga": safe_float(row["W_Fatiga"]), "W_Dolor": safe_float(row["W_Dolor"]), "W_Estres": safe_float(row["W_Estres"]), "RPE": safe_float(row["RPE"]), "MIN": min_ses, "MIN_GPS": min_gps_val, "CARGA": min_ses * safe_float(row["RPE"]),
+                                            "EWMA AGUDA": ewma_aguda, "EWMA CRÓNICA": ewma_cronica, "RATIO A/C": ratio_ac, "DIS": dis, "DIS AI": dis_ai_21, "Nº SPR": spr_24, "ACC": acc_3, "DCC": dcc_3, "VMAX": v_max, "Z1": r_0_7 + r_7_14, "Z2": r_14_21, "Z3": r_21_24, "Z4": r_24_27, "Z5": r_27_30, "Z6": r_30_45, "HID >21": dis_ai_21, "HID >24": dis_ai_24, "SPR >24": spr_24, "SPR >27": spr_27, "V_Med": v_med, "V_Max": v_max, "ACC_Max": acc_max, "ACC >2": acc_2, "ACC >3": acc_3, "ACC >4": acc_4, "DCC >2": dcc_2, "DCC >3": dcc_3, "DCC >4": dcc_4, "R_0_7": r_0_7, "R_7_14": r_7_14, "R_14_21": r_14_21, "R_21_24": r_21_24, "R_24_27": r_24_27, "R_27_30": r_27_30, "R_30_45": r_30_45
+                                        })
+                                        
+                                    st.session_state.sesiones[idx_real]['datos_informe'] = full_records
+                                    st.session_state.sesiones[idx_real]['informe_generado'] = True
+                                    guardar_datos(modulo="sesiones")
+                                    st.success("✅ ¡Datos manuales calculados y guardados correctamente!")
+                                    st.rerun()
+                                    
+                                elif del_manual:
+                                    st.session_state.sesiones[idx_real]['datos_informe'] = []
+                                    st.session_state.sesiones[idx_real]['informe_generado'] = False
+                                    guardar_datos(modulo="sesiones")
+                                    st.success("✅ Datos de la sesión borrados correctamente.")
+                                    st.rerun()
+
+                        with t_exc:
+                            st.caption("Asegúrate de haber configurado el nombre de las columnas en la pestaña de Configuración.")
+                            col_up1, col_up2, col_up3 = st.columns(3)
+                            with col_up1: archivo_well = st.file_uploader("1. Wellness:", type=["xlsx"], key=f"up_w_{idx_real}")
+                            with col_up2: archivo_rpe = st.file_uploader("2. RPE:", type=["xlsx"], key=f"up_r_{idx_real}")
+                            with col_up3: archivo_gps = st.file_uploader("3. GPS:", type=["xlsx"], key=f"up_g_{idx_real}")
+                            
+                            if st.button("⚙️ Sincronizar Archivos", type="primary", use_container_width=True):
+                                try:
+                                    import difflib
+                                    df_w_up = pd.read_excel(archivo_well) if archivo_well else pd.DataFrame()
+                                    df_r_up = pd.read_excel(archivo_rpe) if archivo_rpe else pd.DataFrame()
+                                    df_g_up = pd.read_excel(archivo_gps) if archivo_gps else pd.DataFrame()
+                                    
+                                    cfg_w = st.session_state.get("config_mapeo", {}).get("wellness", {})
+                                    cfg_r = st.session_state.get("config_mapeo", {}).get("rpe", {})
+                                    cfg_g = st.session_state.get("config_mapeo", {}).get("gps", {})
+                                    
+                                    errores_criticos = []
+                                    if not df_w_up.empty:
+                                        valido, err = validar_columnas_excel(df_w_up, "Wellness", [cfg_w.get("nombre", "Nombre"), cfg_w.get("fecha", "Marca temporal")])
+                                        if not valido: errores_criticos.append(err)
+                                    if not df_r_up.empty:
+                                        valido, err = validar_columnas_excel(df_r_up, "RPE", [cfg_r.get("nombre", "Nombre"), cfg_r.get("fecha", "Marca temporal")])
+                                        if not valido: errores_criticos.append(err)
+                                    if not df_g_up.empty:
+                                        valido, err = validar_columnas_excel(df_g_up, "GPS", [cfg_g.get("nombre", "Player Name"), cfg_g.get("fecha", "Activity Date"), cfg_g.get("dis", "Distance (km)")])
+                                        if not valido: errores_criticos.append(err)
+                                            
+                                    if errores_criticos:
+                                        for error_msg in errores_criticos: st.markdown(f"<div style='background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 15px; margin-bottom: 10px; border-radius: 6px; color: #991b1b;'>{error_msg}</div>", unsafe_allow_html=True)
+                                    else:
+                                        fecha_sesion_str = pd.to_datetime(sesion['fecha']).strftime('%Y-%m-%d')
+                                        def filtrar_fecha_dinamico(df, col_fecha_config):
+                                            if df.empty: return df
+                                            col_f = next((c for c in df.columns if str(c).strip().lower() == col_fecha_config.strip().lower()), None)
+                                            if not col_f: col_f = next((c for c in df.columns if 'marca temporal' in str(c).lower() or 'activity date' in str(c).lower() or 'date' in str(c).lower() or 'fecha' in str(c).lower()), None)
+                                            if col_f:
+                                                df['FECHA_TEMP'] = pd.to_datetime(df[col_f], errors='coerce').dt.strftime('%Y-%m-%d')
+                                                return df[df['FECHA_TEMP'] == fecha_sesion_str].drop(columns=['FECHA_TEMP'])
+                                            return df
+
+                                        df_w_up = filtrar_fecha_dinamico(df_w_up, cfg_w.get("fecha", "Marca temporal"))
+                                        df_r_up = filtrar_fecha_dinamico(df_r_up, cfg_r.get("fecha", "Marca temporal"))
+                                        df_g_up = filtrar_fecha_dinamico(df_g_up, cfg_g.get("fecha", "Activity Date"))
+
+                                        nombres_plantilla = [p['JUGADOR'] for p in st.session_state.plantilla]
+                                        no_encontrados_en_app = set()
+                                        
+                                        def emparejar_nombre(nombre_excel):
+                                            if pd.isna(nombre_excel): return None
+                                            n_ex = limpiar_nombre(nombre_excel)
+                                            for n_app in nombres_plantilla:
+                                                if n_ex == limpiar_nombre(n_app): return n_app
+                                            for n_app in nombres_plantilla:
+                                                n_app_cl = limpiar_nombre(n_app)
+                                                if n_ex in n_app_cl or n_app_cl in n_ex: return n_app
+                                            matches = difflib.get_close_matches(n_ex, [limpiar_nombre(n) for n in nombres_plantilla], n=1, cutoff=0.7)
+                                            if matches:
+                                                for n_app in nombres_plantilla:
+                                                    if limpiar_nombre(n_app) == matches[0]: return n_app
+                                            return None
+
+                                        faltan_w = []
+                                        col_w_nom = cfg_w.get("nombre", "Nombre")
+                                        if not df_w_up.empty and col_w_nom in df_w_up.columns:
+                                            df_w_up['JUGADOR_MATCH'] = df_w_up[col_w_nom].apply(emparejar_nombre)
+                                            no_encontrados_en_app.update(df_w_up[df_w_up['JUGADOR_MATCH'].isna()][col_w_nom].dropna().tolist())
+                                            df_w_up = df_w_up.dropna(subset=['JUGADOR_MATCH'])
+                                            faltan_w = [n for n in nombres_plantilla if n not in df_w_up['JUGADOR_MATCH'].tolist()]
+                                        elif archivo_well: faltan_w = nombres_plantilla.copy()
+
+                                        faltan_r = []
+                                        col_r_nom = cfg_r.get("nombre", "Nombre")
+                                        if not df_r_up.empty and col_r_nom in df_r_up.columns:
+                                            df_r_up['JUGADOR_MATCH'] = df_r_up[col_r_nom].apply(emparejar_nombre)
+                                            no_encontrados_en_app.update(df_r_up[df_r_up['JUGADOR_MATCH'].isna()][col_r_nom].dropna().tolist())
+                                            df_r_up = df_r_up.dropna(subset=['JUGADOR_MATCH'])
+                                            faltan_r = [n for n in nombres_plantilla if n not in df_r_up['JUGADOR_MATCH'].tolist()]
+                                        elif archivo_rpe: faltan_r = nombres_plantilla.copy()
+
+                                        col_g_nom = cfg_g.get("nombre", "Player Name")
+                                        if not df_g_up.empty and col_g_nom in df_g_up.columns:
+                                            df_g_up['JUGADOR_MATCH'] = df_g_up[col_g_nom].apply(emparejar_nombre)
+                                            no_encontrados_en_app.update(df_g_up[df_g_up['JUGADOR_MATCH'].isna()][col_g_nom].dropna().tolist())
+                                            df_g_up = df_g_up.dropna(subset=['JUGADOR_MATCH'])
+
+                                        datos_actuales = {d["JUGADOR"]: d for d in sesion.get("datos_informe", [])}
+                                        registros_sesion = []
+                                        for nombre_final in sorted(nombres_plantilla):
+                                            match_p = next((p for p in st.session_state.plantilla if p['JUGADOR'] == nombre_final), None)
+                                            pos_jug = match_p['POS'] if match_p else "DEF"
+
+                                            reg = datos_actuales.get(nombre_final, {
+                                                "JUGADOR": nombre_final, "POS": pos_jug, "TQR": 0.0, "WELLNESS": 0.0, "W_Humor": 0.0, "W_Sueño": 0.0, "W_Fatiga": 0.0, "W_Dolor": 0.0, "W_Estres": 0.0, "RPE": 0.0, "MIN": 0.0, "MIN_GPS": 0.0, "CARGA": 0.0, "EWMA AGUDA": 0.0, "EWMA CRÓNICA": 0.0, "RATIO A/C": 0.0, "DIS": 0.0, "DIS AI": 0.0, "Nº SPR": 0.0, "ACC": 0.0, "DCC": 0.0, "VMAX": 0.0, "Z1": 0.0, "Z2": 0.0, "Z3": 0.0, "Z4": 0.0, "Z5": 0.0, "Z6": 0.0, "HID >21": 0.0, "HID >24": 0.0, "SPR >24": 0.0, "SPR >27": 0.0, "V_Med": 0.0, "V_Max": 0.0, "ACC_Max": 0.0, "ACC >2": 0.0, "ACC >3": 0.0, "ACC >4": 0.0, "DCC >2": 0.0, "DCC >3": 0.0, "DCC >4": 0.0, "R_0_7": 0.0, "R_7_14": 0.0, "R_14_21": 0.0, "R_21_24": 0.0, "R_24_27": 0.0, "R_27_30": 0.0, "R_30_45": 0.0
+                                            })
+
+                                            if not df_r_up.empty and cfg_r:
+                                                match_r = df_r_up[df_r_up['JUGADOR_MATCH'] == nombre_final]
+                                                if not match_r.empty: 
+                                                    reg["RPE"] = safe_float(match_r.iloc[0].get(cfg_r.get("rpe", "RPE"), 0))
+                                                    if reg["MIN"] == 0: reg["MIN"] = 90.0
+
+                                            if not df_w_up.empty and cfg_w:
+                                                match_w = df_w_up[df_w_up['JUGADOR_MATCH'] == nombre_final]
+                                                if not match_w.empty:
+                                                    r_w = match_w.iloc[0]
+                                                    reg["TQR"] = safe_float(r_w.get(cfg_w.get("tqr", "TQR"), 0))
+                                                    reg["W_Fatiga"] = safe_float(r_w.get(cfg_w.get("fatiga", "W_Fatiga"), 0))
+                                                    reg["W_Sueño"] = safe_float(r_w.get(cfg_w.get("sueno", "W_Sueño"), 0))
+                                                    reg["W_Dolor"] = safe_float(r_w.get(cfg_w.get("dolor", "W_Dolor"), 0))
+                                                    reg["W_Estres"] = safe_float(r_w.get(cfg_w.get("estres", "W_Estres"), 0))
+                                                    reg["W_Humor"] = safe_float(r_w.get(cfg_w.get("humor", "W_Humor"), 0))
+                                                    reg["WELLNESS"] = reg["W_Fatiga"] + reg["W_Sueño"] + reg["W_Dolor"] + reg["W_Estres"] + reg["W_Humor"]
+
+                                            if not df_g_up.empty and cfg_g:
+                                                match_g = df_g_up[df_g_up['JUGADOR_MATCH'] == nombre_final]
+                                                if not match_g.empty:
+                                                    row_g = match_g.iloc[0]
+                                                    dis = safe_float(row_g.get(cfg_g.get("dis", "Distance (km)"), 0))
+                                                    if dis > 0:
+                                                        min_gps_excel = extraer_minutos(str(row_g.get(cfg_g.get("min_gps", "Time Played"), '0')))
+                                                        reg["MIN_GPS"] = min_gps_excel if min_gps_excel > 0 else 90.0
+                                                        reg["MIN"] = reg["MIN_GPS"]
+                                                        reg["DIS"] = dis
+                                                        reg["HID >21"] = safe_float(row_g.get(cfg_g.get("hid_21", ""), 0)) * 1000.0
+                                                        reg["DIS AI"] = reg["HID >21"]
+                                                        reg["HID >24"] = safe_float(row_g.get(cfg_g.get("hid_24", ""), 0)) * 1000.0
+                                                        reg["SPR >24"] = safe_float(row_g.get(cfg_g.get("spr_24", ""), 0))
+                                                        reg["Nº SPR"] = reg["SPR >24"]
+                                                        reg["SPR >27"] = safe_float(row_g.get(cfg_g.get("spr_27", ""), 0))
+                                                        reg["V_Med"] = safe_float(row_g.get(cfg_g.get("v_med", ""), 0))
+                                                        reg["VMAX"] = safe_float(row_g.get(cfg_g.get("v_max", ""), 0))
+                                                        reg["V_Max"] = reg["VMAX"]
+                                                        reg["ACC >2"] = safe_float(row_g.get(cfg_g.get("acc_2", ""), 0))
+                                                        reg["ACC >3"] = safe_float(row_g.get(cfg_g.get("acc_3", ""), 0))
+                                                        reg["ACC"] = reg["ACC >3"]
+                                                        reg["ACC >4"] = safe_float(row_g.get(cfg_g.get("acc_4", ""), 0))
+                                                        reg["DCC >2"] = safe_float(row_g.get(cfg_g.get("dcc_2", ""), 0))
+                                                        reg["DCC >3"] = safe_float(row_g.get(cfg_g.get("dcc_3", ""), 0))
+                                                        reg["DCC"] = reg["DCC >3"]
+                                                        reg["DCC >4"] = safe_float(row_g.get(cfg_g.get("dcc_4", ""), 0))
+                                                        reg["R_0_7"] = safe_float(row_g.get(cfg_g.get("r_0_7", ""), 0)) * 1000.0
+                                                        reg["R_7_14"] = safe_float(row_g.get(cfg_g.get("r_7_14", ""), 0)) * 1000.0
+                                                        reg["R_14_21"] = safe_float(row_g.get(cfg_g.get("r_14_21", ""), 0)) * 1000.0
+                                                        reg["R_21_24"] = safe_float(row_g.get(cfg_g.get("r_21_24", ""), 0)) * 1000.0
+                                                        reg["R_24_27"] = safe_float(row_g.get(cfg_g.get("r_24_27", ""), 0)) * 1000.0
+                                                        reg["R_27_30"] = safe_float(row_g.get(cfg_g.get("r_27_30", ""), 0)) * 1000.0
+                                                        reg["R_30_45"] = safe_float(row_g.get(cfg_g.get("r_30_45", ""), 0)) * 1000.0 
+                                                        reg["Z1"] = reg["R_0_7"] + reg["R_7_14"]
+                                                        reg["Z2"] = reg["R_14_21"]
+                                                        reg["Z3"] = reg["R_21_24"]
+                                                        reg["Z4"] = reg["R_24_27"]
+                                                        reg["Z5"] = reg["R_27_30"]
+
+                                            reg["CARGA"] = reg["MIN"] * reg["RPE"]
+                                            ewma_excel = calcular_ewma_historico(st.session_state.sesiones, sesion["fecha"]).get(nombre_final, {})
+                                            reg["EWMA AGUDA"] = ewma_excel.get("EWMA AGUDA", reg["CARGA"])
+                                            reg["EWMA CRÓNICA"] = ewma_excel.get("EWMA CRÓNICA", reg["CARGA"])
+                                            reg["RATIO A/C"] = ewma_excel.get("RATIO A/C", 1.0)
+                                            
+                                            registros_sesion.append(reg)
+                                            
+                                        st.session_state.sesiones[idx_real]['datos_informe'] = registros_sesion
+                                        st.session_state.sesiones[idx_real]['informe_generado'] = True
+                                        guardar_datos(modulo="sesiones")
+                                        
+                                        msgs = [f"✅ Sincronización completada. Se generó la tabla con los {len(nombres_plantilla)} jugadores de tu plantilla."]
+                                        if archivo_well and faltan_w: msgs.append(f"⚠️ **Faltan en Wellness:** {', '.join(faltan_w)}")
+                                        if archivo_rpe and faltan_r: msgs.append(f"⚠️ **Faltan en RPE:** {', '.join(faltan_r)}")
+                                        if no_encontrados_en_app: msgs.append(f"❓ **Están en Excel pero NO en tu App:** {', '.join(no_encontrados_en_app)}")
+                                        st.session_state[f'msg_sync_{idx_real}'] = msgs
+                                        st.rerun()
+                                except Exception as e:
+                                    st.error(f"Error al procesar: {e}")
+
+                    # ---------------------------------------------------------
+                    # HERRAMIENTA 4: LESIONES (FORMULARIO COMPRIMIDO)
+                    # ---------------------------------------------------------
+                    elif active_view == "les":
+                        st.markdown(f"#### 🚑 PARTE MÉDICO | {sesion['fecha']}")
+                        if not st.session_state.plantilla:
+                            st.warning("No hay jugadores en la plantilla.")
+                        else:
+                            with st.form(key=f"form_lesion_{idx_real}"):
+                                n_plan = [j["JUGADOR"] for j in st.session_state.plantilla]
+                                
+                                c1, c2, c3, c4 = st.columns(4)
+                                les_jugador = c1.selectbox("Jugador Afectado:", n_plan)
+                                les_tipo = c2.selectbox("Tipo de Lesión:", ["Muscular", "Tendinosa", "Artículo-ligamentosa", "Fractura", "Otra"])
+                                les_zona = c3.selectbox("Zona Afectada:", ["Pie", "Tobillo", "Pierna", "Rodilla", "Muslo", "Cadera - Ingles", "Extremidades Superiores", "Tronco", "Cabeza"])
+                                les_lado = c4.selectbox("Lado:", ["Derecha", "Izquierda", "N/A"])
+                                
+                                c5, c6, c7, c8 = st.columns([1.5, 1, 1, 1])
+                                les_lat = c5.selectbox("Lateralidad:", ["Dominante", "No dominante", "Sin lateralidad"])
+                                les_contacto = c6.radio("¿Contacto?", ["Sí", "No"], horizontal=True)
+                                les_cesped = c7.radio("Superficie:", ["Natural", "Artificial"], horizontal=True)
+                                les_recidiva = c8.radio("¿Recidiva?", ["No", "Sí"], horizontal=True)
+                                
+                                les_comentarios = st.text_input("Comentarios / Mecanismo:")
+                                
+                                if st.form_submit_button("💾 Registrar Lesión", type="primary"):
+                                    nueva_lesion = {"id_sesion": sesion["fecha"], "tipo_sesion": "Partido" if es_partido else "Entrenamiento", "jugador": les_jugador, "tipo": les_tipo, "zona": les_zona, "lado": les_lado, "lateralidad": les_lat, "contacto": les_contacto, "cesped": les_cesped, "recidiva": les_recidiva, "comentarios": les_comentarios, "dias_baja": None, "estado": "Activa", "fecha_registro": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+                                    st.session_state.lesiones.append(nueva_lesion)
+                                    guardar_datos(modulo="lesiones")
+                                    st.success(f"¡Parte médico de {les_jugador} guardado!")
+                                    st.rerun()
+
+                    # ---------------------------------------------------------
+                    # HERRAMIENTA 5: ESTADÍSTICAS DEL PARTIDO
+                    # ---------------------------------------------------------
+                    elif active_view == "stats" and es_partido:
+                        st.markdown(f"#### ⚡ ESTADÍSTICAS DE PARTIDO | vs {sesion.get('rival', 'Rival')} ({sesion['fecha']})")
+                        col_g1, col_g2 = st.columns(2)
+                        condicion_actual = sesion.get("condicion", "Casa")
+                        nueva_condicion = col_g1.selectbox("Condición:", ["Casa", "Fuera"], index=["Casa", "Fuera"].index(condicion_actual), key=f"cond_{idx_real}")
+                        goles_f_actual = sesion.get("goles_favor", 0)
+                        nuevo_gf = col_g2.number_input("Goles Anotados (Favor del Equipo):", min_value=0, value=int(goles_f_actual or 0), key=f"gf_{idx_real}")
+                        
+                        sesion["condicion"] = nueva_condicion
+                        sesion["goles_favor"] = nuevo_gf
+
+                        st.markdown("##### 📋 Rendimiento de Jugadores Convocados")
+                        disp_s = sesion.get("disponibilidad", {})
+                        disp_clean = {limpiar_nombre(k): v for k, v in disp_s.items()}
+                        jugadores_convocados = []
+                        for p in st.session_state.plantilla:
+                            rol = disp_clean.get(limpiar_nombre(p["JUGADOR"]), "No convocado")
+                            if rol in ["Titular", "Suplente"]:
+                                jugadores_convocados.append({
+                                    "JUGADOR": p["JUGADOR"], "POS": p["POS"], "Rol": rol,
+                                    **sesion.get("estadisticas_partido", {}).get(p["JUGADOR"], {"Minutos": 90 if rol == "Titular" else 0, "Goles": 0, "Goles Encajados": 0, "Asistencias": 0, "Amarillas": 0, "Rojas": 0})
+                                })
+                        
+                        invitados_guardados = sesion.get("estadisticas_invitados", [])
+                        for inv in invitados_guardados:
+                            jugadores_convocados.append({"JUGADOR": inv["JUGADOR"], "POS": inv["POS"], "Rol": inv["Rol"], "Minutos": inv["Minutos"], "Goles": inv["Goles"], "Goles Encajados": inv["Goles Encajados"], "Asistencias": inv["Asistencias"], "Amarillas": inv["Amarillas"], "Rojas": inv["Rojas"]})
+
+                        with st.expander("➕ Añadir jugador del filial / juvenil / invitado"):
+                            c_inv1, c_inv2, c_inv3, c_inv4 = st.columns([2, 1, 1, 1])
+                            nombre_invitado = c_inv1.text_input("Nombre del Jugador Invitado:", key=f"nombre_inv_{idx_real}")
+                            pos_invitado = c_inv2.selectbox("Posición:", ["POR", "DEF", "MED", "ATA"], key=f"pos_inv_{idx_real}")
+                            rol_invitado = c_inv3.selectbox("Rol:", ["Suplente", "Titular"], key=f"rol_inv_{idx_real}")
+                            min_invitado = c_inv4.number_input("Minutos:", min_value=0, max_value=120, value=45, key=f"min_inv_{idx_real}")
+                            if st.button("➕ Incluir en la tabla del partido", key=f"btn_add_inv_{idx_real}"):
+                                if nombre_invitado.strip():
+                                    if "estadisticas_invitados" not in sesion: sesion["estadisticas_invitados"] = []
+                                    sesion["estadisticas_invitados"].append({"JUGADOR": nombre_invitado.strip() + " (Cantera)", "POS": pos_invitado, "Rol": rol_invitado, "Minutos": min_invitado, "Goles": 0, "Goles Encajados": 0, "Asistencias": 0, "Amarillas": 0, "Rojas": 0})
+                                    guardar_datos(modulo="sesiones")
+                                    st.success(f"✅ {nombre_invitado} añadido al partido.")
+                                    st.rerun()
+                                else: st.warning("Escribe un nombre válido.")
+
+                        if not jugadores_convocados:
+                            st.warning("⚠️ No hay jugadores convocados. Configura la disponibilidad o añade un jugador invitado arriba.")
+                        else:
+                            df_stats_base = pd.DataFrame(jugadores_convocados)
+                            cols_orden_stats = ["JUGADOR", "POS", "Rol", "Minutos", "Goles", "Goles Encajados", "Asistencias", "Amarillas", "Rojas"]
+                            for c in cols_orden_stats:
+                                if c not in df_stats_base.columns: df_stats_base[c] = 0
+                            
+                            with st.form(f"form_stats_{idx_real}"):
+                                edited_stats = st.data_editor(df_stats_base[cols_orden_stats], use_container_width=True, hide_index=True, disabled=["JUGADOR", "POS", "Rol"])
+                                if st.form_submit_button("💾 Guardar Estadísticas de Partido", type="primary"):
+                                    stats_dict, invitados_actualizados, goles_contra_totales = {}, [], 0
+                                    nombres_plantilla_oficial = [p["JUGADOR"] for p in st.session_state.plantilla]
+                                    for _, r in edited_stats.iterrows():
+                                        j_nom = r["JUGADOR"]
+                                        g_e = int(safe_float(r["Goles Encajados"]))
+                                        goles_contra_totales += g_e
+                                        d_jug = {"Minutos": safe_float(r["Minutos"]), "Goles": int(safe_float(r["Goles"])), "Goles Encajados": g_e, "Asistencias": int(safe_float(r["Asistencias"])), "Amarillas": int(safe_float(r["Amarillas"])), "Rojas": int(safe_float(r["Rojas"]))}
+                                        if j_nom in nombres_plantilla_oficial: stats_dict[j_nom] = d_jug
+                                        else: invitados_actualizados.append({"JUGADOR": j_nom, "POS": r["POS"], "Rol": r["Rol"], **d_jug})
+                                    sesion["estadisticas_partido"] = stats_dict
+                                    sesion["estadisticas_invitados"] = invitados_actualizados
+                                    sesion["goles_contra"] = goles_contra_totales
+                                    guardar_datos(modulo="sesiones")
+                                    st.success(f"✅ ¡Estadísticas guardadas con éxito! (Goles en contra totales: {goles_contra_totales})")
+                                    st.rerun()
 with tab_add:
     st.markdown("### ➕ Planificación de Sesiones")
     st.caption("Selecciona la fecha e introduce los datos del evento para registrarlo en el calendario.")
