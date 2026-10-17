@@ -441,30 +441,73 @@ with tab_informes:
                 st.plotly_chart(fig_tor, use_container_width=True)
             # (El código anterior termina donde se dibuja el gráfico fig_tor)
             
-            # --- PEGAR JUSTO DEBAJO DE st.plotly_chart(fig_tor, use_container_width=True) ---
+            # --- NUEVO: BOTÓN DESCARGA INDIVIDUAL ---
+            st.markdown("---")
+            pdf_key = f"pdf_val_{val_sel_id}"
+            
+            if pdf_key not in st.session_state:
+                if st.button("⚙️ Generar PDF de esta Valoración", use_container_width=True):
+                    with st.spinner("Procesando gráficos y compilando PDF..."):
+                        img_paths_ind = {}
+                        for name, f_obj in [('fv', fig_sq), ('rad', fig_rad), ('tor', fig_tor)]:
+                            if f_obj:
+                                f_obj.update_layout(paper_bgcolor="white", plot_bgcolor="white", font=dict(color="black"))
+                                tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
+                                tmp.close()
+                                f_obj.write_image(tmp.name, engine="kaleido", width=700, height=350, format="jpg")
+                                img_paths_ind[name] = tmp.name
+                                
+                        from utils.pdf_generator import generar_pdf_valoracion_jugador
+                        jug_datos_ind = next((j for j in st.session_state.plantilla if j["JUGADOR"] == jug_sel), None)
+                        
+                        pdf_bytes = generar_pdf_valoracion_jugador(
+                            jug_masivo=jug_sel, 
+                            jug_datos=jug_datos_ind, 
+                            v_latest=v_data, 
+                            v_ref=val_ref, 
+                            peso_act=peso_actual, 
+                            img_paths=img_paths_ind,
+                            escudo_b64=st.session_state.get("escudo_equipo"),
+                            cuadrante=cuadrante, 
+                            v0=v0, 
+                            f0_kg_barra=f0_kg_barra, 
+                            f0_rel_N=f0_rel_N, 
+                            r2=r2, 
+                            pauta_fv=pauta_fv
+                        )
+                        st.session_state[pdf_key] = pdf_bytes
+                        st.rerun()
+            else:
+                c_down1, c_down2 = st.columns(2)
+                with c_down1:
+                    st.download_button("📥 Descargar PDF Individual", data=st.session_state[pdf_key], file_name=f"Valoracion_{jug_sel}_{v_data['fecha']}.pdf", mime="application/pdf", use_container_width=True)
+                with c_down2:
+                    if st.button("🗑️ Descartar PDF", use_container_width=True):
+                        del st.session_state[pdf_key]
+                        st.rerun()
+
+            # --- BOTÓN DESCARGA MASIVA (ZIP REFACTORIZADO) ---
             st.markdown("---")
             st.markdown("#### 🗂️ Descarga Masiva (Toda la Plantilla)")
-            st.caption("Genera un archivo ZIP que contendrá los informes individuales en PDF con el diseño idéntico al de la plataforma para todos los jugadores evaluados.")
             
             if st.button("📦 Generar ZIP con valoraciones de todo el equipo", use_container_width=True):
-                with st.status("Generando informes PDF maquetados para todo el equipo...", expanded=True) as status:
+                with st.status("Generando informes PDF maquetados...", expanded=True) as status:
                     zip_buffer = io.BytesIO()
                     
                     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
                         jugadores_unicos = list(set([v['jugador'] for v in valoraciones]))
                         df_eq = pd.DataFrame(valoraciones)
+                        from utils.pdf_generator import generar_pdf_valoracion_jugador
                         
                         for jug_masivo in jugadores_unicos:
-                            st.write(f"Procesando informe maquetado de {jug_masivo}...")
-                            vals_j = [v for v in valoraciones if v['jugador'] == jug_masivo]
-                            vals_j = sorted(vals_j, key=lambda x: x.get('fecha', ''))
-                            for i, v in enumerate(vals_j): v['num_cronologico'] = i + 1
-                            
+                            st.write(f"Procesando informe de {jug_masivo}...")
+                            vals_j = sorted([v for v in valoraciones if v['jugador'] == jug_masivo], key=lambda x: x.get('fecha', ''))
                             v_latest = vals_j[-1]
                             peso_act = safe_float(v_latest.get('peso_corporal', 70.0))
-                            if peso_act == 0: peso_act = 70.0
-                            
                             jug_datos = next((j for j in st.session_state.plantilla if j["JUGADOR"] == jug_masivo), None)
+                            
+                            # (Aquí regeneras los 3 gráficos en silencio para el jugador del loop, extraes el img_paths y llamas a generar_pdf_valoracion_jugador, al igual que arriba, pero dentro del bucle ZIP)
+                            # Nota: El código interno de la IA original de las líneas 490 a 523 con la generación de las variables cuadrante, v0, etc, debe mantenerse para procesar cada jugador del loop antes de llamar al PDF.
                             
                             # --- 1. RECALCULAR GRÁFICOS (F-V, Radar, Tornado) ---
                             fig_sq_m = None
