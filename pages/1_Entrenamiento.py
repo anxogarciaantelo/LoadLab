@@ -627,14 +627,18 @@ with tab_ses:
             accion_sugerida="Ve a la pestaña '➕ Añadir Sesión' para generar tu primer evento."
         )
     else:
-        # 1. Agrupar sesiones por microciclo
+        # 1. Agrupar sesiones por microciclo y mapear numeración relativa
         micros_dict = {}
+        semanas_unicas = set()
         for s in st.session_state.sesiones:
             num_sem = obtener_numero_semana(s["fecha"])
+            semanas_unicas.add(num_sem)
             if num_sem not in micros_dict:
                 micros_dict[num_sem] = []
             micros_dict[num_sem].append(s)
             
+        # Creamos el mapa ordenando cronológicamente las semanas
+        mapa_micros = {num_sem: i + 1 for i, num_sem in enumerate(sorted(list(semanas_unicas)))}
         micros_sorted = sorted(micros_dict.keys(), reverse=True)
         
         # Gestión de estado de la vista activa para ultra-rendimiento (Solo carga 1 panel a la vez)
@@ -648,9 +652,11 @@ with tab_ses:
             sesiones_sem = sorted(micros_dict[num_sem], key=lambda x: x["fecha"])
             _, _, lunes, domingo = obtener_rango_fechas_semana(sesiones_sem[0]["fecha"])
             
+            micro_relativo = mapa_micros[num_sem]
+            
             st.markdown(f"""
             <div style='background-color: #1e293b; padding: 12px 18px; border-radius: 8px; border-left: 4px solid #3b82f6; margin-top: 25px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);'>
-                <h4 style='margin: 0; color: #f8fafc; font-weight: 800; text-transform: uppercase;'>📦 MICROCICLO {num_sem} 
+                <h4 style='margin: 0; color: #f8fafc; font-weight: 800; text-transform: uppercase;'>📦 MICROCICLO {micro_relativo} 
                 <span style='font-size: 0.95rem; color: #94a3b8; font-weight: 700;'>(Semana {lunes.strftime('%d/%m')} al {domingo.strftime('%d/%m')})</span></h4>
             </div>
             """, unsafe_allow_html=True)
@@ -679,19 +685,28 @@ with tab_ses:
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    # Botones de herramientas compactos en la propia tarjeta
+                    # Botones de herramientas compactos en la propia tarjeta con lógica TOGGLE
                     b_cols = st.columns(5)
+                    
+                    def toggle_view(target_idx, target_view):
+                        if st.session_state.ses_activa_idx == target_idx and st.session_state.ses_activa_view == target_view:
+                            st.session_state.ses_activa_idx = None
+                            st.session_state.ses_activa_view = None
+                        else:
+                            st.session_state.ses_activa_idx = target_idx
+                            st.session_state.ses_activa_view = target_view
+                            
                     if b_cols[0].button("🏥", key=f"bd_{idx_real}", help="Disponibilidad"):
-                        st.session_state.ses_activa_idx = idx_real; st.session_state.ses_activa_view = "disp"; st.rerun()
+                        toggle_view(idx_real, "disp"); st.rerun()
                     if b_cols[1].button("📊", key=f"bi_{idx_real}", help="Informe"):
-                        st.session_state.ses_activa_idx = idx_real; st.session_state.ses_activa_view = "inf"; st.rerun()
+                        toggle_view(idx_real, "inf"); st.rerun()
                     if b_cols[2].button("📂", key=f"bc_{idx_real}", help="Cargar Datos"):
-                        st.session_state.ses_activa_idx = idx_real; st.session_state.ses_activa_view = "datos"; st.rerun()
+                        toggle_view(idx_real, "datos"); st.rerun()
                     if b_cols[3].button("🚑", key=f"bl_{idx_real}", help="Lesión"):
-                        st.session_state.ses_activa_idx = idx_real; st.session_state.ses_activa_view = "les"; st.rerun()
+                        toggle_view(idx_real, "les"); st.rerun()
                     if es_partido:
                         if b_cols[4].button("⚡", key=f"bs_{idx_real}", help="Stats Partido"):
-                            st.session_state.ses_activa_idx = idx_real; st.session_state.ses_activa_view = "stats"; st.rerun()
+                            toggle_view(idx_real, "stats"); st.rerun()
                     else:
                         b_cols[4].write("")
             
@@ -721,6 +736,16 @@ with tab_ses:
                         
                         disp_dict_clean = {limpiar_nombre(k): v for k, v in sesion.get("disponibilidad", {}).items()}
                         jugs_plantilla = [p["JUGADOR"] for p in st.session_state.plantilla]
+                        
+                        # --- RENDERIZAR KPIs DE DISPONIBILIDAD ---
+                        todas_opciones = [default_disp] + opciones_disp
+                        conteos = Counter([disp_dict_clean.get(limpiar_nombre(j), default_disp) for j in jugs_plantilla])
+                        
+                        cols_metricas = st.columns(len(todas_opciones))
+                        for i, opc in enumerate(todas_opciones):
+                            cols_metricas[i].metric(opc, conteos.get(opc, 0))
+                        st.markdown("---")
+                        # -----------------------------------------
                         
                         jugadores_por_estado = {est: [] for est in opciones_disp}
                         for j in jugs_plantilla:
