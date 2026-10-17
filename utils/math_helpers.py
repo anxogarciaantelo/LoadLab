@@ -405,7 +405,7 @@ def aplicar_color_sidebar():
             st.page_link("pages/8_Predicción_de_lesiones.py", label="Predicción de lesiones", icon="🧠")
             
             # 3. ESPACIADOR FLEXIBLE (Empuja los siguientes elementos abajo del todo)
-            st.markdown("<div style='margin-top: auto;'></div>", unsafe_allow_html=True)
+            st.markdown("<div class='spacer-bottom'></div>", unsafe_allow_html=True)
             
             # 4. LIVE SYNC Y BOTONES ABAJO DEL TODO
             st.markdown("<hr style='border-color: #1e293b; margin-top: 10px; margin-bottom: 10px; border-width: 1px;'>", unsafe_allow_html=True)
