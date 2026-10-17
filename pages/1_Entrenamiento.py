@@ -200,9 +200,13 @@ with tab_temp:
                     actual = ultimo_m[col]
                     
                     if media == 0: 
-                        return {'valor': 0, 'inverso': col in ['Wellness', 'RPE'], 'texto': 'esta semana'}
+                        return {'valor': 0, 'inverso': False, 'texto': 'esta semana'}
                     
-                    diff_pct = ((actual - media) / media) * 100
+                    # Corrección científica: En Wellness (5-35), la fatiga real empieza en 5.
+                    if col == 'Wellness' and media > 5:
+                        diff_pct = ((actual - media) / (media - 5)) * 100
+                    else:
+                        diff_pct = ((actual - media) / media) * 100
                     
                     if col == 'Wellness':
                         texto = "peor esta semana" if diff_pct > 0 else "mejor esta semana"
@@ -212,7 +216,7 @@ with tab_temp:
                         inverso = False
                     else:
                         texto = "más esta semana" if diff_pct > 0 else "menos esta semana"
-                        inverso = col in ['RPE']
+                        inverso = False  # RPE ahora es directo: más = verde, menos = rojo
                         
                     return {'valor': diff_pct, 'inverso': inverso, 'texto': texto}
                 
