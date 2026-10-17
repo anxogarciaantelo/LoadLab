@@ -1331,6 +1331,7 @@ with tab_ses:
                                                         reg["Z3"] = reg["R_21_24"]
                                                         reg["Z4"] = reg["R_24_27"]
                                                         reg["Z5"] = reg["R_27_30"]
+                                                        reg["Z6"] = reg["R_30_45"]
 
                                             reg["CARGA"] = reg["MIN"] * reg["RPE"]
                                             ewma_excel = calcular_ewma_historico(st.session_state.sesiones, sesion["fecha"]).get(nombre_final, {})
