@@ -230,8 +230,8 @@ with tab_temp:
                 with cols_kpi[2]: render_kpi_elite("RPE", f"{medias_temp['RPE']:.1f}", tendencia=calc_tendencia_temporada('RPE'))
                 with cols_kpi[3]: render_kpi_elite("Minutos", f"{medias_temp['Minutos']:.0f}", tendencia=calc_tendencia_temporada('Minutos'))
                 with cols_kpi[4]: render_kpi_elite("Carga", f"{medias_temp['Carga']:.0f}", tendencia=calc_tendencia_temporada('Carga'))
-                with cols_kpi[5]: render_kpi_elite("DISTANCIA (km)", f"{medias_temp['DIS']:.1f}", tendencia=calc_tendencia_temporada('DIS'))
-                with cols_kpi[6]: render_kpi_elite("HSR (m)", f"{medias_temp['HSR']:.0f}", tendencia=calc_tendencia_temporada('HSR'))
+                with cols_kpi[5]: render_kpi_elite("DISTANCIA", f"{medias_temp['DIS']:.1f}", tendencia=calc_tendencia_temporada('DIS'))
+                with cols_kpi[6]: render_kpi_elite("HSR", f"{medias_temp['HSR']:.0f}", tendencia=calc_tendencia_temporada('HSR'))
                 with cols_kpi[7]: render_kpi_elite("Sprints", f"{medias_temp['Sprints']:.1f}", tendencia=calc_tendencia_temporada('Sprints'))
                 with cols_kpi[8]: render_kpi_elite("ACC", f"{medias_temp['ACC']:.0f}", tendencia=calc_tendencia_temporada('ACC'))
                 with cols_kpi[9]: render_kpi_elite("DCC", f"{medias_temp['DCC']:.0f}", tendencia=calc_tendencia_temporada('DCC'))
@@ -239,7 +239,7 @@ with tab_temp:
                 st.markdown("---")
                 
                 # --- GRÁFICOS SUPERIORES Y MEJORADOS ---
-                st.markdown("#### 📈 Evolución Gráfica de la Temporada")
+                st.markdown("#### Evolución Gráfica")
                 cg1, cg2 = st.columns(2)
                 
                 with cg1:
