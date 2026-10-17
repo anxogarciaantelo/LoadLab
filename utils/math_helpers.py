@@ -455,13 +455,13 @@ def validar_columnas_excel(df, nombre_archivo, columnas_esperadas):
     return True, "OK"
 def render_kpi_elite(titulo, valor, subtitulo="", icono="", color_borde="#3b82f6", tendencia=None):
     """
-    Tarjeta KPI compacta, centrada, con título adaptativo y flecha de tendencia.
-    tendencia: dict opcional {'valor': float, 'inverso': bool}
+    Tarjeta KPI compacta, alineada a la izquierda (estilo nativo), con título adaptativo y flecha de tendencia.
     """
     tendencia_html = ""
     if tendencia is not None:
         val_t = tendencia.get('valor', 0)
         inverso = tendencia.get('inverso', False) # Si True, subir es malo (Rojo)
+        texto_personalizado = tendencia.get('texto', 'vs Sem. Ant.')
         
         if val_t > 0.5:
             color = "#ef4444" if inverso else "#10b981"
@@ -472,15 +472,18 @@ def render_kpi_elite(titulo, valor, subtitulo="", icono="", color_borde="#3b82f6
         else:
             color = "#94a3b8"
             flecha = "▬"
+            if "semana" in texto_personalizado:
+                texto_personalizado = "igual esta semana"
             
-        tendencia_html = f"<div style='color: {color}; font-size: 0.7rem; font-weight: 800; margin-top: 2px;'>{flecha} {abs(val_t):.1f}% vs Sem. Ant.</div>"
+        # Letra aumentada a 0.85rem y line-height ajustado
+        tendencia_html = f"<div style='color: {color}; font-size: 0.85rem; font-weight: 800; margin-top: 8px; line-height: 1.2;'>{flecha} {abs(val_t):.1f}% {texto_personalizado}</div>"
 
     html = f"""
-    <div style="background: linear-gradient(145deg, #1e293b, #0f172a); border: 1px solid #334155; border-top: 3px solid {color_borde}; border-radius: 8px; padding: 12px 2px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); height: 100%; display: flex; flex-direction: column; justify-content: center;">
-        <p style="color: #94a3b8; font-size: 0.65rem; font-weight: 800; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.1;">{titulo} {icono}</p>
-        <h2 style="color: #f8fafc; font-size: 1.3rem; font-weight: 800; margin: 0; line-height: 1;">{valor}</h2>
+    <div style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid {color_borde}; padding: 15px 12px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); text-align: left; height: 100%; display: flex; flex-direction: column; justify-content: center;">
+        <p style="color: #94a3b8; font-size: 0.8rem; font-weight: 700; margin: 0 0 5px 0; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.2; word-wrap: break-word;">{titulo} {icono}</p>
+        <h2 style="color: #f8fafc; font-size: 1.6rem; font-weight: 800; margin: 0; line-height: 1;">{valor}</h2>
         {tendencia_html}
-        {f"<p style='color: {color_borde}; font-size: 0.6rem; font-weight: 600; margin: 4px 0 0 0;'>{subtitulo}</p>" if subtitulo else ""}
+        {f"<p style='color: {color_borde}; font-size: 0.7rem; font-weight: 600; margin: 4px 0 0 0;'>{subtitulo}</p>" if subtitulo else ""}
     </div>
     """
     import streamlit as st
