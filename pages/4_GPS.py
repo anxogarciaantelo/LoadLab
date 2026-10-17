@@ -336,30 +336,6 @@ else:
                 else:
                     st.selectbox("6. Selección:", ["N/A"], disabled=True)
 
-            st.markdown("---")
-
-            c_n1, c_n2 = st.columns([2.2, 1.2])
-            
-            with c_n1:
-                f_nivel = st.radio(
-                    "Analizar por:", 
-                    ["Equipo completo", "Por posición general", "Por posición específica", "Por jugador"], 
-                    horizontal=True, 
-                    key="p_niv"
-                )
-
-            f_jug = "TODOS"
-            f_pos = "DEF"
-            f_pos_esp = "Central"
-
-            with c_n2:
-                if f_nivel == "Por posición general":
-                    f_pos = st.selectbox("Seleccionar posición general:", lista_pos, key="p_pos")
-                elif f_nivel == "Por posición específica":
-                    f_pos_esp = st.selectbox("Seleccionar posición específica:", lista_pos_esp, key="p_pos_esp")
-                elif f_nivel == "Por jugador":
-                    f_jug = st.selectbox("Seleccionar jugador:", ["TODOS"] + lista_jugs, key="p_jug")
-
         # Aplicar filtros a la selección principal
         df_perfil = aplicar_filtros_gps(
             df_gps, 
