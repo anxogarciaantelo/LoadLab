@@ -398,6 +398,18 @@ def aplicar_color_sidebar():
                     </div>
                 """, unsafe_allow_html=True)
             
+            # --- CSS PARA TIPOGRAFÍA DE ENLACES LATERALES ---
+            st.markdown("""
+            <style>
+            [data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"] p, 
+            [data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"] span {
+                font-weight: 700 !important;
+                font-size: 0.95rem !important;
+                letter-spacing: 0.3px !important;
+            }
+            </style>
+            """, unsafe_allow_html=True)
+
             # 2. ENLACES DE PÁGINAS MANUALES (Control total de la posición central)
             st.markdown("<p style='color: #64748b; font-size: 0.75rem; text-transform: uppercase; font-weight: 800; margin-bottom: 8px; letter-spacing: 0.5px;'>Navegación</p>", unsafe_allow_html=True)
 
