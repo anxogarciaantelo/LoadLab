@@ -329,6 +329,10 @@ def reconstruir_dataframes_globales():
             for df_melt in [aguda_melt, cronica_melt, ratio_melt]:
                 df_melt.rename(columns={'index': 'FECHA_DT'}, inplace=True)
             
+            # PARCHE: Eliminar las columnas estáticas si vienen del JSON de Supabase para evitar el conflicto de sufijos (_x, _y)
+            columnas_dinamicas = ['EWMA AGUDA', 'EWMA CRÓNICA', 'RATIO A/C']
+            df_master.drop(columns=[col for col in columnas_dinamicas if col in df_master.columns], inplace=True, errors='ignore')
+            
             df_master = df_master.merge(aguda_melt, on=['FECHA_DT', 'JUGADOR'], how='left')
             df_master = df_master.merge(cronica_melt, on=['FECHA_DT', 'JUGADOR'], how='left')
             df_master = df_master.merge(ratio_melt, on=['FECHA_DT', 'JUGADOR'], how='left')
