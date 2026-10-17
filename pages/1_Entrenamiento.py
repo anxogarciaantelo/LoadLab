@@ -828,109 +828,21 @@ with tab_ses:
                             fig_well = fig_tqr = fig2 = fig3 = fig5 = fig4 = None
 
                             if not df_informe.empty:
-                                tqr_m = df_para_medias['TQR'].mean() if pd.notna(df_para_medias['TQR'].mean()) else 0.0
-                                well_m = df_para_medias['WELLNESS'].mean() if pd.notna(df_para_medias['WELLNESS'].mean()) else 0.0
-                                rpe_m = df_para_medias['RPE'].mean() if pd.notna(df_para_medias['RPE'].mean()) else 0.0
-                                carga_m = df_para_medias['CARGA'].mean() if pd.notna(df_para_medias['CARGA'].mean()) else 0.0
-                                min_m = df_para_medias['MIN'].mean() if pd.notna(df_para_medias['MIN'].mean()) else 0.0
+                                # --- 1. CÁLCULO DE % V. MÁX HISTÓRICA ---
+                                df_master_hist = st.session_state.df_master_informes[st.session_state.df_master_informes['FECHA'] <= sesion["fecha"]]
+                                vmax_historica = df_master_hist.groupby('JUGADOR')['VMAX'].max().to_dict()
+                                df_informe['VMAX_HIST'] = df_informe['JUGADOR'].map(lambda j: vmax_historica.get(j, 0.0))
+                                df_informe['% VMAX'] = np.where(df_informe['VMAX_HIST'] > 0, (df_informe['VMAX'] / df_informe['VMAX_HIST']) * 100, 0.0)
 
-                                kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-                                kpi1.metric("TQR Medio (Recuperación)", f"{tqr_m:.1f} / 10")
-                                kpi2.metric("Wellness Medio (Fatiga)", f"{well_m:.1f} pts")
-                                kpi3.metric("RPE Medio (Esfuerzo)", f"{rpe_m:.1f} / 10")
-                                kpi4.metric("Carga Media Sesión", f"{carga_m:.0f} UA")
+                                # Re-filtrar con la nueva columna añadida
+                                df_para_medias = df_informe[(df_informe['ESTADO'].isin(["Disponible", "Titular", "Suplente"])) & (df_informe['POS'] != "POR")].copy()
+                                df_para_medias['TQR'] = df_para_medias['TQR'].replace(0, np.nan)
+                                df_para_medias['WELLNESS'] = df_para_medias['WELLNESS'].replace(0, np.nan)
+                                df_para_medias['RPE'] = df_para_medias['RPE'].replace(0, np.nan)
+                                df_para_medias_gps = df_para_medias[df_para_medias['DIS'] > 0].copy()
+                                df_graficos = df_informe[df_informe['JUGADOR'] != ""].copy()
 
-                                st.markdown("---")
-                                st.markdown("#### 🧠 1. Bienestar y Recuperación")
-                                cg1, cg2 = st.columns(2)
-                                with cg1:
-                                    if df_graficos['WELLNESS'].sum() > 0:
-                                        df_well = df_graficos[df_graficos['WELLNESS'] > 0].sort_values('WELLNESS', ascending=False).copy()
-                                        nombres_limpios = {'W_Sueño': 'Sueño', 'W_Fatiga': 'Fatiga', 'W_Dolor': 'Dolor', 'W_Estres': 'Estrés', 'W_Humor': 'Humor'}
-                                        df_well = df_well.rename(columns=nombres_limpios)
-                                        fig_well = go.Figure()
-                                        for i, factor in enumerate(list(nombres_limpios.values())):
-                                            fig_well.add_trace(go.Bar(x=df_well['JUGADOR'], y=df_well[factor], name=factor, marker_color=px.colors.qualitative.Set2[i]))
-                                        fig_well.update_layout(title="<b>Desglose de Wellness</b>", barmode='stack', yaxis_title="Puntos", legend_title_text="Factores", yaxis_range=[0, 35], plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', margin=dict(t=40, b=120, l=40, r=40), hovermode="x unified")
-                                        fig_well.add_hline(y=18, line_dash="dot", line_color="orange", annotation_text="Moderado (18)", annotation_position="bottom right")
-                                        fig_well.add_hline(y=24, line_dash="dash", line_color="red", annotation_text="Crítico (24)", annotation_position="top right")
-                                        st.plotly_chart(fig_well, use_container_width=True, key=f"ses_w_{idx_real}")
-                                with cg2:
-                                    if df_graficos['TQR'].sum() > 0:
-                                        df_tqr = df_graficos[df_graficos['TQR'] > 0].sort_values('TQR')
-                                        fig_tqr = px.bar(df_tqr, x='JUGADOR', y='TQR', color='TQR', color_continuous_scale="RdYlGn", range_color=[1, 10], title="Calidad de Recuperación (TQR)")
-                                        fig_tqr.update_yaxes(range=[1, 10])
-                                        st.plotly_chart(fig_tqr, use_container_width=True, key=f"ses_t_{idx_real}")
-
-                                st.markdown("---")
-                                st.markdown("#### 🔥 2. Carga Interna")
-                                ci1, ci2, ci3 = st.columns(3)
-                                ci1.metric("Minutos Sesión (Media)", f"{min_m:.1f}")
-                                ci2.metric("RPE Medio", f"{rpe_m:.1f}")
-                                ci3.metric("Carga Media (UA)", f"{carga_m:.0f}")
-                                
-                                cols_ver_ci = ['JUGADOR', 'POS', 'ESTADO', 'MIN', 'RPE', 'CARGA', 'EWMA AGUDA', 'EWMA CRÓNICA', 'RATIO A/C']
-                                estilo_ci = (df_informe[cols_ver_ci].style.hide(axis="index").format(precision=2).background_gradient(subset=['RPE'], cmap='Reds', vmin=0, vmax=10).map(lambda x: f"background-color: {color_ratio_ac(x)}; color: black;" if isinstance(x, (int, float)) else "", subset=['RATIO A/C']).set_table_attributes('class="modern-table"'))
-                                st.markdown(estilo_ci.to_html(), unsafe_allow_html=True)
-                                
-                                cg3, cg4 = st.columns(2)
-                                with cg3:
-                                    if df_graficos['CARGA'].sum() > 0:
-                                        df_ci = df_graficos[df_graficos['CARGA'] > 0].sort_values('CARGA', ascending=False)
-                                        fig2 = px.bar(df_ci, x='JUGADOR', y='CARGA', color='RPE', color_continuous_scale="Reds", range_color=[0, 10], title="Carga de Sesión (Min * RPE)")
-                                        if not df_para_medias.empty:
-                                            fig2.add_hline(y=df_para_medias['CARGA'].mean(), line_dash="dot", line_color="gray", annotation_text=f"Media Equipo", annotation_position="top right")
-                                        st.plotly_chart(fig2, use_container_width=True, key=f"ses_c_{idx_real}")
-                                with cg4:
-                                    if df_graficos['RATIO A/C'].sum() > 0:
-                                        df_ac = df_graficos[df_graficos['RATIO A/C'] > 0].sort_values('RATIO A/C', ascending=False).copy()
-                                        df_ac['Color_AC'] = df_ac['RATIO A/C'].apply(color_ratio_ac)
-                                        fig3 = go.Figure(data=[go.Bar(x=df_ac['JUGADOR'], y=df_ac['RATIO A/C'], marker_color=df_ac['Color_AC'], text=df_ac['RATIO A/C'].round(2), textposition='auto')])
-                                        fig3.update_layout(title="Riesgo de Lesión (Ratio A/C)")
-                                        fig3.add_hline(y=1.4, line_dash="dash", line_color="#ff4b4b")
-                                        st.plotly_chart(fig3, use_container_width=True, key=f"ses_ac_{idx_real}")
-
-                                st.markdown("---")
-                                st.markdown("#### 🏃‍♂️ 3. Carga Externa (GPS)")
-                                
-                                dis_m = df_para_medias_gps['DIS'].mean() if pd.notna(df_para_medias_gps['DIS'].mean()) else 0.0
-                                hsr_m = df_para_medias_gps['DIS AI'].mean() if pd.notna(df_para_medias_gps['DIS AI'].mean()) else 0.0
-                                spr_m = df_para_medias_gps['Nº SPR'].mean() if pd.notna(df_para_medias_gps['Nº SPR'].mean()) else 0.0
-                                acc_m = df_para_medias_gps['ACC'].mean() if pd.notna(df_para_medias_gps['ACC'].mean()) else 0.0
-                                dcc_m = df_para_medias_gps['DCC'].mean() if pd.notna(df_para_medias_gps['DCC'].mean()) else 0.0
-                                
-                                ce1, ce2, ce3, ce4, ce5 = st.columns(5)
-                                ce1.metric("Distancia (km)", f"{dis_m:.2f}")
-                                ce2.metric("HSR (>21 km/h)", f"{hsr_m:.2f}")
-                                ce3.metric("Nº SPRINTS", f"{spr_m:.1f}")
-                                ce4.metric("ACC (>3)", f"{acc_m:.0f}")
-                                ce5.metric("DCC (>3)", f"{dcc_m:.0f}")
-                                
-                                cols_ver_ce = ['JUGADOR', 'POS', 'ESTADO', 'DIS', 'HID >21', 'Nº SPR', 'ACC', 'DCC', 'VMAX']
-                                df_tabla_ce = df_informe[df_informe['DIS'] > 0]
-                                mostrar_tabla_moderna(df_tabla_ce[cols_ver_ce].style.hide(axis="index").format(precision=2))
-                                
-                                cg5, cg6 = st.columns(2)
-                                with cg5:
-                                    if df_graficos['DIS'].sum() > 0:
-                                        df_gps_sesion = df_graficos[df_graficos['DIS'] > 0].copy()
-                                        fig5 = px.scatter(df_gps_sesion, x='DIS', y='DIS AI', color='POS', hover_name='JUGADOR', text='JUGADOR', title="Volumen vs Intensidad", color_discrete_map={"POR": "gray", "DEF": "#00b4d8", "MED": "#28a745", "ATA": "#ff4b4b"})
-                                        fig5.update_traces(textposition='top center', marker=dict(size=12, opacity=0.8, line=dict(width=1, color='DarkSlateGrey')))
-                                        fig5.add_vline(x=df_gps_sesion['DIS'].mean(), line_dash="dot", line_color="gray", opacity=0.6)
-                                        fig5.add_hline(y=df_gps_sesion['DIS AI'].mean(), line_dash="dot", line_color="gray", opacity=0.6)
-                                        st.plotly_chart(fig5, use_container_width=True, key=f"ses_h_{idx_real}")
-                                with cg6:
-                                    if df_graficos['ACC'].sum() > 0 or df_graficos['DCC'].sum() > 0:
-                                        df_accdcc = df_graficos[df_graficos['DIS'] > 0]
-                                        max_val = max(df_accdcc['ACC'].max(), df_accdcc['DCC'].max()) * 1.1 if not df_accdcc.empty else 10
-                                        fig4 = px.scatter(df_accdcc, x='DCC', y='ACC', color='POS', hover_name='JUGADOR', text='JUGADOR', title="ACC vs DCC", color_discrete_map={"POR": "gray", "DEF": "#00b4d8", "MED": "#28a745", "ATA": "#ff4b4b"})
-                                        fig4.update_traces(textposition='top center', marker=dict(size=12, opacity=0.8, line=dict(width=1, color='DarkSlateGrey')))
-                                        fig4.add_shape(type="line", x0=0, y0=0, x1=max_val, y1=max_val, line=dict(color="gray", dash="dot"))
-                                        fig4.update_layout(yaxis=dict(scaleanchor="x", scaleratio=1))
-                                        st.plotly_chart(fig4, use_container_width=True, key=f"ses_a_{idx_real}")
-
-                                st.markdown("---")
-                                st.markdown("#### ⚠️ Alertas de Riesgo lesivo alto")
+                                # --- 2. CÁLCULO DE ALERTAS (MOVIDO ARRIBA) ---
                                 media_carga = df_para_medias['CARGA'].mean() if not df_para_medias.empty else 0
                                 std_carga = df_para_medias['CARGA'].std(ddof=0) if not df_para_medias.empty else 0
                                 umbral_carga = media_carga + (2.0 * std_carga) if std_carga > 0 else media_carga * 1.4
@@ -965,28 +877,200 @@ with tab_ses:
                                         
                                 alertas_multi, alertas_rec, alertas_car = [], [], []
                                 for jug, data in alertas_jugadores.items():
-                                    if data['total'] >= 2: alertas_multi.append(f"**{jug}** ({data['total']} alertas): " + " | ".join(data['recuperacion'] + data['carga']))
+                                    if data['total'] >= 2: alertas_multi.append(f"**{jug}**: " + " | ".join(data['recuperacion'] + data['carga']))
                                     elif data['total'] == 1:
                                         if data['recuperacion']: alertas_rec.append(f"**{jug}**: {data['recuperacion'][0]}")
                                         if data['carga']: alertas_car.append(f"**{jug}**: {data['carga'][0]}")
 
+                                # --- 3. RENDERIZADO DE KPIs GLOBALES (3 COLUMNAS COMPACTAS) ---
+                                tqr_m = df_para_medias['TQR'].mean() if pd.notna(df_para_medias['TQR'].mean()) else 0.0
+                                well_m = df_para_medias['WELLNESS'].mean() if pd.notna(df_para_medias['WELLNESS'].mean()) else 0.0
+                                rpe_m = df_para_medias['RPE'].mean() if pd.notna(df_para_medias['RPE'].mean()) else 0.0
+                                carga_m = df_para_medias['CARGA'].mean() if pd.notna(df_para_medias['CARGA'].mean()) else 0.0
+                                min_m = df_para_medias['MIN'].mean() if pd.notna(df_para_medias['MIN'].mean()) else 0.0
+                                
+                                dis_m = df_para_medias_gps['DIS'].mean() if pd.notna(df_para_medias_gps['DIS'].mean()) else 0.0
+                                hsr_m = df_para_medias_gps['DIS AI'].mean() if pd.notna(df_para_medias_gps['DIS AI'].mean()) else 0.0
+                                spr_m = df_para_medias_gps['Nº SPR'].mean() if pd.notna(df_para_medias_gps['Nº SPR'].mean()) else 0.0
+                                acc_m = df_para_medias_gps['ACC'].mean() if pd.notna(df_para_medias_gps['ACC'].mean()) else 0.0
+                                dcc_m = df_para_medias_gps['DCC'].mean() if pd.notna(df_para_medias_gps['DCC'].mean()) else 0.0
+                                pct_vmax_m = df_para_medias_gps['% VMAX'].mean() if pd.notna(df_para_medias_gps['% VMAX'].mean()) else 0.0
+
+                                c_kpi_w, c_kpi_i, c_kpi_e = st.columns([1, 1, 1.8])
+                                
+                                with c_kpi_w:
+                                    st.markdown(f"""
+                                    <div style='background: #1e293b; border: 1px solid #334155; border-top: 3px solid #10b981; border-radius: 8px; padding: 15px; height: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.15);'>
+                                        <h5 style='color: #f8fafc; margin-top: 0; margin-bottom: 15px; font-weight: 800; text-transform: uppercase;'>🧠 Bienestar</h5>
+                                        <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;'>
+                                            <span style='color: #94a3b8; font-size: 0.85rem; font-weight: 700;'>TQR</span>
+                                            <span style='color: #f8fafc; font-size: 1.2rem; font-weight: 800;'>{tqr_m:.1f}</span>
+                                        </div>
+                                        <div style='display: flex; justify-content: space-between; align-items: center;'>
+                                            <span style='color: #94a3b8; font-size: 0.85rem; font-weight: 700;'>WELLNESS</span>
+                                            <span style='color: #f8fafc; font-size: 1.2rem; font-weight: 800;'>{well_m:.1f}</span>
+                                        </div>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+                                    
+                                with c_kpi_i:
+                                    st.markdown(f"""
+                                    <div style='background: #1e293b; border: 1px solid #334155; border-top: 3px solid #f59e0b; border-radius: 8px; padding: 15px; height: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.15);'>
+                                        <h5 style='color: #f8fafc; margin-top: 0; margin-bottom: 15px; font-weight: 800; text-transform: uppercase;'>🔥 Carga Interna</h5>
+                                        <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;'>
+                                            <span style='color: #94a3b8; font-size: 0.85rem; font-weight: 700;'>MINUTOS</span>
+                                            <span style='color: #f8fafc; font-size: 1rem; font-weight: 800;'>{min_m:.0f}'</span>
+                                        </div>
+                                        <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;'>
+                                            <span style='color: #94a3b8; font-size: 0.85rem; font-weight: 700;'>RPE</span>
+                                            <span style='color: #f8fafc; font-size: 1rem; font-weight: 800;'>{rpe_m:.1f}</span>
+                                        </div>
+                                        <div style='display: flex; justify-content: space-between; align-items: center;'>
+                                            <span style='color: #94a3b8; font-size: 0.85rem; font-weight: 700;'>CARGA</span>
+                                            <span style='color: #f8fafc; font-size: 1rem; font-weight: 800;'>{carga_m:.0f} UA</span>
+                                        </div>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+                                    
+                                with c_kpi_e:
+                                    st.markdown(f"""
+                                    <div style='background: #1e293b; border: 1px solid #334155; border-top: 3px solid #3b82f6; border-radius: 8px; padding: 15px; height: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.15);'>
+                                        <h5 style='color: #f8fafc; margin-top: 0; margin-bottom: 15px; font-weight: 800; text-transform: uppercase;'>🏃‍♂️ Carga Externa</h5>
+                                        <div style='display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px;'>
+                                            <div style='display: flex; justify-content: space-between; align-items: center;'>
+                                                <span style='color: #94a3b8; font-size: 0.85rem; font-weight: 700;'>DISTANCIA</span>
+                                                <span style='color: #f8fafc; font-size: 1rem; font-weight: 800;'>{dis_m:.2f} km</span>
+                                            </div>
+                                            <div style='display: flex; justify-content: space-between; align-items: center;'>
+                                                <span style='color: #94a3b8; font-size: 0.85rem; font-weight: 700;'>ACC (>3)</span>
+                                                <span style='color: #f8fafc; font-size: 1rem; font-weight: 800;'>{acc_m:.0f}</span>
+                                            </div>
+                                            <div style='display: flex; justify-content: space-between; align-items: center;'>
+                                                <span style='color: #94a3b8; font-size: 0.85rem; font-weight: 700;'>HSR (>21)</span>
+                                                <span style='color: #f8fafc; font-size: 1rem; font-weight: 800;'>{hsr_m:.0f} m</span>
+                                            </div>
+                                            <div style='display: flex; justify-content: space-between; align-items: center;'>
+                                                <span style='color: #94a3b8; font-size: 0.85rem; font-weight: 700;'>DCC (>3)</span>
+                                                <span style='color: #f8fafc; font-size: 1rem; font-weight: 800;'>{dcc_m:.0f}</span>
+                                            </div>
+                                            <div style='display: flex; justify-content: space-between; align-items: center;'>
+                                                <span style='color: #94a3b8; font-size: 0.85rem; font-weight: 700;'>SPRINTS</span>
+                                                <span style='color: #f8fafc; font-size: 1rem; font-weight: 800;'>{spr_m:.1f}</span>
+                                            </div>
+                                            <div style='display: flex; justify-content: space-between; align-items: center;'>
+                                                <span style='color: #94a3b8; font-size: 0.85rem; font-weight: 700;'>% V. MÁX</span>
+                                                <span style='color: #f8fafc; font-size: 1rem; font-weight: 800;'>{pct_vmax_m:.1f} %</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+
+                                st.markdown("---")
+                                
+                                # --- 4. ALERTAS DE RIESGO MOVIDAS ARRIBA (EN 3 COLUMNAS) ---
+                                st.markdown("#### ⚠️ Alertas de Rendimiento y Riesgo Lesivo")
                                 if not alertas_multi and not alertas_rec and not alertas_car:
                                     st.success("✅ Todos los marcadores de fatiga y riesgo del equipo están dentro de los parámetros normales.")
                                 else:
-                                    if alertas_multi:
-                                        st.error("🚨 **RIESGO MULTIFACTORIAL (2 o más alertas simultáneas)**")
-                                        for al in alertas_multi: st.write(f"- {al}")
-                                    c_al1, c_al2 = st.columns(2)
-                                    with c_al1:
-                                        st.markdown("#### 🧠 Recuperación")
+                                    c_al_rec, c_al_car, c_al_mul = st.columns(3)
+                                    with c_al_rec:
+                                        st.markdown("##### 🧠 Recuperación")
                                         if alertas_rec:
                                             for al in alertas_rec: st.warning(al)
-                                        else: st.info("✅ Sin alertas individuales.")
-                                    with c_al2:
-                                        st.markdown("#### 🔥 Carga")
+                                        else: st.info("✅ Sin alertas.")
+                                    with c_al_car:
+                                        st.markdown("##### 🔥 Carga")
                                         if alertas_car:
                                             for al in alertas_car: st.warning(al)
-                                        else: st.info("✅ Sin alertas individuales.")
+                                        else: st.info("✅ Sin alertas.")
+                                    with c_al_mul:
+                                        st.markdown("##### 🚨 Riesgo Multifactorial")
+                                        if alertas_multi:
+                                            for al in alertas_multi: st.error(al)
+                                        else: st.success("✅ Sin alertas críticas.")
+
+                                st.markdown("---")
+
+                                # --- 5. GRÁFICOS DE BIENESTAR ---
+                                st.markdown("#### 🧠 1. Bienestar y Recuperación")
+                                cg1, cg2 = st.columns(2)
+                                with cg1:
+                                    if df_graficos['WELLNESS'].sum() > 0:
+                                        df_well = df_graficos[df_graficos['WELLNESS'] > 0].sort_values('WELLNESS', ascending=False).copy()
+                                        nombres_limpios = {'W_Sueño': 'Sueño', 'W_Fatiga': 'Fatiga', 'W_Dolor': 'Dolor', 'W_Estres': 'Estrés', 'W_Humor': 'Humor'}
+                                        df_well = df_well.rename(columns=nombres_limpios)
+                                        fig_well = go.Figure()
+                                        for i, factor in enumerate(list(nombres_limpios.values())):
+                                            fig_well.add_trace(go.Bar(x=df_well['JUGADOR'], y=df_well[factor], name=factor, marker_color=px.colors.qualitative.Set2[i]))
+                                        fig_well.update_layout(title="<b>Desglose de Wellness</b>", barmode='stack', yaxis_title="Puntos", legend_title_text="Factores", yaxis_range=[0, 35], plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', margin=dict(t=40, b=120, l=40, r=40), hovermode="x unified")
+                                        fig_well.add_hline(y=18, line_dash="dot", line_color="orange", annotation_text="Moderado (18)", annotation_position="bottom right")
+                                        fig_well.add_hline(y=24, line_dash="dash", line_color="red", annotation_text="Crítico (24)", annotation_position="top right")
+                                        st.plotly_chart(fig_well, use_container_width=True, key=f"ses_w_{idx_real}")
+                                with cg2:
+                                    if df_graficos['TQR'].sum() > 0:
+                                        df_tqr = df_graficos[df_graficos['TQR'] > 0].sort_values('TQR')
+                                        fig_tqr = px.bar(df_tqr, x='JUGADOR', y='TQR', color='TQR', color_continuous_scale="RdYlGn", range_color=[1, 10], title="Calidad de Recuperación (TQR)")
+                                        fig_tqr.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+                                        fig_tqr.update_yaxes(range=[1, 10])
+                                        st.plotly_chart(fig_tqr, use_container_width=True, key=f"ses_t_{idx_real}")
+
+                                st.markdown("---")
+
+                                # --- 6. CARGA INTERNA (GRÁFICOS PRIMERO, TABLA DESPUÉS) ---
+                                st.markdown("#### 🔥 2. Carga Interna")
+                                
+                                cg3, cg4 = st.columns(2)
+                                with cg3:
+                                    if df_graficos['CARGA'].sum() > 0:
+                                        df_ci = df_graficos[df_graficos['CARGA'] > 0].sort_values('CARGA', ascending=False)
+                                        fig2 = px.bar(df_ci, x='JUGADOR', y='CARGA', color='RPE', color_continuous_scale="Reds", range_color=[0, 10], title="Carga de Sesión (Min * RPE)")
+                                        fig2.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+                                        if not df_para_medias.empty:
+                                            fig2.add_hline(y=df_para_medias['CARGA'].mean(), line_dash="dot", line_color="gray", annotation_text=f"Media Equipo", annotation_position="top right")
+                                        st.plotly_chart(fig2, use_container_width=True, key=f"ses_c_{idx_real}")
+                                with cg4:
+                                    if df_graficos['RATIO A/C'].sum() > 0:
+                                        df_ac = df_graficos[df_graficos['RATIO A/C'] > 0].sort_values('RATIO A/C', ascending=False).copy()
+                                        df_ac['Color_AC'] = df_ac['RATIO A/C'].apply(color_ratio_ac)
+                                        fig3 = go.Figure(data=[go.Bar(x=df_ac['JUGADOR'], y=df_ac['RATIO A/C'], marker_color=df_ac['Color_AC'], text=df_ac['RATIO A/C'].round(2), textposition='auto')])
+                                        fig3.update_layout(title="Riesgo de Lesión (Ratio A/C)")
+                                        fig3.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+                                        fig3.add_hline(y=1.4, line_dash="dash", line_color="#ff4b4b")
+                                        st.plotly_chart(fig3, use_container_width=True, key=f"ses_ac_{idx_real}")
+                                
+                                cols_ver_ci = ['JUGADOR', 'POS', 'ESTADO', 'MIN', 'RPE', 'CARGA', 'EWMA AGUDA', 'EWMA CRÓNICA', 'RATIO A/C']
+                                estilo_ci = (df_informe[cols_ver_ci].style.hide(axis="index").format(precision=2).background_gradient(subset=['RPE'], cmap='Reds', vmin=0, vmax=10).map(lambda x: f"background-color: {color_ratio_ac(x)}; color: black;" if isinstance(x, (int, float)) else "", subset=['RATIO A/C']))
+                                mostrar_tabla_moderna(estilo_ci)
+                                
+                                st.markdown("---")
+
+                                # --- 7. CARGA EXTERNA (GRÁFICOS PRIMERO, TABLA DESPUÉS, CON % VMAX) ---
+                                st.markdown("#### 🏃‍♂️ 3. Carga Externa (GPS)")
+                                
+                                cg5, cg6 = st.columns(2)
+                                with cg5:
+                                    if df_graficos['DIS'].sum() > 0:
+                                        df_gps_sesion = df_graficos[df_graficos['DIS'] > 0].copy()
+                                        fig5 = px.scatter(df_gps_sesion, x='DIS', y='DIS AI', color='POS', hover_name='JUGADOR', text='JUGADOR', title="Volumen vs Intensidad", color_discrete_map={"POR": "gray", "DEF": "#00b4d8", "MED": "#28a745", "ATA": "#ff4b4b"})
+                                        fig5.update_traces(textposition='top center', marker=dict(size=12, opacity=0.8, line=dict(width=1, color='DarkSlateGrey')))
+                                        fig5.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+                                        fig5.add_vline(x=df_gps_sesion['DIS'].mean(), line_dash="dot", line_color="gray", opacity=0.6)
+                                        fig5.add_hline(y=df_gps_sesion['DIS AI'].mean(), line_dash="dot", line_color="gray", opacity=0.6)
+                                        st.plotly_chart(fig5, use_container_width=True, key=f"ses_h_{idx_real}")
+                                with cg6:
+                                    if df_graficos['ACC'].sum() > 0 or df_graficos['DCC'].sum() > 0:
+                                        df_accdcc = df_graficos[df_graficos['DIS'] > 0]
+                                        max_val = max(df_accdcc['ACC'].max(), df_accdcc['DCC'].max()) * 1.1 if not df_accdcc.empty else 10
+                                        fig4 = px.scatter(df_accdcc, x='DCC', y='ACC', color='POS', hover_name='JUGADOR', text='JUGADOR', title="ACC vs DCC", color_discrete_map={"POR": "gray", "DEF": "#00b4d8", "MED": "#28a745", "ATA": "#ff4b4b"})
+                                        fig4.update_traces(textposition='top center', marker=dict(size=12, opacity=0.8, line=dict(width=1, color='DarkSlateGrey')))
+                                        fig4.add_shape(type="line", x0=0, y0=0, x1=max_val, y1=max_val, line=dict(color="gray", dash="dot"))
+                                        fig4.update_layout(yaxis=dict(scaleanchor="x", scaleratio=1), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+                                        st.plotly_chart(fig4, use_container_width=True, key=f"ses_a_{idx_real}")
+                                        
+                                # AÑADIDO: '% VMAX' en la tabla de GPS
+                                cols_ver_ce = ['JUGADOR', 'POS', 'ESTADO', 'DIS', 'HID >21', 'Nº SPR', 'ACC', 'DCC', 'VMAX', '% VMAX']
+                                df_tabla_ce = df_informe[df_informe['DIS'] > 0]
+                                mostrar_tabla_moderna(df_tabla_ce[cols_ver_ce].style.hide(axis="index").format(precision=2))
                                 
                                 st.markdown("---")
                                 pdf_key = f"pdf_sesion_listo_{idx_real}"
