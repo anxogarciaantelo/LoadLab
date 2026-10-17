@@ -114,14 +114,16 @@ def generar_grafico_radar_gps(df_target, df_ref, label_target, label_ref):
 
     fig.update_layout(
         polar=dict(
-            radialaxis=dict(
-                visible=True,
-                range=[0, max(150, max(valores_target) + 20)]
-            )
+            radialaxis=dict(visible=True, range=[0, max(150, max(valores_target) + 20)], gridcolor="#334155", linecolor="#334155"),
+            bgcolor="rgba(0,0,0,0)",
+            angularaxis=dict(gridcolor="#334155", linecolor="#334155")
         ),
         title=f"<b>Perfil Radar: {label_target} vs {label_ref}</b>",
         showlegend=True,
-        margin=dict(l=40, r=40, t=40, b=40)
+        margin=dict(l=40, r=40, t=40, b=40),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        font=dict(color='#f8fafc')
     )
 
     return fig
@@ -188,9 +190,16 @@ def generar_radar_comparador(dict_medias, usar_C):
         ))
 
     fig.update_layout(
-        polar=dict(radialaxis=dict(visible=True, range=[0, 110])),
+        polar=dict(
+            radialaxis=dict(visible=True, range=[0, 110], gridcolor="#334155", linecolor="#334155"),
+            bgcolor="rgba(0,0,0,0)",
+            angularaxis=dict(gridcolor="#334155", linecolor="#334155")
+        ),
         title="<b>Comparativa Multidimensional (100% = Valor Máximo Relativo)</b>",
-        margin=dict(l=40, r=40, t=40, b=40)
+        margin=dict(l=40, r=40, t=40, b=40),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        font=dict(color='#f8fafc')
     )
     return fig
 
@@ -279,56 +288,53 @@ else:
         return res
 
     with tab_gps_perf:
-        # --- FILTROS PLEGABLES MEDIANTE EXPANDER ---
-        with st.expander("🔍 Filtros de Rendimiento", expanded=False):
-            c_f1, c_f2, c_f3 = st.columns([1.2, 1.2, 1.6])
+        # --- FILTROS PLEGABLES DE UNA SOLA FILA ---
+        with st.expander("🔍 FILTROS DE RENDIMIENTO", expanded=True):
+            # Usamos 6 columnas compactas para una lectura de izquierda a derecha
+            c_f1, c_f2, c_f3, c_f4, c_f5, c_f6 = st.columns(6)
             
-            with c_f1:
-                f_tiempo = st.radio(
-                    "Analizar:", 
-                    ["Promedio total", "Promedio de microciclo", "Sesión"], 
-                    key="p_tiempo"
-                )
-                
-            with c_f2:
-                f_tipo = st.radio(
-                    "Tipo de Sesión:", 
-                    ["Todas", "Entrenamiento", "Partido Oficial", "Partido Amistoso"], 
-                    key="p_tipo"
-                )
-
-            f_sel_micro = "TODOS"
-            f_sel_sesion = "TODOS"
-            f_md = "TODOS"
-
+            with c_f1: f_tiempo = st.selectbox("1. Periodo:", ["Promedio total", "Promedio de microciclo", "Sesión"], key="p_tiempo")
+            with c_f2: f_tipo = st.selectbox("2. Evento:", ["Todas", "Entrenamiento", "Partido Oficial", "Partido Amistoso"], key="p_tipo")
+            
+            f_sel_micro, f_sel_sesion, f_md = "TODOS", "TODOS", "TODOS"
+            
             with c_f3:
                 if f_tiempo == "Promedio de microciclo":
                     lista_micros = sorted(df_gps['Microciclo'].unique(), key=lambda x: int(x.split()[1]) if len(x.split()) > 1 and x.split()[1].isdigit() else 0)
-                    f_sel_micro = st.selectbox("Seleccionar microciclo:", lista_micros, key="p_sel_micro")
-                
-                if f_tipo == "Entrenamiento":
-                    lista_entrenos = sorted(df_gps[df_gps['TIPO'] == 'Entrenamiento']['Nombre_Sesion'].unique(), reverse=True)
-                    if lista_entrenos:
-                        if f_tiempo == "Sesión":
-                            f_sel_sesion = st.selectbox("Seleccionar entrenamiento:", lista_entrenos, key="p_sel_entreno")
-                        else:
-                            f_sel_sesion = st.selectbox("Seleccionar entrenamiento (Opcional):", ["TODOS"] + lista_entrenos, key="p_sel_entreno")
-                    else:
-                        st.info("No hay entrenamientos registrados.")
-                        
-                elif f_tipo in ["Partido Oficial", "Partido Amistoso"]:
+                    f_sel_micro = st.selectbox("3. Microciclo:", lista_micros, key="p_sel_micro")
+                elif f_tipo == "Entrenamiento":
+                    f_md = st.selectbox("3. Match Day:", lista_mds, key="p_md")
+                elif f_tiempo == "Sesión" and f_tipo in ["Partido Oficial", "Partido Amistoso"]:
                     lista_partidos = sorted(df_gps[df_gps['TIPO'] == f_tipo]['Nombre_Sesion'].unique(), reverse=True)
-                    if lista_partidos:
-                        if f_tiempo == "Sesión":
-                            f_sel_sesion = st.selectbox(f"Seleccionar {f_tipo.lower()}:", lista_partidos, key="p_sel_partido")
-                        else:
-                            f_sel_sesion = st.selectbox(f"Seleccionar {f_tipo.lower()} (Opcional):", ["TODOS"] + lista_partidos, key="p_sel_partido")
-                    else:
-                        st.info(f"No hay registros de {f_tipo.lower()}.")
-
+                    f_sel_sesion = st.selectbox("3. Partido:", lista_partidos if lista_partidos else ["Sin datos"], key="p_sel_partido")
                 elif f_tiempo == "Sesión" and f_tipo == "Todas":
                     lista_todas_ses = sorted(df_gps['Nombre_Sesion'].unique(), reverse=True)
-                    f_sel_sesion = st.selectbox("Seleccionar sesión:", lista_todas_ses, key="p_sel_ses_todas")
+                    f_sel_sesion = st.selectbox("3. Sesión:", lista_todas_ses if lista_todas_ses else ["Sin datos"], key="p_sel_ses_todas")
+                else:
+                    st.selectbox("3. Filtro extra:", ["N/A"], disabled=True)
+
+            with c_f4:
+                if f_tiempo == "Sesión" and f_tipo == "Entrenamiento":
+                    df_filtrado_md = df_gps[df_gps['TIPO'] == 'Entrenamiento']
+                    if f_md != "TODOS": df_filtrado_md = df_filtrado_md[df_filtrado_md['MD'] == f_md]
+                    lista_entrenos = sorted(df_filtrado_md['Nombre_Sesion'].unique(), reverse=True)
+                    f_sel_sesion = st.selectbox("4. Sesión Exacta:", lista_entrenos if lista_entrenos else ["Sin datos"], key="p_sel_entreno")
+                else:
+                    st.selectbox("4. Sesión Exacta:", ["N/A"], disabled=True)
+            
+            with c_f5:
+                f_nivel = st.selectbox("5. Agrupar por:", ["Equipo completo", "Por posición general", "Por posición específica", "Por jugador"], key="p_niv")
+
+            f_jug, f_pos, f_pos_esp = "TODOS", "DEF", "Central"
+            with c_f6:
+                if f_nivel == "Por posición general":
+                    f_pos = st.selectbox("6. Selección:", lista_pos, key="p_pos")
+                elif f_nivel == "Por posición específica":
+                    f_pos_esp = st.selectbox("6. Selección:", lista_pos_esp, key="p_pos_esp")
+                elif f_nivel == "Por jugador":
+                    f_jug = st.selectbox("6. Selección:", ["TODOS"] + lista_jugs, key="p_jug")
+                else:
+                    st.selectbox("6. Selección:", ["N/A"], disabled=True)
 
             st.markdown("---")
 
@@ -523,47 +529,52 @@ else:
         # --- DESPLEGABLE CON LOS FILTROS DE LOS PERFILES ---
         with st.expander("⚖️ Configurar Perfiles a Comparar", expanded=False):
             
-            # Función auxiliar para renderizar los filtros de cada perfil en su columna
             def render_columna_filtro_comparador(prefijo, titulo, color_hex):
                 st.markdown(f"**<span style='color:{color_hex}'>■</span> {titulo}**", unsafe_allow_html=True)
                 
-                t_tiempo = st.selectbox("Analizar:", ["Promedio total", "Promedio de microciclo", "Sesión"], key=f"c_{prefijo}_tiempo")
-                t_tipo = st.selectbox("Tipo de Sesión:", ["Todas", "Entrenamiento", "Partido Oficial", "Partido Amistoso"], key=f"c_{prefijo}_tipo")
+                t_tiempo = st.selectbox("1. Periodo:", ["Promedio total", "Promedio de microciclo", "Sesión"], key=f"c_{prefijo}_tiempo")
+                t_tipo = st.selectbox("2. Evento:", ["Todas", "Entrenamiento", "Partido Oficial", "Partido Amistoso"], key=f"c_{prefijo}_tipo")
                 
-                t_sel_micro, t_sel_sesion = "TODOS", "TODOS"
+                t_sel_micro, t_sel_sesion, t_md = "TODOS", "TODOS", "TODOS"
                 
                 if t_tiempo == "Promedio de microciclo":
                     lista_micros = sorted(df_gps['Microciclo'].unique(), key=lambda x: int(x.split()[1]) if len(x.split()) > 1 and x.split()[1].isdigit() else 0)
-                    t_sel_micro = st.selectbox("Microciclo:", lista_micros, key=f"c_{prefijo}_micro")
-                elif t_tipo == "Entrenamiento":
-                    lista_entrenos = sorted(df_gps[df_gps['TIPO'] == 'Entrenamiento']['Nombre_Sesion'].unique(), reverse=True)
-                    t_sel_sesion = st.selectbox("Entrenamiento:", lista_entrenos if t_tiempo=="Sesión" else ["TODOS"]+lista_entrenos, key=f"c_{prefijo}_entreno")
-                elif t_tipo in ["Partido Oficial", "Partido Amistoso"]:
-                    lista_partidos = sorted(df_gps[df_gps['TIPO'] == t_tipo]['Nombre_Sesion'].unique(), reverse=True)
-                    t_sel_sesion = st.selectbox(f"{t_tipo}:", lista_partidos if t_tiempo=="Sesión" else ["TODOS"]+lista_partidos, key=f"c_{prefijo}_partido")
-                elif t_tiempo == "Sesión" and t_tipo == "Todas":
-                    lista_todas_ses = sorted(df_gps['Nombre_Sesion'].unique(), reverse=True)
-                    t_sel_sesion = st.selectbox("Sesión:", lista_todas_ses, key=f"c_{prefijo}_ses_todas")
+                    t_sel_micro = st.selectbox("3. Microciclo:", lista_micros, key=f"c_{prefijo}_micro")
+                
+                if t_tipo == "Entrenamiento":
+                    t_md = st.selectbox("Match Day (MD):", lista_mds, key=f"c_{prefijo}_md")
+                    if t_tiempo == "Sesión":
+                        df_filtrado_md = df_gps[df_gps['TIPO'] == 'Entrenamiento']
+                        if t_md != "TODOS": df_filtrado_md = df_filtrado_md[df_filtrado_md['MD'] == t_md]
+                        lista_entrenos = sorted(df_filtrado_md['Nombre_Sesion'].unique(), reverse=True)
+                        t_sel_sesion = st.selectbox("Sesión exacta:", lista_entrenos if lista_entrenos else ["Sin datos"], key=f"c_{prefijo}_entreno")
+                elif t_tiempo == "Sesión":
+                    if t_tipo in ["Partido Oficial", "Partido Amistoso"]:
+                        lista_partidos = sorted(df_gps[df_gps['TIPO'] == t_tipo]['Nombre_Sesion'].unique(), reverse=True)
+                        t_sel_sesion = st.selectbox("Sesión exacta:", lista_partidos if lista_partidos else ["Sin datos"], key=f"c_{prefijo}_partido")
+                    else:
+                        lista_todas_ses = sorted(df_gps['Nombre_Sesion'].unique(), reverse=True)
+                        t_sel_sesion = st.selectbox("Sesión exacta:", lista_todas_ses if lista_todas_ses else ["Sin datos"], key=f"c_{prefijo}_ses_todas")
 
-                t_nivel = st.selectbox("Analizar por:", ["Equipo completo", "Por posición general", "Por posición específica", "Por jugador"], key=f"c_{prefijo}_niv")
+                t_nivel = st.selectbox("Agrupar por:", ["Equipo completo", "Por posición general", "Por posición específica", "Por jugador"], key=f"c_{prefijo}_niv")
                 t_jug, t_pos, t_pos_esp = "TODOS", "DEF", "Central"
                 
                 if t_nivel == "Por posición general":
-                    t_pos = st.selectbox("Posición General:", lista_pos, key=f"c_{prefijo}_pos")
+                    t_pos = st.selectbox("Selección:", lista_pos, key=f"c_{prefijo}_pos")
                 elif t_nivel == "Por posición específica":
-                    t_pos_esp = st.selectbox("Posición Específica:", lista_pos_esp, key=f"c_{prefijo}_pos_esp")
+                    t_pos_esp = st.selectbox("Selección:", lista_pos_esp, key=f"c_{prefijo}_pos_esp")
                 elif t_nivel == "Por jugador":
-                    t_jug = st.selectbox("Jugador:", ["TODOS"] + lista_jugs, key=f"c_{prefijo}_jug")
+                    t_jug = st.selectbox("Selección:", ["TODOS"] + lista_jugs, key=f"c_{prefijo}_jug")
                 
-                # Etiqueta dinámica para la leyenda del radar y la tabla
                 lbl_nivel = t_jug if t_nivel == "Por jugador" else (t_pos if t_nivel == "Por posición general" else (t_pos_esp if t_nivel == "Por posición específica" else "Equipo"))
-                lbl_ctx = t_sel_micro if t_tiempo == "Promedio de microciclo" else (t_sel_sesion if t_tiempo == "Sesión" else ("Entrenos" if t_tipo == "Entrenamiento" else ("Partidos" if t_tipo == "Partido" else "Total")))
+                lbl_ctx = t_sel_micro if t_tiempo == "Promedio de microciclo" else (t_sel_sesion if t_tiempo == "Sesión" else (t_md if t_tipo == "Entrenamiento" and t_md != "TODOS" else ("Entrenos" if t_tipo == "Entrenamiento" else ("Partidos" if "Partido" in t_tipo else "Total"))))
                 label_final = f"{lbl_nivel} ({lbl_ctx})"
 
                 df_res = aplicar_filtros_gps(
                     df_gps, 
                     target_tiempo=t_tiempo, 
                     target_tipo=t_tipo, 
+                    target_md=t_md,
                     target_sel_micro=t_sel_micro, 
                     target_sel_sesion=t_sel_sesion, 
                     target_nivel=t_nivel, 
