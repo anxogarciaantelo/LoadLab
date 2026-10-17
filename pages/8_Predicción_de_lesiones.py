@@ -116,8 +116,8 @@ def construir_dataset_entrenamiento(sesiones, lesiones):
     features = []
     for jug, group in df.groupby("JUGADOR"):
         group = group.set_index("FECHA").resample('D').sum().fillna(0)
-        group['Carga_Aguda'] = group['CARGA'].ewm(span=7, adjust=False).mean()
-        group['Carga_Cronica'] = group['CARGA'].ewm(span=28, adjust=False).mean()
+        group['Carga_Aguda'] = group['CARGA'].ewm(span=7, adjust=False).mean() * 7
+        group['Carga_Cronica'] = group['CARGA'].ewm(span=28, adjust=False).mean() * 7
         group['Ratio_AC'] = np.where(group['Carga_Cronica'] > 0, group['Carga_Aguda'] / group['Carga_Cronica'], 1.0)
         group['HSR_7d'] = group['HSR'].rolling(window=7, min_periods=1).sum()
         group['Sprints_7d'] = group['SPRINTS'].rolling(window=7, min_periods=1).sum()
