@@ -500,5 +500,26 @@ else:
                     st.plotly_chart(fig_evo_jug, use_container_width=True, key=f"jug_antro_{i}")
 
             with sub_tabs[5]:
-                st.info("⚙️ Módulo de valoraciones físicas y test neuromusculares vacío.")
+                vals_jug = [v for v in st.session_state.get('val_rom', []) if v.get('jugador') == jugador['JUGADOR']]
+                if not vals_jug:
+                    st.info("No hay valoraciones físicas registradas para este jugador.")
+                else:
+                    v_latest = sorted(vals_jug, key=lambda x: x.get('fecha', ''))[-1]
+                    st.markdown(f"#### 📊 Última Valoración ({v_latest['fecha']})")
+                    c1, c2, c3 = st.columns(3)
+                    c1.metric("1RM Sentadilla", f"{safe_float(v_latest.get('rm_sq', v_latest.get('rm_sentadilla', 0)))} kg")
+                    c2.metric("CMJ Bilateral", f"{safe_float(v_latest.get('cmj_bi', 0))} cm")
+                    c3.metric("F. Iso Cuádriceps (D / I)", f"{safe_float(v_latest.get('iso_ext_d', 0))} / {safe_float(v_latest.get('iso_ext_i', 0))} N")
+                    
+                    st.markdown("##### 🔍 Asimetrías Destacadas")
+                    def get_asi_str(d, i):
+                        d_v, i_v = safe_float(d), safe_float(i)
+                        if max(d_v, i_v) == 0: return "0%"
+                        return f"{abs(d_v - i_v) / max(d_v, i_v) * 100:.1f}%"
+                    
+                    ca1, ca2, ca3 = st.columns(3)
+                    ca1.metric("CMJ Unilateral", get_asi_str(v_latest.get('cmj_uni_d', 0), v_latest.get('cmj_uni_i', 0)))
+                    ca2.metric("Iso Isquiosurales", get_asi_str(v_latest.get('iso_flx_d', 0), v_latest.get('iso_flx_i', 0)))
+                    ca3.metric("Dorsiflexión Tobillo", get_asi_str(v_latest.get('mov_dorsi_d', 0), v_latest.get('mov_dorsi_i', 0)))
+                    st.caption("Visita el módulo de 'Valoraciones' en el menú lateral para ver su perfil F-V y gráficas evolutivas completas.")
 
