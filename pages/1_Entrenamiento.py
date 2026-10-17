@@ -749,30 +749,13 @@ with tab_ses:
                     
                     st.markdown("---")
                     
-                    # ---------------------------------------------------------
-                    # HERRAMIENTA 1: DISPONIBILIDAD (MULTIFILTRO OPTIMIZADO)
-                    # ---------------------------------------------------------
-                    if active_view == "disp":
-                        st.markdown(f"#### 🏥 CONTROL DE DISPONIBILIDAD | {sesion['fecha']}")
-                        if es_partido:
-                            opciones_disp = ["Suplente", "No convocado", "Lesionado", "Enfermo", "Selección", "No disponible"]
-                            default_disp = "Titular"
-                        else:
-                            opciones_disp = ["Lesionado", "Readaptación", "Enfermo", "Falta", "Selección", "No disponible"]
-                            default_disp = "Disponible"
-                        
-                        disp_dict_clean = {limpiar_nombre(k): v for k, v in sesion.get("disponibilidad", {}).items()}
-                        jugs_plantilla = [p["JUGADOR"] for p in st.session_state.plantilla]
-                        
-                        # --- RENDERIZAR KPIs EN DOS FILAS PARA EVITAR RECORTES ---
+                    # --- RENDERIZAR KPIs EN UNA SOLA FILA ---
                         todas_opciones = [default_disp] + opciones_disp
                         conteos = Counter([disp_dict_clean.get(limpiar_nombre(j), default_disp) for j in jugs_plantilla])
                         
-                        cols_m1 = st.columns(4)
-                        cols_m2 = st.columns(3)
+                        cols_m = st.columns(len(todas_opciones))
                         for i, opc in enumerate(todas_opciones):
-                            if i < 4: cols_m1[i].metric(opc, conteos.get(opc, 0))
-                            else: cols_m2[i-4].metric(opc, conteos.get(opc, 0))
+                            cols_m[i].metric(opc, conteos.get(opc, 0))
                         st.markdown("---")
                         # -----------------------------------------
                         
@@ -786,14 +769,12 @@ with tab_ses:
                         
                         with st.form(key=f"form_disp_{idx_real}"):
                             selecciones = {}
-                            # Garantizamos la creación de filas correctas para que salgan todas las opciones
-                            for i in range(0, len(opciones_disp), 3):
-                                cols_disp = st.columns(3)
-                                for j in range(3):
-                                    if i + j < len(opciones_disp):
-                                        est = opciones_disp[i + j]
-                                        with cols_disp[j]:
-                                            selecciones[est] = st.multiselect(f"{est}", jugs_plantilla, default=jugadores_por_estado[est])
+                            
+                            # RENDERIZAR SELECTORES EN UNA SOLA FILA HORIZONTAL
+                            cols_disp = st.columns(len(opciones_disp))
+                            for i, est in enumerate(opciones_disp):
+                                with cols_disp[i]:
+                                    selecciones[est] = st.multiselect(f"{est}", jugs_plantilla, default=jugadores_por_estado[est])
                                     
                             if st.form_submit_button("💾 Guardar Disponibilidad", type="primary", use_container_width=True):
                                 disp_final = {}
