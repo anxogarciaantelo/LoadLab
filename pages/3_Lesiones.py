@@ -23,11 +23,12 @@ aplicar_color_sidebar()
 
 st.subheader("🚑 Lesiones")
 
-tab_les_res, tab_les_list = st.tabs(["📊 Resumen", "📋 Listado de Lesiones"])
+tab_les_res, tab_gest_med, tab_les_list = st.tabs(["📊 Resumen", "🩺 Gestión Médica", "📋 Listado de Lesiones"])
 
 les_data = st.session_state.get("lesiones", [])
 if not les_data:
     with tab_les_res: st.success("¡Buenas noticias! No hay ninguna lesión registrada en el historial del equipo.")
+    with tab_gest_med: st.success("¡Buenas noticias! No hay ninguna lesión registrada en el historial del equipo.")
     with tab_les_list: st.success("¡Buenas noticias! No hay ninguna lesión registrada en el historial del equipo.")
 else:
     df_les = st.session_state.df_lesiones.copy()
@@ -98,38 +99,92 @@ else:
             st.markdown("---")
             st.markdown("#### 📈 Desglose Estadístico")
             
-            cg1, cg2 = st.columns(2)
+            cg1, cg2, cg3 = st.columns(3)
             with cg1:
-                fig_dur = px.histogram(df_filtrado, x='Gravedad', title="1. Duración de la Lesión", color='Gravedad', category_orders={"Gravedad": ["Mínima (1-3d)", "Leve (4-7d)", "Moderada (8-28d)", "Grave (>28d)", "Activa"]})
-                fig_dur.update_layout(xaxis_title="", yaxis_title="Nº Lesiones")
-                st.plotly_chart(fig_dur, use_container_width=True, key="les_hist_dur")
+                conteo_dur = df_filtrado['Gravedad'].value_counts().reset_index()
+                fig_dur = px.pie(conteo_dur, names='Gravedad', values='count', title="1. Duración", hole=0.5)
+                fig_dur.update_layout(showlegend=False, height=280, margin=dict(t=40, b=10, l=10, r=10))
+                fig_dur.update_traces(textposition='inside', textinfo='percent+label')
+                st.plotly_chart(fig_dur, use_container_width=True, key="les_pie_dur")
             with cg2:
-                fig_tipo = px.histogram(df_filtrado, x='tipo', title="2. Tipo de Lesión", color='tipo')
-                fig_tipo.update_layout(xaxis_title="", yaxis_title="Nº Lesiones")
-                st.plotly_chart(fig_tipo, use_container_width=True, key="les_hist_tipo")
-                
-            cg3, cg4 = st.columns(2)
+                conteo_tipo = df_filtrado['tipo'].value_counts().reset_index()
+                fig_tipo = px.pie(conteo_tipo, names='tipo', values='count', title="2. Tipo", hole=0.5)
+                fig_tipo.update_layout(showlegend=False, height=280, margin=dict(t=40, b=10, l=10, r=10))
+                fig_tipo.update_traces(textposition='inside', textinfo='percent+label')
+                st.plotly_chart(fig_tipo, use_container_width=True, key="les_pie_tipo")
             with cg3:
-                fig_zona = px.histogram(df_filtrado, x='zona', title="3. Zona Afectada", color='zona')
-                fig_zona.update_layout(xaxis_title="", yaxis_title="Nº Lesiones")
-                st.plotly_chart(fig_zona, use_container_width=True, key="les_hist_zona")
-            with cg4:
-                fig_lat = px.histogram(df_filtrado, x='lateralidad', title="4. Lateralidad Lesional", color='lateralidad')
-                fig_lat.update_layout(xaxis_title="", yaxis_title="Nº Lesiones")
-                st.plotly_chart(fig_lat, use_container_width=True, key="les_hist_lat")
+                conteo_zona = df_filtrado['zona'].value_counts().reset_index()
+                fig_zona = px.pie(conteo_zona, names='zona', values='count', title="3. Zona", hole=0.5)
+                fig_zona.update_layout(showlegend=False, height=280, margin=dict(t=40, b=10, l=10, r=10))
+                fig_zona.update_traces(textposition='inside', textinfo='percent+label')
+                st.plotly_chart(fig_zona, use_container_width=True, key="les_pie_zona")
                 
-            cg5, cg6 = st.columns(2)
+            cg4, cg5, cg6 = st.columns(3)
+            with cg4:
+                conteo_lat = df_filtrado['lateralidad'].value_counts().reset_index()
+                fig_lat = px.pie(conteo_lat, names='lateralidad', values='count', title="4. Lateralidad", hole=0.5)
+                fig_lat.update_layout(showlegend=False, height=280, margin=dict(t=40, b=10, l=10, r=10))
+                fig_lat.update_traces(textposition='inside', textinfo='percent+label')
+                st.plotly_chart(fig_lat, use_container_width=True, key="les_pie_lat")
             with cg5:
                 conteo_recidiva = df_filtrado['recidiva'].value_counts().reset_index()
-                fig_rec = px.pie(conteo_recidiva, names='recidiva', values='count', title="5. Índice de Recidiva", hole=0.4)
+                fig_rec = px.pie(conteo_recidiva, names='recidiva', values='count', title="5. Recidiva", hole=0.5)
+                fig_rec.update_layout(showlegend=False, height=280, margin=dict(t=40, b=10, l=10, r=10))
+                fig_rec.update_traces(textposition='inside', textinfo='percent+label')
                 st.plotly_chart(fig_rec, use_container_width=True, key="les_pie_rec")
             with cg6:
                 conteo_sup = df_filtrado['cesped'].value_counts().reset_index()
-                fig_sup = px.pie(conteo_sup, names='cesped', values='count', title="6. Superficie de Juego", hole=0.4)
+                fig_sup = px.pie(conteo_sup, names='cesped', values='count', title="6. Superficie", hole=0.5)
+                fig_sup.update_layout(showlegend=False, height=280, margin=dict(t=40, b=10, l=10, r=10))
+                fig_sup.update_traces(textposition='inside', textinfo='percent+label')
                 st.plotly_chart(fig_sup, use_container_width=True, key="les_pie_sup")
 
+    with tab_gest_med:
+        st.markdown("#### 🩺 Gestor de Altas Médicas")
+        lesiones_activas = [l for l in st.session_state.lesiones if l.get("estado") == "Activa"]
+        
+        if not lesiones_activas:
+            st.success("✅ ¡Toda la plantilla está sana! No hay ninguna lesión activa pendiente de cerrar.")
+        else:
+            nombres_lesiones_activas = [f"{l['id_sesion']} | {l['jugador']} - {l['tipo']} ({l['zona']})" for l in lesiones_activas]
+            les_seleccionada_idx = st.selectbox("Selecciona la lesión que deseas dar de alta:", range(len(lesiones_activas)), format_func=lambda x: nombres_lesiones_activas[x])
+            les_obj = lesiones_activas[les_seleccionada_idx]
+            
+            fecha_lesion = datetime.strptime(les_obj["id_sesion"], "%Y-%m-%d")
+            fecha_alta_sugerida = None
+            dias_sugeridos = 0
+            
+            sesiones_ordenadas_crono = sorted(st.session_state.sesiones, key=lambda x: x["fecha"])
+            for s in sesiones_ordenadas_crono:
+                s_dt = datetime.strptime(s["fecha"], "%Y-%m-%d")
+                if s_dt > fecha_lesion:
+                    disp_jug = s.get("disponibilidad", {}).get(les_obj["jugador"], "")
+                    if disp_jug in ["Disponible", "Titular", "Suplente"]:
+                        fecha_alta_sugerida = s_dt
+                        dias_sugeridos = (fecha_alta_sugerida - fecha_lesion).days
+                        break
+            
+            with st.form("form_alta_medica"):
+                st.write(f"Actualizando lesión de **{les_obj['jugador']}** (Iniciada el {les_obj['id_sesion']})")
+                
+                if fecha_alta_sugerida:
+                    st.info(f"💡 **Auto-Detección:** {les_obj['jugador']} volvió a estar '{disp_jug}' el **{fecha_alta_sugerida.strftime('%Y-%m-%d')}**.")
+                    dias_baja_input = st.number_input("Días de Baja Totales:", min_value=1, max_value=500, value=dias_sugeridos)
+                else:
+                    st.warning("El jugador no ha vuelto a estar disponible en ninguna sesión registrada.")
+                    dias_baja_input = st.number_input("Días de Baja Totales (Añadir manualmente):", min_value=1, max_value=500, value=7)
+                    
+                if st.form_submit_button("✅ Procesar Alta Médica"):
+                    for L in st.session_state.lesiones:
+                        if L["id_sesion"] == les_obj["id_sesion"] and L["jugador"] == les_obj["jugador"] and L["tipo"] == les_obj["tipo"]:
+                            L["estado"] = "Recuperado"
+                            L["dias_baja"] = dias_baja_input
+                            break
+                    guardar_datos(modulo="lesiones")
+                    st.success(f"Alta médica procesada. {les_obj['jugador']} estuvo {dias_baja_input} días de baja.")
+                    st.rerun()
+
     with tab_les_list:
-        # --- MEJORA VISUAL: Mostrar días en tiempo real para lesiones activas ---
         df_mostrar_list = df_les.copy()
         
         def display_dias_tabla(row):
@@ -146,57 +201,23 @@ else:
             "zona": "Zona", "lado": "Lado", "lateralidad": "Lateralidad", "contacto": "Contacto", 
             "cesped": "Superficie", "recidiva": "Recidiva", "estado": "Estado", "dias_baja_display": "Días Baja", "comentarios": "Comentarios"
         })
-        mostrar_tabla_moderna(df_mostrar.style.hide(axis="index"))
+        
+        # Inyección de tabla interactiva (permite click en cabeceras para ordenar y búsqueda global con ctrl+f)
+        st.dataframe(
+            df_mostrar,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "Estado": st.column_config.TextColumn("Estado", help="Indica si la lesión sigue activa o está de alta"),
+                "Días Baja": st.column_config.TextColumn("Días Baja", help="Días acumulados"),
+                "Comentarios": st.column_config.TextColumn("Comentarios", width="large")
+            }
+        )
         
         st.markdown("---")
         col_m1, col_m2 = st.columns(2)
-        
-        with col_m1:
-            st.markdown("#### 🩺 Gestor de Altas Médicas")
-            lesiones_activas = [l for l in st.session_state.lesiones if l.get("estado") == "Activa"]
-            
-            if not lesiones_activas:
-                st.success("✅ ¡Toda la plantilla está sana! No hay ninguna lesión activa pendiente de cerrar.")
-            else:
-                nombres_lesiones_activas = [f"{l['id_sesion']} | {l['jugador']} - {l['tipo']} ({l['zona']})" for l in lesiones_activas]
-                les_seleccionada_idx = st.selectbox("Selecciona la lesión que deseas dar de alta:", range(len(lesiones_activas)), format_func=lambda x: nombres_lesiones_activas[x])
-                les_obj = lesiones_activas[les_seleccionada_idx]
-                
-                fecha_lesion = datetime.strptime(les_obj["id_sesion"], "%Y-%m-%d")
-                fecha_alta_sugerida = None
-                dias_sugeridos = 0
-                
-                sesiones_ordenadas_crono = sorted(st.session_state.sesiones, key=lambda x: x["fecha"])
-                for s in sesiones_ordenadas_crono:
-                    s_dt = datetime.strptime(s["fecha"], "%Y-%m-%d")
-                    if s_dt > fecha_lesion:
-                        disp_jug = s.get("disponibilidad", {}).get(les_obj["jugador"], "")
-                        if disp_jug in ["Disponible", "Titular", "Suplente"]:
-                            fecha_alta_sugerida = s_dt
-                            dias_sugeridos = (fecha_alta_sugerida - fecha_lesion).days
-                            break
-                
-                with st.form("form_alta_medica"):
-                    st.write(f"Actualizando lesión de **{les_obj['jugador']}** (Iniciada el {les_obj['id_sesion']})")
-                    
-                    if fecha_alta_sugerida:
-                        st.info(f"💡 **Auto-Detección:** {les_obj['jugador']} volvió a estar '{disp_jug}' el **{fecha_alta_sugerida.strftime('%Y-%m-%d')}**.")
-                        dias_baja_input = st.number_input("Días de Baja Totales:", min_value=1, max_value=500, value=dias_sugeridos)
-                    else:
-                        st.warning("El jugador no ha vuelto a estar disponible en ninguna sesión registrada.")
-                        dias_baja_input = st.number_input("Días de Baja Totales (Añadir manualmente):", min_value=1, max_value=500, value=7)
-                        
-                    if st.form_submit_button("✅ Procesar Alta Médica"):
-                        for L in st.session_state.lesiones:
-                            if L["id_sesion"] == les_obj["id_sesion"] and L["jugador"] == les_obj["jugador"] and L["tipo"] == les_obj["tipo"]:
-                                L["estado"] = "Recuperado"
-                                L["dias_baja"] = dias_baja_input
-                                break
-                        guardar_datos(modulo="lesiones")
-                        st.success(f"Alta médica procesada. {les_obj['jugador']} estuvo {dias_baja_input} días de baja.")
-                        st.rerun()
 
-        with col_m2:
+        with col_m1:
             st.markdown("#### 📝 Editar Comentarios")
             lesiones_todas_ordenadas = sorted(st.session_state.lesiones, key=lambda x: x.get("fecha_registro", "2000-01-01"), reverse=True)
             nombres_les_todas = [f"{l['id_sesion']} | {l['jugador']} ({l['tipo']})" for l in lesiones_todas_ordenadas]
@@ -213,11 +234,9 @@ else:
                     st.success("¡Comentario actualizado correctamente!")
                     st.rerun()
         
-        # --- NUEVO: GESTOR DE ELIMINACIÓN DE LESIONES ---
-        st.markdown("---")
-        with st.expander("🗑️ Eliminar Registro de Lesión (Corrección de errores)"):
+        with col_m2:
+            st.markdown("#### 🗑️ Eliminar Registro de Lesión")
             if st.session_state.lesiones:
-                # Usamos la misma lista ordenada por fecha de registro
                 lesiones_todas_del = sorted(st.session_state.lesiones, key=lambda x: x.get("fecha_registro", "2000-01-01"), reverse=True)
                 nombres_les_borrar = [f"{l['id_sesion']} | {l['jugador']} ({l['tipo']} - {l['zona']})" for l in lesiones_todas_del]
                 
@@ -227,8 +246,6 @@ else:
                     
                     if st.form_submit_button("❌ Eliminar Lesión Definitivamente"):
                         les_a_borrar = lesiones_todas_del[les_del_idx]
-                        
-                        # Buscar el índice real en la lista global y eliminar
                         real_idx_del = st.session_state.lesiones.index(les_a_borrar)
                         del st.session_state.lesiones[real_idx_del]
                         
