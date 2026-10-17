@@ -619,6 +619,26 @@ with tab_micro:
                             st.rerun()
 
 with tab_ses:
+    # --- CSS ESPECÍFICO PARA BOTONES DE SESIÓN ---
+    st.markdown("""
+    <style>
+    div[data-testid="column"]:has(.sesion-toolbar-hook) div[data-testid="stHorizontalBlock"] button {
+        min-height: 38px !important;
+        padding: 0 !important;
+        border-radius: 6px !important;
+        background-color: #0f172a !important;
+        border: 1px solid #334155 !important;
+    }
+    div[data-testid="column"]:has(.sesion-toolbar-hook) div[data-testid="stHorizontalBlock"] button:hover {
+        border-color: #3b82f6 !important;
+        transform: translateY(-2px);
+    }
+    div[data-testid="column"]:has(.sesion-toolbar-hook) div[data-testid="stHorizontalBlock"] button p {
+        font-size: 1.4rem !important; /* Agranda el emoji */
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
     if not st.session_state.sesiones:
         render_estado_vacio(
             icono="📅", 
@@ -679,7 +699,7 @@ with tab_ses:
                 
                 with cols[col_idx]:
                     st.markdown(f"""
-                    <div style='background-color: #0f172a; border: 1px solid #334155; border-top: 3px solid {color_borde}; border-radius: 8px; padding: 10px 5px; text-align: center; margin-bottom: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); height: 70px; display: flex; flex-direction: column; justify-content: center;'>
+                    <div class="sesion-toolbar-hook" style='background-color: #0f172a; border: 1px solid #334155; border-top: 3px solid {color_borde}; border-radius: 8px; padding: 10px 5px; text-align: center; margin-bottom: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); height: 70px; display: flex; flex-direction: column; justify-content: center;'>
                         <strong style='color: #f8fafc; font-size: 0.95rem;'>{f_str}</strong>
                         <span style='color: #94a3b8; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;' title='{sub}'>{sub}</span>
                     </div>
