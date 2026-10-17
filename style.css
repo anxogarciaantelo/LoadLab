@@ -139,3 +139,26 @@ div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
     .modern-table { display: block; overflow-x: auto; white-space: nowrap; }
     .stTabs [data-baseweb="tab"] { font-size: 1rem !important; padding: 0 10px !important; }
 }
+/* --- OPTIMIZACIÓN DOM: TARJETAS DE PLANTILLA Y CALENDARIO --- */
+.card-elite {
+    background-color: #1e293b;
+    border: 1px solid #334155;
+    border-top: 3px solid #3b82f6;
+    border-radius: 8px;
+    padding: 15px 5px 10px 5px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    text-align: center;
+    margin-bottom: 5px;
+    transition: transform 0.2s ease;
+}
+.card-elite:hover { transform: scale(1.03); }
+.card-elite img {
+    width: 85px; height: 85px; object-fit: cover;
+    border-radius: 50%; border: 2px solid #3b82f6;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2); margin-bottom: 5px;
+}
+.card-elite h4 {
+    color: #f8fafc; font-weight: 800; font-size: 1.1rem;
+    margin: 5px 0 0 0; text-transform: uppercase;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
