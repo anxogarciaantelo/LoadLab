@@ -9,12 +9,22 @@ html, body, [class*="css"], .stMarkdown p, .stText p, label, .stSelectbox, .stTe
     font-family: 'Plus Jakarta Sans', -apple-system, sans-serif !important;
     color: #e2e8f0 !important;
     font-size: 0.95rem !important; 
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
 }
 h1, h2, h3, h4, h5, h6 { color: #f8fafc !important; font-weight: 800 !important; margin-bottom: 0.4rem !important; }
 
 /* Forzar alineación geométrica para métricas y tablas */
 div[data-testid="stMetricValue"], .modern-table td, .modern-table th, [data-testid="stDataFrame"], h2 {
     font-variant-numeric: tabular-nums !important;
+}
+
+/* --- MENÚ LATERAL (Tipografía de enlaces) --- */
+[data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"] p {
+    font-weight: 800 !important;
+    font-size: 0.85rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
 }
 
 /* Reducción global de espacios entre bloques en Streamlit */
@@ -28,7 +38,6 @@ div[data-testid="stVerticalBlock"] {
 
 /* --- OCULTACIÓN INTELIGENTE DE LA BARRA SUPERIOR --- */
 @media (min-width: 769px) {
-    /* En PC: Ocultamos la barra por completo para ganar espacio visual */
     header[data-testid="stHeader"] {
         display: none !important;
     }
@@ -37,12 +46,11 @@ div[data-testid="stVerticalBlock"] {
     }
 }
 @media (max-width: 768px) {
-    /* En Móvil: Mantenemos la barra transparente para no perder el menú hamburguesa */
     header[data-testid="stHeader"] {
         background-color: transparent !important; 
     }
     .block-container {
-        padding-top: 4rem !important; /* Empuja el título bajo el botón hamburguesa */
+        padding-top: 4rem !important;
     }
 }
 
@@ -98,6 +106,17 @@ div[data-testid="stExpander"] summary p {
     background-color: transparent !important;
     border-bottom: 3px solid #3b82f6 !important;
     box-shadow: none !important;
+}
+
+/* --- BOTONES (Transiciones suaves) --- */
+button[data-testid="baseButton-secondary"], 
+button[data-testid="baseButton-primary"] {
+    transition: transform 0.15s ease, filter 0.15s ease !important;
+}
+button[data-testid="baseButton-secondary"]:hover, 
+button[data-testid="baseButton-primary"]:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.1);
 }
 
 /* --- TARJETAS KPI NATIVAS (st.metric) --- */
