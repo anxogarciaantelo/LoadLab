@@ -629,3 +629,181 @@ def generar_pdf_antropometria_jugador(jugador_nombre, jugador_info, fecha_pesaje
         
     out = pdf.output(dest='S')
     return out.encode('latin-1') if isinstance(out, str) else bytes(out)
+
+def generar_pdf_valoracion_jugador(jug_masivo, jug_datos, v_latest, v_ref, peso_act, img_paths, escudo_b64, cuadrante, v0, f0_kg_barra, f0_rel_N, r2, pauta_fv):
+    from fpdf import FPDF
+    import tempfile
+    import os
+    import base64
+
+    def safe_float(val):
+        try: return float(val) if val else 0.0
+        except: return 0.0
+
+    def calc_asimetria(der, izq):
+        d, i = safe_float(der), safe_float(izq)
+        if max(d, i) == 0: return 0.0
+        return (abs(d - i) / max(d, i)) * 100
+
+    def clean_txt(t): return str(t).encode('latin-1', 'ignore').decode('latin-1').strip()
+    def no_emo(t): return clean_txt(str(t)[2:].strip() if len(str(t))>2 and str(t)[0] in '🟢🟡🔴🏃⚖🚀' else str(t))
+    
+    def badge_asi_detallado(val, der, izq):
+        if val < 10: return f"🟢 {val:.1f}% (Optimo)"
+        else:
+            pierna_debil = "Derecha" if safe_float(der) < safe_float(izq) else ("Izquierda" if safe_float(izq) < safe_float(der) else "Ninguna")
+            if val <= 15: return f"🟡 {val:.1f}% (Precaucion | Debil: {pierna_debil})"
+            else: return f"🔴 {val:.1f}% (Riesgo | Debil: {pierna_debil})"
+
+    pdf = FPDF(orientation='L', unit='mm', format='A4')
+    pdf.set_auto_page_break(auto=True, margin=10)
+    pdf.add_page()
+    
+    pdf.set_font("Arial", 'B', 18)
+    pdf.cell(200, 10, clean_txt(jug_masivo.upper()), ln=False)
+    
+    if jug_datos and jug_datos.get("foto"):
+        tmp_foto = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
+        fb64 = jug_datos["foto"]
+        if str(fb64).startswith("http"):
+            import requests
+            r = requests.get(fb64)
+            tmp_foto.write(r.content)
+        else:
+            tmp_foto.write(base64.b64decode(fb64.split(',')[1] if ',' in fb64 else fb64))
+        tmp_foto.close()
+        pdf.image(tmp_foto.name, x=260, y=8, w=22)
+        os.unlink(tmp_foto.name)
+    
+    pdf.ln(12)
+    
+    def draw_card(pdf_obj, x, y, w, h, title, v_left, v_right=None, l_left="", l_right="", b_lbl="", b_val=""):
+        pdf_obj.set_xy(x, y)
+        pdf_obj.set_fill_color(255, 255, 255)
+        pdf_obj.set_draw_color(220, 220, 220)
+        pdf_obj.cell(w, h, "", border=1, fill=True)
+        pdf_obj.set_xy(x+3, y+2)
+        pdf_obj.set_font("Arial", 'B', 6)
+        pdf_obj.set_text_color(80, 80, 80)
+        pdf_obj.cell(w-6, 4, clean_txt(title.upper()), ln=0)
+        pdf_obj.set_xy(x+3, y+8)
+        if v_right is not None:
+            pdf_obj.set_font("Arial", '', 7)
+            pdf_obj.set_text_color(120, 120, 120)
+            pdf_obj.cell(6, 6, clean_txt(l_left), ln=0)
+            pdf_obj.set_font("Arial", 'B', 11)
+            pdf_obj.set_text_color(220, 38, 38)
+            pdf_obj.cell(w/2 - 12, 6, clean_txt(v_left), ln=0)
+            pdf_obj.set_font("Arial", '', 7)
+            pdf_obj.set_text_color(120, 120, 120)
+            pdf_obj.cell(6, 6, clean_txt(l_right), ln=0)
+            pdf_obj.set_font("Arial", 'B', 11)
+            pdf_obj.set_text_color(220, 38, 38)
+            pdf_obj.cell(w/2 - 12, 6, clean_txt(v_right), ln=0)
+        else:
+            pdf_obj.set_font("Arial", 'B', 12)
+            pdf_obj.set_text_color(0, 0, 0)
+            pdf_obj.cell(w-6, 6, clean_txt(v_left), ln=0)
+        if b_lbl:
+            pdf_obj.set_xy(x, y + h)
+            pdf_obj.set_fill_color(240, 248, 255)
+            pdf_obj.cell(w, 6, "", border=1, fill=True)
+            pdf_obj.set_xy(x+3, y + h + 1)
+            pdf_obj.set_font("Arial", 'B', 7)
+            pdf_obj.set_text_color(30, 80, 140)
+            lbl_w = pdf_obj.get_string_width(clean_txt(b_lbl)) + 1
+            pdf_obj.cell(lbl_w, 4, clean_txt(b_lbl), ln=0)
+            pdf_obj.set_font("Arial", '', 7)
+            pdf_obj.set_text_color(80, 80, 80)
+            pdf_obj.cell(10, 4, clean_txt(b_val), ln=0)
+
+    pdf.set_font("Arial", 'B', 12)
+    pdf.set_text_color(0, 0, 0)
+    pdf.cell(200, 8, "Movilidad (Grados)", ln=True)
+    y_mov = pdf.get_y()
+    w_3 = 89
+    m_re_d, m_re_i = v_latest.get('mov_rot_ext_d',0), v_latest.get('mov_rot_ext_i',0)
+    m_ri_d, m_ri_i = v_latest.get('mov_rot_int_d',0), v_latest.get('mov_rot_int_i',0)
+    m_do_d, m_do_i = v_latest.get('mov_dorsi_d',0), v_latest.get('mov_dorsi_i',0)
+    a_re, a_ri, a_do = calc_asimetria(m_re_d, m_re_i), calc_asimetria(m_ri_d, m_ri_i), calc_asimetria(m_do_d, m_do_i)
+    draw_card(pdf, 10, y_mov, w_3, 16, "Rot. Ext. Cadera", str(m_re_d), str(m_re_i), "Der:", "Izq:", "Asimetria Rot. Ext:", no_emo(badge_asi_detallado(a_re, m_re_d, m_re_i)))
+    draw_card(pdf, 10+w_3+5, y_mov, w_3, 16, "Rot. Int. Cadera", str(m_ri_d), str(m_ri_i), "Der:", "Izq:", "Asimetria Rot. Int:", no_emo(badge_asi_detallado(a_ri, m_ri_d, m_ri_i)))
+    draw_card(pdf, 10+(w_3*2)+10, y_mov, w_3, 16, "Dorsiflexion Tobillo", str(m_do_d), str(m_do_i), "Der:", "Izq:", "Asimetria Dorsiflexion:", no_emo(badge_asi_detallado(a_do, m_do_d, m_do_i)))
+
+    pdf.set_xy(10, y_mov + 28)
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(200, 8, "Salto y Perfil Vectorial", ln=True)
+    y_salto = pdf.get_y()
+    s_hb = safe_float(v_latest.get('sh_bi', v_latest.get('sj_bi', 0)))
+    s_cb = safe_float(v_latest.get('cmj_bi', 0))
+    s_cd, s_ci = v_latest.get('cmj_uni_d',0), v_latest.get('cmj_uni_i',0)
+    s_hd, s_hi = v_latest.get('sh_d',0), v_latest.get('sh_i',0)
+    a_cmj, a_sh = calc_asimetria(s_cd, s_ci), calc_asimetria(s_hd, s_hi)
+    c_sum = s_cd + s_ci
+    dbl = round(100*(s_cb/c_sum)-100, 1) if c_sum>0 else 0
+    rv = round(s_hb/s_cb, 2) if s_cb>0 else 0
+    w_4 = 65.5
+    draw_card(pdf, 10, y_salto, w_4, 16, "Salto Horiz. Bilateral", f"{s_hb} cm", None, "", "", "Asimetria Vertical:", f"{a_cmj:.1f}%")
+    draw_card(pdf, 10+w_4+5, y_salto, w_4, 16, "CMJ Bilateral", f"{s_cb} cm", None, "", "", "Asimetria Horizontal:", f"{a_sh:.1f}%")
+    draw_card(pdf, 10+(w_4*2)+10, y_salto, w_4, 16, "CMJ Unilateral", f"{s_cd} cm", f"{s_ci} cm", "Der:", "Izq:", "Deficit Bilateral:", f"{dbl}%")
+    draw_card(pdf, 10+(w_4*3)+15, y_salto, w_4, 16, "Salto Horiz. Unilateral", f"{s_hd} cm", f"{s_hi} cm", "Der:", "Izq:", "Ratio Vectores (H/V):", f"{rv}")
+
+    pdf.set_xy(10, y_salto + 28)
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(200, 8, "Fuerza Maxima Isometrica", ln=True)
+    y_iso = pdf.get_y()
+    f_ed, f_ei = v_latest.get('iso_ext_d',0), v_latest.get('iso_ext_i',0)
+    f_fd, f_fi = v_latest.get('iso_flx_d',0), v_latest.get('iso_flx_i',0)
+    f_ad, f_ai = v_latest.get('iso_add_d',0), v_latest.get('iso_add_i',0)
+    a_e, a_f, a_a = calc_asimetria(f_ed, f_ei), calc_asimetria(f_fd, f_fi), calc_asimetria(f_ad, f_ai)
+    draw_card(pdf, 10, y_iso, w_3, 16, "Extension (Cuad)", f"{f_ed} N", f"{f_ei} N", "Der:", "Izq:", "Asim. Cuadriceps:", no_emo(badge_asi_detallado(a_e, f_ed, f_ei)))
+    draw_card(pdf, 10+w_3+5, y_iso, w_3, 16, "Flexion (Isq)", f"{f_fd} N", f"{f_fi} N", "Der:", "Izq:", "Asim. Isquiosurales:", no_emo(badge_asi_detallado(a_f, f_fd, f_fi)))
+    draw_card(pdf, 10+(w_3*2)+10, y_iso, w_3, 16, "Aduccion", f"{f_ad} N", f"{f_ai} N", "Der:", "Izq:", "Asim. Aduccion:", no_emo(badge_asi_detallado(a_a, f_ad, f_ai)))
+
+    pdf.add_page()
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(200, 8, "Fuerza Maxima (Sentadilla)", ln=True)
+    y_sq = pdf.get_y()
+    rm_sq = safe_float(v_latest.get('rm_sq', v_latest.get('rm_sentadilla', 0)))
+    rel_sq = rm_sq/peso_act if peso_act>0 else 0
+    rfs = s_cb / rel_sq if rel_sq>0 else 0
+    draw_card(pdf, 10, y_sq, w_3, 16, "1RM Sentadilla (VMP 0.3 M/S)", f"{rm_sq} kg")
+    draw_card(pdf, 10+w_3+5, y_sq, w_3, 16, "Fuerza Relativa Sentadilla", f"{rel_sq:.2f}x Peso")
+    draw_card(pdf, 10+(w_3*2)+10, y_sq, w_3, 16, "Ratio Fuerza-Salto", f"{rfs:.1f}")
+
+    y_fv = y_sq + 20
+    if 'fv' in img_paths: pdf.image(img_paths['fv'], x=5, y=y_fv, w=145)
+    
+    pdf.set_xy(150, y_fv+10)
+    pdf.set_fill_color(240, 248, 255)
+    pdf.cell(127, 45, "", border=1, fill=True)
+    pdf.set_xy(155, y_fv+15)
+    pdf.set_font("Arial", 'B', 8)
+    pdf.set_text_color(30, 80, 140)
+    pdf.cell(20, 6, "Diagnostico:", ln=0)
+    pdf.set_font("Arial", '', 8)
+    pdf.set_text_color(0, 0, 0)
+    pdf.cell(100, 6, clean_txt(no_emo(cuadrante)), ln=1)
+    
+    pdf.set_x(155)
+    pdf.set_font("Arial", 'B', 8)
+    pdf.set_text_color(30, 80, 140)
+    pdf.cell(6, 6, "V0:", ln=0)
+    pdf.set_font("Arial", '', 8)
+    pdf.set_text_color(0, 0, 0)
+    pdf.cell(18, 6, f"{v0:.2f} m/s |", ln=0)
+    pdf.set_font("Arial", 'B', 8)
+    pdf.set_text_color(30, 80, 140)
+    pdf.cell(16, 6, "F0 (Barra):", ln=0)
+    pdf.set_font("Arial", '', 8)
+    pdf.set_text_color(0, 0, 0)
+    pdf.cell(20, 6, f"{f0_kg_barra:.1f} kg", ln=1)
+
+    pdf.add_page()
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(200, 8, "Perfil Evolutivo y Asimetrias", ln=True)
+    if 'rad' in img_paths: pdf.image(img_paths['rad'], x=10, y=25, w=130)
+    if 'tor' in img_paths: pdf.image(img_paths['tor'], x=150, y=25, w=130)
+
+    out = pdf.output(dest='S')
+    return out.encode('latin-1') if isinstance(out, str) else bytes(out)
