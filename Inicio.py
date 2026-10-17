@@ -368,12 +368,44 @@ if st.session_state.get("equipo_seleccionado", False):
     # ==========================================
     # 🚨 TORRE DE CONTROL (DASHBOARD DIARIO)
     # ==========================================
-    st.markdown("### Información Diaria")
-    
     hoy_dt = date.today()
     hoy_str = str(hoy_dt)
     
-    # --- 1. CABECERA DE CONTEXTO ---
+    # Cálculos de fechas de la semana actual (Lunes a Domingo)
+    lunes = hoy_dt - timedelta(days=hoy_dt.weekday())
+    domingo = lunes + timedelta(days=6)
+    dias_semana = [lunes + timedelta(days=i) for i in range(7)]
+    nombres_dias = ["L", "M", "X", "J", "V", "S", "D"]
+
+    # --- 1. CALENDARIO MICROCICLO ACTUAL ---
+    st.markdown("### 🗓️ Microciclo Actual")
+    html_cal = "<div style='display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; text-align: center; margin-bottom: 20px;'>"
+    for i, d in enumerate(dias_semana):
+        d_str = str(d)
+        es_hoy = "border: 2px solid #3b82f6;" if d_str == hoy_str else "border: 1px solid #334155;"
+        bg_color = "#0f172a" if d_str == hoy_str else "#1e293b"
+        
+        sesiones_dia = [s for s in st.session_state.sesiones if s["fecha"] == d_str]
+        contenido_extra = ""
+        for s in sesiones_dia:
+            tipo = s.get("tipo", "")
+            if tipo == "Entrenamiento": nom = "Sesión"
+            elif tipo == "Partido Amistoso": nom = "Amistoso"
+            elif tipo == "Partido Oficial": nom = "Oficial"
+            else: nom = tipo
+            
+            sub = s.get('rival', 'Rival') if "Partido" in tipo else s.get('descripcion', 'TD')
+            color_badge = "#dc2626" if "Partido" in tipo else "#10b981"
+            contenido_extra += f"<div style='background-color: {color_badge}; color: white; font-size: 0.75rem; font-weight: 800; padding: 4px; border-radius: 4px; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 2px 4px rgba(0,0,0,0.2);' title='{nom} | {sub}'>{nom}<br><span style='font-size: 0.65rem;'>{sub}</span></div>"
+            
+        html_cal += f"<div style='background-color: {bg_color}; {es_hoy} padding: 10px 5px; border-radius: 8px; min-height: 85px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.15);'><span style='color: #94a3b8; font-size: 0.8rem; font-weight: 800; text-transform: uppercase;'>{nombres_dias[i]}</span><span style='color: #f8fafc; font-weight: 800; font-size: 1.15rem; margin-bottom: 4px;'>{d.day}</span>{contenido_extra}</div>"
+    html_cal += "</div>"
+    st.markdown(html_cal, unsafe_allow_html=True)
+
+    # --- 2. CABECERA DE CONTEXTO Y ALERTAS (4 COLUMNAS COMPRIMIDAS) ---
+    st.markdown("### 🚨 Torre de Control (Hoy)")
+    
+    # 2.1 Variables de Contexto
     sesiones_partido = sorted([s for s in st.session_state.sesiones if "Partido" in s.get("tipo", "")], key=lambda x: x["fecha"])
     proximo_partido = next((s for s in sesiones_partido if s["fecha"] >= hoy_str), None)
     
@@ -389,77 +421,36 @@ if st.session_state.get("equipo_seleccionado", False):
         
         if dias_diff == 0: md_text = "🚨 MATCH DAY (MD)"
         elif dias_diff == 1: md_text = "⚡ MD - 1 (Activación)"
-        elif dias_diff == 2: md_text = "🔥 MD - 2 (Tensión / Velocidad)"
-        elif dias_diff == 3: md_text = "🏃‍♂️ MD - 3 (Fuerza / Resistencia)"
-        elif dias_diff == 4: md_text = "🧠 MD - 4 (Recuperación Activa)"
+        elif dias_diff == 2: md_text = "🔥 MD - 2 (Tensión)"
+        elif dias_diff == 3: md_text = "🏃‍♂️ MD - 3 (Fuerza)"
+        elif dias_diff == 4: md_text = "🧠 MD - 4 (Recuperación)"
         else: md_text = f"📅 MD - {dias_diff}"
 
-    # Clima de hoy (usamos la ubicación del club)
     from utils.math_helpers import obtener_clima
     ciudad_club = st.session_state.get("ubicacion_local", "Santiago de Compostela")
     clima_hoy = obtener_clima(ciudad_club, hoy_str)
     clima_str = f"{clima_hoy['temp']}°C | {clima_hoy['estado']}" if clima_hoy else "Desconocido"
 
-    st.markdown(f"""
-    <div style="background: linear-gradient(135deg, #0f172a, #1e293b); border: 1px solid #334155; border-left: 4px solid #3b82f6; border-radius: 8px; padding: 12px 18px; box-shadow: 0 2px 6px rgba(0,0,0,0.2); margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-        <div>
-            <p style="color: #94a3b8; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; margin: 0 0 2px 0;">Contexto del Microciclo</p>
-            <h2 style="color: #f8fafc; font-size: 1.4rem; font-weight: 800; margin: 0;">{md_text}</h2>
-        </div>
-        <div style="text-align: right;">
-            <div style="color: #f8fafc; font-size: 1rem; font-weight: 800; margin-bottom: 0px;">🆚 {rival_text}</div>
-            <div style="color: #94a3b8; font-size: 0.75rem; font-weight: 600;">{fecha_partido_text}</div>
-            <div style="color: #3b82f6; font-size: 0.75rem; font-weight: 800; margin-top: 2px;">📍 {ciudad_club} | {clima_str}</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # Funciones auxiliares visuales
-    def get_avatar_html(jugador_nombre):
-        for p in st.session_state.get("plantilla", []):
-            if limpiar_nombre(p["JUGADOR"]) == limpiar_nombre(jugador_nombre):
-                if p.get("foto"):
-                    img_src = p["foto"] if str(p["foto"]).startswith("http") else f"data:image/jpeg;base64,{p['foto']}"
-                    return f'<img src="{img_src}" style="width:22px; height:22px; border-radius:50%; object-fit: cover; vertical-align: middle; margin-right: 6px; border: 1px solid #334155;">'
-                break
-        return '<span style="font-size: 16px; margin-right: 6px; vertical-align: middle;">👤</span>'
-
-    def item_alerta(jugador, texto, nivel="rojo"):
-        color = "#ef4444" if nivel == "rojo" else ("#f59e0b" if nivel == "amarillo" else "#10b981")
-        bg = "rgba(239, 68, 68, 0.1)" if nivel == "rojo" else ("rgba(245, 158, 11, 0.1)" if nivel == "amarillo" else "rgba(16, 185, 129, 0.1)")
-        st.markdown(f"""
-        <div style="display: flex; align-items: center; justify-content: space-between; background: {bg}; border: 1px solid {color}40; border-left: 3px solid {color}; padding: 4px 8px; border-radius: 6px; margin-bottom: 4px;">
-            <div style="display: flex; align-items: center;">
-                {get_avatar_html(jugador)}
-                <span style="color: #f8fafc; font-size: 0.8rem; font-weight: 700;">{jugador}</span>
-            </div>
-            <span style="color: {color}; font-size: 0.7rem; font-weight: 800;">{texto}</span>
-        </div>
-        """, unsafe_allow_html=True)
-
-    # --- RECOPILACIÓN DE DATOS (READINESS, CARGA Y MÉDICO) ---
+    # 2.2 Motor de Alertas
     bajas_medicas = []
     readaptacion = []
     alertas_readiness = []
     alertas_carga = []
 
-    # 1. PARTE MÉDICO
     for l in st.session_state.lesiones:
         if l.get("estado") == "Activa":
             dias_lesionado = (hoy_dt - datetime.strptime(l["id_sesion"], "%Y-%m-%d").date()).days
             bajas_medicas.append({"jug": l["jugador"], "txt": f"{l['tipo']} ({dias_lesionado}d)"})
         elif l.get("estado") == "Recuperado" and l.get("dias_baja"):
             fecha_alta = datetime.strptime(l["id_sesion"], "%Y-%m-%d").date() + timedelta(days=int(l["dias_baja"]))
-            if 0 <= (hoy_dt - fecha_alta).days <= 7: # Alta en los últimos 7 días
+            if 0 <= (hoy_dt - fecha_alta).days <= 7:
                 readaptacion.append({"jug": l["jugador"], "txt": "Alta reciente (RTP)"})
 
-    # 2. READINESS (Último registro de bienestar disponible)
     sesiones_con_datos = [s for s in st.session_state.sesiones if s.get("informe_generado") and s["fecha"] <= hoy_str]
     if sesiones_con_datos:
         ult_sesion = sorted(sesiones_con_datos, key=lambda x: x["fecha"])[-1]
         for d in ult_sesion.get("datos_informe", []):
             jug = d["JUGADOR"]
-            # Excluir a los lesionados del readiness
             if jug in [b["jug"] for b in bajas_medicas]: continue
             tqr = safe_float(d.get("TQR", 0))
             well = safe_float(d.get("WELLNESS", 0))
@@ -468,10 +459,7 @@ if st.session_state.get("equipo_seleccionado", False):
             if well >= 24: alertas_readiness.append({"jug": jug, "txt": f"Fatiga {well:.0f}", "lvl": "rojo"})
             elif 18 <= well < 24: alertas_readiness.append({"jug": jug, "txt": f"Fatiga {well:.0f}", "lvl": "amarillo"})
 
-    # 3. CARGA (EWMA y GPS)
     ewma_hoy = calcular_ewma_historico(st.session_state.sesiones, hoy_str)
-    
-    # HSR acumulado en 7 días (para carga mecánica)
     df_master = st.session_state.get("df_master_informes", pd.DataFrame())
     hsr_dict = {}
     if not df_master.empty and 'DIS AI' in df_master.columns:
@@ -488,62 +476,148 @@ if st.session_state.get("equipo_seleccionado", False):
         if aguda > 800:
             if ratio >= 1.5: alertas_carga.append({"jug": jug, "txt": f"A/C: {ratio:.2f}", "lvl": "rojo"})
             elif 1.35 <= ratio < 1.5: alertas_carga.append({"jug": jug, "txt": f"A/C: {ratio:.2f}", "lvl": "amarillo"})
-            elif ratio < 0.8: alertas_carga.append({"jug": jug, "txt": f"A/C Bajo: {ratio:.2f}", "lvl": "amarillo"})
+            elif ratio < 0.8: alertas_carga.append({"jug": jug, "txt": f"A/C: {ratio:.2f}", "lvl": "amarillo"})
             
-        if hsr_7d > 2500: # Threshold heurístico de HSR semanal
+        if hsr_7d > 2500:
             alertas_carga.append({"jug": jug, "txt": f"HSR 7d: {hsr_7d:.0f}m", "lvl": "amarillo"})
 
-    # Limpiar duplicados de un mismo jugador en listas (mostrar solo la peor alerta si hay varias)
     def dedup_alertas(lista):
         vistos = {}
         for item in lista:
             if item["jug"] not in vistos: vistos[item["jug"]] = item
             else:
                 if item["lvl"] == "rojo" and vistos[item["jug"]]["lvl"] == "amarillo":
-                    vistos[item["jug"]] = item # Priorizar rojo
+                    vistos[item["jug"]] = item
                 elif item["lvl"] == vistos[item["jug"]]["lvl"]:
                     vistos[item["jug"]]["txt"] += f" | {item['txt']}"
         return list(vistos.values())
         
     alertas_readiness = dedup_alertas(alertas_readiness)
     alertas_carga = dedup_alertas(alertas_carga)
+    alertas_medicas = [{"jug": b["jug"], "txt": b["txt"], "lvl": "rojo"} for b in bajas_medicas] + [{"jug": r["jug"], "txt": r["txt"], "lvl": "verde"} for r in readaptacion]
 
-    # --- RENDERIZADO DE LAS 3 COLUMNAS ---
-    c_read, c_carga, c_med = st.columns(3)
+    # 2.3 Renderizador de Cuadrícula (2 columnas internas por tarjeta)
+    def get_avatar_html(jugador_nombre):
+        for p in st.session_state.get("plantilla", []):
+            if limpiar_nombre(p["JUGADOR"]) == limpiar_nombre(jugador_nombre):
+                if p.get("foto"):
+                    img_src = p["foto"] if str(p["foto"]).startswith("http") else f"data:image/jpeg;base64,{p['foto']}"
+                    return f'<img src="{img_src}" style="width:20px; height:20px; border-radius:50%; object-fit: cover; margin-right: 6px; border: 1px solid #334155;">'
+                break
+        return '<span style="font-size: 16px; margin-right: 6px;">👤</span>'
+
+    def render_alertas_grid(alertas, nivel_predeterminado="verde"):
+        if not alertas:
+            return f"<div style='color: #10b981; font-weight: 800; font-size: 0.8rem; padding: 10px; text-align: center; margin-top: 20px;'>✅ En parámetros</div>"
+        
+        html = "<div style='display: grid; grid-template-columns: 1fr 1fr; gap: 6px;'>"
+        for a in alertas:
+            nivel = a.get("lvl", nivel_predeterminado)
+            color = "#ef4444" if nivel == "rojo" else ("#f59e0b" if nivel == "amarillo" else "#10b981")
+            bg = "rgba(239, 68, 68, 0.1)" if nivel == "rojo" else ("rgba(245, 158, 11, 0.1)" if nivel == "amarillo" else "rgba(16, 185, 129, 0.1)")
+            avatar = get_avatar_html(a["jug"])
+            
+            html += f"""
+            <div style="background: {bg}; border: 1px solid {color}40; border-left: 3px solid {color}; padding: 6px; border-radius: 6px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <div style="display: flex; align-items: center; margin-bottom: 3px;">
+                    {avatar}
+                    <span style="color: #f8fafc; font-size: 0.75rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{a['jug']}">{a['jug']}</span>
+                </div>
+                <span style="color: {color}; font-size: 0.7rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{a['txt']}">{a['txt']}</span>
+            </div>
+            """
+        html += "</div>"
+        return html
+
+    c_ctx, c_read, c_carga, c_med = st.columns([1.2, 1.5, 1.5, 1.5])
+
+    with c_ctx:
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, #0f172a, #1e293b); border: 1px solid #334155; border-top: 4px solid #3b82f6; border-radius: 8px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); height: 100%; display: flex; flex-direction: column; justify-content: center; text-align: center;">
+            <p style="color: #94a3b8; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin: 0 0 5px 0;">Contexto del Microciclo</p>
+            <h2 style="color: #f8fafc; font-size: 1.3rem; font-weight: 800; margin: 0 0 10px 0;">{md_text}</h2>
+            <div style="color: #f8fafc; font-size: 1rem; font-weight: 800; margin-bottom: 2px;">🆚 {rival_text}</div>
+            <div style="color: #94a3b8; font-size: 0.8rem; font-weight: 600; margin-bottom: 12px;">{fecha_partido_text}</div>
+            <div style="color: #3b82f6; font-size: 0.8rem; font-weight: 800; margin-top: auto; padding-top: 10px; border-top: 1px solid #334155;">📍 {ciudad_club} | {clima_str}</div>
+        </div>
+        """, unsafe_allow_html=True)
 
     with c_read:
-        st.markdown("""
-        <div style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid #f59e0b; border-radius: 8px; padding: 8px; height: 100%;">
-            <p style="color: #f8fafc; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin: 0 0 8px 0;">🧠 Readiness & Bienestar</p>
+        st.markdown(f"""
+        <div style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid #f59e0b; border-radius: 8px; padding: 10px; height: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
+            <p style="color: #f8fafc; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin: 0 0 10px 0;">🧠 Readiness & Bienestar</p>
+            {render_alertas_grid(alertas_readiness)}
+        </div>
         """, unsafe_allow_html=True)
-        if alertas_readiness:
-            for a in alertas_readiness: item_alerta(a["jug"], a["txt"], a["lvl"])
-        else:
-            st.success("✅ Equipo en parámetros óptimos.")
-        st.markdown("</div>", unsafe_allow_html=True)
 
     with c_carga:
-        st.markdown("""
-        <div style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid #ef4444; border-radius: 8px; padding: 8px; height: 100%;">
-            <p style="color: #f8fafc; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin: 0 0 8px 0;">🔥 Riesgo de Carga Acumulada</p>
+        st.markdown(f"""
+        <div style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid #ef4444; border-radius: 8px; padding: 10px; height: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
+            <p style="color: #f8fafc; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin: 0 0 10px 0;">🔥 Riesgo de Carga</p>
+            {render_alertas_grid(alertas_carga)}
+        </div>
         """, unsafe_allow_html=True)
-        if alertas_carga:
-            for a in alertas_carga: item_alerta(a["jug"], a["txt"], a["lvl"])
-        else:
-            st.success("✅ Cargas crónicas balanceadas.")
-        st.markdown("</div>", unsafe_allow_html=True)
 
     with c_med:
-        st.markdown("""
-        <div style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid #8b5cf6; border-radius: 8px; padding: 8px; height: 100%;">
-            <p style="color: #f8fafc; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin: 0 0 8px 0;">🚑 Enfermería & RTP</p>
+        st.markdown(f"""
+        <div style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid #8b5cf6; border-radius: 8px; padding: 10px; height: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
+            <p style="color: #f8fafc; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin: 0 0 10px 0;">🚑 Enfermería & RTP</p>
+            {render_alertas_grid(alertas_medicas)}
+        </div>
         """, unsafe_allow_html=True)
-        if not bajas_medicas and not readaptacion:
-            st.success("✅ Plantilla 100% disponible.")
+
+    st.markdown("---")
+
+    # --- 3. GRÁFICOS DE EVOLUCIÓN DEL MICROCICLO ---
+    st.markdown("### 📈 Evolución del Microciclo")
+    if not df_master.empty:
+        df_sem = df_master[(df_master['FECHA'] >= str(lunes)) & (df_master['FECHA'] <= str(domingo))].copy()
+        
+        if not df_sem.empty:
+            df_sem['TQR'] = df_sem['TQR'].replace(0, np.nan)
+            df_sem['WELLNESS'] = df_sem['WELLNESS'].replace(0, np.nan)
+            
+            # Agrupar datos por fecha
+            df_diario_int = df_sem.groupby('FECHA')[['WELLNESS', 'TQR', 'CARGA']].mean().reset_index()
+            
+            df_sem_gps = df_sem[df_sem['DIS'] > 0]
+            if not df_sem_gps.empty:
+                df_diario_ext = df_sem_gps.groupby('FECHA')[['DIS', 'DIS AI']].mean().reset_index()
+            else:
+                df_diario_ext = pd.DataFrame(columns=['FECHA', 'DIS', 'DIS AI'])
+                
+            df_diario = pd.merge(df_diario_int, df_diario_ext, on='FECHA', how='left').fillna(0)
+            
+            df_diario['DIA_NOMBRE'] = pd.to_datetime(df_diario['FECHA']).dt.weekday.map({
+                0: 'Lunes', 1: 'Martes', 2: 'Miércoles', 3: 'Jueves', 4: 'Viernes', 5: 'Sábado', 6: 'Domingo'
+            })
+            
+            cg1, cg2, cg3 = st.columns(3)
+            
+            with cg1:
+                fig_w = go.Figure()
+                fig_w.add_trace(go.Bar(x=df_diario['DIA_NOMBRE'], y=df_diario['WELLNESS'], name="Fatiga (Wellness)", marker_color="rgba(239, 68, 68, 0.7)", yaxis="y1"))
+                fig_w.add_trace(go.Scatter(x=df_diario['DIA_NOMBRE'], y=df_diario['TQR'], name="TQR", mode="lines+markers", line=dict(color="#10b981", width=3), yaxis="y2"))
+                fig_w.update_layout(title="🧠 Bienestar", yaxis=dict(title="Puntos Wellness", range=[0, 35]), yaxis2=dict(title="TQR", overlaying="y", side="right", range=[0, 10]), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
+                st.plotly_chart(fig_w, use_container_width=True)
+                
+            with cg2:
+                fig_c = go.Figure()
+                fig_c.add_trace(go.Bar(x=df_diario['DIA_NOMBRE'], y=df_diario['CARGA'], name="Carga (UA)", marker_color="#3b82f6"))
+                fig_c.update_layout(title="🔥 Carga Interna Acumulada", yaxis_title="UA")
+                st.plotly_chart(fig_c, use_container_width=True)
+                
+            with cg3:
+                fig_ext = go.Figure()
+                if 'DIS' in df_diario.columns:
+                    fig_ext.add_trace(go.Bar(x=df_diario['DIA_NOMBRE'], y=df_diario['DIS'], name="Distancia (km)", marker_color="rgba(59, 130, 246, 0.6)", yaxis="y1"))
+                    fig_ext.add_trace(go.Scatter(x=df_diario['DIA_NOMBRE'], y=df_diario['DIS AI'], name="HSR (m)", mode="lines+markers", line=dict(color="#f59e0b", width=3), yaxis="y2"))
+                fig_ext.update_layout(title="🏃‍♂️ Carga Externa", yaxis=dict(title="km"), yaxis2=dict(title="HSR (m)", overlaying="y", side="right"), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
+                st.plotly_chart(fig_ext, use_container_width=True)
         else:
-            for b in bajas_medicas: item_alerta(b["jug"], b["txt"], "rojo")
-            for r in readaptacion: item_alerta(r["jug"], r["txt"], "verde")
-        st.markdown("</div>", unsafe_allow_html=True)
+            st.info("Aún no hay datos de sesión procesados para la semana actual.")
+    else:
+        st.info("No hay datos cargados en la base de datos de rendimiento para procesar gráficas.")
     
     # --- BOTÓN DE CONFIGURACIÓN ESTRECHO A LA DERECHA ---
     c_vacio, c_btn = st.columns([6, 1])
