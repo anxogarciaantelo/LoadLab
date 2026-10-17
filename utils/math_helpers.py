@@ -336,13 +336,19 @@ def aplicar_color_sidebar():
             background-color: #0f172a !important;
             border-right: 1px solid #1e293b !important;
         }
-        /* Convertimos el sidebar en una caja flexible de arriba a abajo */
-        [data-testid="stSidebar"] > div:first-child {
+        
+        /* Forzar flexbox para empujar elementos al fondo */
+        [data-testid="stSidebarUserContent"] {
             display: flex;
             flex-direction: column;
-            height: 100vh;
-            padding: 20px 10px;
+            height: calc(100vh - 4rem) !important;
         }
+        
+        /* Magia CSS: El contenedor con este div absorberá todo el espacio vacío */
+        div.element-container:has(.spacer-bottom) {
+            margin-top: auto !important;
+        }
+        
         [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3,
         [data-testid="stSidebar"] label, [data-testid="stSidebar"] p, [data-testid="stSidebar"] span {
             color: #f8fafc !important; 
