@@ -198,11 +198,16 @@ else:
                     dias_baja_input = st.number_input("Días de Baja Totales (Añadir manualmente):", min_value=1, max_value=500, value=7)
                     
                 if st.form_submit_button("✅ Procesar Alta Médica"):
-                    for L in st.session_state.lesiones:
-                        if L["id_sesion"] == les_obj["id_sesion"] and L["jugador"] == les_obj["jugador"] and L["tipo"] == les_obj["tipo"]:
-                            L["estado"] = "Recuperado"
-                            L["dias_baja"] = dias_baja_input
-                            break
+                    # 1. Búsqueda por índice exacto en lugar de bucle
+                    real_idx = st.session_state.lesiones.index(les_obj)
+                    
+                    # 2. Modificación directa en memoria
+                    st.session_state.lesiones[real_idx]["estado"] = "Recuperado"
+                    st.session_state.lesiones[real_idx]["dias_baja"] = dias_baja_input
+                    
+                    # 3. CRÍTICO: Forzar sincronización del DataFrame para el guardado en BBDD
+                    st.session_state.df_lesiones = pd.DataFrame(st.session_state.lesiones)
+                    
                     guardar_datos(modulo="lesiones")
                     st.success(f"Alta médica procesada. {les_obj['jugador']} estuvo {dias_baja_input} días de baja.")
                     st.rerun()
@@ -225,7 +230,6 @@ else:
             "cesped": "Superficie", "recidiva": "Recidiva", "estado": "Estado", "dias_baja_display": "Días Baja", "comentarios": "Comentarios"
         })
         
-        # Inyección de tabla interactiva (permite click en cabeceras para ordenar y búsqueda global con ctrl+f)
         st.dataframe(
             df_mostrar,
             use_container_width=True,
@@ -253,6 +257,10 @@ else:
                 if st.form_submit_button("💾 Guardar Cambios"):
                     real_idx = st.session_state.lesiones.index(les_edit_obj)
                     st.session_state.lesiones[real_idx]["comentarios"] = nuevo_com
+                    
+                    # CRÍTICO: Sincronizar BBDD
+                    st.session_state.df_lesiones = pd.DataFrame(st.session_state.lesiones)
+                    
                     guardar_datos(modulo="lesiones")
                     st.success("¡Comentario actualizado correctamente!")
                     st.rerun()
@@ -272,15 +280,15 @@ else:
                         real_idx_del = st.session_state.lesiones.index(les_a_borrar)
                         del st.session_state.lesiones[real_idx_del]
                         
+                        # CRÍTICO: Sincronizar BBDD
+                        st.session_state.df_lesiones = pd.DataFrame(st.session_state.lesiones)
+                        
                         guardar_datos(modulo="lesiones")
                         st.success("¡Registro de lesión eliminado correctamente!")
                         st.rerun()
             else:
                 st.info("No hay lesiones en el historial para eliminar.")
-
-    # ==========================================
-    # PESTAÑA 4: PROTOCOLO RTP
-    # ==========================================
+                
     with tab_rtp:
         st.markdown("#### 🏃‍♂️ Gestión de Return To Play (RTP)")
         st.caption("Sistema de progresión estructurada basado en los 4 pasos, duraciones mínimas y criterios de alta competitiva.")
