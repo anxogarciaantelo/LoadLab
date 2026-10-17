@@ -64,7 +64,28 @@ with tab_cal:
     meses_nombres = ["", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
     
     # Botones de navegación del mes
-    c_nav1, c_nav2, c_nav3 = st.columns([1, 3, 1])
+    st.markdown("<div class='mes-nav-bar'></div>", unsafe_allow_html=True)
+    st.markdown("""
+    <style>
+    div.element-container:has(.mes-nav-bar) + div[data-testid="stHorizontalBlock"] button {
+        background: transparent !important;
+        border: transparent !important;
+        box-shadow: none !important;
+        color: #94a3b8 !important;
+        font-size: 1.5rem !important;
+        padding: 0 !important;
+        min-height: 10px !important;
+        margin-top: -5px !important;
+    }
+    div.element-container:has(.mes-nav-bar) + div[data-testid="stHorizontalBlock"] button:hover {
+        color: #f8fafc !important;
+        background: transparent !important;
+        transform: scale(1.2);
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    c_nav1, c_nav2, c_nav3 = st.columns([1, 6, 1])
     if c_nav1.button("◀", use_container_width=True):
         st.session_state.cal_offset -= 1
         st.rerun()
