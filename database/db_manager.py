@@ -334,6 +334,13 @@ def reconstruir_dataframes_globales():
             rango_fechas = pd.date_range(start=df_pivot.index.min(), end=df_pivot.index.max(), freq='D')
             df_pivot = df_pivot.reindex(rango_fechas, fill_value=0)
             
+            # Enmascarar con np.nan los días previos al primer registro real del jugador
+            for col in df_pivot.columns:
+                s_cargas = df_pivot[col]
+                primer_dia_valido = s_cargas[s_cargas > 0].first_valid_index()
+                if primer_dia_valido:
+                    df_pivot.loc[:primer_dia_valido - pd.Timedelta(days=1), col] = np.nan
+            
             # Multiplicamos por 7 para obtener la Carga Semanal Equivalente
             aguda = df_pivot.ewm(span=7, adjust=False).mean() * 7
             cronica = df_pivot.ewm(span=28, adjust=False).mean() * 7
