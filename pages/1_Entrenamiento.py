@@ -91,7 +91,7 @@ with tab_cal:
         num_sem = obtener_numero_semana(f"{year}-{month:02d}-{dia_sem:02d}") if dia_sem else 0
         
         # Tarjeta contenedora de la semana completa
-        html_cal += "<div style='background-color: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 10px; margin-bottom: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); display: grid; grid-template-columns: 60px repeat(7, 1fr); gap: 8px;'>"
+        html_cal += "<div style='background-color: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 10px; margin-bottom: 5px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); display: grid; grid-template-columns: 60px repeat(7, 1fr); gap: 8px;'>"
         
         # Etiqueta del Microciclo (Píldora azul a la izquierda)
         if num_sem > 0:
