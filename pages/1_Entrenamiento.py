@@ -1340,10 +1340,9 @@ with tab_ses:
                                 "MIN": min_ses,
                                 "MIN_GPS": min_gps_val,
                                 "CARGA": min_ses * safe_float(row["RPE"]),
-                                "EWMA AGUDA": ewma_aguda,          # <- AÑADIDO
-                                "EWMA CRÓNICA": ewma_cronica,      # <- AÑADIDO
-                                "RATIO A/C": ratio_ac,,
-                                
+                                "EWMA AGUDA": ewma_aguda,
+                                "EWMA CRÓNICA": ewma_cronica,
+                                "RATIO A/C": ratio_ac,
                                 "DIS": dis,
                                 "DIS AI": dis_ai_21,
                                 "Nº SPR": spr_24,
