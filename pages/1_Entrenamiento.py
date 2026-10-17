@@ -899,23 +899,23 @@ with tab_ses:
                                 # Estructuras HTML Forzadas para igualar el CSS de style.css
                                 def html_tarjeta_doble(color, val1, val2, lbl1, lbl2):
                                     return f"""
-                                    <div style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid {color}; border-radius: 10px; padding: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); display: flex; flex-direction: row; align-items: stretch; margin-bottom: 15px; height: 110px;">
-                                        <div style='flex: 1; padding-right: 10px; border-right: 1px solid #334155; display: flex; flex-direction: column;'>
-                                            <span style='font-size: 1.05rem; color: #f8fafc; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; line-height: 1.2;'>{lbl1}</span>
-                                            <span style='font-size: 1.8rem; font-weight: 800; color: #f8fafc; text-align: center; margin-top: auto;'>{val1}</span>
+                                    <div style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid {color}; border-radius: 8px; padding: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.15); display: flex; flex-direction: row; align-items: stretch; margin-bottom: 10px; height: 85px;">
+                                        <div style='flex: 1; padding-right: 8px; border-right: 1px solid #334155; display: flex; flex-direction: column;'>
+                                            <span style='font-size: 0.85rem; color: #f8fafc; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; line-height: 1.1;'>{lbl1}</span>
+                                            <span style='font-size: 1.4rem; font-weight: 800; color: #f8fafc; text-align: center; margin-top: auto;'>{val1}</span>
                                         </div>
-                                        <div style='flex: 1; padding-left: 10px; display: flex; flex-direction: column;'>
-                                            <span style='font-size: 1.05rem; color: #f8fafc; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; line-height: 1.2;'>{lbl2}</span>
-                                            <span style='font-size: 1.8rem; font-weight: 800; color: #f8fafc; text-align: center; margin-top: auto;'>{val2}</span>
+                                        <div style='flex: 1; padding-left: 8px; display: flex; flex-direction: column;'>
+                                            <span style='font-size: 0.85rem; color: #f8fafc; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; line-height: 1.1;'>{lbl2}</span>
+                                            <span style='font-size: 1.4rem; font-weight: 800; color: #f8fafc; text-align: center; margin-top: auto;'>{val2}</span>
                                         </div>
                                     </div>
                                     """
                                     
                                 def html_tarjeta_simple(color, val, lbl):
                                     return f"""
-                                    <div style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid {color}; border-radius: 10px; padding: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); display: flex; flex-direction: column; margin-bottom: 15px; height: 110px;">
-                                        <span style='font-size: 1.05rem; color: #f8fafc; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; line-height: 1.2;'>{lbl}</span>
-                                        <span style='font-size: 1.8rem; font-weight: 800; color: #f8fafc; text-align: center; margin-top: auto;'>{val}</span>
+                                    <div style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid {color}; border-radius: 8px; padding: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.15); display: flex; flex-direction: column; margin-bottom: 10px; height: 85px;">
+                                        <span style='font-size: 0.85rem; color: #f8fafc; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; line-height: 1.1;'>{lbl}</span>
+                                        <span style='font-size: 1.4rem; font-weight: 800; color: #f8fafc; text-align: center; margin-top: auto;'>{val}</span>
                                     </div>
                                     """
 
