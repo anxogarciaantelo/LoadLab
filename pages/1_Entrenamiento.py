@@ -728,26 +728,26 @@ with tab_ses:
                     if es_partido:
                         if c_b5.button("⚡", key=f"bs_{idx_real}", help="Stats Partido", use_container_width=True): toggle_view(idx_real, "stats"); st.rerun()
 
-                    # =======================================================
-                    # VISTA 2: PANTALLA COMPLETA PARA HERRAMIENTAS (ROUTER)
-                    # =======================================================
-                    else:
-                        sesion = st.session_state.sesiones[active_idx]
-                        idx_real = active_idx
-                        es_partido = "Partido" in sesion['tipo']
-                        
-                        # Barra superior de navegación nativa
-                        col_back, col_title = st.columns([1, 5])
-                        with col_back:
-                            if st.button("⬅️ Volver", use_container_width=True):
-                                toggle_view(None, None)
-                                st.rerun()
-                        with col_title:
-                            nom_h = sesion.get("nombre_dinamico", sesion["tipo"])
-                            sub_h = sesion.get('rival', 'Rival') if es_partido else sesion.get('descripcion', 'TD')
-                            st.markdown(f"<h4 style='margin-top: 5px; color: #f8fafc;'>⚙️ Gestión: {nom_h} ({sub_h}) | {sesion['fecha']}</h4>", unsafe_allow_html=True)
+        # =======================================================
+        # VISTA 2: PANTALLA COMPLETA PARA HERRAMIENTAS (ROUTER)
+        # =======================================================
+        else:
+            sesion = st.session_state.sesiones[active_idx]
+            idx_real = active_idx
+            es_partido = "Partido" in sesion['tipo']
             
-                        st.markdown("---")
+            # Barra superior de navegación nativa
+            col_back, col_title = st.columns([1, 5])
+            with col_back:
+                if st.button("⬅️ Volver", use_container_width=True):
+                    toggle_view(None, None)
+                    st.rerun()
+            with col_title:
+                nom_h = sesion.get("nombre_dinamico", sesion["tipo"])
+                sub_h = sesion.get('rival', 'Rival') if es_partido else sesion.get('descripcion', 'TD')
+                st.markdown(f"<h4 style='margin-top: 5px; color: #f8fafc;'>⚙️ Gestión: {nom_h} ({sub_h}) | {sesion['fecha']}</h4>", unsafe_allow_html=True)
+
+            st.markdown("---")
             
                                                
                     # ---------------------------------------------------------
