@@ -882,7 +882,7 @@ with tab_ses:
                                         if data['recuperacion']: alertas_rec.append(f"**{jug}**: {data['recuperacion'][0]}")
                                         if data['carga']: alertas_car.append(f"**{jug}**: {data['carga'][0]}")
 
-                                # --- 3. RENDERIZADO DE KPIs GLOBALES (3 COLUMNAS COMPACTAS) ---
+                                # --- 3. RENDERIZADO DE KPIs GLOBALES (NUEVO FORMATO TARJETAS DOBLES) ---
                                 tqr_m = df_para_medias['TQR'].mean() if pd.notna(df_para_medias['TQR'].mean()) else 0.0
                                 well_m = df_para_medias['WELLNESS'].mean() if pd.notna(df_para_medias['WELLNESS'].mean()) else 0.0
                                 rpe_m = df_para_medias['RPE'].mean() if pd.notna(df_para_medias['RPE'].mean()) else 0.0
@@ -896,74 +896,41 @@ with tab_ses:
                                 dcc_m = df_para_medias_gps['DCC'].mean() if pd.notna(df_para_medias_gps['DCC'].mean()) else 0.0
                                 pct_vmax_m = df_para_medias_gps['% VMAX'].mean() if pd.notna(df_para_medias_gps['% VMAX'].mean()) else 0.0
 
-                                c_kpi_w, c_kpi_i, c_kpi_e = st.columns([1, 1, 1.8])
+                                def html_tarjeta_doble(color, val1, val2, lbl1, lbl2):
+                                    return f"""
+                                    <div style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid {color}; border-radius: 10px; padding: 15px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); display: flex; flex-direction: column; justify-content: center; margin-bottom: 15px;">
+                                        <div style='display: flex; justify-content: space-evenly; align-items: center;'>
+                                            <div style='text-align: center;'><span style='font-size: 0.75rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;'>{lbl1}</span><br><span style='font-size: 1.6rem; font-weight: 800; color: #f8fafc;'>{val1}</span></div>
+                                            <div style='width: 1px; height: 30px; background-color: #334155;'></div>
+                                            <div style='text-align: center;'><span style='font-size: 0.75rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;'>{lbl2}</span><br><span style='font-size: 1.6rem; font-weight: 800; color: #f8fafc;'>{val2}</span></div>
+                                        </div>
+                                    </div>
+                                    """
+                                    
+                                def html_tarjeta_simple(color, val, lbl):
+                                    return f"""
+                                    <div style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid {color}; border-radius: 10px; padding: 15px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); display: flex; flex-direction: column; justify-content: center; margin-bottom: 15px;">
+                                        <p style="color: #94a3b8; font-size: 0.75rem; font-weight: 700; margin: 0 0 5px 0; text-transform: uppercase; text-align: center;">{lbl}</p>
+                                        <h2 style="color: #f8fafc; font-size: 1.8rem; font-weight: 800; margin: 0; line-height: 1; text-align: center;">{val}</h2>
+                                    </div>
+                                    """
+
+                                c_kpi_w, c_kpi_i, c_kpi_e = st.columns(3)
                                 
                                 with c_kpi_w:
-                                    st.markdown(f"""
-                                    <div style='background: #1e293b; border: 1px solid #334155; border-top: 3px solid #10b981; border-radius: 8px; padding: 15px; height: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.15);'>
-                                        <h5 style='color: #f8fafc; margin-top: 0; margin-bottom: 15px; font-weight: 800; text-transform: uppercase;'>🧠 Bienestar</h5>
-                                        <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;'>
-                                            <span style='color: #94a3b8; font-size: 0.85rem; font-weight: 700;'>TQR</span>
-                                            <span style='color: #f8fafc; font-size: 1.2rem; font-weight: 800;'>{tqr_m:.1f}</span>
-                                        </div>
-                                        <div style='display: flex; justify-content: space-between; align-items: center;'>
-                                            <span style='color: #94a3b8; font-size: 0.85rem; font-weight: 700;'>WELLNESS</span>
-                                            <span style='color: #f8fafc; font-size: 1.2rem; font-weight: 800;'>{well_m:.1f}</span>
-                                        </div>
-                                    </div>
-                                    """, unsafe_allow_html=True)
+                                    st.markdown("<h5 style='color: #f8fafc; font-weight: 800; text-transform: uppercase; margin-bottom: 15px;'>🧠 Bienestar</h5>", unsafe_allow_html=True)
+                                    st.markdown(html_tarjeta_doble("#10b981", f"{tqr_m:.1f}", f"{well_m:.1f}", "TQR", "Wellness"), unsafe_allow_html=True)
                                     
                                 with c_kpi_i:
-                                    st.markdown(f"""
-                                    <div style='background: #1e293b; border: 1px solid #334155; border-top: 3px solid #f59e0b; border-radius: 8px; padding: 15px; height: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.15);'>
-                                        <h5 style='color: #f8fafc; margin-top: 0; margin-bottom: 15px; font-weight: 800; text-transform: uppercase;'>🔥 Carga Interna</h5>
-                                        <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;'>
-                                            <span style='color: #94a3b8; font-size: 0.85rem; font-weight: 700;'>MINUTOS</span>
-                                            <span style='color: #f8fafc; font-size: 1rem; font-weight: 800;'>{min_m:.0f}'</span>
-                                        </div>
-                                        <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;'>
-                                            <span style='color: #94a3b8; font-size: 0.85rem; font-weight: 700;'>RPE</span>
-                                            <span style='color: #f8fafc; font-size: 1rem; font-weight: 800;'>{rpe_m:.1f}</span>
-                                        </div>
-                                        <div style='display: flex; justify-content: space-between; align-items: center;'>
-                                            <span style='color: #94a3b8; font-size: 0.85rem; font-weight: 700;'>CARGA</span>
-                                            <span style='color: #f8fafc; font-size: 1rem; font-weight: 800;'>{carga_m:.0f} UA</span>
-                                        </div>
-                                    </div>
-                                    """, unsafe_allow_html=True)
+                                    st.markdown("<h5 style='color: #f8fafc; font-weight: 800; text-transform: uppercase; margin-bottom: 15px;'>🔥 Carga Interna</h5>", unsafe_allow_html=True)
+                                    st.markdown(html_tarjeta_doble("#f59e0b", f"{min_m:.0f}'", f"{rpe_m:.1f}", "Minutos", "RPE"), unsafe_allow_html=True)
+                                    st.markdown(html_tarjeta_simple("#f59e0b", f"{carga_m:.0f} UA", "Carga Interna"), unsafe_allow_html=True)
                                     
                                 with c_kpi_e:
-                                    st.markdown(f"""
-                                    <div style='background: #1e293b; border: 1px solid #334155; border-top: 3px solid #3b82f6; border-radius: 8px; padding: 15px; height: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.15);'>
-                                        <h5 style='color: #f8fafc; margin-top: 0; margin-bottom: 15px; font-weight: 800; text-transform: uppercase;'>🏃‍♂️ Carga Externa</h5>
-                                        <div style='display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px;'>
-                                            <div style='display: flex; justify-content: space-between; align-items: center;'>
-                                                <span style='color: #94a3b8; font-size: 0.85rem; font-weight: 700;'>DISTANCIA</span>
-                                                <span style='color: #f8fafc; font-size: 1rem; font-weight: 800;'>{dis_m:.2f} km</span>
-                                            </div>
-                                            <div style='display: flex; justify-content: space-between; align-items: center;'>
-                                                <span style='color: #94a3b8; font-size: 0.85rem; font-weight: 700;'>ACC (>3)</span>
-                                                <span style='color: #f8fafc; font-size: 1rem; font-weight: 800;'>{acc_m:.0f}</span>
-                                            </div>
-                                            <div style='display: flex; justify-content: space-between; align-items: center;'>
-                                                <span style='color: #94a3b8; font-size: 0.85rem; font-weight: 700;'>HSR (>21)</span>
-                                                <span style='color: #f8fafc; font-size: 1rem; font-weight: 800;'>{hsr_m:.0f} m</span>
-                                            </div>
-                                            <div style='display: flex; justify-content: space-between; align-items: center;'>
-                                                <span style='color: #94a3b8; font-size: 0.85rem; font-weight: 700;'>DCC (>3)</span>
-                                                <span style='color: #f8fafc; font-size: 1rem; font-weight: 800;'>{dcc_m:.0f}</span>
-                                            </div>
-                                            <div style='display: flex; justify-content: space-between; align-items: center;'>
-                                                <span style='color: #94a3b8; font-size: 0.85rem; font-weight: 700;'>SPRINTS</span>
-                                                <span style='color: #f8fafc; font-size: 1rem; font-weight: 800;'>{spr_m:.1f}</span>
-                                            </div>
-                                            <div style='display: flex; justify-content: space-between; align-items: center;'>
-                                                <span style='color: #94a3b8; font-size: 0.85rem; font-weight: 700;'>% V. MÁX</span>
-                                                <span style='color: #f8fafc; font-size: 1rem; font-weight: 800;'>{pct_vmax_m:.1f} %</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    """, unsafe_allow_html=True)
+                                    st.markdown("<h5 style='color: #f8fafc; font-weight: 800; text-transform: uppercase; margin-bottom: 15px;'>🏃‍♂️ Carga Externa</h5>", unsafe_allow_html=True)
+                                    st.markdown(html_tarjeta_doble("#3b82f6", f"{dis_m:.2f} km", f"{hsr_m:.0f} m", "Distancia Total", "HSR (>21)"), unsafe_allow_html=True)
+                                    st.markdown(html_tarjeta_doble("#3b82f6", f"{spr_m:.1f}", f"{pct_vmax_m:.1f} %", "Nº Sprints", "% V. Máx"), unsafe_allow_html=True)
+                                    st.markdown(html_tarjeta_doble("#3b82f6", f"{acc_m:.0f}", f"{dcc_m:.0f}", "ACC (>3)", "DCC (>3)"), unsafe_allow_html=True)
 
                                 st.markdown("---")
                                 
