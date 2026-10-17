@@ -82,7 +82,7 @@ with tab_cal:
         st.rerun()
     with c_nav2:
         # Reducido de h3 a h4, font-size ajustado a 1.15rem y margin-bottom a 8px
-        st.markdown(f"<h4 style='text-align: center; color: #f8fafc; margin-top: 0; margin-bottom: 8px; font-size: 1.15rem; text-transform: uppercase; font-weight: 800; letter-spacing: 1px;'>🗓️ {meses_nombres[month]} {year}</h4>", unsafe_allow_html=True)
+        st.markdown(f"<h4 style='text-align: center; color: #f8fafc; margin-top: 0; margin-bottom: 8px; font-size: 1.15rem; text-transform: uppercase; font-weight: 500; letter-spacing: 1px;'>🗓️ {meses_nombres[month]} {year}</h4>", unsafe_allow_html=True)
     if c_nav3.button("Mes Siguiente ▶", use_container_width=True):
         st.session_state.cal_offset += 1
         st.rerun()
