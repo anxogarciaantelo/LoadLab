@@ -1128,9 +1128,9 @@ with tab_ses:
                                         
                             if datos_validos:
                                 df_val = pd.DataFrame(datos_validos)
-                                medias_esp = df_val.groupby("POS_ESP").mean(numeric_only=True).to_dict('index')
-                                medias_gen = df_val.groupby("POS_GEN").mean(numeric_only=True).to_dict('index')
-                                medias_eq = df_val.mean(numeric_only=True).to_dict()
+                                medias_esp = df_val.groupby("POS_ESP").mean(numeric_only=True).fillna(0.0).to_dict('index')
+                                medias_gen = df_val.groupby("POS_GEN").mean(numeric_only=True).fillna(0.0).to_dict('index')
+                                medias_eq = df_val.mean(numeric_only=True).fillna(0.0).to_dict()
                                 
                                 # 2. Imputamos a los que no tienen GPS pero entrenaron
                                 for reg in registros:
@@ -1149,18 +1149,20 @@ with tab_ses:
                                         # Escala de fallback: Misma posición específica -> Posición general -> Media de equipo
                                         ratios = medias_esp.get(pos_esp, medias_gen.get(pos, medias_eq))
                                         
-                                        reg["MIN_GPS"] = min_jug
-                                        reg["DIS"] = ratios["DIS_pm"] * min_jug
-                                        reg["DIS AI"] = ratios["DIS_AI_pm"] * min_jug
-                                        reg["HID >21"] = ratios["DIS_AI_pm"] * min_jug
-                                        reg["Nº SPR"] = ratios["SPR_pm"] * min_jug
-                                        reg["SPR >24"] = ratios["SPR_pm"] * min_jug
-                                        reg["ACC"] = ratios["ACC_pm"] * min_jug
-                                        reg["ACC >3"] = ratios["ACC_pm"] * min_jug
-                                        reg["DCC"] = ratios["DCC_pm"] * min_jug
-                                        reg["DCC >3"] = ratios["DCC_pm"] * min_jug
-                                        reg["VMAX"] = ratios["VMAX"]
-                                        reg["V_Max"] = ratios["VMAX"]
+                                        def seguro(v): return 0.0 if pd.isna(v) else float(v)
+
+                                        reg["MIN_GPS"] = seguro(min_jug)
+                                        reg["DIS"] = seguro(ratios.get("DIS_pm", 0) * min_jug)
+                                        reg["DIS AI"] = seguro(ratios.get("DIS_AI_pm", 0) * min_jug)
+                                        reg["HID >21"] = seguro(ratios.get("DIS_AI_pm", 0) * min_jug)
+                                        reg["Nº SPR"] = seguro(ratios.get("SPR_pm", 0) * min_jug)
+                                        reg["SPR >24"] = seguro(ratios.get("SPR_pm", 0) * min_jug)
+                                        reg["ACC"] = seguro(ratios.get("ACC_pm", 0) * min_jug)
+                                        reg["ACC >3"] = seguro(ratios.get("ACC_pm", 0) * min_jug)
+                                        reg["DCC"] = seguro(ratios.get("DCC_pm", 0) * min_jug)
+                                        reg["DCC >3"] = seguro(ratios.get("DCC_pm", 0) * min_jug)
+                                        reg["VMAX"] = seguro(ratios.get("VMAX", 0))
+                                        reg["V_Max"] = seguro(ratios.get("VMAX", 0))
                             return registros
                         if f'msg_sync_{idx_real}' in st.session_state:
                             for msg in st.session_state[f'msg_sync_{idx_real}']:
@@ -1279,7 +1281,8 @@ with tab_ses:
                                     st.session_state.sesiones[idx_real]['datos_informe'] = full_records
                                     st.session_state.sesiones[idx_real]['informe_generado'] = True
                                     guardar_datos(modulo="sesiones")
-                                    st.success("✅ ¡Datos manuales calculados y guardados correctamente!")
+                                    # Delegamos el mensaje al renderizador global para que sobreviva al rerun
+                                    st.session_state[f'msg_sync_{idx_real}'] = ["✅ ¡Datos manuales calculados y guardados correctamente!"]
                                     st.rerun()
                                     
                                 elif del_manual:
