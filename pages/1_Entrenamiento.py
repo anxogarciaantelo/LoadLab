@@ -747,7 +747,7 @@ with tab_ses:
                             sub_h = sesion.get('rival', 'Rival') if es_partido else sesion.get('descripcion', 'TD')
                             st.markdown(f"<h4 style='margin-top: 5px; color: #f8fafc;'>⚙️ Gestión: {nom_h} ({sub_h}) | {sesion['fecha']}</h4>", unsafe_allow_html=True)
             
-            st.markdown("---")
+                        st.markdown("---")
             
                                                
                     # ---------------------------------------------------------
