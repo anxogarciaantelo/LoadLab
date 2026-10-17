@@ -38,66 +38,100 @@ else:
     df_les['Gravedad'] = df_les['dias_baja'].apply(categorizar_duracion)
     
     with tab_les_res:
-        st.markdown("#### 🔍 Filtros Epidemiológicos")
-        cf1, cf2, cf3 = st.columns(3)
+        c_filt, c_kpis = st.columns([1, 3.5])
         
-        meses_unicos = ["TODOS"] + list(df_les['Mes'].dropna().unique())
-        filtro_mes = cf1.selectbox("Filtrar por Mes:", meses_unicos)
-        
-        filtro_tipo_ses = cf2.selectbox("Filtrar por Sesión:", ["TODOS", "Entrenamiento", "Partido"])
-        
-        jugs_unicos = ["TODOS"] + sorted([j["JUGADOR"] for j in st.session_state.plantilla])
-        filtro_jugador = cf3.selectbox("Filtrar por Jugador:", jugs_unicos)
-        
-        df_filtrado = df_les.copy()
-        if filtro_mes != "TODOS": df_filtrado = df_filtrado[df_filtrado['Mes'] == filtro_mes]
-        if filtro_tipo_ses != "TODOS": df_filtrado = df_filtrado[df_filtrado['tipo_sesion'] == filtro_tipo_ses]
-        if filtro_jugador != "TODOS": df_filtrado = df_filtrado[df_filtrado['jugador'] == filtro_jugador]
-        
-        if df_filtrado.empty:
-            st.warning("No hay lesiones que coincidan con los filtros aplicados para este jugador/periodo.")
-        else:
-            # --- 1. CÁLCULO DINÁMICO DE DÍAS REALES ---
-            def calcular_dias_reales(row):
-                if row.get('estado') == 'Activa':
-                    fecha_les = datetime.strptime(row['id_sesion'], "%Y-%m-%d").date()
-                    return max((date.today() - fecha_les).days, 0)
-                else:
-                    return safe_float(row.get('dias_baja', 0))
+        with c_filt:
+            st.markdown("#### 🔍 Filtros")
+            meses_unicos = ["TODOS"] + list(df_les['Mes'].dropna().unique())
+            filtro_mes = st.selectbox("Mes:", meses_unicos)
+            
+            filtro_tipo_ses = st.selectbox("Sesión:", ["TODOS", "Entrenamiento", "Partido"])
+            
+            jugs_unicos = ["TODOS"] + sorted([j["JUGADOR"] for j in st.session_state.plantilla])
+            filtro_jugador = st.selectbox("Jugador:", jugs_unicos)
+            
+        def calcular_dias_reales(row):
+            if row.get('estado') == 'Activa':
+                fecha_les = datetime.strptime(row['id_sesion'], "%Y-%m-%d").date()
+                return max((date.today() - fecha_les).days, 0)
+            else:
+                return safe_float(row.get('dias_baja', 0))
 
-            df_filtrado['dias_reales'] = df_filtrado.apply(calcular_dias_reales, axis=1)
+        # DF Anual para baseline (Sin filtrar por el mes seleccionado)
+        df_anual = df_les.copy()
+        if filtro_tipo_ses != "TODOS": df_anual = df_anual[df_anual['tipo_sesion'] == filtro_tipo_ses]
+        if filtro_jugador != "TODOS": df_anual = df_anual[df_anual['jugador'] == filtro_jugador]
+        
+        # DF Filtrado completamente
+        df_filtrado = df_anual.copy()
+        if filtro_mes != "TODOS": df_filtrado = df_filtrado[df_filtrado['Mes'] == filtro_mes]
+
+        def calcular_metricas(df_eval, mes_eval):
+            if df_eval.empty:
+                return 0, 0, 0.0, 0.0, 0.0
+                
+            df_eval_calc = df_eval.copy()
+            df_eval_calc['dias_reales'] = df_eval_calc.apply(calcular_dias_reales, axis=1)
+            t_les = len(df_eval_calc)
+            t_dias = int(df_eval_calc['dias_reales'].sum())
+            p_dias = t_dias / t_les if t_les > 0 else 0
             
-            total_lesiones = len(df_filtrado)
-            total_dias = int(df_filtrado['dias_reales'].sum())
-            promedio_dias = total_dias / total_lesiones if total_lesiones > 0 else 0
-            
-            # --- 2. CÁLCULO DE EXPOSICIÓN (HORAS) ---
-            horas_totales = 0
+            h_tot = 0
             for s in st.session_state.sesiones:
                 if s.get("informe_generado", False):
-                    if filtro_mes != "TODOS" and meses_esp[datetime.strptime(s["fecha"], "%Y-%m-%d").month] != filtro_mes: continue
+                    try:
+                        mes_s = meses_esp[datetime.strptime(s["fecha"], "%Y-%m-%d").month]
+                    except: continue
+                    
+                    if mes_eval != "TODOS" and mes_s != mes_eval: continue
+                    
                     es_partido_s = "Partido" in s["tipo"]
                     if filtro_tipo_ses == "Entrenamiento" and es_partido_s: continue
                     if filtro_tipo_ses == "Partido" and not es_partido_s: continue
                     
                     for d in s["datos_informe"]:
                         if filtro_jugador == "TODOS" or d["JUGADOR"] == filtro_jugador:
-                            horas_totales += float(d.get("MIN", 0)) / 60.0
+                            h_tot += float(d.get("MIN", 0)) / 60.0
 
-            incidencia = (total_lesiones / horas_totales * 1000) if horas_totales > 0 else 0
-            
-            # --- 3. CÁLCULO DEL BURDEN LESIONAL ---
-            burden = (total_dias / horas_totales * 1000) if horas_totales > 0 else 0
+            inc = (t_les / h_tot * 1000) if h_tot > 0 else 0
+            bur = (t_dias / h_tot * 1000) if h_tot > 0 else 0
+            return t_les, t_dias, p_dias, inc, bur
 
+        with c_kpis:
             st.markdown("#### 🎯 Métricas Globales")
-            k1, k2, k3, k4, k5 = st.columns(5)
-            k1.metric("Total de Lesiones", total_lesiones)
-            k2.metric("Total Días de Baja", f"{total_dias} días")
-            k3.metric("Promedio de Baja", f"{promedio_dias:.1f} días / lesión")
-            k4.metric("Incidencia (/1000h)", f"{incidencia:.1f}")
-            k5.metric("Burden (/1000h)", f"{burden:.0f}", help="Días perdidos por cada 1000 horas de exposición. Óptimo (<100) | Moderado (100-150) | Crítico (>150)")
-            
-            st.markdown("---")
+            if df_filtrado.empty:
+                st.warning("No hay lesiones que coincidan con los filtros aplicados.")
+            else:
+                # 1. Calcular el bloque de métricas del mes seleccionado y el baseline anual
+                total_lesiones, total_dias, promedio_dias, incidencia, burden = calcular_metricas(df_filtrado, filtro_mes)
+                _, _, _, inc_anual, bur_anual = calcular_metricas(df_anual, "TODOS")
+
+                tendencia_inc = None
+                tendencia_bur = None
+                
+                # 2. Generar el diccionario de tendencia si se selecciona un mes
+                if filtro_mes != "TODOS":
+                    if inc_anual > 0:
+                        diff_inc = ((incidencia - inc_anual) / inc_anual) * 100
+                        txt_inc = "peor vs anual" if diff_inc > 0 else "mejor vs anual"
+                        tendencia_inc = {'valor': diff_inc, 'inverso': True, 'texto': txt_inc}
+                        
+                    if bur_anual > 0:
+                        diff_bur = ((burden - bur_anual) / bur_anual) * 100
+                        txt_bur = "peor vs anual" if diff_bur > 0 else "mejor vs anual"
+                        tendencia_bur = {'valor': diff_bur, 'inverso': True, 'texto': txt_bur}
+
+                from utils.math_helpers import render_kpi_elite
+                
+                # 3. Renderizar las 5 tarjetas en una sola fila compacta
+                k1, k2, k3, k4, k5 = st.columns(5)
+                with k1: render_kpi_elite("Lesiones", f"{total_lesiones}", color_borde="#3b82f6")
+                with k2: render_kpi_elite("Bajas (Tot)", f"{total_dias} d", color_borde="#f59e0b")
+                with k3: render_kpi_elite("Baja/Les", f"{promedio_dias:.1f} d", color_borde="#8b5cf6")
+                with k4: render_kpi_elite("Incidencia", f"{incidencia:.1f}", subtitulo="/1000h expos.", color_borde="#ef4444", tendencia=tendencia_inc)
+                with k5: render_kpi_elite("Burden", f"{burden:.0f}", subtitulo="/1000h expos.", color_borde="#ef4444", tendencia=tendencia_bur)
+        
+        st.markdown("---")
             st.markdown("#### 📈 Desglose Estadístico")
             
             cg1, cg2, cg3 = st.columns(3)
