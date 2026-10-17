@@ -69,7 +69,7 @@ with tab_cal:
         st.session_state.cal_offset -= 1
         st.rerun()
     with c_nav2:
-        st.markdown(f"<h4 style='text-align: center; color: #f8fafc; margin-top: 0; margin-bottom: 10px; font-size: 1.15rem; text-transform: uppercase; font-weight: 800; letter-spacing: 1px;'>🗓️ {meses_nombres[month]} {year}</h4>", unsafe_allow_html=True)
+        st.markdown(f"<h4 style='text-align: center; color: #f8fafc; margin-top: 0; margin-bottom: 5px; font-size: 1.15rem; text-transform: uppercase; font-weight: 800; letter-spacing: 1px;'>🗓️ {meses_nombres[month]} {year}</h4>", unsafe_allow_html=True)
     if c_nav3.button("▶", use_container_width=True):
         st.session_state.cal_offset += 1
         st.rerun()
@@ -79,7 +79,7 @@ with tab_cal:
     hoy_str = str(date.today())
     
     # --- CABECERAS DE LOS DÍAS (Limpias y reducidas) ---
-    html_cal = "<div style='display: grid; grid-template-columns: 60px repeat(7, 1fr); gap: 8px; text-align: center; margin-bottom: 8px; align-items: end;'>"
+    html_cal = "<div style='display: grid; grid-template-columns: 60px repeat(7, 1fr); gap: 8px; text-align: center; margin-bottom: 5px; align-items: end;'>"
     html_cal += "<div></div>" # Espacio vacío sobre la columna de microciclos
     for d in dias_semana:
         html_cal += f"<div style='color: #94a3b8; font-weight: 800; font-size: 0.8rem; text-transform: uppercase; padding-bottom: 6px; border-bottom: 2px solid #334155;'>{d}</div>"
