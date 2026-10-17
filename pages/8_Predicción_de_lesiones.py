@@ -31,7 +31,8 @@ def construir_dataset_entrenamiento(sesiones, lesiones):
     registros = []
     dict_pos_esp = {limpiar_nombre(p["JUGADOR"]): p.get("pos_1", "Desconocida") for p in st.session_state.get("plantilla", [])}
     dict_pos_gen = {limpiar_nombre(p["JUGADOR"]): p.get("POS", "DEF") for p in st.session_state.get("plantilla", [])}
-
+    dict_edad = {limpiar_nombre(p["JUGADOR"]): safe_float(p.get("edad", 25)) for p in st.session_state.get("plantilla", [])}
+    
     for s in sesiones:
         if not s.get("informe_generado"): continue
             
@@ -125,6 +126,17 @@ def construir_dataset_entrenamiento(sesiones, lesiones):
         group['Wellness_3d'] = group['WELLNESS'].replace(0, np.nan).rolling(window=3, min_periods=1).mean().fillna(0)
         group['Sueno_3d'] = group['SUEÑO'].replace(0, np.nan).rolling(window=3, min_periods=1).mean().fillna(0)
         group['JUGADOR'] = jug
+        group['Edad'] = dict_edad.get(limpiar_nombre(jug), 25.0)
+        def calcular_lesiones_previas(fecha_fila, nombre_jugador):
+            count = 0
+            for l in lesiones:
+                if l['jugador'] == nombre_jugador and l.get('tipo') in ["Muscular", "Tendinosa"]:
+                    if pd.to_datetime(l['id_sesion']) < fecha_fila:
+                        count += 1
+            return count
+            
+        group['Lesiones_Previas'] = group.apply(lambda r: calcular_lesiones_previas(r.name, r['JUGADOR']), axis=1)
+        
         features.append(group.reset_index())
         
     df_features = pd.concat(features, ignore_index=True)
@@ -171,7 +183,7 @@ MIN_LESIONES_REQUERIDAS = 10
 lesiones_musculares_validas = [l for l in st.session_state.lesiones if l.get('tipo') in ["Muscular", "Tendinosa"] and l.get('contacto') == "No"]
 total_lesiones_reales = len(lesiones_musculares_validas)
 
-predictores = ['Ratio_AC', 'Carga_Aguda', 'HSR_7d', 'Sprints_7d', 'ACC_7d', 'DCC_7d', 'Wellness_3d', 'Sueno_3d']
+predictores = ['Ratio_AC', 'Carga_Aguda', 'HSR_7d', 'Sprints_7d', 'ACC_7d', 'DCC_7d', 'Wellness_3d', 'Sueno_3d', 'Edad', 'Lesiones_Previas']
 modo_ia = False
 
 if total_lesiones_reales >= MIN_LESIONES_REQUERIDAS:
