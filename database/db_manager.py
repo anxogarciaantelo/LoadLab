@@ -84,6 +84,24 @@ def cargar_datos_equipo(equipo_id):
                     vistos_plan.add(p["JUGADOR"])
                     plan_limpia.append(p)
             st.session_state.plantilla = plan_limpia
+
+            vistos_les = set()
+            les_limpias = []
+            for l in st.session_state.lesiones:
+                uid_les = f"{l.get('id_sesion','')}_{l.get('jugador','')}_{l.get('tipo','')}"
+                if uid_les not in vistos_les:
+                    vistos_les.add(uid_les)
+                    les_limpias.append(l)
+            st.session_state.lesiones = les_limpias
+
+            vistos_ant = set()
+            ant_limpias = []
+            for a in st.session_state.antropometria:
+                uid_ant = f"{a.get('fecha','')}_{a.get('jugador','')}"
+                if uid_ant not in vistos_ant:
+                    vistos_ant.add(uid_ant)
+                    ant_limpias.append(a)
+            st.session_state.antropometria = ant_limpias
             # --------------------------------------------
 
             cfg = cfg_data[0] if cfg_data else {}
