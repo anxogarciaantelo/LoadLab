@@ -4,7 +4,7 @@
 html, body, [class*="css"], .stMarkdown p, .stText p, label, .stSelectbox, .stTextInput {
     font-family: 'Plus Jakarta Sans', -apple-system, sans-serif !important;
     color: #e2e8f0 !important;
-    font-size: 1.15rem !important; 
+    font-size: 0.85rem !important; 
 }
 h1, h2, h3, h4, h5, h6 { color: #f8fafc !important; font-weight: 800 !important; }
 
@@ -49,13 +49,13 @@ div[data-testid="stExpander"] summary p {
     overflow-x: visible !important;
 }
 .stTabs [data-baseweb="tab"] {
-    height: 55px !important;
+    height: 45px !important;
     background-color: transparent !important;
     color: #94a3b8 !important;
     font-weight: 700 !important;
-    font-size: 1.25rem !important;
+    font-size: 0.95rem !important;
     border: none !important;
-    padding: 0 20px !important;
+    padding: 0 15px !important;
     white-space: nowrap !important;
     min-width: max-content !important;
     transition: all 0.3s ease;
@@ -86,7 +86,7 @@ div[data-testid="stMetric"] label,
 div[data-testid="stMetric"] label p,
 div[data-testid="stMetric"] [data-testid="stMetricLabel"],
 div[data-testid="stMetric"] [data-testid="stMetricLabel"] p {
-    font-size: 1.05rem !important;
+    font-size: 0.75rem !important;
     color: #f8fafc !important;
     font-weight: 800 !important;
     text-transform: uppercase !important;
@@ -96,13 +96,13 @@ div[data-testid="stMetric"] [data-testid="stMetricLabel"] p {
 }
 
 div[data-testid="stMetric"] label {
-    margin-bottom: 10px !important;
+    margin-bottom: 5px !important;
     width: 100% !important;
     display: block !important;
 }
 
 div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
-    font-size: 1.8rem !important;
+    font-size: 1.4rem !important;
     color: #f8fafc !important;
     font-weight: 800 !important;
     text-align: center !important;
@@ -131,9 +131,9 @@ div[data-testid="stMetric"] div[data-testid="stMetricDelta"] {
 }
 .modern-table thead tr { background-color: #0f172a; }
 .modern-table th {
-    padding: 16px 18px;
+    padding: 10px 12px;
     font-weight: 800;
-    font-size: 0.85rem;
+    font-size: 0.75rem;
     color: #94a3b8;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -141,8 +141,8 @@ div[data-testid="stMetric"] div[data-testid="stMetricDelta"] {
     border-bottom: 2px solid #3b82f6;
 }
 .modern-table td {
-    padding: 14px 18px;
-    font-size: 0.95rem;
+    padding: 8px 12px;
+    font-size: 0.85rem;
     color: #f8fafc;
     text-align: center !important;
     border-bottom: 1px solid #334155;
@@ -160,7 +160,7 @@ div[data-testid="stMetric"] div[data-testid="stMetricDelta"] {
     border: 1px solid #334155;
     border-top: 3px solid #3b82f6;
     border-radius: 8px;
-    padding: 15px 5px 10px 5px;
+    padding: 10px 5px 8px 5px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.15);
     text-align: center;
     margin-bottom: 5px;
@@ -168,12 +168,12 @@ div[data-testid="stMetric"] div[data-testid="stMetricDelta"] {
 }
 .card-elite:hover { transform: scale(1.03); }
 .card-elite img {
-    width: 85px; height: 85px; object-fit: cover;
+    width: 60px; height: 60px; object-fit: cover;
     border-radius: 50%; border: 2px solid #3b82f6;
     box-shadow: 0 4px 8px rgba(0,0,0,0.2); margin-bottom: 5px;
 }
 .card-elite h4 {
-    color: #f8fafc; font-weight: 800; font-size: 1.1rem;
+    color: #f8fafc; font-weight: 800; font-size: 0.85rem;
     margin: 5px 0 0 0; text-transform: uppercase;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
