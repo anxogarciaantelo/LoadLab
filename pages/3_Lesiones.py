@@ -110,12 +110,13 @@ else:
 
                 from utils.math_helpers import render_kpi_elite
                 
+                # Tarjetas renderizadas con texto en el título para evitar el fallo HTML interno
                 k1, k2, k3, k4, k5 = st.columns(5)
                 with k1: render_kpi_elite("Lesiones Totales", f"{total_lesiones}", color_borde="#3b82f6")
                 with k2: render_kpi_elite("Días de Baja Totales", f"{total_dias}", color_borde="#f59e0b")
-                with k3: render_kpi_elite("Días Baja / Lesión", f"{promedio_dias:.1f}", color_borde="#8b5cf6")
-                with k4: render_kpi_elite("Incidencia", f"{incidencia:.1f}", subtitulo="/1000h expos.", color_borde="#ef4444")
-                with k5: render_kpi_elite("Burden", f"{burden:.0f}", subtitulo="/1000h expos.", color_borde="#ef4444")
+                with k3: render_kpi_elite("Días Baja / Les", f"{promedio_dias:.1f}", color_borde="#8b5cf6")
+                with k4: render_kpi_elite("Incidencia (/1000h)", f"{incidencia:.1f}", color_borde="#ef4444")
+                with k5: render_kpi_elite("Burden (/1000h)", f"{burden:.0f}", color_borde="#ef4444")
                 
                 st.caption("ℹ️ **Valores de Referencia (Fútbol Élite):** Incidencia: 6-9 lesiones por 1000h | Burden: 100-150 días de baja por 1000h")
 
