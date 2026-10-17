@@ -1208,6 +1208,7 @@ with tab_ses:
                                             
                                     if errores_criticos:
                                         for error_msg in errores_criticos: st.markdown(f"<div style='background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 15px; margin-bottom: 10px; border-radius: 6px; color: #991b1b;'>{error_msg}</div>", unsafe_allow_html=True)
+                                        st.stop() # Bloqueo crítico para impedir contaminación de datos
                                     else:
                                         fecha_sesion_str = pd.to_datetime(sesion['fecha']).strftime('%Y-%m-%d')
                                         def filtrar_fecha_dinamico(df, col_fecha_config):
