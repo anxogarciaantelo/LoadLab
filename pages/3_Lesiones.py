@@ -133,47 +133,47 @@ else:
                 with k5: render_kpi_elite("Burden", f"{burden:.0f}", subtitulo="/1000h expos.", color_borde="#ef4444", tendencia=tendencia_bur)
         
         st.markdown("---")
-            st.markdown("#### 📈 Desglose Estadístico")
+        st.markdown("#### 📈 Desglose Estadístico")
+        
+        cg1, cg2, cg3 = st.columns(3)
+        with cg1:
+            conteo_dur = df_filtrado['Gravedad'].value_counts().reset_index()
+            fig_dur = px.pie(conteo_dur, names='Gravedad', values='count', title="1. Duración", hole=0.5)
+            fig_dur.update_layout(showlegend=True, height=280, margin=dict(t=40, b=10, l=10, r=10))
+            fig_dur.update_traces(textposition='inside', textinfo='percent')
+            st.plotly_chart(fig_dur, use_container_width=True, key="les_pie_dur")
+        with cg2:
+            conteo_tipo = df_filtrado['tipo'].value_counts().reset_index()
+            fig_tipo = px.pie(conteo_tipo, names='tipo', values='count', title="2. Tipo", hole=0.5)
+            fig_tipo.update_layout(showlegend=True, height=280, margin=dict(t=40, b=10, l=10, r=10))
+            fig_tipo.update_traces(textposition='inside', textinfo='percent')
+            st.plotly_chart(fig_tipo, use_container_width=True, key="les_pie_tipo")
+        with cg3:
+            conteo_zona = df_filtrado['zona'].value_counts().reset_index()
+            fig_zona = px.pie(conteo_zona, names='zona', values='count', title="3. Zona", hole=0.5)
+            fig_zona.update_layout(showlegend=True, height=280, margin=dict(t=40, b=10, l=10, r=10))
+            fig_zona.update_traces(textposition='inside', textinfo='percent')
+            st.plotly_chart(fig_zona, use_container_width=True, key="les_pie_zona")
             
-            cg1, cg2, cg3 = st.columns(3)
-            with cg1:
-                conteo_dur = df_filtrado['Gravedad'].value_counts().reset_index()
-                fig_dur = px.pie(conteo_dur, names='Gravedad', values='count', title="1. Duración", hole=0.5)
-                fig_dur.update_layout(showlegend=True, height=280, margin=dict(t=40, b=10, l=10, r=10))
-                fig_dur.update_traces(textposition='inside', textinfo='percent')
-                st.plotly_chart(fig_dur, use_container_width=True, key="les_pie_dur")
-            with cg2:
-                conteo_tipo = df_filtrado['tipo'].value_counts().reset_index()
-                fig_tipo = px.pie(conteo_tipo, names='tipo', values='count', title="2. Tipo", hole=0.5)
-                fig_tipo.update_layout(showlegend=True, height=280, margin=dict(t=40, b=10, l=10, r=10))
-                fig_tipo.update_traces(textposition='inside', textinfo='percent')
-                st.plotly_chart(fig_tipo, use_container_width=True, key="les_pie_tipo")
-            with cg3:
-                conteo_zona = df_filtrado['zona'].value_counts().reset_index()
-                fig_zona = px.pie(conteo_zona, names='zona', values='count', title="3. Zona", hole=0.5)
-                fig_zona.update_layout(showlegend=True, height=280, margin=dict(t=40, b=10, l=10, r=10))
-                fig_zona.update_traces(textposition='inside', textinfo='percent')
-                st.plotly_chart(fig_zona, use_container_width=True, key="les_pie_zona")
-                
-            cg4, cg5, cg6 = st.columns(3)
-            with cg4:
-                conteo_lat = df_filtrado['lateralidad'].value_counts().reset_index()
-                fig_lat = px.pie(conteo_lat, names='lateralidad', values='count', title="4. Lateralidad", hole=0.5)
-                fig_lat.update_layout(showlegend=True, height=280, margin=dict(t=40, b=10, l=10, r=10))
-                fig_lat.update_traces(textposition='inside', textinfo='percent')
-                st.plotly_chart(fig_lat, use_container_width=True, key="les_pie_lat")
-            with cg5:
-                conteo_recidiva = df_filtrado['recidiva'].value_counts().reset_index()
-                fig_rec = px.pie(conteo_recidiva, names='recidiva', values='count', title="5. Recidiva", hole=0.5)
-                fig_rec.update_layout(showlegend=True, height=280, margin=dict(t=40, b=10, l=10, r=10))
-                fig_rec.update_traces(textposition='inside', textinfo='percent')
-                st.plotly_chart(fig_rec, use_container_width=True, key="les_pie_rec")
-            with cg6:
-                conteo_sup = df_filtrado['cesped'].value_counts().reset_index()
-                fig_sup = px.pie(conteo_sup, names='cesped', values='count', title="6. Superficie", hole=0.5)
-                fig_sup.update_layout(showlegend=True, height=280, margin=dict(t=40, b=10, l=10, r=10))
-                fig_sup.update_traces(textposition='inside', textinfo='percent')
-                st.plotly_chart(fig_sup, use_container_width=True, key="les_pie_sup")
+        cg4, cg5, cg6 = st.columns(3)
+        with cg4:
+            conteo_lat = df_filtrado['lateralidad'].value_counts().reset_index()
+            fig_lat = px.pie(conteo_lat, names='lateralidad', values='count', title="4. Lateralidad", hole=0.5)
+            fig_lat.update_layout(showlegend=True, height=280, margin=dict(t=40, b=10, l=10, r=10))
+            fig_lat.update_traces(textposition='inside', textinfo='percent')
+            st.plotly_chart(fig_lat, use_container_width=True, key="les_pie_lat")
+        with cg5:
+            conteo_recidiva = df_filtrado['recidiva'].value_counts().reset_index()
+            fig_rec = px.pie(conteo_recidiva, names='recidiva', values='count', title="5. Recidiva", hole=0.5)
+            fig_rec.update_layout(showlegend=True, height=280, margin=dict(t=40, b=10, l=10, r=10))
+            fig_rec.update_traces(textposition='inside', textinfo='percent')
+            st.plotly_chart(fig_rec, use_container_width=True, key="les_pie_rec")
+        with cg6:
+            conteo_sup = df_filtrado['cesped'].value_counts().reset_index()
+            fig_sup = px.pie(conteo_sup, names='cesped', values='count', title="6. Superficie", hole=0.5)
+            fig_sup.update_layout(showlegend=True, height=280, margin=dict(t=40, b=10, l=10, r=10))
+            fig_sup.update_traces(textposition='inside', textinfo='percent')
+            st.plotly_chart(fig_sup, use_container_width=True, key="les_pie_sup")
 
     with tab_gest_med:
         st.markdown("#### 🩺 Gestor de Altas Médicas")
