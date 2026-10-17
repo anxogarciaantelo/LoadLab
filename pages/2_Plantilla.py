@@ -125,17 +125,62 @@ elif st.session_state.vista_plantilla == "⚙️ Modificar Plantilla":
     st.markdown("---")
     
     with st.expander("❌ Eliminar Jugador"):
-        if st.session_state.plantilla:
+        # Recopilar todos los nombres que existan en cualquier parte de la base de datos (Actuales y Fantasmas)
+        nombres_historicos = set([j["JUGADOR"] for j in st.session_state.plantilla])
+        for s in st.session_state.sesiones:
+            if s.get("datos_informe"):
+                for d in s["datos_informe"]: nombres_historicos.add(d["JUGADOR"])
+            if s.get("estadisticas_partido"):
+                for k in s["estadisticas_partido"].keys(): nombres_historicos.add(k)
+        for l in st.session_state.lesiones: nombres_historicos.add(l["jugador"])
+        for a in st.session_state.antropometria: nombres_historicos.add(a["jugador"])
+        for v in st.session_state.val_rom: nombres_historicos.add(v.get("jugador", ""))
+        
+        nombres_historicos.discard("")
+        lista_borrar = sorted(list(nombres_historicos))
+
+        if lista_borrar:
             with st.form("form_baja_jugador"):
-                jugador_a_borrar = st.selectbox("Selecciona el jugador a eliminar:", nombres_jugadores)
-                st.warning("⚠️ Cuidado: Si eliminas a un jugador, desaparecerá de la plantilla actual.")
-                if st.form_submit_button("❌ Confirmar Eliminación"):
+                jugador_a_borrar = st.selectbox("Selecciona el jugador a eliminar (Histórico o Actual):", lista_borrar)
+                st.warning("⚠️ Cuidado: Se borrarán TODOS sus registros históricos (Plantilla, Sesiones, GPS, Lesiones, Antropometría y Valoraciones). Esta acción es irreversible.")
+                
+                if st.form_submit_button("❌ Confirmar Eliminación Global"):
+                    # 1. Borrar de Plantilla
                     st.session_state.plantilla = [j for j in st.session_state.plantilla if j["JUGADOR"] != jugador_a_borrar]
-                    guardar_datos(modulo="plantilla")
-                    st.success(f"¡El jugador {jugador_a_borrar} ha sido eliminado!")
+                    
+                    # 2. Borrar de Lesiones y Antropometría
+                    st.session_state.lesiones = [l for l in st.session_state.lesiones if l['jugador'] != jugador_a_borrar]
+                    st.session_state.antropometria = [a for a in st.session_state.antropometria if a['jugador'] != jugador_a_borrar]
+                    
+                    # 3. Borrar de Valoraciones (Configuración)
+                    st.session_state.val_rom = [v for v in st.session_state.val_rom if v.get('jugador') != jugador_a_borrar]
+                    
+                    # 4. Purgar de Sesiones (Disponibilidad, Informes, Estadísticas)
+                    jugador_limpio = limpiar_nombre(jugador_a_borrar)
+                    for s in st.session_state.sesiones:
+                        if "disponibilidad" in s:
+                            keys_to_delete = [k for k in s["disponibilidad"].keys() if limpiar_nombre(k) == jugador_limpio]
+                            for k in keys_to_delete:
+                                del s["disponibilidad"][k]
+                        
+                        if s.get("datos_informe"):
+                            s["datos_informe"] = [d for d in s["datos_informe"] if d["JUGADOR"] != jugador_a_borrar]
+                            # Seguridad: Si la sesión se queda vacía de jugadores, desactivar el informe
+                            if not s["datos_informe"]:
+                                s["informe_generado"] = False
+                                
+                        if "estadisticas_partido" in s:
+                            s["estadisticas_partido"].pop(jugador_a_borrar, None)
+                            
+                        if "estadisticas_invitados" in s:
+                            s["estadisticas_invitados"] = [inv for inv in s["estadisticas_invitados"] if inv["JUGADOR"] != jugador_a_borrar]
+                    
+                    # 5. Volcar la limpieza a Supabase
+                    guardar_datos(modulo="todo")
+                    st.success(f"¡Los datos y el rastro histórico de {jugador_a_borrar} han sido eliminados por completo!")
                     st.rerun()
         else:
-            st.info("No hay jugadores en la plantilla para eliminar.")
+            st.info("No hay jugadores en la base de datos.")
         
 else:
     nombre_jugador_actual = st.session_state.vista_plantilla.replace("👤 ", "")
