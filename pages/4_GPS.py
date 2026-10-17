@@ -311,7 +311,7 @@ else:
                     lista_todas_ses = sorted(df_gps['Nombre_Sesion'].unique(), reverse=True)
                     f_sel_sesion = st.selectbox("3. Sesión:", lista_todas_ses if lista_todas_ses else ["Sin datos"], key="p_sel_ses_todas")
                 else:
-                    st.selectbox("3. Filtro extra:", ["N/A"], disabled=True)
+                    st.selectbox("3. Filtro extra:", [" "], disabled=True)
 
             with c_f4:
                 if f_tiempo == "Sesión" and f_tipo == "Entrenamiento":
@@ -320,7 +320,7 @@ else:
                     lista_entrenos = sorted(df_filtrado_md['Nombre_Sesion'].unique(), reverse=True)
                     f_sel_sesion = st.selectbox("4. Sesión Exacta:", lista_entrenos if lista_entrenos else ["Sin datos"], key="p_sel_entreno")
                 else:
-                    st.selectbox("4. Sesión Exacta:", ["N/A"], disabled=True)
+                    st.selectbox("4. Sesión Exacta:", [" "], disabled=True)
             
             with c_f5:
                 f_nivel = st.selectbox("5. Agrupar por:", ["Equipo completo", "Por posición general", "Por posición específica", "Por jugador"], key="p_niv")
@@ -334,7 +334,7 @@ else:
                 elif f_nivel == "Por jugador":
                     f_jug = st.selectbox("6. Selección:", ["TODOS"] + lista_jugs, key="p_jug")
                 else:
-                    st.selectbox("6. Selección:", ["N/A"], disabled=True)
+                    st.selectbox("6. Selección:", [" "], disabled=True)
 
         # Aplicar filtros a la selección principal
         df_perfil = aplicar_filtros_gps(
