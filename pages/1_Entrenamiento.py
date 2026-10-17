@@ -178,14 +178,23 @@ with tab_temp:
                     else:
                         df_jug_sum_ext = pd.DataFrame(columns=['JUGADOR', 'DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC'])
                         
+                    cols_w = ['W_Fatiga', 'W_Sueño', 'W_Dolor', 'W_Estres', 'W_Humor']
+                    for c in cols_w:
+                        if c not in df_sem.columns: df_sem[c] = 0.0
+                        
                     df_no_ceros = df_sem.replace({'TQR': 0, 'WELLNESS': 0, 'RPE': 0}, np.nan)
-                    df_jug_mean = df_no_ceros.groupby('JUGADOR')[['TQR', 'WELLNESS', 'RPE']].mean().reset_index().fillna(0)
+                    df_jug_mean = df_no_ceros.groupby('JUGADOR')[['TQR', 'WELLNESS', 'RPE'] + cols_w].mean().reset_index().fillna(0)
                     
                     kpis_temporada.append({
                         "ID": i+1,
                         "Microciclo": nombre_micro,
                         "Wellness": df_jug_mean['WELLNESS'].mean(),
                         "TQR": df_jug_mean['TQR'].mean(),
+                        "Fatiga": df_jug_mean['W_Fatiga'].mean(),
+                        "Sueño": df_jug_mean['W_Sueño'].mean(),
+                        "Dolor": df_jug_mean['W_Dolor'].mean(),
+                        "Estrés": df_jug_mean['W_Estres'].mean(),
+                        "Humor": df_jug_mean['W_Humor'].mean(),
                         "RPE": df_jug_mean['RPE'].mean(),
                         "Minutos": df_jug_sum_int['MIN'].mean() if not df_jug_sum_int.empty else 0,
                         "Carga": df_jug_sum_int['CARGA'].mean() if not df_jug_sum_int.empty else 0,
@@ -250,47 +259,46 @@ with tab_temp:
                 st.markdown("---")
                 
                 # --- GRÁFICOS SUPERIORES Y MEJORADOS ---
-                st.markdown("#### Evolución Gráfica")
-                cg1, cg2 = st.columns(2)
+                st.markdown("#### 🧠 Evolución de Bienestar y Recuperación")
+                cg_b1, cg_b2 = st.columns(2)
                 
-                with cg1:
-                    fig_well_tqr = go.Figure()
-                    fig_well_tqr.add_trace(go.Bar(x=df_temporada['Microciclo'], y=df_temporada['Wellness'], name="Fatiga/Dolor (Wellness)", marker_color="rgba(239, 68, 68, 0.7)", yaxis="y1"))
-                    fig_well_tqr.add_trace(go.Scatter(x=df_temporada['Microciclo'], y=df_temporada['TQR'], name="Recuperación (TQR)", mode="lines+markers", line=dict(color="#10b981", width=3), marker=dict(size=8), yaxis="y2"))
-                    fig_well_tqr.update_layout(
-                        title="Recuperación vs Fatiga",
-                        yaxis=dict(title="Puntos Wellness", range=[0, 35]),
-                        yaxis2=dict(title="TQR", overlaying="y", side="right", range=[0, 10]),
-                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-                    )
-                    st.plotly_chart(fig_well_tqr, use_container_width=True)
+                with cg_b1:
+                    fig_tqr = px.bar(df_temporada, x='Microciclo', y='TQR', color='TQR', color_continuous_scale="RdYlGn", range_color=[1, 10], title="Calidad de Recuperación (TQR)")
+                    fig_tqr.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+                    fig_tqr.update_yaxes(range=[1, 10])
+                    st.plotly_chart(fig_tqr, use_container_width=True)
                     
-                with cg2:
+                with cg_b2:
+                    fig_well = go.Figure()
+                    colores_w = px.colors.qualitative.Set2
+                    factores = ['Fatiga', 'Sueño', 'Dolor', 'Estrés', 'Humor']
+                    for i, factor in enumerate(factores):
+                        fig_well.add_trace(go.Bar(x=df_temporada['Microciclo'], y=df_temporada[factor], name=factor, marker_color=colores_w[i]))
+                    fig_well.update_layout(title="Evolución Wellness (Factores)", barmode='stack', yaxis_title="Puntos", yaxis_range=[0, 35], hovermode="x unified", plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+                    fig_well.add_hline(y=18, line_dash="dot", line_color="orange", annotation_text="Moderado (18)")
+                    fig_well.add_hline(y=24, line_dash="dash", line_color="red", annotation_text="Crítico (24)")
+                    st.plotly_chart(fig_well, use_container_width=True)
+                
+                st.markdown("#### 🔥 Carga Interna y Externa")
+                cg1, cg2, cg3 = st.columns(3)
+                with cg1:
                     fig_carga = go.Figure()
                     fig_carga.add_trace(go.Bar(x=df_temporada['Microciclo'], y=df_temporada['Carga'], name="Carga (UA)", marker_color="#3b82f6"))
                     media_carga = df_temporada['Carga'].mean()
                     fig_carga.add_hline(y=media_carga, line_dash="dash", line_color="#f59e0b", annotation_text=f"Media Acumulada: {media_carga:.0f} UA")
-                    fig_carga.update_layout(title="Carga Interna Acumulada", yaxis_title="Unidades Arbitrarias")
+                    fig_carga.update_layout(title="Carga Interna", yaxis_title="UA", plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
                     st.plotly_chart(fig_carga, use_container_width=True)
-                    
-                cg3, cg4 = st.columns(2)
-                with cg3:
+                with cg2:
                     fig_ext = go.Figure()
                     fig_ext.add_trace(go.Bar(x=df_temporada['Microciclo'], y=df_temporada['DIS'], name="Volumen (km)", marker_color="rgba(59, 130, 246, 0.6)", yaxis="y1"))
                     fig_ext.add_trace(go.Scatter(x=df_temporada['Microciclo'], y=df_temporada['HSR'], name="HSR (>21km/h)", mode="lines+markers", line=dict(color="#f59e0b", width=3), yaxis="y2"))
-                    fig_ext.update_layout(
-                        title="Volumen vs Alta Intensidad",
-                        yaxis=dict(title="Distancia (km)"),
-                        yaxis2=dict(title="HSR (m)", overlaying="y", side="right"),
-                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-                    )
+                    fig_ext.update_layout(title="Volumen vs HSR", yaxis=dict(title="Distancia (km)"), yaxis2=dict(title="HSR (m)", overlaying="y", side="right"), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
                     st.plotly_chart(fig_ext, use_container_width=True)
-                    
-                with cg4:
+                with cg3:
                     fig_mec = go.Figure()
                     fig_mec.add_trace(go.Scatter(x=df_temporada['Microciclo'], y=df_temporada['ACC'], name="Aceleraciones", mode="lines+markers", line=dict(color="#10b981", width=2)))
                     fig_mec.add_trace(go.Scatter(x=df_temporada['Microciclo'], y=df_temporada['DCC'], name="Deceleraciones", mode="lines+markers", line=dict(color="#ef4444", width=2)))
-                    fig_mec.update_layout(title="Carga Mecánica (ACC vs DCC)", yaxis_title="Cantidad (>3 m/s²)")
+                    fig_mec.update_layout(title="Carga Mecánica", yaxis_title="Cantidad", plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
                     st.plotly_chart(fig_mec, use_container_width=True)
 
                 st.markdown("---")
@@ -299,15 +307,17 @@ with tab_temp:
                 st.markdown("#### 📋 Base de Datos de Microciclos")
                 st.caption("Puedes clickar en el nombre de cualquier columna para ordenar los datos de mayor a menor, o usar la lupa para buscar.")
                 
-                # Ordenamos el DataFrame de más reciente a más antiguo (por ID) pero ocultamos la columna técnica ID
                 df_temporada_show = df_temporada.sort_values("ID", ascending=False).drop(columns=["ID"])
+                # Excluir las sub-columnas de Wellness para no saturar la vista
+                cols_mostrar = [c for c in df_temporada_show.columns if c not in ['Fatiga', 'Sueño', 'Dolor', 'Estrés', 'Humor']]
                 
-                # Usamos st.dataframe para habilitar la funcionalidad de filtrado y ordenación nativa de Streamlit
-                st.dataframe(
-                    df_temporada_show.style.format(precision=1),
-                    use_container_width=True,
-                    hide_index=True
-                )
+                estilo_temp = (df_temporada_show[cols_mostrar].style.format(precision=1)
+                    .background_gradient(subset=['Wellness'], cmap='Reds', vmin=5, vmax=35)
+                    .background_gradient(subset=['TQR'], cmap='RdYlGn', vmin=1, vmax=10)
+                    .background_gradient(subset=['RPE'], cmap='Reds', vmin=1, vmax=10)
+                    .background_gradient(subset=['Minutos', 'Carga', 'DIS', 'HSR', 'Sprints', 'ACC', 'DCC'], cmap='Blues'))
+                
+                st.dataframe(estilo_temp, use_container_width=True, hide_index=True)
 
 with tab_micro:
     if not st.session_state.sesiones:
@@ -450,7 +460,12 @@ with tab_micro:
                 st.markdown("---")
                 st.markdown("#### 📋 Resumen por Día")
                 if not df_diario.empty:
-                    mostrar_tabla_moderna(df_diario.style.hide(axis="index").format(precision=2))
+                    estilo_diario = (df_diario.style.hide(axis="index").format(precision=2)
+                        .background_gradient(subset=['WELLNESS'], cmap='Reds', vmin=5, vmax=35)
+                        .background_gradient(subset=['TQR'], cmap='RdYlGn', vmin=1, vmax=10)
+                        .background_gradient(subset=['RPE'], cmap='Reds', vmin=1, vmax=10)
+                        .background_gradient(subset=['MIN', 'CARGA', 'DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC'], cmap='Blues'))
+                    mostrar_tabla_moderna(estilo_diario)
 
                 st.markdown("---")
                 st.markdown("#### 🧠 Bienestar")
@@ -459,6 +474,7 @@ with tab_micro:
                     df_tqr_plot = df_diario.set_index('DIA').reindex(["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]).reset_index()
                     fig_tqr = px.bar(df_tqr_plot, x='DIA', y='TQR', color='TQR', color_continuous_scale="RdYlGn", range_color=[1, 10], title="Calidad de Recuperación (TQR)")
                     fig_tqr.update_xaxes(categoryorder='array', categoryarray=["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"])
+                    fig_tqr.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
                     fig_tqr.update_yaxes(range=[1, 10])
                     st.plotly_chart(fig_tqr, use_container_width=True, key=f"micro_tqr_{num_sem}_{idx_real}")
                 with cg_b2:
@@ -490,7 +506,7 @@ with tab_micro:
                     for i, factor in enumerate(factores):
                         fig_well.add_trace(go.Bar(x=df_w_plot['DIA'], y=df_w_plot[factor], name=factor, marker_color=colores_w[i]))
                     
-                    fig_well.update_layout(title="Evolución Wellness Diario", barmode='stack', yaxis_title="Puntos", legend_title_text="Factor", yaxis_range=[0, 35], hovermode="x unified")
+                    fig_well.update_layout(title="Evolución Wellness Diario", barmode='stack', yaxis_title="Puntos", legend_title_text="Factor", yaxis_range=[0, 35], hovermode="x unified", plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
                     fig_well.update_xaxes(categoryorder='array', categoryarray=["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"])
                     fig_well.add_hline(y=18, line_dash="dot", line_color="orange", annotation_text="Moderado (18)", annotation_position="bottom right")
                     fig_well.add_hline(y=24, line_dash="dash", line_color="red", annotation_text="Crítico (24)", annotation_position="top right")
@@ -501,11 +517,13 @@ with tab_micro:
                 cg_i1, cg_i2, cg_i3 = st.columns(3)
                 with cg_i1:
                     fig_min = px.bar(df_diario, x='DIA', y='MIN', title="Evolución Minutos")
+                    fig_min.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
                     st.plotly_chart(fig_min, use_container_width=True, key=f"micro_min_{num_sem}_{idx_real}")
                 with cg_i2:
                     df_rpe_plot = df_diario.set_index('DIA').reindex(["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]).reset_index()
                     fig_rpe = px.bar(df_rpe_plot, x='DIA', y='RPE', title="Evolución RPE", color='RPE', color_continuous_scale="Reds", range_color=[0, 10])
                     fig_rpe.update_xaxes(categoryorder='array', categoryarray=["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"])
+                    fig_rpe.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
                     fig_rpe.update_yaxes(range=[1, 10])
                     st.plotly_chart(fig_rpe, use_container_width=True, key=f"micro_rpe_{num_sem}_{idx_real}")
                 with cg_i3:
@@ -532,6 +550,7 @@ with tab_micro:
                         title="Evolución Carga"
                     )
                     fig_carga.update_xaxes(categoryorder='array', categoryarray=["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"])
+                    fig_carga.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
                     fig_carga.update_yaxes(range=[0, max_c_temp])
                     
                     media_equipo_semana = df_diario['CARGA'].mean()
@@ -557,15 +576,17 @@ with tab_micro:
                     fig_accdcc.add_trace(go.Scatter(x=df_diario_plot['DIA'], y=df_diario_plot['ACC'], mode='lines+markers', name='ACC (>3)', line=dict(color='blue')))
                     fig_accdcc.add_trace(go.Scatter(x=df_diario_plot['DIA'], y=df_diario_plot['DCC'], mode='lines+markers', name='DCC (>3)', line=dict(color='red')))
                     fig_accdcc.update_xaxes(categoryorder='array', categoryarray=["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"])
-                    fig_accdcc.update_layout(title="Evolución ACC vs DCC")
+                    fig_accdcc.update_layout(title="Evolución ACC vs DCC", plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
                     st.plotly_chart(fig_accdcc, use_container_width=True, key=f"micro_accdcc_{num_sem}_{idx_real}")
                 with cg_e2:
                     fig_dis = px.bar(df_diario_plot, x='DIA', y='DIS', title="Evolución DIS (km)", color_discrete_sequence=['#00b4d8'])
                     fig_dis.update_xaxes(categoryorder='array', categoryarray=["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"])
+                    fig_dis.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
                     st.plotly_chart(fig_dis, use_container_width=True, key=f"micro_dis_{num_sem}_{idx_real}")
                 with cg_e3:
                     fig_disai = px.bar(df_diario_plot, x='DIA', y='DIS AI', title="Evolución HSR (>21 km/h)", color_discrete_sequence=['#f50057'])
                     fig_disai.update_xaxes(categoryorder='array', categoryarray=["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"])
+                    fig_disai.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
                     st.plotly_chart(fig_disai, use_container_width=True, key=f"micro_disai_{num_sem}_{idx_real}")
 
                 st.markdown("---")
@@ -586,7 +607,13 @@ with tab_micro:
                 cols_ordenadas = ['JUGADOR', 'POS', 'ROL', 'MIN', 'TQR', 'WELLNESS', 'RPE', 'CARGA', 'DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC']
                 df_indiv = df_indiv[cols_ordenadas]
                 
-                st.dataframe(df_indiv.style.format(precision=1), use_container_width=True, hide_index=True)
+                estilo_indiv = (df_indiv.style.format(precision=1)
+                    .background_gradient(subset=['WELLNESS'], cmap='Reds', vmin=5, vmax=35)
+                    .background_gradient(subset=['TQR'], cmap='RdYlGn', vmin=1, vmax=10)
+                    .background_gradient(subset=['RPE'], cmap='Reds', vmin=1, vmax=10)
+                    .background_gradient(subset=['MIN', 'CARGA', 'DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC'], cmap='Blues'))
+                
+                st.dataframe(estilo_indiv, use_container_width=True, hide_index=True)
                 
                 kpis_micro = {
                     "Wellness": df_diario['WELLNESS'].replace(0, np.nan).mean() if not df_diario.empty else 0,
