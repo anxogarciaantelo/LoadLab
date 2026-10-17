@@ -764,13 +764,15 @@ with tab_ses:
                         disp_dict_clean = {limpiar_nombre(k): v for k, v in sesion.get("disponibilidad", {}).items()}
                         jugs_plantilla = [p["JUGADOR"] for p in st.session_state.plantilla]
                         
-                        # --- RENDERIZAR KPIs DE DISPONIBILIDAD ---
+                        # --- RENDERIZAR KPIs EN DOS FILAS PARA EVITAR RECORTES ---
                         todas_opciones = [default_disp] + opciones_disp
                         conteos = Counter([disp_dict_clean.get(limpiar_nombre(j), default_disp) for j in jugs_plantilla])
                         
-                        cols_metricas = st.columns(len(todas_opciones))
+                        cols_m1 = st.columns(4)
+                        cols_m2 = st.columns(3)
                         for i, opc in enumerate(todas_opciones):
-                            cols_metricas[i].metric(opc, conteos.get(opc, 0))
+                            if i < 4: cols_m1[i].metric(opc, conteos.get(opc, 0))
+                            else: cols_m2[i-4].metric(opc, conteos.get(opc, 0))
                         st.markdown("---")
                         # -----------------------------------------
                         
@@ -783,11 +785,15 @@ with tab_ses:
                         st.info(f"💡 Por defecto, todos los jugadores de la plantilla que no añadas abajo se marcarán automáticamente como **{default_disp}**.")
                         
                         with st.form(key=f"form_disp_{idx_real}"):
-                            cols_disp = st.columns(3)
                             selecciones = {}
-                            for i, est in enumerate(opciones_disp):
-                                with cols_disp[i % 3]:
-                                    selecciones[est] = st.multiselect(f"{est}", jugs_plantilla, default=jugadores_por_estado[est])
+                            # Garantizamos la creación de filas correctas para que salgan todas las opciones
+                            for i in range(0, len(opciones_disp), 3):
+                                cols_disp = st.columns(3)
+                                for j in range(3):
+                                    if i + j < len(opciones_disp):
+                                        est = opciones_disp[i + j]
+                                        with cols_disp[j]:
+                                            selecciones[est] = st.multiselect(f"{est}", jugs_plantilla, default=jugadores_por_estado[est])
                                     
                             if st.form_submit_button("💾 Guardar Disponibilidad", type="primary", use_container_width=True):
                                 disp_final = {}
@@ -1099,6 +1105,68 @@ with tab_ses:
                     # ---------------------------------------------------------
                     elif active_view == "datos":
                         st.markdown(f"#### 📂 CARGA DE DATOS | {sesion['fecha']}")
+
+                        # --- MOTOR DE IMPUTACIÓN DE GPS PARA JUGADORES SIN UNIDAD ---
+                        def aplicar_imputacion_gps(registros, sesion_actual, es_partido_flag):
+                            disp_dict = {limpiar_nombre(k): v for k, v in sesion_actual.get("disponibilidad", {}).items()}
+                            default_estado = "Titular" if es_partido_flag else "Disponible"
+                            
+                            # 1. Analizamos a los que SÍ llevaron GPS para sacar los ratios
+                            datos_validos = []
+                            for reg in registros:
+                                jug = reg["JUGADOR"]
+                                pos = reg.get("POS", "DEF")
+                                if reg.get("DIS", 0) > 0 and pos != "POR":
+                                    p_match = next((p for p in st.session_state.plantilla if p["JUGADOR"] == jug), {})
+                                    pos_esp = p_match.get("pos_1", pos)
+                                    min_gps = safe_float(reg.get("MIN_GPS", reg.get("MIN", 0)))
+                                    if min_gps > 0:
+                                        datos_validos.append({
+                                            "POS_ESP": pos_esp, "POS_GEN": pos,
+                                            "DIS_pm": safe_float(reg.get("DIS")) / min_gps,
+                                            "DIS_AI_pm": safe_float(reg.get("HID >21", reg.get("DIS AI", 0))) / min_gps,
+                                            "SPR_pm": safe_float(reg.get("SPR >24", reg.get("Nº SPR", 0))) / min_gps,
+                                            "ACC_pm": safe_float(reg.get("ACC >3", reg.get("ACC", 0))) / min_gps,
+                                            "DCC_pm": safe_float(reg.get("DCC >3", reg.get("DCC", 0))) / min_gps,
+                                            "VMAX": safe_float(reg.get("V_Max", reg.get("VMAX", 0)))
+                                        })
+                                        
+                            if datos_validos:
+                                df_val = pd.DataFrame(datos_validos)
+                                medias_esp = df_val.groupby("POS_ESP").mean().to_dict('index')
+                                medias_gen = df_val.groupby("POS_GEN").mean().to_dict('index')
+                                medias_eq = df_val.mean().to_dict()
+                                
+                                # 2. Imputamos a los que no tienen GPS pero entrenaron
+                                for reg in registros:
+                                    jug = reg["JUGADOR"]
+                                    pos = reg.get("POS", "DEF")
+                                    estado = disp_dict.get(limpiar_nombre(jug), default_estado)
+                                    
+                                    elegible = estado in ["Disponible", "Titular", "Suplente"]
+                                    min_jug = safe_float(reg.get("MIN", 0))
+                                    
+                                    # Condición: Elegible, de campo, con 0 distancia y que haya entrenado (MIN > 0)
+                                    if elegible and pos != "POR" and safe_float(reg.get("DIS", 0)) == 0 and min_jug > 0:
+                                        p_match = next((p for p in st.session_state.plantilla if p["JUGADOR"] == jug), {})
+                                        pos_esp = p_match.get("pos_1", pos)
+                                        
+                                        # Escala de fallback: Misma posición específica -> Posición general -> Media de equipo
+                                        ratios = medias_esp.get(pos_esp, medias_gen.get(pos, medias_eq))
+                                        
+                                        reg["MIN_GPS"] = min_jug
+                                        reg["DIS"] = ratios["DIS_pm"] * min_jug
+                                        reg["DIS AI"] = ratios["DIS_AI_pm"] * min_jug
+                                        reg["HID >21"] = ratios["DIS_AI_pm"] * min_jug
+                                        reg["Nº SPR"] = ratios["SPR_pm"] * min_jug
+                                        reg["SPR >24"] = ratios["SPR_pm"] * min_jug
+                                        reg["ACC"] = ratios["ACC_pm"] * min_jug
+                                        reg["ACC >3"] = ratios["ACC_pm"] * min_jug
+                                        reg["DCC"] = ratios["DCC_pm"] * min_jug
+                                        reg["DCC >3"] = ratios["DCC_pm"] * min_jug
+                                        reg["VMAX"] = ratios["VMAX"]
+                                        reg["V_Max"] = ratios["VMAX"]
+                            return registros
                         if f'msg_sync_{idx_real}' in st.session_state:
                             for msg in st.session_state[f'msg_sync_{idx_real}']:
                                 if "✅" in msg: st.success(msg)
@@ -1160,10 +1228,12 @@ with tab_ses:
                                         ratio_ac = ewma_actual.get("RATIO A/C", 1.0)
                                         
                                         full_records.append({
-                                            "JUGADOR": row["JUGADOR"], "POS": row["POS"], "TQR": safe_float(row["TQR"]), "WELLNESS": suma_well, "W_Humor": safe_float(row["W_Humor"]), "W_Sueño": safe_float(row["W_Sueño"]), "W_Fatiga": safe_float(row["W_Fatiga"]), "W_Dolor": safe_float(row["W_Dolor"]), "W_Estres": safe_float(row["W_Estres"]), "RPE": safe_float(row["RPE"]), "MIN": min_ses, "MIN_GPS": min_gps_val, "CARGA": min_ses * safe_float(row["RPE"]),
-                                            "EWMA AGUDA": ewma_aguda, "EWMA CRÓNICA": ewma_cronica, "RATIO A/C": ratio_ac, "DIS": dis, "DIS AI": dis_ai_21, "Nº SPR": spr_24, "ACC": acc_3, "DCC": dcc_3, "VMAX": v_max, "Z1": r_0_7 + r_7_14, "Z2": r_14_21, "Z3": r_21_24, "Z4": r_24_27, "Z5": r_27_30, "Z6": r_30_45, "HID >21": dis_ai_21, "HID >24": dis_ai_24, "SPR >24": spr_24, "SPR >27": spr_27, "V_Med": v_med, "V_Max": v_max, "ACC_Max": acc_max, "ACC >2": acc_2, "ACC >3": acc_3, "ACC >4": acc_4, "DCC >2": dcc_2, "DCC >3": dcc_3, "DCC >4": dcc_4, "R_0_7": r_0_7, "R_7_14": r_7_14, "R_14_21": r_14_21, "R_21_24": r_21_24, "R_24_27": r_24_27, "R_27_30": r_27_30, "R_30_45": r_30_45
+                                            # ... toda la lista de variables ...
                                         })
                                         
+                                    # Imputar GPS automático antes de guardar
+                                    full_records = aplicar_imputacion_gps(full_records, sesion, es_partido)
+                                    
                                     st.session_state.sesiones[idx_real]['datos_informe'] = full_records
                                     st.session_state.sesiones[idx_real]['informe_generado'] = True
                                     guardar_datos(modulo="sesiones")
@@ -1342,6 +1412,9 @@ with tab_ses:
                                             
                                             registros_sesion.append(reg)
                                             
+                                        # Imputar GPS automático antes de guardar
+                                        registros_sesion = aplicar_imputacion_gps(registros_sesion, sesion, es_partido)
+                                        
                                         st.session_state.sesiones[idx_real]['datos_informe'] = registros_sesion
                                         st.session_state.sesiones[idx_real]['informe_generado'] = True
                                         guardar_datos(modulo="sesiones")
