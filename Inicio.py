@@ -389,16 +389,22 @@ if st.session_state.get("equipo_seleccionado", False):
         contenido_extra = ""
         for s in sesiones_dia:
             tipo = s.get("tipo", "")
-            if tipo == "Entrenamiento": nom = "Sesión"
-            elif tipo == "Partido Amistoso": nom = "Amistoso"
-            elif tipo == "Partido Oficial": nom = "Oficial"
-            else: nom = tipo
+            sub = s.get('descripcion', 'TD') if tipo == "Entrenamiento" else s.get('rival', 'Rival')
             
-            sub = s.get('rival', 'Rival') if "Partido" in tipo else s.get('descripcion', 'TD')
+            # Formato en una sola línea para no engordar el calendario
+            if tipo == "Entrenamiento":
+                texto_badge = f"ENT - {sub}"
+            elif tipo == "Partido Oficial":
+                texto_badge = f"OFI - {sub}"
+            else:
+                texto_badge = f"AMI - {sub}"
+            
             color_badge = "#dc2626" if "Partido" in tipo else "#10b981"
-            contenido_extra += f"<div style='background-color: {color_badge}; color: white; font-size: 0.75rem; font-weight: 800; padding: 4px; border-radius: 4px; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 2px 4px rgba(0,0,0,0.2);' title='{nom} | {sub}'>{nom}<br><span style='font-size: 0.65rem;'>{sub}</span></div>"
             
-        html_cal += f"<div style='background-color: {bg_color}; {es_hoy} padding: 10px 5px; border-radius: 8px; min-height: 85px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.15);'><span style='color: #94a3b8; font-size: 0.8rem; font-weight: 800; text-transform: uppercase;'>{nombres_dias[i]}</span><span style='color: #f8fafc; font-weight: 800; font-size: 1.15rem; margin-bottom: 4px;'>{d.day}</span>{contenido_extra}</div>"
+            # Etiqueta de una línea (white-space: nowrap)
+            contenido_extra += f"<div style='background-color: {color_badge}; color: white; font-size: 0.75rem; font-weight: 800; padding: 4px 6px; border-radius: 4px; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 2px 4px rgba(0,0,0,0.2);' title='{texto_badge}'>{texto_badge}</div>"
+            
+        html_cal += f"<div style='background-color: {bg_color}; {es_hoy} padding: 10px 5px; border-radius: 8px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.15);'><span style='color: #94a3b8; font-size: 0.8rem; font-weight: 800; text-transform: uppercase;'>{nombres_dias[i]}</span><span style='color: #f8fafc; font-weight: 800; font-size: 1.15rem; margin-bottom: 2px;'>{d.day}</span>{contenido_extra}</div>"
     html_cal += "</div>"
     st.markdown(html_cal, unsafe_allow_html=True)
 
@@ -409,7 +415,7 @@ if st.session_state.get("equipo_seleccionado", False):
     sesiones_partido = sorted([s for s in st.session_state.sesiones if "Partido" in s.get("tipo", "")], key=lambda x: x["fecha"])
     proximo_partido = next((s for s in sesiones_partido if s["fecha"] >= hoy_str), None)
     
-    md_text = "SIN PARTIDO PROGRAMADO"
+    md_text = "SIN PARTIDO"
     rival_text = "N/A"
     fecha_partido_text = ""
     
@@ -419,11 +425,11 @@ if st.session_state.get("equipo_seleccionado", False):
         rival_text = proximo_partido.get('rival', 'Rival Desconocido')
         fecha_partido_text = fecha_p_dt.strftime("%d/%m/%Y")
         
-        if dias_diff == 0: md_text = "🚨 MATCH DAY (MD)"
-        elif dias_diff == 1: md_text = "⚡ MD - 1 (Activación)"
-        elif dias_diff == 2: md_text = "🔥 MD - 2 (Tensión)"
-        elif dias_diff == 3: md_text = "🏃‍♂️ MD - 3 (Fuerza)"
-        elif dias_diff == 4: md_text = "🧠 MD - 4 (Recuperación)"
+        if dias_diff == 0: md_text = "🚨 MATCH DAY"
+        elif dias_diff == 1: md_text = "⚡ MD - 1"
+        elif dias_diff == 2: md_text = "🔥 MD - 2"
+        elif dias_diff == 3: md_text = "🏃‍♂️ MD - 3"
+        elif dias_diff == 4: md_text = "🧠 MD - 4"
         else: md_text = f"📅 MD - {dias_diff}"
 
     from utils.math_helpers import obtener_clima
@@ -496,33 +502,26 @@ if st.session_state.get("equipo_seleccionado", False):
     alertas_carga = dedup_alertas(alertas_carga)
     alertas_medicas = [{"jug": b["jug"], "txt": b["txt"], "lvl": "rojo"} for b in bajas_medicas] + [{"jug": r["jug"], "txt": r["txt"], "lvl": "verde"} for r in readaptacion]
 
-    # 2.3 Renderizador de Cuadrícula (2 columnas internas por tarjeta)
+    # 2.3 Renderizador de Cuadrícula anti-rotura
     def get_avatar_html(jugador_nombre):
         for p in st.session_state.get("plantilla", []):
             if limpiar_nombre(p["JUGADOR"]) == limpiar_nombre(jugador_nombre):
                 if p.get("foto"):
                     img_src = p["foto"] if str(p["foto"]).startswith("http") else f"data:image/jpeg;base64,{p['foto']}"
-                    return f'<img src="{img_src}" style="width:20px; height:20px; border-radius:50%; object-fit: cover; margin-right: 6px; border: 1px solid #334155;">'
+                    return f"<img src='{img_src}' style='width:20px; height:20px; border-radius:50%; object-fit: cover; margin-right: 6px; border: 1px solid #334155;'>"
                 break
-        return '<span style="font-size: 16px; margin-right: 6px;">👤</span>'
+        return "<span style='font-size: 16px; margin-right: 6px;'>👤</span>"
 
     def render_alertas_grid(alertas, nivel_predeterminado="verde"):
         if not alertas:
-            return f"<div style='color: #10b981; font-weight: 800; font-size: 0.8rem; padding: 10px; text-align: center; margin-top: 20px;'>✅ En parámetros</div>"
+            return "<div style='color: #10b981; font-weight: 800; font-size: 0.8rem; padding: 10px; text-align: center; margin-top: 20px;'>✅ En parámetros</div>"
         
-        # 1. Ordenar alertas por prioridad: Rojo primero, Amarillo después, Verde último
         orden_niveles = {"rojo": 0, "amarillo": 1, "verde": 2}
         alertas_ordenadas = sorted(alertas, key=lambda x: orden_niveles.get(x.get("lvl", nivel_predeterminado), 3))
         
-        # 2. Contenedor con Scroll interno (max-height) y CSS para barra de scroll invisible/elegante
-        html = """
-        <style>
-        .alerta-scroll::-webkit-scrollbar { width: 4px; }
-        .alerta-scroll::-webkit-scrollbar-track { background: transparent; }
-        .alerta-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-        </style>
-        <div class="alerta-scroll" style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; max-height: 180px; overflow-y: auto; padding-right: 4px;">
-        """
+        # Eliminamos por completo los saltos de línea e indentaciones en el f-string interno
+        html = "<style>.alerta-scroll::-webkit-scrollbar { width: 4px; } .alerta-scroll::-webkit-scrollbar-track { background: transparent; } .alerta-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }</style>"
+        html += "<div class='alerta-scroll' style='display: grid; grid-template-columns: 1fr 1fr; gap: 6px; max-height: 140px; overflow-y: auto; padding-right: 4px;'>"
         
         for a in alertas_ordenadas:
             nivel = a.get("lvl", nivel_predeterminado)
@@ -530,56 +529,51 @@ if st.session_state.get("equipo_seleccionado", False):
             bg = "rgba(239, 68, 68, 0.1)" if nivel == "rojo" else ("rgba(245, 158, 11, 0.1)" if nivel == "amarillo" else "rgba(16, 185, 129, 0.1)")
             avatar = get_avatar_html(a["jug"])
             
-            html += f"""
-            <div style="background: {bg}; border: 1px solid {color}40; border-left: 3px solid {color}; padding: 6px; border-radius: 6px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                <div style="display: flex; align-items: center; margin-bottom: 3px;">
-                    {avatar}
-                    <span style="color: #f8fafc; font-size: 0.75rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{a['jug']}">{a['jug']}</span>
-                </div>
-                <span style="color: {color}; font-size: 0.7rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{a['txt']}">{a['txt']}</span>
-            </div>
-            """
+            html += f"<div style='background: {bg}; border: 1px solid {color}40; border-left: 3px solid {color}; padding: 6px; border-radius: 6px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);'><div style='display: flex; align-items: center; margin-bottom: 3px;'>{avatar}<span style='color: #f8fafc; font-size: 0.75rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;' title='{a['jug']}'>{a['jug']}</span></div><span style='color: {color}; font-size: 0.7rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;' title='{a['txt']}'>{a['txt']}</span></div>"
+            
         html += "</div>"
         return html
 
     c_ctx, c_read, c_carga, c_med = st.columns([1.2, 1.5, 1.5, 1.5])
 
+    # MUY IMPORTANTE: Todo el HTML pegado al margen izquierdo (cero espacios)
     with c_ctx:
-        st.markdown(f"""
-        <div style="background: linear-gradient(135deg, #0f172a, #1e293b); border: 1px solid #334155; border-top: 4px solid #3b82f6; border-radius: 8px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); height: 100%; display: flex; flex-direction: column; justify-content: center; text-align: center;">
-            <p style="color: #94a3b8; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin: 0 0 5px 0;">Contexto del Microciclo</p>
-            <h2 style="color: #f8fafc; font-size: 1.3rem; font-weight: 800; margin: 0 0 10px 0;">{md_text}</h2>
-            <div style="color: #f8fafc; font-size: 1rem; font-weight: 800; margin-bottom: 2px;">🆚 {rival_text}</div>
-            <div style="color: #94a3b8; font-size: 0.8rem; font-weight: 600; margin-bottom: 12px;">{fecha_partido_text}</div>
-            <div style="color: #3b82f6; font-size: 0.8rem; font-weight: 800; margin-top: auto; padding-top: 10px; border-top: 1px solid #334155;">📍 {ciudad_club} | {clima_str}</div>
-        </div>
-        """, unsafe_allow_html=True)
+        html_ctx = f"""
+<div style="background: linear-gradient(135deg, #0f172a, #1e293b); border: 1px solid #334155; border-top: 4px solid #3b82f6; border-radius: 8px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); height: 100%; display: flex; flex-direction: column; justify-content: center; text-align: center;">
+<h2 style="color: #f8fafc; font-size: 1.5rem; font-weight: 800; margin: 0 0 10px 0;">{md_text}</h2>
+<div style="color: #f8fafc; font-size: 1.1rem; font-weight: 800; margin-bottom: 2px;">🆚 {rival_text}</div>
+<div style="color: #94a3b8; font-size: 0.8rem; font-weight: 600; margin-bottom: 12px;">{fecha_partido_text}</div>
+<div style="color: #3b82f6; font-size: 0.8rem; font-weight: 800; margin-top: auto; padding-top: 10px; border-top: 1px solid #334155;">📍 {ciudad_club} | {clima_str}</div>
+</div>
+"""
+        st.markdown(html_ctx, unsafe_allow_html=True)
 
     with c_read:
-        st.markdown(f"""
-        <div style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid #f59e0b; border-radius: 8px; padding: 10px; height: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
-            <p style="color: #f8fafc; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin: 0 0 10px 0;">🧠 Readiness & Bienestar</p>
-            {render_alertas_grid(alertas_readiness)}
-        </div>
-        """, unsafe_allow_html=True)
+        html_read = f"""
+<div style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid #f59e0b; border-radius: 8px; padding: 10px; height: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
+<p style="color: #f8fafc; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin: 0 0 10px 0;">🧠 Readiness & Bienestar</p>
+{render_alertas_grid(alertas_readiness)}
+</div>
+"""
+        st.markdown(html_read, unsafe_allow_html=True)
 
     with c_carga:
-        st.markdown(f"""
-        <div style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid #ef4444; border-radius: 8px; padding: 10px; height: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
-            <p style="color: #f8fafc; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin: 0 0 10px 0;">🔥 Riesgo de Carga</p>
-            {render_alertas_grid(alertas_carga)}
-        </div>
-        """, unsafe_allow_html=True)
+        html_carga = f"""
+<div style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid #ef4444; border-radius: 8px; padding: 10px; height: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
+<p style="color: #f8fafc; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin: 0 0 10px 0;">🔥 Riesgo de Carga</p>
+{render_alertas_grid(alertas_carga)}
+</div>
+"""
+        st.markdown(html_carga, unsafe_allow_html=True)
 
     with c_med:
-        st.markdown(f"""
-        <div style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid #8b5cf6; border-radius: 8px; padding: 10px; height: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
-            <p style="color: #f8fafc; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin: 0 0 10px 0;">🚑 Enfermería & RTP</p>
-            {render_alertas_grid(alertas_medicas)}
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("---")
+        html_med = f"""
+<div style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid #8b5cf6; border-radius: 8px; padding: 10px; height: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
+<p style="color: #f8fafc; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin: 0 0 10px 0;">🚑 Enfermería & RTP</p>
+{render_alertas_grid(alertas_medicas)}
+</div>
+"""
+        st.markdown(html_med, unsafe_allow_html=True)
 
     # --- 3. GRÁFICOS DE EVOLUCIÓN DEL MICROCICLO ---
     st.markdown("### 📈 Evolución del Microciclo")
