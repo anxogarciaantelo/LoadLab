@@ -38,6 +38,7 @@ else:
     df_les['Gravedad'] = df_les['dias_baja'].apply(categorizar_duracion)
     
     with tab_les_res:
+        
         c_filt, c_kpis = st.columns([1, 3.5])
         
         with c_filt:
