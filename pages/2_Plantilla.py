@@ -67,9 +67,9 @@ if st.session_state.vista_plantilla == "📋 Plantilla":
                         nombre = jug['JUGADOR']
                         
                         tarjeta_html = f"""
-                        <div style="background-color: #1e293b; border: 1px solid #334155; border-top: 3px solid #3b82f6; border-radius: 8px; padding: 15px 5px 10px 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.15); text-align: center; margin-bottom: 5px; transition: transform 0.2s ease;">
+                        <div class="card-elite">
                             {img_html}
-                            <h4 style="color: #f8fafc; font-weight: 800; font-size: 1.1rem; margin: 5px 0 0 0; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{nombre}">{nombre}</h4>
+                            <h4 title="{nombre}">{nombre}</h4>
                         </div>
                         """
                         st.markdown(tarjeta_html, unsafe_allow_html=True)
