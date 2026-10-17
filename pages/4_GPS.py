@@ -22,16 +22,10 @@ if not st.session_state.get("autenticado", False) or not st.session_state.get("e
 aplicar_color_sidebar()
 
 def generar_grafico_radar_gps(df_target, df_ref, label_target, label_ref):
-    """
-    Genera un gráfico de radar universal:
-    - df_target: Datos del grupo/jugador/sesión a evaluar (Línea Azul)
-    - df_ref: Datos de referencia/comparación (Sombra Gris - 100%)
-    """
     df_t_val = df_target[df_target['DIS'] > 0].copy()
     df_r_val = df_ref[df_ref['DIS'] > 0].copy()
     
-    if df_t_val.empty or df_r_val.empty:
-        return None
+    if df_t_val.empty or df_r_val.empty: return None
 
     for df in [df_t_val, df_r_val]:
             min_efectivo_radar = np.where(df['MIN_GPS'] > 0, df['MIN_GPS'], df['MIN'])
@@ -40,167 +34,63 @@ def generar_grafico_radar_gps(df_target, df_ref, label_target, label_ref):
                     multiplicador = 1000.0 if col == 'DIS' else 1.0
                     df[f'{col}/min'] = np.where(min_efectivo_radar > 0, (df[col] * multiplicador) / min_efectivo_radar, 0)
     
-    # Corrección de la Velocidad Media para usar el tiempo de GPS real
     min_ref_sum = np.where(df_r_val['MIN_GPS'] > 0, df_r_val['MIN_GPS'], df_r_val['MIN']).sum()
     min_tar_sum = np.where(df_t_val['MIN_GPS'] > 0, df_t_val['MIN_GPS'], df_t_val['MIN']).sum()
     
     medias_ref = {
-        'ACC/min': df_r_val['ACC/min'].mean(),
-        'VMAX': df_r_val['VMAX'].mean(),
+        'ACC/min': df_r_val['ACC/min'].mean(), 'VMAX': df_r_val['VMAX'].mean(),
         'V_Media': (df_r_val['DIS'].sum() / min_ref_sum) * 60 if min_ref_sum > 0 else 0,
-        'DIS/min': df_r_val['DIS/min'].mean(),
-        'Nº SPR/min': df_r_val['Nº SPR/min'].mean(),
-        'DIS AI/min': df_r_val['DIS AI/min'].mean()
+        'DIS/min': df_r_val['DIS/min'].mean(), 'Nº SPR/min': df_r_val['Nº SPR/min'].mean(),
+        'DIS AI/min': df_r_val['DIS AI/min'].mean(), '% VMAX': df_r_val['% VMAX'].mean()
     }
     
     medias_target = {
-        'ACC/min': df_t_val['ACC/min'].mean(),
-        'VMAX': df_t_val['VMAX'].mean(),
+        'ACC/min': df_t_val['ACC/min'].mean(), 'VMAX': df_t_val['VMAX'].mean(),
         'V_Media': (df_t_val['DIS'].sum() / min_tar_sum) * 60 if min_tar_sum > 0 else 0,
-        'DIS/min': df_t_val['DIS/min'].mean(),
-        'Nº SPR/min': df_t_val['Nº SPR/min'].mean(),
-        'DIS AI/min': df_t_val['DIS AI/min'].mean()
+        'DIS/min': df_t_val['DIS/min'].mean(), 'Nº SPR/min': df_t_val['Nº SPR/min'].mean(),
+        'DIS AI/min': df_t_val['DIS AI/min'].mean(), '% VMAX': df_t_val['% VMAX'].mean()
     }
 
-    categorias = [
-        'Aceleraciones (>3)/min', 
-        'Velocidad Máxima (Pico)', 
-        'Velocidad Media', 
-        'Distancia/min', 
-        'Sprints/min', 
-        'HSR (>21)/min'
-    ]
-    
-    claves = ['ACC/min', 'VMAX', 'V_Media', 'DIS/min', 'Nº SPR/min', 'DIS AI/min']
+    categorias = ['Aceleraciones (>3)/min', 'Velocidad Máxima (Pico)', 'Velocidad Media', 'Distancia/min', 'Sprints/min', 'HSR (>21)/min', '% V. Máx']
+    claves = ['ACC/min', 'VMAX', 'V_Media', 'DIS/min', 'Nº SPR/min', 'DIS AI/min', '% VMAX']
     
     valores_target = []
-    valores_referencia = [100] * 6
+    valores_referencia = [100] * 7
 
     for clave in claves:
         m_ref = medias_ref[clave]
         m_tar = medias_target[clave]
-        
-        if m_ref > 0:
-            porcentaje = (m_tar / m_ref) * 100
-        else:
-            porcentaje = 100
+        porcentaje = (m_tar / m_ref) * 100 if m_ref > 0 else 100
         valores_target.append(round(porcentaje, 1))
 
-    categorias_radar = categorias + [categorias[0]]
-    valores_target_radar = valores_target + [valores_target[0]]
-    valores_ref_radar = valores_referencia + [valores_referencia[0]]
-
     fig = go.Figure()
+    fig.add_trace(go.Scatterpolar(r=valores_referencia + [valores_referencia[0]], theta=categorias + [categorias[0]], fill='toself', name=label_ref, line=dict(color='rgba(150, 150, 150, 0.8)', width=2), fillcolor='rgba(200, 200, 200, 0.2)'))
+    fig.add_trace(go.Scatterpolar(r=valores_target + [valores_target[0]], theta=categorias + [categorias[0]], fill='toself', name=label_target, line=dict(color='#00b4d8', width=3), fillcolor='rgba(0, 180, 216, 0.3)'))
 
-    # Trazado de referencia (Gris)
-    fig.add_trace(go.Scatterpolar(
-        r=valores_ref_radar,
-        theta=categorias_radar,
-        fill='toself',
-        name=label_ref,
-        line=dict(color='rgba(150, 150, 150, 0.8)', width=2),
-        fillcolor='rgba(200, 200, 200, 0.2)'
-    ))
-
-    # Trazado del objetivo (Azul)
-    fig.add_trace(go.Scatterpolar(
-        r=valores_target_radar,
-        theta=categorias_radar,
-        fill='toself',
-        name=label_target,
-        line=dict(color='#00b4d8', width=3),
-        fillcolor='rgba(0, 180, 216, 0.3)'
-    ))
-
-    fig.update_layout(
-        polar=dict(
-            radialaxis=dict(visible=True, range=[0, max(150, max(valores_target) + 20)], gridcolor="#334155", linecolor="#334155"),
-            bgcolor="rgba(0,0,0,0)",
-            angularaxis=dict(gridcolor="#334155", linecolor="#334155")
-        ),
-        title=f"<b>Perfil Radar: {label_target} vs {label_ref}</b>",
-        showlegend=True,
-        margin=dict(l=40, r=40, t=40, b=40),
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)',
-        font=dict(color='#f8fafc')
-    )
-
+    fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, max(150, max(valores_target) + 20)], gridcolor="#334155", linecolor="#334155"), bgcolor="rgba(0,0,0,0)", angularaxis=dict(gridcolor="#334155", linecolor="#334155")), title=f"<b>Perfil Radar: {label_target} vs {label_ref}</b>", showlegend=True, margin=dict(l=40, r=40, t=40, b=40), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='#f8fafc'))
     return fig
+
 def generar_radar_comparador(dict_medias, usar_C):
-    """ 
-    Radar para Comparador Múltiple (A vs B vs C).
-    Normaliza cada métrica al valor máximo de los perfiles seleccionados (Máx = 100%).
-    """
-    categorias = ['Aceleraciones (>3)/min', 'Velocidad Máxima', 'Velocidad Media', 'Distancia/min', 'Sprints/min', 'HSR (>21)/min']
-    claves = ['ACC/min', 'VMAX', 'V_Media', 'DIS/min', 'Nº SPR/min', 'DIS AI/min']
-    
+    categorias = ['Aceleraciones (>3)/min', 'Velocidad Máxima', 'Velocidad Media', 'Distancia/min', 'Sprints/min', 'HSR (>21)/min', '% V. Máx']
+    claves = ['ACC/min', 'VMAX', 'V_Media', 'DIS/min', 'Nº SPR/min', 'DIS AI/min', '% VMAX']
     datos_graf = {'A': [], 'B': [], 'C': []}
     
     for clave in claves:
         val_A = dict_medias['A'].get(clave, 0)
         val_B = dict_medias['B'].get(clave, 0)
         val_C = dict_medias['C'].get(clave, 0) if usar_C else 0
-        
-        # Encontrar el valor máximo entre los perfiles activos para escalar a 100%
         max_val = max(val_A, val_B, val_C) if usar_C else max(val_A, val_B)
         
-        if max_val > 0:
-            datos_graf['A'].append((val_A / max_val) * 100)
-            datos_graf['B'].append((val_B / max_val) * 100)
-            if usar_C:
-                datos_graf['C'].append((val_C / max_val) * 100)
-        else:
-            datos_graf['A'].append(0)
-            datos_graf['B'].append(0)
-            if usar_C:
-                datos_graf['C'].append(0)
+        datos_graf['A'].append((val_A / max_val) * 100 if max_val > 0 else 0)
+        datos_graf['B'].append((val_B / max_val) * 100 if max_val > 0 else 0)
+        if usar_C: datos_graf['C'].append((val_C / max_val) * 100 if max_val > 0 else 0)
 
     fig = go.Figure()
+    fig.add_trace(go.Scatterpolar(r=datos_graf['A'] + [datos_graf['A'][0]], theta=categorias + [categorias[0]], fill='toself', name=dict_medias['A_label'], line=dict(color='#00b4d8', width=2), fillcolor='rgba(0, 180, 216, 0.2)'))
+    fig.add_trace(go.Scatterpolar(r=datos_graf['B'] + [datos_graf['B'][0]], theta=categorias + [categorias[0]], fill='toself', name=dict_medias['B_label'], line=dict(color='#ff4b4b', width=2), fillcolor='rgba(255, 75, 75, 0.2)'))
+    if usar_C: fig.add_trace(go.Scatterpolar(r=datos_graf['C'] + [datos_graf['C'][0]], theta=categorias + [categorias[0]], fill='toself', name=dict_medias['C_label'], line=dict(color='#28a745', width=2), fillcolor='rgba(40, 167, 69, 0.2)'))
 
-    # Perfil A (Azul)
-    fig.add_trace(go.Scatterpolar(
-        r=datos_graf['A'] + [datos_graf['A'][0]], 
-        theta=categorias + [categorias[0]],
-        fill='toself', 
-        name=dict_medias['A_label'], 
-        line=dict(color='#00b4d8', width=2), 
-        fillcolor='rgba(0, 180, 216, 0.2)'
-    ))
-    
-    # Perfil B (Rojo)
-    fig.add_trace(go.Scatterpolar(
-        r=datos_graf['B'] + [datos_graf['B'][0]], 
-        theta=categorias + [categorias[0]],
-        fill='toself', 
-        name=dict_medias['B_label'], 
-        line=dict(color='#ff4b4b', width=2), 
-        fillcolor='rgba(255, 75, 75, 0.2)'
-    ))
-
-    # Perfil C (Verde)
-    if usar_C:
-        fig.add_trace(go.Scatterpolar(
-            r=datos_graf['C'] + [datos_graf['C'][0]], 
-            theta=categorias + [categorias[0]],
-            fill='toself', 
-            name=dict_medias['C_label'], 
-            line=dict(color='#28a745', width=2), 
-            fillcolor='rgba(40, 167, 69, 0.2)'
-        ))
-
-    fig.update_layout(
-        polar=dict(
-            radialaxis=dict(visible=True, range=[0, 110], gridcolor="#334155", linecolor="#334155"),
-            bgcolor="rgba(0,0,0,0)",
-            angularaxis=dict(gridcolor="#334155", linecolor="#334155")
-        ),
-        title="<b>Comparativa Multidimensional (100% = Valor Máximo Relativo)</b>",
-        margin=dict(l=40, r=40, t=40, b=40),
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)',
-        font=dict(color='#f8fafc')
-    )
+    fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 110], gridcolor="#334155", linecolor="#334155"), bgcolor="rgba(0,0,0,0)", angularaxis=dict(gridcolor="#334155", linecolor="#334155")), title="<b>Comparativa Multidimensional (100% = Valor Máximo)</b>", margin=dict(l=40, r=40, t=40, b=40), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='#f8fafc'))
     return fig
 
 st.subheader("📡 GPS")
@@ -254,10 +144,16 @@ if df_gps.empty:
 else:
     cols_dinamicas = ['DIS', 'DIS AI', 'ACC', 'DCC', 'Nº SPR', 'Z1', 'Z2', 'Z3', 'Z4', 'Z5', 'Z6']
     for c in cols_dinamicas:
-        # Usamos MIN_GPS prioritariamente. Si por algún error de subida está a 0 pero hay distancia, usamos MIN como salvavidas antibloqueo.
         min_efectivo = np.where(df_gps['MIN_GPS'] > 0, df_gps['MIN_GPS'], df_gps['MIN'])
         multiplicador = 1000.0 if c == 'DIS' else 1.0
         df_gps[f'{c}/min'] = np.where(min_efectivo > 0, (df_gps[c] * multiplicador) / min_efectivo, 0)
+
+    # --- NUEVO CÁLCULO DE % VMAX HISTÓRICA ---
+    # Cogemos el máximo histórico de VMAX de cada jugador desde el Master
+    vmax_historica = st.session_state.df_master_informes.groupby('JUGADOR')['VMAX'].max().to_dict()
+    df_gps['VMAX_HIST'] = df_gps['JUGADOR'].map(vmax_historica).fillna(0)
+    df_gps['% VMAX'] = np.where(df_gps['VMAX_HIST'] > 0, (df_gps['VMAX'] / df_gps['VMAX_HIST']) * 100, 0.0)
+    # ------------------------------------------
 
     lista_jugs = sorted(df_gps['JUGADOR'].unique())
     lista_pos = ["POR", "DEF", "MED", "ATA"]
@@ -451,52 +347,68 @@ else:
                 else:
                     st.info("No hay suficientes datos GPS para generar la comparación radar.")
 
-            # --- METRICAS KPI Y TABLAS ---
-            kpis = df_perfil[['MIN_GPS', 'DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC', 'VMAX']].mean()
-            kpis_rel = df_perfil[['DIS/min', 'DIS AI/min', 'ACC/min', 'DCC/min']].mean()
+            # --- REDISEÑO ÉLITE: TARJETAS KPI Y HEATMAP ---
+            df_perfil['m/min'] = np.where(df_perfil['MIN_GPS'] > 0, (df_perfil['DIS'] * 1000) / df_perfil['MIN_GPS'], 0)
+            df_perfil['HSR/min'] = np.where(df_perfil['MIN_GPS'] > 0, df_perfil['DIS AI'] / df_perfil['MIN_GPS'], 0)
+            df_perfil['SPR/min'] = np.where(df_perfil['MIN_GPS'] > 0, df_perfil['Nº SPR'] / df_perfil['MIN_GPS'], 0)
+            df_perfil['ACC/min'] = np.where(df_perfil['MIN_GPS'] > 0, df_perfil['ACC'] / df_perfil['MIN_GPS'], 0)
+            df_perfil['DCC/min'] = np.where(df_perfil['MIN_GPS'] > 0, df_perfil['DCC'] / df_perfil['MIN_GPS'], 0)
+
+            kpis_abs = df_perfil[['DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC', 'VMAX', '% VMAX']].mean()
+            kpis_rel = df_perfil[['m/min', 'HSR/min', 'SPR/min', 'ACC/min', 'DCC/min']].mean()
+
+            def kpi_gps_card(titulo, val_abs, lbl_abs, val_rel, lbl_rel, color="#3b82f6"):
+                return f"""
+                <div style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid {color}; border-radius: 10px; padding: 15px; display: flex; flex-direction: column; height: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
+                    <span style="color: #94a3b8; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; margin-bottom: 5px;">{titulo}</span>
+                    <span style="color: #f8fafc; font-size: 1.8rem; font-weight: 800; line-height: 1;">{val_abs} <span style="font-size: 0.9rem; color: #94a3b8;">{lbl_abs}</span></span>
+                    <div style="margin-top: auto; padding-top: 10px; border-top: 1px solid #334155; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="color: #cbd5e1; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">Densidad</span>
+                        <span style="color: {color}; font-size: 0.95rem; font-weight: 800;">{val_rel} <span style="font-size: 0.75rem;">{lbl_rel}</span></span>
+                    </div>
+                </div>
+                """
 
             st.markdown("---")
-            st.markdown("#### 🚀 Promedios Absolutos (Totales)")
-            kp1, kp2, kp3, kp4, kp5, kp6, kp7 = st.columns(7)
-            kp1.metric("Minutos GPS", f"{kpis['MIN_GPS']:.1f}")
-            kp2.metric("Distancia (km)", f"{kpis['DIS']:.2f}")
-            kp3.metric("HSR (m)", f"{kpis['DIS AI']:.1f}")
-            kp4.metric("Sprints", f"{kpis['Nº SPR']:.1f}")
-            kp5.metric("Aceleraciones", f"{kpis['ACC']:.1f}")
-            kp6.metric("Deceleraciones", f"{kpis['DCC']:.1f}")
-            kp7.metric("V. Max (km/h)", f"{kpis['VMAX']:.1f}")
+            st.markdown("#### 🎯 Rendimiento Físico Medio (Absoluto vs Relativo)")
+            c1, c2, c3, c4, c5, c6 = st.columns(6)
+            with c1: st.markdown(kpi_gps_card("Distancia", f"{kpis_abs['DIS']:.2f}", "km", f"{kpis_rel['m/min']:.1f}", "m/min", "#3b82f6"), unsafe_allow_html=True)
+            with c2: st.markdown(kpi_gps_card("HSR (>21)", f"{kpis_abs['DIS AI']:.0f}", "m", f"{kpis_rel['HSR/min']:.2f}", "m/min", "#f59e0b"), unsafe_allow_html=True)
+            with c3: st.markdown(kpi_gps_card("Sprints", f"{kpis_abs['Nº SPR']:.1f}", "nº", f"{kpis_rel['SPR/min']:.2f}", "n/min", "#ef4444"), unsafe_allow_html=True)
+            with c4: st.markdown(kpi_gps_card("ACC (>3)", f"{kpis_abs['ACC']:.0f}", "nº", f"{kpis_rel['ACC/min']:.2f}", "n/min", "#10b981"), unsafe_allow_html=True)
+            with c5: st.markdown(kpi_gps_card("DCC (>3)", f"{kpis_abs['DCC']:.0f}", "nº", f"{kpis_rel['DCC/min']:.2f}", "n/min", "#8b5cf6"), unsafe_allow_html=True)
+            with c6: 
+                st.markdown(f"""
+                <div style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid #ec4899; border-radius: 10px; padding: 15px; display: flex; flex-direction: column; height: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
+                    <span style="color: #94a3b8; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; margin-bottom: 5px;">Velocidad Máx</span>
+                    <span style="color: #f8fafc; font-size: 1.8rem; font-weight: 800; line-height: 1;">{kpis_abs['VMAX']:.1f} <span style="font-size: 0.9rem; color: #94a3b8;">km/h</span></span>
+                    <div style="margin-top: auto; padding-top: 10px; border-top: 1px solid #334155; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="color: #cbd5e1; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">% Histórico</span>
+                        <span style="color: #ec4899; font-size: 0.95rem; font-weight: 800;">{kpis_abs['% VMAX']:.1f} <span style="font-size: 0.75rem;">%</span></span>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
 
-            st.markdown("#### ⏱️ Promedios Relativos (Por Minuto de GPS)")
-            kr1, kr2, kr3, kr4 = st.columns(4)
-            kr1.metric("m / min", f"{kpis_rel['DIS/min']:.1f}")
-            kr2.metric("HSR m / min", f"{kpis_rel['DIS AI/min']:.2f}")
-            kr3.metric("ACC / min", f"{kpis_rel['ACC/min']:.2f}")
-            kr4.metric("DCC / min", f"{kpis_rel['DCC/min']:.2f}")
-            
             st.markdown("---")
-            st.markdown("#### 🔬 Desglose Exhaustivo de Zonas de Velocidad")
+            st.markdown("#### 📋 Análisis Detallado (Heatmap de Intensidad)")
             
-            todas_kpis = ['MIN', 'DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC', 'VMAX', 'Z1', 'Z2', 'Z3', 'Z4', 'Z5', 'Z6']
-            todas_kpis_rel = [f'{c}/min' for c in ['DIS', 'DIS AI', 'ACC', 'DCC', 'Z1', 'Z2', 'Z3', 'Z4', 'Z5', 'Z6']]
+            df_tabla = df_perfil.groupby(['JUGADOR', 'POS']).agg({
+                'MIN_GPS': 'mean', 'DIS': 'mean', 'm/min': 'mean', 'DIS AI': 'mean',
+                'Nº SPR': 'mean', 'ACC': 'mean', 'DCC': 'mean', 'VMAX': 'max', '% VMAX': 'max'
+            }).reset_index()
             
-            medias_abs = df_perfil[todas_kpis].mean().round(2).to_dict()
-            medias_rel = df_perfil[todas_kpis_rel].mean().round(3).to_dict()
+            css_dark_table = "<style>.modern-dark-table { width: 100%; border-collapse: collapse; font-family: sans-serif; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4); background-color: #1e293b; color: #f8fafc; margin-bottom: 20px; } .modern-dark-table thead tr { background-color: #0f172a; color: #3b82f6; } .modern-dark-table th { padding: 12px 15px; font-weight: 800; text-transform: uppercase; font-size: 0.8rem; text-align: center !important; border-bottom: 2px solid #334155; } .modern-dark-table td { padding: 10px 15px; text-align: center !important; border-bottom: 1px solid #334155; font-weight: 700; font-size: 0.95rem; } .modern-dark-table tbody tr:hover td { filter: brightness(1.2); }</style>"
             
-            df_detallado = pd.DataFrame({
-                "Variable": ["Minutos GPS", "Distancia Total", "HSR (>21km/h)", "Sprints", "ACC", "DCC", "V. Máxima", "Zona 1", "Zona 2", "Zona 3", "Zona 4", "Zona 5", "Zona 6"],
-                "Promedio Acumulado": [
-                    medias_abs['MIN'], medias_abs['DIS'], medias_abs['DIS AI'], medias_abs['Nº SPR'], 
-                    medias_abs['ACC'], medias_abs['DCC'], medias_abs['VMAX'],
-                    medias_abs['Z1'], medias_abs['Z2'], medias_abs['Z3'], medias_abs['Z4'], medias_abs['Z5'], medias_abs['Z6']
-                ],
-                "Promedio por Minuto": [
-                    "-", medias_rel['DIS/min'], medias_rel['DIS AI/min'], "-", 
-                    medias_rel['ACC/min'], medias_rel['DCC/min'], "-",
-                    medias_rel['Z1/min'], medias_rel['Z2/min'], medias_rel['Z3/min'], 
-                    medias_rel['Z4/min'], medias_rel['Z5/min'], medias_rel['Z6/min']
-                ]
-            })
-            mostrar_tabla_moderna(df_detallado.style.hide(axis="index"))
+            cols_tabla = ['JUGADOR', 'POS', 'MIN_GPS', 'DIS', 'm/min', 'DIS AI', 'Nº SPR', 'ACC', 'DCC', 'VMAX', '% VMAX']
+            
+            estilo_gps = (df_tabla[cols_tabla].style
+                .hide(axis="index")
+                .format({"MIN_GPS": "{:.0f}'", "DIS": "{:.2f}", "m/min": "{:.1f}", "DIS AI": "{:.0f}", "Nº SPR": "{:.1f}", "ACC": "{:.0f}", "DCC": "{:.0f}", "VMAX": "{:.1f}", "% VMAX": "{:.1f}"})
+                .background_gradient(subset=['DIS', 'm/min', 'DIS AI', 'Nº SPR', 'ACC', 'DCC', 'VMAX', '% VMAX'], cmap='Blues', text_color_threshold=0.6)
+                .set_table_attributes('class="modern-dark-table"')
+            )
+            
+            st.markdown(css_dark_table + estilo_gps.to_html(), unsafe_allow_html=True))
 
     # ==========================================
     # PESTAÑA 2: COMPARADOR (FILTROS PLEGABLES)
@@ -579,24 +491,18 @@ else:
             st.warning("⚠️ Uno de los perfiles activos no tiene datos para los filtros seleccionados.")
         else:
             # 1. CÁLCULO DE MEDIAS PARA EL RADAR MULTI-PERFIL
-            metrics_radar = ['ACC/min', 'VMAX', 'DIS/min', 'Nº SPR/min', 'DIS AI/min', 'MIN', 'DIS']
+            metrics_radar = ['ACC/min', 'VMAX', 'DIS/min', 'Nº SPR/min', 'DIS AI/min', 'MIN', 'DIS', '% VMAX']
             mean_A = df_A[metrics_radar].mean().to_dict()
             mean_B = df_B[metrics_radar].mean().to_dict()
             mean_C = df_C[metrics_radar].mean().to_dict() if usar_C else {}
             
-            def calc_vmedia(df): 
-                return (df['DIS'].sum() / df['MIN'].sum()) * 60 if df['MIN'].sum() > 0 else 0
+            def calc_vmedia(df): return (df['DIS'].sum() / df['MIN'].sum()) * 60 if df['MIN'].sum() > 0 else 0
 
             mean_A['V_Media'] = calc_vmedia(df_A)
             mean_B['V_Media'] = calc_vmedia(df_B)
-            if usar_C: 
-                mean_C['V_Media'] = calc_vmedia(df_C)
+            if usar_C: mean_C['V_Media'] = calc_vmedia(df_C)
 
-            dict_medias_radar = {
-                'A': mean_A, 'A_label': lbl_A,
-                'B': mean_B, 'B_label': lbl_B,
-                'C': mean_C, 'C_label': lbl_C
-            }
+            dict_medias_radar = {'A': mean_A, 'A_label': lbl_A, 'B': mean_B, 'B_label': lbl_B, 'C': mean_C, 'C_label': lbl_C}
 
             # 2. MOSTRAR RADAR
             st.markdown("#### 🕸️ Radar Comparativo")
@@ -610,7 +516,7 @@ else:
             modo_comp = st.radio("¿Qué tipo de métricas quieres comparar en la tabla?", ["Absolutas (Totales)", "Relativas (Por Minuto)"], horizontal=True)
             
             if modo_comp == "Absolutas (Totales)":
-                metrics_to_compare = ['MIN', 'DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC', 'VMAX']
+                metrics_to_compare = ['MIN', 'DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC', 'VMAX', '% VMAX']
             else:
                 metrics_to_compare = ['DIS/min', 'DIS AI/min', 'ACC/min', 'DCC/min']
 
