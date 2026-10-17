@@ -749,7 +749,22 @@ with tab_ses:
                     
                     st.markdown("---")
                     
-                    # --- RENDERIZAR KPIs EN UNA SOLA FILA ---
+                    # ---------------------------------------------------------
+                    # HERRAMIENTA 1: DISPONIBILIDAD (MULTIFILTRO OPTIMIZADO)
+                    # ---------------------------------------------------------
+                    if active_view == "disp":
+                        st.markdown(f"#### 🏥 CONTROL DE DISPONIBILIDAD | {sesion['fecha']}")
+                        if es_partido:
+                            opciones_disp = ["Suplente", "No convocado", "Lesionado", "Enfermo", "Selección", "No disponible"]
+                            default_disp = "Titular"
+                        else:
+                            opciones_disp = ["Lesionado", "Readaptación", "Enfermo", "Falta", "Selección", "No disponible"]
+                            default_disp = "Disponible"
+                        
+                        disp_dict_clean = {limpiar_nombre(k): v for k, v in sesion.get("disponibilidad", {}).items()}
+                        jugs_plantilla = [p["JUGADOR"] for p in st.session_state.plantilla]
+                        
+                        # --- RENDERIZAR KPIs EN UNA SOLA FILA ---
                         todas_opciones = [default_disp] + opciones_disp
                         conteos = Counter([disp_dict_clean.get(limpiar_nombre(j), default_disp) for j in jugs_plantilla])
                         
@@ -757,7 +772,6 @@ with tab_ses:
                         for i, opc in enumerate(todas_opciones):
                             cols_m[i].metric(opc, conteos.get(opc, 0))
                         st.markdown("---")
-                        # -----------------------------------------
                         
                         jugadores_por_estado = {est: [] for est in opciones_disp}
                         for j in jugs_plantilla:
