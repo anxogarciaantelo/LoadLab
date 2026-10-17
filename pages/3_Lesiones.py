@@ -23,13 +23,14 @@ aplicar_color_sidebar()
 
 st.subheader("🚑 Lesiones")
 
-tab_les_res, tab_gest_med, tab_les_list = st.tabs(["📊 Resumen", "🩺 Gestión Médica", "📋 Listado de Lesiones"])
+tab_les_res, tab_gest_med, tab_les_list, tab_rtp = st.tabs(["📊 Resumen", "🩺 Gestión Médica", "📋 Listado de Lesiones", "🏃‍♂️ Protocolo RTP"])
 
 les_data = st.session_state.get("lesiones", [])
 if not les_data:
     with tab_les_res: st.success("¡Buenas noticias! No hay ninguna lesión registrada en el historial del equipo.")
     with tab_gest_med: st.success("¡Buenas noticias! No hay ninguna lesión registrada en el historial del equipo.")
     with tab_les_list: st.success("¡Buenas noticias! No hay ninguna lesión registrada en el historial del equipo.")
+    with tab_rtp: st.success("¡Buenas noticias! No hay ninguna lesión registrada en el historial del equipo.")
 else:
     df_les = st.session_state.df_lesiones.copy()
     df_les['Mes_Num'] = pd.to_datetime(df_les['id_sesion']).dt.month
@@ -255,3 +256,85 @@ else:
             else:
                 st.info("No hay lesiones en el historial para eliminar.")
 
+    # ==========================================
+    # PESTAÑA 4: PROTOCOLO RTP
+    # ==========================================
+    with tab_rtp:
+        st.markdown("#### 🏃‍♂️ Gestión de Return To Play (RTP)")
+        st.caption("Sistema de progresión estructurada basado en los 4 pasos, duraciones mínimas y criterios de alta competitiva.")
+
+        # Seleccionar lesión
+        lesiones_rtp = sorted(df_les.to_dict('records'), key=lambda x: x.get('id_sesion', ''), reverse=True)
+        opciones_rtp = [f"{l['id_sesion']} | {l['jugador']} - {l['tipo']} ({l['estado']})" for l in lesiones_rtp]
+        rtp_sel_idx = st.selectbox("Selecciona la lesión para evaluar su RTP:", range(len(lesiones_rtp)), format_func=lambda x: opciones_rtp[x])
+        
+        l_rtp = lesiones_rtp[rtp_sel_idx]
+        jug_rtp = l_rtp['jugador']
+        
+        # Calcular los días exactos para determinar la gravedad
+        if l_rtp['estado'] == 'Activa':
+            dias_rtp = max((date.today() - datetime.strptime(l_rtp['id_sesion'], "%Y-%m-%d").date()).days, 0)
+        else:
+            dias_rtp = int(safe_float(l_rtp.get('dias_baja', 0)))
+        
+        # 1. Determinar Gravedad y Sesiones Mínimas
+        if dias_rtp <= 4: grav_rtp = "Mínima"
+        elif dias_rtp <= 7: grav_rtp = "Leve"
+        elif dias_rtp <= 14: grav_rtp = "Moderada I"
+        elif dias_rtp <= 28: grav_rtp = "Moderada II"
+        else: grav_rtp = "Grave"
+
+        s1, s2, s3 = 0, 0, 0
+        if grav_rtp == "Leve": s3 = 1
+        elif grav_rtp == "Moderada I": s1, s2, s3 = 1, 1, 1
+        elif grav_rtp == "Moderada II": s1, s2, s3 = 2, 2, 2
+        elif grav_rtp == "Grave": s1, s2, s3 = 3, 3, 3
+
+        # Aplicar regla de penalización por tejido o recidiva
+        mod_txt = ""
+        if l_rtp.get('recidiva') == "Sí" or l_rtp.get('tipo') == "Tendinosa":
+            s1 += 1; s2 += 1; s3 += 1
+            mod_txt = "⚠️ Se ha sumado **+1 sesión obligatoria por fase** debido al protocolo de seguridad (Lesión Tendinosa o Recidiva)."
+
+        st.markdown(f"**Deportista:** {jug_rtp} | **Gravedad Base:** {grav_rtp} ({dias_rtp} días de baja)")
+        if mod_txt: st.warning(mod_txt)
+        
+        st.markdown("---")
+        st.markdown("##### 🧱 Fases de Progresión (Sesiones Mínimas Requeridas)")
+        
+        # Tarjetas de los 4 Pasos
+        c_p1, c_p2, c_p3, c_p4 = st.columns(4)
+        c_p1.info(f"**Paso 1: Analítico / Comodín**\n\nMin. Sesiones: **{s1}**\n\n*30-40% del tiempo total.*")
+        c_p2.info(f"**Paso 2: Espacios Reducidos**\n\nMin. Sesiones: **{s2}**\n\n*50-75% vol. ACC/DCC.*")
+        c_p3.info(f"**Paso 3: Espacios Amplios**\n\nMin. Sesiones: **{s3}**\n\n*80-90% HSR / Dist. Total.*")
+        c_p4.success(f"**Paso 4: Entreno Completo**\n\nMin. Sesiones: **Libre**\n\n*100% de la sesión.*")
+
+        st.markdown("---")
+        st.markdown("##### 🚨 Regla de No Progresión / Regresión")
+        st.error("Detener avance o retroceder de fase si se cumple alguna de estas banderas rojas post-entrenamiento:\n- **Dolor > 3/10 (EVA)** o inflamación visible en las 12-24 horas posteriores.\n- **Ratio A/C > 1.5** posterior a la sesión de campo.")
+
+        st.markdown("---")
+        st.markdown("##### ✅ Criterios Finales de RTP Competitivo (Checklist)")
+        
+        # Extracción inteligente de métricas actuales del jugador
+        ewma_actual = calcular_ewma_historico(st.session_state.sesiones, str(date.today()))
+        j_ewma = ewma_actual.get(jug_rtp, {"RATIO A/C": 0})
+        ratio_actual = j_ewma.get("RATIO A/C", 0)
+        
+        vals_jug = [v for v in st.session_state.get('val_rom', []) if v.get('jugador') == jug_rtp]
+        asim_cmj_txt = "Sin datos de salto registrados"
+        if vals_jug:
+            v_latest = sorted(vals_jug, key=lambda x: x.get('fecha', ''))[-1]
+            d, i = safe_float(v_latest.get('cmj_uni_d', 0)), safe_float(v_latest.get('cmj_uni_i', 0))
+            if max(d, i) > 0:
+                lsi = (min(d, i) / max(d, i)) * 100
+                asim_cmj_txt = f"{lsi:.1f}% LSI en última prueba"
+                
+        # Interfaz del Checklist
+        st.checkbox("Igualar (>100%) las demandas individuales de partido o de posición (>90%) en microciclo (Dist, HSR, ACC/DCC, Vmax).")
+        st.checkbox("Completar una semana al 100% del volumen grupal.")
+        st.checkbox(f"Mantenimiento de la simetría (LSI > 90%) en CMJ post MD-3/MD-4. *(Auto-detectado: {asim_cmj_txt})*")
+        st.checkbox("Sin dolor entre las 12 y 48 horas tras los entrenamientos.")
+        st.checkbox("Cuestionario subjetivo de RTP apto.")
+        st.checkbox(f"Igualar EWMA Aguda y Crónica de la media del equipo (>90%). *(Actual Ratio A/C: {ratio_actual:.2f})*")
+        st.checkbox("Alcanzar el 90% del 1RM en Sentadilla.")
