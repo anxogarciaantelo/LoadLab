@@ -387,7 +387,17 @@ def aplicar_color_sidebar():
             
             # 2. ENLACES DE PÁGINAS MANUALES (Control total de la posición central)
             st.markdown("<p style='color: #64748b; font-size: 0.75rem; text-transform: uppercase; font-weight: 800; margin-bottom: 8px; letter-spacing: 0.5px;'>Navegación</p>", unsafe_allow_html=True)
-                        
+
+            st.page_link("Inicio.py", label="Inicio", icon="🏠")
+            st.page_link("pages/1_Entrenamiento.py", label="Entrenamiento", icon="📅")
+            st.page_link("pages/2_Plantilla.py", label="Plantilla", icon="👥")
+            st.page_link("pages/3_Lesiones.py", label="Lesiones", icon="🚑")
+            st.page_link("pages/4_GPS.py", label="GPS", icon="📡")
+            st.page_link("pages/5_Antropometria.py", label="Antropometría", icon="⚖️")
+            st.page_link("pages/6_Valoraciones.py", label="Valoraciones", icon="📊")
+            st.page_link("pages/7_Estadisticas.py", label="Estadísticas", icon="📈")
+            st.page_link("pages/8_Predicción_de_lesiones.py", label="Predicción de lesiones", icon="🧠")
+            
             # 3. ESPACIADOR FLEXIBLE (Empuja los siguientes elementos abajo del todo)
             st.markdown("<div style='margin-top: auto;'></div>", unsafe_allow_html=True)
             
