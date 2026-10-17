@@ -64,33 +64,12 @@ with tab_cal:
     meses_nombres = ["", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
     
     # Botones de navegación del mes
-    st.markdown("<div class='mes-nav-bar'></div>", unsafe_allow_html=True)
-    st.markdown("""
-    <style>
-    div.element-container:has(.mes-nav-bar) + div[data-testid="stHorizontalBlock"] button {
-        background: transparent !important;
-        border: transparent !important;
-        box-shadow: none !important;
-        color: #94a3b8 !important;
-        font-size: 1.5rem !important;
-        padding: 0 !important;
-        min-height: 10px !important;
-        margin-top: -5px !important;
-    }
-    div.element-container:has(.mes-nav-bar) + div[data-testid="stHorizontalBlock"] button:hover {
-        color: #f8fafc !important;
-        background: transparent !important;
-        transform: scale(1.2);
-    }
-    </style>
-    """, unsafe_allow_html=True)
-    
-    c_nav1, c_nav2, c_nav3 = st.columns([1, 6, 1])
+    c_nav1, c_nav2, c_nav3 = st.columns([1, 3, 1])
     if c_nav1.button("◀", use_container_width=True):
         st.session_state.cal_offset -= 1
         st.rerun()
     with c_nav2:
-        st.markdown(f"<h4 style='text-align: center; color: #f8fafc; margin-top: 0; margin-bottom: 5px; font-size: 1.15rem; text-transform: uppercase; font-weight: 800; letter-spacing: 1px;'>🗓️ {meses_nombres[month]} {year}</h4>", unsafe_allow_html=True)
+        st.markdown(f"<h4 style='text-align: center; color: #f8fafc; margin-top: 0; margin-bottom: 10px; font-size: 1.15rem; text-transform: uppercase; font-weight: 800; letter-spacing: 1px;'>🗓️ {meses_nombres[month]} {year}</h4>", unsafe_allow_html=True)
     if c_nav3.button("▶", use_container_width=True):
         st.session_state.cal_offset += 1
         st.rerun()
@@ -112,7 +91,7 @@ with tab_cal:
         num_sem = obtener_numero_semana(f"{year}-{month:02d}-{dia_sem:02d}") if dia_sem else 0
         
         # Tarjeta contenedora de la semana completa
-        html_cal += "<div style='background-color: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 10px; margin-bottom: 5px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); display: grid; grid-template-columns: 60px repeat(7, 1fr); gap: 8px;'>"
+        html_cal += "<div style='background-color: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 10px; margin-bottom: 2px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); display: grid; grid-template-columns: 60px repeat(7, 1fr); gap: 8px;'>"
         
         # Etiqueta del Microciclo (Píldora azul a la izquierda)
         if num_sem > 0:
