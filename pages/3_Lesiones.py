@@ -38,16 +38,16 @@ else:
     df_les['Gravedad'] = df_les['dias_baja'].apply(categorizar_duracion)
     
     with tab_les_res:
+        # --- REDUCCIÓN MILIMÉTRICA DE MÁRGENES VERTICALES ---
+        st.markdown("<h4 style='margin-bottom: 5px; margin-top: 0;'>🔍 Filtros Epidemiológicos</h4>", unsafe_allow_html=True)
         
-        c_filt, c_kpis = st.columns([1, 3.5])
-        
-        with c_filt:
-            st.markdown("#### 🔍 Filtros")
+        c_f1, c_f2, c_f3 = st.columns(3)
+        with c_f1:
             meses_unicos = ["TODOS"] + list(df_les['Mes'].dropna().unique())
             filtro_mes = st.selectbox("Mes:", meses_unicos)
-            
+        with c_f2:
             filtro_tipo_ses = st.selectbox("Sesión:", ["TODOS", "Entrenamiento", "Partido"])
-            
+        with c_f3:
             jugs_unicos = ["TODOS"] + sorted([j["JUGADOR"] for j in st.session_state.plantilla])
             filtro_jugador = st.selectbox("Jugador:", jugs_unicos)
             
@@ -58,16 +58,16 @@ else:
             else:
                 return safe_float(row.get('dias_baja', 0))
 
-        # DF Anual para baseline (Sin filtrar por el mes seleccionado)
+        # Base anual global (Baseline)
         df_anual = df_les.copy()
-        if filtro_tipo_ses != "TODOS": df_anual = df_anual[df_anual['tipo_sesion'] == filtro_tipo_ses]
-        if filtro_jugador != "TODOS": df_anual = df_anual[df_anual['jugador'] == filtro_jugador]
         
-        # DF Filtrado completamente
+        # Base filtrada
         df_filtrado = df_anual.copy()
         if filtro_mes != "TODOS": df_filtrado = df_filtrado[df_filtrado['Mes'] == filtro_mes]
+        if filtro_tipo_ses != "TODOS": df_filtrado = df_filtrado[df_filtrado['tipo_sesion'] == filtro_tipo_ses]
+        if filtro_jugador != "TODOS": df_filtrado = df_filtrado[df_filtrado['jugador'] == filtro_jugador]
 
-        def calcular_metricas(df_eval, mes_eval):
+        def calcular_metricas(df_eval, mes_eval, ses_eval, jug_eval):
             if df_eval.empty:
                 return 0, 0, 0.0, 0.0, 0.0
                 
@@ -87,51 +87,57 @@ else:
                     if mes_eval != "TODOS" and mes_s != mes_eval: continue
                     
                     es_partido_s = "Partido" in s["tipo"]
-                    if filtro_tipo_ses == "Entrenamiento" and es_partido_s: continue
-                    if filtro_tipo_ses == "Partido" and not es_partido_s: continue
+                    if ses_eval == "Entrenamiento" and es_partido_s: continue
+                    if ses_eval == "Partido" and not es_partido_s: continue
                     
                     for d in s["datos_informe"]:
-                        if filtro_jugador == "TODOS" or d["JUGADOR"] == filtro_jugador:
+                        if jug_eval == "TODOS" or d["JUGADOR"] == jug_eval:
                             h_tot += float(d.get("MIN", 0)) / 60.0
 
             inc = (t_les / h_tot * 1000) if h_tot > 0 else 0
             bur = (t_dias / h_tot * 1000) if h_tot > 0 else 0
             return t_les, t_dias, p_dias, inc, bur
 
-        with c_kpis:
-            st.markdown("#### 🎯 Métricas Globales")
-            if df_filtrado.empty:
-                st.warning("No hay lesiones que coincidan con los filtros aplicados.")
-            else:
-                # 1. Calcular el bloque de métricas del mes seleccionado y el baseline anual
-                total_lesiones, total_dias, promedio_dias, incidencia, burden = calcular_metricas(df_filtrado, filtro_mes)
-                _, _, _, inc_anual, bur_anual = calcular_metricas(df_anual, "TODOS")
-
-                tendencia_inc = None
-                tendencia_bur = None
-                
-                # 2. Generar el diccionario de tendencia si se selecciona un mes
-                if filtro_mes != "TODOS":
-                    if inc_anual > 0:
-                        diff_inc = ((incidencia - inc_anual) / inc_anual) * 100
-                        txt_inc = "peor vs anual" if diff_inc > 0 else "mejor vs anual"
-                        tendencia_inc = {'valor': diff_inc, 'inverso': True, 'texto': txt_inc}
-                        
-                    if bur_anual > 0:
-                        diff_bur = ((burden - bur_anual) / bur_anual) * 100
-                        txt_bur = "peor vs anual" if diff_bur > 0 else "mejor vs anual"
-                        tendencia_bur = {'valor': diff_bur, 'inverso': True, 'texto': txt_bur}
-
-                from utils.math_helpers import render_kpi_elite
-                
-                # 3. Renderizar las 5 tarjetas en una sola fila compacta
-                k1, k2, k3, k4, k5 = st.columns(5)
-                with k1: render_kpi_elite("Lesiones", f"{total_lesiones}", color_borde="#3b82f6")
-                with k2: render_kpi_elite("Bajas (Tot)", f"{total_dias} d", color_borde="#f59e0b")
-                with k3: render_kpi_elite("Baja/Les", f"{promedio_dias:.1f} d", color_borde="#8b5cf6")
-                with k4: render_kpi_elite("Incidencia", f"{incidencia:.1f}", subtitulo="/1000h expos.", color_borde="#ef4444", tendencia=tendencia_inc)
-                with k5: render_kpi_elite("Burden", f"{burden:.0f}", subtitulo="/1000h expos.", color_borde="#ef4444", tendencia=tendencia_bur)
+        st.markdown("<h4 style='margin-bottom: 5px; margin-top: -10px;'>🎯 Métricas Globales</h4>", unsafe_allow_html=True)
         
+        if df_filtrado.empty:
+            st.warning("No hay lesiones que coincidan con los filtros aplicados.")
+        else:
+            # Cálculo de datos
+            total_lesiones, total_dias, promedio_dias, incidencia, burden = calcular_metricas(df_filtrado, filtro_mes, filtro_tipo_ses, filtro_jugador)
+            _, _, _, inc_anual, bur_anual = calcular_metricas(df_anual, "TODOS", "TODOS", "TODOS")
+
+            tendencia_inc = None
+            tendencia_bur = None
+            
+            # CONTROL DE ERROR: Solo calcular tendencia si hay algún filtro activo 
+            filtros_activos = (filtro_mes != "TODOS") or (filtro_tipo_ses != "TODOS") or (filtro_jugador != "TODOS")
+            
+            if filtros_activos:
+                if inc_anual > 0:
+                    diff_inc = ((incidencia - inc_anual) / inc_anual) * 100
+                    txt_inc = "peor vs anual" if diff_inc > 0 else "mejor vs anual"
+                    tendencia_inc = {'valor': diff_inc, 'inverso': True, 'texto': txt_inc}
+                    
+                if bur_anual > 0:
+                    diff_bur = ((burden - bur_anual) / bur_anual) * 100
+                    txt_bur = "peor vs anual" if diff_bur > 0 else "mejor vs anual"
+                    tendencia_bur = {'valor': diff_bur, 'inverso': True, 'texto': txt_bur}
+
+            from utils.math_helpers import render_kpi_elite
+            
+            # Textos Help integrados por HTML
+            help_inc = "/1000h <span title='Fútbol Élite: 6 a 9 lesiones / 1000h de exposición' style='cursor:help;'>ℹ️</span>"
+            help_bur = "/1000h <span title='Fútbol Élite: 100 a 150 días de baja / 1000h de exposición' style='cursor:help;'>ℹ️</span>"
+            
+            # Tarjetas renderizadas con texto completo
+            k1, k2, k3, k4, k5 = st.columns(5)
+            with k1: render_kpi_elite("Lesiones Totales", f"{total_lesiones}", color_borde="#3b82f6")
+            with k2: render_kpi_elite("Días de Baja Totales", f"{total_dias}", color_borde="#f59e0b")
+            with k3: render_kpi_elite("Días Baja / Lesión", f"{promedio_dias:.1f}", color_borde="#8b5cf6")
+            with k4: render_kpi_elite("Incidencia", f"{incidencia:.1f}", subtitulo=help_inc, color_borde="#ef4444", tendencia=tendencia_inc)
+            with k5: render_kpi_elite("Burden", f"{burden:.0f}", subtitulo=help_bur, color_borde="#ef4444", tendencia=tendencia_bur)
+    
         st.markdown("---")
         st.markdown("#### 📈 Desglose Estadístico")
         
