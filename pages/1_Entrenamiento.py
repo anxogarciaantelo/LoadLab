@@ -685,6 +685,7 @@ with tab_ses:
                         
                         # --- GENERADOR DEL MINI-CALENDARIO SEMANAL ---
                         html_mini_cal = "<div style='display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 8px;'>"
+                        letras_semana = ["L", "M", "X", "J", "V", "S", "D"]
                         for d_offset in range(7):
                             dia_actual = lunes + timedelta(days=d_offset)
                             dia_str = dia_actual.strftime("%Y-%m-%d")
@@ -697,7 +698,7 @@ with tab_ses:
                                 color_ind = "transparent"
                                 color_text = "#475569"
                                 
-                            html_mini_cal += f"<div style='background-color: #0f172a; border-radius: 4px; padding: 2px 0; border-bottom: 3px solid {color_ind};'><span style='color: {color_text}; font-size: 0.75rem; font-weight: 800;'>{dia_actual.day}</span></div>"
+                            html_mini_cal += f"<div style='background-color: #0f172a; border-radius: 4px; padding: 3px 0; border-bottom: 3px solid {color_ind}; display: flex; flex-direction: column; align-items: center;'><span style='color: #64748b; font-size: 0.55rem; font-weight: 800; line-height: 1;'>{letras_semana[d_offset]}</span><span style='color: {color_text}; font-size: 0.8rem; font-weight: 800; line-height: 1.2;'>{dia_actual.day}</span></div>"
                         html_mini_cal += "</div>"
                         
                         st.markdown(f"""
