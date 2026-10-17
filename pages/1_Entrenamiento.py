@@ -766,6 +766,7 @@ with tab_ses:
 
                 # Extraer instantáneamente desde la base de datos central sin recalcular
                 df_master_sesion = st.session_state.df_master_informes[st.session_state.df_master_informes['FECHA'] == sesion["fecha"]]
+                df_master_sesion = df_master_sesion.drop_duplicates(subset=['JUGADOR'], keep='last')
                 dic_ewma = df_master_sesion.set_index('JUGADOR')[['EWMA AGUDA', 'EWMA CRÓNICA', 'RATIO A/C']].to_dict('index')
                 
                 df_informe['EWMA AGUDA'] = df_informe['JUGADOR'].map(lambda j: dic_ewma.get(j, {}).get('EWMA AGUDA', 0.0))
