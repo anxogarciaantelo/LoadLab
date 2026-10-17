@@ -453,24 +453,28 @@ if st.session_state.get("equipo_seleccionado", False):
         if sesion_ref:
             nom_dyn = sesion_ref.get("nombre_dinamico", "")
             
-            # Formato exacto solicitado: J5 vs Sestao | MD-3  o  S56 | MD-1
+            # Limpieza del descriptor por si viene guardado como texto vacío
+            desc_raw = str(sesion_ref.get('descripcion', '')).strip()
+            
             if "Partido" in sesion_ref.get("tipo", ""):
-                contexto_str = f"{nom_dyn} vs {sesion_ref.get('rival', 'Rival')} | {sesion_ref.get('descripcion', 'MD')}"
-                sub_str = "Partido"
+                desc_val = desc_raw if desc_raw else 'MD'
+                contexto_str = f"{nom_dyn} vs {sesion_ref.get('rival', 'Rival')} | {desc_val}"
             else:
-                contexto_str = f"{nom_dyn} | {sesion_ref.get('descripcion', 'TD')}"
-                sub_str = "Entrenamiento"
+                desc_val = desc_raw if desc_raw else 'TD'
+                contexto_str = f"{nom_dyn} | {desc_val}"
 
             fecha_str = datetime.strptime(sesion_ref["fecha"], "%Y-%m-%d").strftime("%d %b")
             clima = sesion_ref.get("clima", {})
             clima_icon = "🌧️" if clima and clima.get("estado") == "Lluvia" else ("☀️" if clima else "⏱️")
             
             st.markdown(f"""
-            <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 12px; padding: 25px; height: 100%; border: 1px solid #334155; border-left: 5px solid #3b82f6; box-shadow: 0 10px 20px rgba(0,0,0,0.2); display: flex; flex-direction: column; justify-content: center;">
-                <span style="color: #94a3b8; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Última Referencia</span>
-                <h2 style="color: #f8fafc; font-size: 1.6rem; font-weight: 800; margin: 0 0 12px 0; line-height: 1.2;">{contexto_str}</h2>
-                <div style="display: inline-block; background: #3b82f6; color: #ffffff; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: 700; width: fit-content;">
-                    {fecha_str} {clima_icon}
+            <div style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid #3b82f6; border-radius: 10px; padding: 15px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); display: flex; flex-direction: column; justify-content: center; height: 100%; box-sizing: border-box;">
+                <p style="color: #f8fafc; font-size: 1.05rem; font-weight: 800; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.2; text-align: left;">Última Referencia</p>
+                <h2 style="color: #f8fafc; font-size: 1.4rem; font-weight: 800; margin: 0 0 10px 0; line-height: 1.2; text-align: center; white-space: normal; word-wrap: break-word;">{contexto_str}</h2>
+                <div style="display: flex; justify-content: center;">
+                    <div style="background: #3b82f6; color: #ffffff; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: 700; width: fit-content;">
+                        {fecha_str} {clima_icon}
+                    </div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
