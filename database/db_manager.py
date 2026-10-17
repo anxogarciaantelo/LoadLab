@@ -67,6 +67,25 @@ def cargar_datos_equipo(equipo_id):
             st.session_state.lesiones = les_data
             st.session_state.antropometria = [a["datos"] for a in ant_data]
 
+            # --- PARCHE DE AUTOLIMPIEZA DE DUPLICADOS ---
+            vistos_ses = set()
+            sesiones_limpias = []
+            for s in st.session_state.sesiones:
+                uid = f"{s['fecha']}_{s['tipo']}_{s.get('descripcion','')}_{s.get('rival','')}"
+                if uid not in vistos_ses:
+                    vistos_ses.add(uid)
+                    sesiones_limpias.append(s)
+            st.session_state.sesiones = sesiones_limpias
+            
+            vistos_plan = set()
+            plan_limpia = []
+            for p in st.session_state.plantilla:
+                if p["JUGADOR"] not in vistos_plan:
+                    vistos_plan.add(p["JUGADOR"])
+                    plan_limpia.append(p)
+            st.session_state.plantilla = plan_limpia
+            # --------------------------------------------
+
             cfg = cfg_data[0] if cfg_data else {}
             st.session_state.val_inicial = cfg.get("val_inicial", [])
             st.session_state.val_rom = cfg.get("val_rom", [])
@@ -101,14 +120,26 @@ def guardar_datos(modulo="todo"):
     if "equipo_id" not in st.session_state: return
     eq_id = st.session_state.equipo_id
 
+    # --- NUEVA FUNCIÓN DE SEGURIDAD (ANTI PÉRDIDA DE DATOS) ---
     def safe_sync(tabla, datos_nuevos):
-        if not datos_nuevos: 
-            return
+        if "equipo_id" not in st.session_state: return
+        eq_id = st.session_state.equipo_id
+        
+        # 1. Hacemos backup rápido de lo que hay en la BD ahora mismo
+        backup_res = supabase.table(tabla).select("*").eq("equipo_id", eq_id).execute()
+        backup = backup_res.data if backup_res else []
         try:
-            for i in range(0, len(datos_nuevos), 100):
-                supabase.table(tabla).upsert(datos_nuevos[i:i+100]).execute()
+            # 2. Borramos el historial clonado
+            supabase.table(tabla).delete().eq("equipo_id", eq_id).execute()
+            # 3. Insertamos la lista limpia en bloques
+            if datos_nuevos:
+                for i in range(0, len(datos_nuevos), 100):
+                    supabase.table(tabla).insert(datos_nuevos[i:i+100]).execute()
         except Exception as e:
-            print(f"Error crítico en upsert de {tabla}: {e}")
+            print(f"Error crítico en {tabla}: {e}. Restaurando backup...")
+            if backup:
+                for i in range(0, len(backup), 100):
+                    supabase.table(tabla).insert(backup[i:i+100]).execute()
             raise e
     # -----------------------------------------------------------
 
