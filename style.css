@@ -80,18 +80,27 @@ div[data-testid="stMetric"] {
     justify-content: center;
     height: 100%;
 }
+
+/* Forzamos el estilo al <p> y <div> ocultos que Streamlit genera nativamente */
 div[data-testid="stMetric"] label,
-div[data-testid="stMetric"] div[data-testid="stMetricLabel"] {
+div[data-testid="stMetric"] label p,
+div[data-testid="stMetric"] [data-testid="stMetricLabel"],
+div[data-testid="stMetric"] [data-testid="stMetricLabel"] p {
     font-size: 1.05rem !important;
     color: #f8fafc !important;
     font-weight: 800 !important;
     text-transform: uppercase !important;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.5px !important;
     text-align: left !important;
+    line-height: 1.2 !important;
+}
+
+div[data-testid="stMetric"] label {
     margin-bottom: 10px !important;
     width: 100% !important;
     display: block !important;
 }
+
 div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
     font-size: 1.8rem !important;
     color: #f8fafc !important;
@@ -100,28 +109,12 @@ div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
     width: 100% !important;
     display: block !important;
 }
+
 div[data-testid="stMetric"] div[data-testid="stMetricDelta"] {
     text-align: center !important;
     width: 100% !important;
     justify-content: center !important;
     display: flex !important;
-}
-
-/* --- BOTONES NATIVOS --- */
-.stButton > button {
-    border-radius: 8px !important;
-    font-weight: 700 !important;
-    font-size: 1rem !important;
-    background-color: #1e293b !important;
-    color: #f8fafc !important;
-    border: 1px solid #334155 !important;
-    padding: 10px 20px !important;
-}
-.stButton > button:hover {
-    background-color: #3b82f6 !important;
-    border-color: #3b82f6 !important;
-    color: #ffffff !important;
-    box-shadow: 0 0 15px rgba(59,130,246,0.3) !important;
 }
 
 /* --- TABLAS MODERNAS --- */
