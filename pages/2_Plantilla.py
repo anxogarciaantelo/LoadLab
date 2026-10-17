@@ -58,11 +58,12 @@ if st.session_state.vista_plantilla == "📋 Plantilla":
                         if jug.get("foto"):
                             try:
                                 img_src = jug["foto"] if str(jug["foto"]).startswith("http") else f"data:image/jpeg;base64,{jug['foto']}"
-                                img_html = f'<img src="{img_src}" style="width:60px; height:60px; object-fit: cover; border-radius:50%; border: 2px solid #3b82f6; box-shadow: 0 4px 8px rgba(0,0,0,0.2); margin-bottom: 5px;">'
+                                # Eliminado el style inline. Ahora lo controla .card-elite img del CSS
+                                img_html = f'<img src="{img_src}">'
                             except:
-                                img_html = '<div style="font-size: 45px; margin-bottom: 5px; line-height: 1;">👤</div>'
+                                img_html = '<div style="font-size: 40px; margin-bottom: 5px; line-height: 1;">👤</div>'
                         else:
-                            img_html = '<div style="font-size: 45px; margin-bottom: 5px; line-height: 1;">👤</div>'
+                            img_html = '<div style="font-size: 40px; margin-bottom: 5px; line-height: 1;">👤</div>'
                         
                         nombre = jug['JUGADOR']
                         
