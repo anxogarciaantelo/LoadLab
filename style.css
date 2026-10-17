@@ -22,9 +22,28 @@ div[data-testid="stVerticalBlock"] {
     gap: 0.6rem !important;
 }
 .block-container {
-    padding-top: 1.2rem !important;
     padding-bottom: 1.2rem !important;
     max-width: 98% !important;
+}
+
+/* --- OCULTACIÓN INTELIGENTE DE LA BARRA SUPERIOR --- */
+@media (min-width: 769px) {
+    /* En PC: Ocultamos la barra por completo para ganar espacio visual */
+    header[data-testid="stHeader"] {
+        display: none !important;
+    }
+    .block-container {
+        padding-top: 2rem !important; 
+    }
+}
+@media (max-width: 768px) {
+    /* En Móvil: Mantenemos la barra transparente para no perder el menú hamburguesa */
+    header[data-testid="stHeader"] {
+        background-color: transparent !important; 
+    }
+    .block-container {
+        padding-top: 4rem !important; /* Empuja el título bajo el botón hamburguesa */
+    }
 }
 
 /* --- FONDO APP --- */
