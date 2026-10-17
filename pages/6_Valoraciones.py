@@ -87,10 +87,10 @@ def tarjeta_kpi(titulo, valor, subtitulo="", tooltip=""):
     icon = " ℹ️" if tooltip else ""
     cursor = "help" if tooltip else "default"
     st.markdown(f"""
-    <div{tt_html} style="background: linear-gradient(145deg, #1e293b, #0f172a); border: 1px solid #334155; border-top: 3px solid #3b82f6; border-radius: 8px; padding: 12px 2px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); height: 100%; display: flex; flex-direction: column; justify-content: center; cursor: {cursor}; margin-bottom: 15px;">
-        <p style="color: #94a3b8; font-size: 0.65rem; font-weight: 800; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.1;">{titulo}{icon}</p>
-        <h2 style="color: #f8fafc; font-size: 1.3rem; font-weight: 800; margin: 0; line-height: 1;">{valor}</h2>
-        {f"<p style='color: #3b82f6; font-size: 0.6rem; font-weight: 600; margin: 4px 0 0 0;'>{subtitulo}</p>" if subtitulo else ""}
+    <div{tt_html} style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid #3b82f6; border-radius: 10px; padding: 15px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); height: 100%; display: flex; flex-direction: column; justify-content: center; cursor: {cursor}; margin-bottom: 15px;">
+        <p style="color: #f8fafc; font-size: 1.05rem; font-weight: 800; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.2; text-align: left;">{titulo}{icon}</p>
+        <h2 style="color: #f8fafc; font-size: 1.8rem; font-weight: 800; margin: 0; line-height: 1; text-align: center;">{valor}</h2>
+        {f"<p style='color: #3b82f6; font-size: 0.7rem; font-weight: 600; margin: 8px 0 0 0; text-align: center;'>{subtitulo}</p>" if subtitulo else ""}
     </div>
     """, unsafe_allow_html=True)
 
@@ -99,12 +99,12 @@ def tarjeta_kpi_doble(titulo, val_d, val_i, lbl_d="Der", lbl_i="Izq", tooltip=""
     icon = " ℹ️" if tooltip else ""
     cursor = "help" if tooltip else "default"
     st.markdown(f"""
-    <div{tt_html} style="background: linear-gradient(145deg, #1e293b, #0f172a); border: 1px solid #334155; border-top: 3px solid #3b82f6; border-radius: 8px; padding: 12px 2px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); height: 100%; display: flex; flex-direction: column; justify-content: center; cursor: {cursor}; margin-bottom: 15px;">
-        <p style="color: #94a3b8; font-size: 0.65rem; font-weight: 800; margin: 0 0 8px 0; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.1;">{titulo}{icon}</p>
+    <div{tt_html} style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid #3b82f6; border-radius: 10px; padding: 15px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); height: 100%; display: flex; flex-direction: column; justify-content: center; cursor: {cursor}; margin-bottom: 15px;">
+        <p style="color: #f8fafc; font-size: 1.05rem; font-weight: 800; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.2; text-align: left;">{titulo}{icon}</p>
         <div style='display: flex; justify-content: space-evenly; align-items: center;'>
-            <div><span style='font-size: 0.6rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;'>{lbl_d}</span><br><span style='font-size: 1.2rem; font-weight: 800; color: #f8fafc;'>{val_d}</span></div>
-            <div style='width: 1px; height: 25px; background-color: #334155;'></div>
-            <div><span style='font-size: 0.6rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;'>{lbl_i}</span><br><span style='font-size: 1.2rem; font-weight: 800; color: #f8fafc;'>{val_i}</span></div>
+            <div style='text-align: center;'><span style='font-size: 0.75rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;'>{lbl_d}</span><br><span style='font-size: 1.6rem; font-weight: 800; color: #f8fafc;'>{val_d}</span></div>
+            <div style='width: 1px; height: 30px; background-color: #334155;'></div>
+            <div style='text-align: center;'><span style='font-size: 0.75rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;'>{lbl_i}</span><br><span style='font-size: 1.6rem; font-weight: 800; color: #f8fafc;'>{val_i}</span></div>
         </div>
     </div>
     """, unsafe_allow_html=True)
