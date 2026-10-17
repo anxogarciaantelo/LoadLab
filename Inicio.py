@@ -368,7 +368,7 @@ if st.session_state.get("equipo_seleccionado", False):
     # ==========================================
     # 🚨 TORRE DE CONTROL (DASHBOARD DIARIO)
     # ==========================================
-    st.markdown("### 🏟️ Torre de Control")
+    st.markdown("### Información Diaria")
     
     hoy_dt = date.today()
     hoy_str = str(hoy_dt)
@@ -525,7 +525,7 @@ if st.session_state.get("equipo_seleccionado", False):
     with c_carga:
         st.markdown("""
         <div style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid #ef4444; border-radius: 8px; padding: 8px; height: 100%;">
-            <p style="color: #f8fafc; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin: 0 0 8px 0;">🔥 Riesgo de Carga Acum.</p>
+            <p style="color: #f8fafc; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin: 0 0 8px 0;">🔥 Riesgo de Carga Acumulada</p>
         """, unsafe_allow_html=True)
         if alertas_carga:
             for a in alertas_carga: item_alerta(a["jug"], a["txt"], a["lvl"])
