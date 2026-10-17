@@ -191,30 +191,46 @@ with tab_temp:
                 # 1. ORDENACIÓN NUMÉRICA ABSOLUTA PARA EVITAR FALLOS DE STRING (Micro 10 antes que 2)
                 df_temporada = pd.DataFrame(kpis_temporada).sort_values("ID", ascending=True).reset_index(drop=True)
                 
-                # --- CÁLCULO DE TENDENCIAS (Último vs Anterior) ---
+                # --- CÁLCULO DE MEDIAS Y TENDENCIAS (Actual vs Media Temporada) ---
                 ultimo_m = df_temporada.iloc[-1]
-                anterior_m = df_temporada.iloc[-2] if len(df_temporada) > 1 else ultimo_m
+                medias_temp = df_temporada.mean(numeric_only=True)
                 
-                def calc_tendencia(col):
-                    if anterior_m[col] == 0: return {'valor': 0, 'inverso': col in ['Wellness', 'RPE']}
-                    diff = ((ultimo_m[col] - anterior_m[col]) / anterior_m[col]) * 100
-                    return {'valor': diff, 'inverso': col in ['Wellness', 'RPE']}
+                def calc_tendencia_temporada(col):
+                    media = medias_temp[col]
+                    actual = ultimo_m[col]
+                    
+                    if media == 0: 
+                        return {'valor': 0, 'inverso': col in ['Wellness', 'RPE'], 'texto': 'esta semana'}
+                    
+                    diff_pct = ((actual - media) / media) * 100
+                    
+                    if col == 'Wellness':
+                        texto = "peor esta semana" if diff_pct > 0 else "mejor esta semana"
+                        inverso = True
+                    elif col == 'TQR':
+                        texto = "mejor esta semana" if diff_pct > 0 else "peor esta semana"
+                        inverso = False
+                    else:
+                        texto = "más esta semana" if diff_pct > 0 else "menos esta semana"
+                        inverso = col in ['RPE']
+                        
+                    return {'valor': diff_pct, 'inverso': inverso, 'texto': texto}
                 
                 # --- KPIs COMPACTOS EN UNA SOLA FILA ---
-                st.markdown(f"#### 🎯 Rendimiento Actual ({ultimo_m['Microciclo']})")
+                st.markdown(f"#### 🎯 Promedios de la Temporada (Tendencia vs {ultimo_m['Microciclo']})")
                 cols_kpi = st.columns(10)
                 
                 from utils.math_helpers import render_kpi_elite
-                with cols_kpi[0]: render_kpi_elite("Wellness", f"{ultimo_m['Wellness']:.1f}", tendencia=calc_tendencia('Wellness'))
-                with cols_kpi[1]: render_kpi_elite("TQR", f"{ultimo_m['TQR']:.1f}", tendencia=calc_tendencia('TQR'))
-                with cols_kpi[2]: render_kpi_elite("RPE", f"{ultimo_m['RPE']:.1f}", tendencia=calc_tendencia('RPE'))
-                with cols_kpi[3]: render_kpi_elite("Minutos", f"{ultimo_m['Minutos']:.0f}", tendencia=calc_tendencia('Minutos'))
-                with cols_kpi[4]: render_kpi_elite("Carga", f"{ultimo_m['Carga']:.0f}", tendencia=calc_tendencia('Carga'))
-                with cols_kpi[5]: render_kpi_elite("DIS (km)", f"{ultimo_m['DIS']:.1f}", tendencia=calc_tendencia('DIS'))
-                with cols_kpi[6]: render_kpi_elite("HSR (m)", f"{ultimo_m['HSR']:.0f}", tendencia=calc_tendencia('HSR'))
-                with cols_kpi[7]: render_kpi_elite("Sprints", f"{ultimo_m['Sprints']:.1f}", tendencia=calc_tendencia('Sprints'))
-                with cols_kpi[8]: render_kpi_elite("ACC", f"{ultimo_m['ACC']:.0f}", tendencia=calc_tendencia('ACC'))
-                with cols_kpi[9]: render_kpi_elite("DCC", f"{ultimo_m['DCC']:.0f}", tendencia=calc_tendencia('DCC'))
+                with cols_kpi[0]: render_kpi_elite("Wellness", f"{medias_temp['Wellness']:.1f}", tendencia=calc_tendencia_temporada('Wellness'))
+                with cols_kpi[1]: render_kpi_elite("TQR", f"{medias_temp['TQR']:.1f}", tendencia=calc_tendencia_temporada('TQR'))
+                with cols_kpi[2]: render_kpi_elite("RPE", f"{medias_temp['RPE']:.1f}", tendencia=calc_tendencia_temporada('RPE'))
+                with cols_kpi[3]: render_kpi_elite("Minutos", f"{medias_temp['Minutos']:.0f}", tendencia=calc_tendencia_temporada('Minutos'))
+                with cols_kpi[4]: render_kpi_elite("Carga", f"{medias_temp['Carga']:.0f}", tendencia=calc_tendencia_temporada('Carga'))
+                with cols_kpi[5]: render_kpi_elite("DIS (km)", f"{medias_temp['DIS']:.1f}", tendencia=calc_tendencia_temporada('DIS'))
+                with cols_kpi[6]: render_kpi_elite("HSR (m)", f"{medias_temp['HSR']:.0f}", tendencia=calc_tendencia_temporada('HSR'))
+                with cols_kpi[7]: render_kpi_elite("Sprints", f"{medias_temp['Sprints']:.1f}", tendencia=calc_tendencia_temporada('Sprints'))
+                with cols_kpi[8]: render_kpi_elite("ACC", f"{medias_temp['ACC']:.0f}", tendencia=calc_tendencia_temporada('ACC'))
+                with cols_kpi[9]: render_kpi_elite("DCC", f"{medias_temp['DCC']:.0f}", tendencia=calc_tendencia_temporada('DCC'))
                 
                 st.markdown("---")
                 
