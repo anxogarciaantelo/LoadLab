@@ -100,26 +100,16 @@ def cargar_datos_equipo(equipo_id):
 def guardar_datos(modulo="todo"):
     if "equipo_id" not in st.session_state: return
     eq_id = st.session_state.equipo_id
-    
-    # --- NUEVA FUNCIÓN DE SEGURIDAD (ANTI PÉRDIDA DE DATOS) ---
+
     def safe_sync(tabla, datos_nuevos):
-        # 1. Hacemos backup rápido de lo que hay en la BD ahora mismo
-        backup = supabase.table(tabla).select("*").eq("equipo_id", eq_id).execute().data
+        if not datos_nuevos: 
+            return
         try:
-            # 2. Borramos
-            supabase.table(tabla).delete().eq("equipo_id", eq_id).execute()
-            # 3. Insertamos en bloques de 100 para evitar que el payload sea muy grande y pete
-            if datos_nuevos:
-                for i in range(0, len(datos_nuevos), 100):
-                    supabase.table(tabla).insert(datos_nuevos[i:i+100]).execute()
+            for i in range(0, len(datos_nuevos), 100):
+                supabase.table(tabla).upsert(datos_nuevos[i:i+100]).execute()
         except Exception as e:
-            # 4. Si ALGO falla (internet, límite, formato...), restauramos el backup inmediatamente
-            print(f"Error crítico en {tabla}: {e}. Restaurando backup...")
-            if backup:
-                # Partimos el backup también en bloques por seguridad
-                for i in range(0, len(backup), 100):
-                    supabase.table(tabla).insert(backup[i:i+100]).execute()
-            raise e # Relanzamos el error para que Streamlit muestre el aviso rojo al usuario
+            print(f"Error crítico en upsert de {tabla}: {e}")
+            raise e
     # -----------------------------------------------------------
 
     try:
