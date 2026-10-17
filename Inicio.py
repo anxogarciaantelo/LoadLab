@@ -510,8 +510,21 @@ if st.session_state.get("equipo_seleccionado", False):
         if not alertas:
             return f"<div style='color: #10b981; font-weight: 800; font-size: 0.8rem; padding: 10px; text-align: center; margin-top: 20px;'>✅ En parámetros</div>"
         
-        html = "<div style='display: grid; grid-template-columns: 1fr 1fr; gap: 6px;'>"
-        for a in alertas:
+        # 1. Ordenar alertas por prioridad: Rojo primero, Amarillo después, Verde último
+        orden_niveles = {"rojo": 0, "amarillo": 1, "verde": 2}
+        alertas_ordenadas = sorted(alertas, key=lambda x: orden_niveles.get(x.get("lvl", nivel_predeterminado), 3))
+        
+        # 2. Contenedor con Scroll interno (max-height) y CSS para barra de scroll invisible/elegante
+        html = """
+        <style>
+        .alerta-scroll::-webkit-scrollbar { width: 4px; }
+        .alerta-scroll::-webkit-scrollbar-track { background: transparent; }
+        .alerta-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        </style>
+        <div class="alerta-scroll" style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; max-height: 180px; overflow-y: auto; padding-right: 4px;">
+        """
+        
+        for a in alertas_ordenadas:
             nivel = a.get("lvl", nivel_predeterminado)
             color = "#ef4444" if nivel == "rojo" else ("#f59e0b" if nivel == "amarillo" else "#10b981")
             bg = "rgba(239, 68, 68, 0.1)" if nivel == "rojo" else ("rgba(245, 158, 11, 0.1)" if nivel == "amarillo" else "rgba(16, 185, 129, 0.1)")
