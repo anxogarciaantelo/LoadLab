@@ -130,7 +130,7 @@ def calcular_monotonia_7d(_sesiones, jugador, fecha_objetivo):
     if desviacion > 0:
         return media / desviacion
     elif media > 0:
-        return 10.0
+        return 1.0
     return 0.0
 import tempfile
 
