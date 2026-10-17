@@ -95,14 +95,6 @@ def generar_radar_comparador(dict_medias, usar_C):
 
 st.subheader("📡 GPS")
 
-# --- DEPURADOR TEMPORAL DE VMAX ANÓMALAS ---
-if not df_gps.empty:
-    anomalos = df_gps[df_gps['VMAX'] > 40] # Cualquier velocidad superior a 40 km/h es físicamente imposible
-    if not anomalos.empty:
-        st.error("🚨 ¡ATENCIÓN! Se han encontrado registros de velocidad máxima absurdos (>40 km/h) en el sistema:")
-        for _, row in anomalos.iterrows():
-            st.warning(f"• Jugador: **{row['JUGADOR']}** | VMAX registrada: **{row['VMAX']} km/h** | Sesión / Fecha: **{row['Nombre_Sesion']}**")
-
 lista_micro_map = []
 for s in st.session_state.sesiones:
     if s.get("informe_generado"):
@@ -144,6 +136,14 @@ if "df_master_informes" in st.session_state and not st.session_state.df_master_i
     df_gps = df_gps.rename(columns={"TIPO_SESION": "TIPO"})
 else:
     df_gps = pd.DataFrame()
+
+# --- DEPURADOR TEMPORAL DE VMAX ANÓMALAS ---
+if not df_gps.empty:
+    anomalos = df_gps[df_gps['VMAX'] > 40] # Cualquier velocidad superior a 40 km/h es físicamente imposible
+    if not anomalos.empty:
+        st.error("🚨 ¡ATENCIÓN! Se han encontrado registros de velocidad máxima absurdos (>40 km/h) en el sistema:")
+        for _, row in anomalos.iterrows():
+            st.warning(f"• Jugador: **{row['JUGADOR']}** | VMAX registrada: **{row['VMAX']} km/h** | Sesión / Fecha: **{row['Nombre_Sesion']}**")
 
 tab_gps_perf, tab_gps_comp = st.tabs(["📈 Perfil de Rendimiento", "⚖️ Comparador"])
 
