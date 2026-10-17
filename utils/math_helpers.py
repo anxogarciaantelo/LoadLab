@@ -96,11 +96,11 @@ def calcular_ewma_historico(_sesiones, fecha_objetivo):
     return res
 
 def color_ratio_ac(valor):
-    if valor >= 1.4: return '#ff4b4b' 
-    if valor >= 1.05: return '#28a745' 
-    if valor >= 0.9: return '#8fd19e' 
-    if valor >= 0.7: return '#ffc107' 
-    return '#17a2b8' 
+    if valor >= 1.5: return '#ef4444'
+    if valor >= 1.31: return '#f59e0b'
+    if valor >= 0.8: return '#10b981'
+    if valor > 0: return '#3b82f6'
+    return '#64748b'
 
 def categorizar_duracion(dias):
     if pd.isna(dias) or dias is None or dias == "": return "Activa"
