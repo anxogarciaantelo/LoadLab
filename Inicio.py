@@ -468,6 +468,9 @@ if st.session_state.get("equipo_seleccionado", False):
             if 0 <= (hoy_dt - fecha_alta).days <= 7:
                 readaptacion.append({"jug": l["jugador"], "txt": "Alta reciente (RTP)"})
 
+    df_master = st.session_state.get("df_master_informes", pd.DataFrame())
+    dict_zscore = calcular_zscore_wellness(df_master, hoy_str)
+    
     sesiones_con_datos = [s for s in st.session_state.sesiones if s.get("informe_generado") and s["fecha"] <= hoy_str]
     if sesiones_con_datos:
         ult_sesion = sorted(sesiones_con_datos, key=lambda x: x["fecha"])[-1]
@@ -476,10 +479,22 @@ if st.session_state.get("equipo_seleccionado", False):
             if jug in [b["jug"] for b in bajas_medicas]: continue
             tqr = safe_float(d.get("TQR", 0))
             well = safe_float(d.get("WELLNESS", 0))
+            
             if 0 < tqr <= 3: alertas_readiness.append({"jug": jug, "txt": f"TQR {tqr:.0f}", "lvl": "rojo"})
             elif tqr == 4: alertas_readiness.append({"jug": jug, "txt": f"TQR {tqr:.0f}", "lvl": "amarillo"})
-            if well >= 24: alertas_readiness.append({"jug": jug, "txt": f"Fatiga {well:.0f}", "lvl": "rojo"})
-            elif 18 <= well < 24: alertas_readiness.append({"jug": jug, "txt": f"Fatiga {well:.0f}", "lvl": "amarillo"})
+            
+            if well > 0:
+                st_j = dict_zscore.get(jug, {'media': 0, 'std': 1.0})
+                if st_j['media'] > 0:
+                    z_score = (well - st_j['media']) / st_j['std']
+                    if z_score >= 1.5: 
+                        alertas_readiness.append({"jug": jug, "txt": f"Fatiga Anormal (Z: +{z_score:.1f})", "lvl": "rojo"})
+                    elif 1.0 <= z_score < 1.5: 
+                        alertas_readiness.append({"jug": jug, "txt": f"Alerta Fatiga (Z: +{z_score:.1f})", "lvl": "amarillo"})
+                else:
+                    # Fallback de seguridad para jugadores sin histórico previo
+                    if well >= 24: alertas_readiness.append({"jug": jug, "txt": f"Fatiga {well:.0f}", "lvl": "rojo"})
+                    elif 18 <= well < 24: alertas_readiness.append({"jug": jug, "txt": f"Fatiga {well:.0f}", "lvl": "amarillo"})
 
     ewma_hoy = calcular_ewma_historico(st.session_state.sesiones, hoy_str)
     df_master = st.session_state.get("df_master_informes", pd.DataFrame())
