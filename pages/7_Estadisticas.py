@@ -167,12 +167,14 @@ with tab_equipo:
                 nuevo_comp_id = st.text_input("ID de Competición de Liga (LaPreferente):", value=comp_id_default)
                 if nuevo_comp_id != comp_id_default:
                     st.session_state["lapreferente_comp_id"] = nuevo_comp_id
+                    guardar_datos(modulo="configuracion")
                     st.success("✅ ID de Liga actualizado correctamente.")
             elif filtro_competicion_eq == "Copa":
                 copa_id_default = st.session_state.get("lapreferente_copa_id", "")
                 nuevo_copa_id = st.text_input("ID de Competición de Copa (LaPreferente):", value=copa_id_default)
                 if nuevo_copa_id != copa_id_default:
                     st.session_state["lapreferente_copa_id"] = nuevo_copa_id
+                    guardar_datos(modulo="configuracion")
                     st.success("✅ ID de Copa actualizado correctamente.")
 
 # ==========================================
@@ -484,6 +486,7 @@ with tab_rivales:
             
             if st.button(f"🗑️ Eliminar a {rival_elegido} de la lista"):
                 del st.session_state["rivales_guardados"][rival_elegido]
+                guardar_datos(modulo="configuracion")
                 st.success(f"Equipo {rival_elegido} eliminado.")
                 st.rerun()
 
