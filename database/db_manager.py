@@ -324,6 +324,20 @@ def reconstruir_dataframes_globales():
     if datos_completos:
         df_master = pd.DataFrame(datos_completos)
         
+        # --- PARCHE DE COMPATIBILIDAD HISTÓRICA (+60 SESIONES ANTIGUAS) ---
+        # Unifica las nomenclaturas antiguas (Excel) con las variables de cálculo EWMA
+        if 'DIS AI' not in df_master.columns: df_master['DIS AI'] = np.nan
+        if 'HID >21' in df_master.columns: df_master['DIS AI'] = df_master['DIS AI'].fillna(df_master['HID >21'])
+        
+        if 'ACC' not in df_master.columns: df_master['ACC'] = np.nan
+        if 'ACC >3' in df_master.columns: df_master['ACC'] = df_master['ACC'].fillna(df_master['ACC >3'])
+        
+        # Blindaje matemático: forzar conversión a números para evitar que un string ("") rompa el EWMA
+        for c in ['CARGA', 'DIS AI', 'ACC']:
+            if c in df_master.columns:
+                df_master[c] = pd.to_numeric(df_master[c], errors='coerce').fillna(0.0)
+        # ------------------------------------------------------------------
+        
         # --- CÁLCULO VECTORIZADO DEL RATIO A/C (EWMA) ---
         df_master['FECHA_DT'] = pd.to_datetime(df_master['FECHA'])
         
