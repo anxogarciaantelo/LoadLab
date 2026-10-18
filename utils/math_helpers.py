@@ -454,18 +454,17 @@ def aplicar_color_sidebar():
                 st.rerun()
                 
 def render_estado_vacio(icono, titulo, descripcion, accion_sugerida=None):
-    """Renderiza una tarjeta moderna para pantallas sin datos (Onboarding)"""
-    html_accion = f'<p style="color: #dc2626; font-weight: 800; font-size: 0.85rem; margin-top: 20px; text-transform: uppercase; letter-spacing: 0.05em;">↳ {accion_sugerida}</p>' if accion_sugerida else ''
+    """Renderiza una tarjeta moderna Dark Mode para pantallas sin datos (Onboarding)"""
+    html_accion = f'<p style="color: #3b82f6; font-weight: 800; font-size: 0.85rem; margin-top: 20px; text-transform: uppercase; letter-spacing: 0.05em;">↳ {accion_sugerida}</p>' if accion_sugerida else ''
     
     html = f"""
-    <div style="background-color: #ffffff; border: 2px dashed #d4d4d8; border-radius: 12px; padding: 50px 20px; text-align: center; margin: 20px 0; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);">
+    <div style="background-color: #1e293b; border: 2px dashed #334155; border-radius: 12px; padding: 50px 20px; text-align: center; margin: 20px 0; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);">
         <div style="font-size: 3.5rem; margin-bottom: 15px; opacity: 0.9;">{icono}</div>
-        <h3 style="color: #1c1c1e; font-weight: 800; font-size: 1.3rem; margin-bottom: 10px; text-transform: uppercase;">{titulo}</h3>
-        <p style="color: #475569; font-size: 0.95rem; max-width: 500px; margin: 0 auto; line-height: 1.5;">{descripcion}</p>
+        <h3 style="color: #f8fafc; font-weight: 800; font-size: 1.3rem; margin-bottom: 10px; text-transform: uppercase;">{titulo}</h3>
+        <p style="color: #94a3b8; font-size: 0.95rem; max-width: 500px; margin: 0 auto; line-height: 1.5;">{descripcion}</p>
         {html_accion}
     </div>
     """
-    import streamlit as st
     st.markdown(html, unsafe_allow_html=True)
 
 def validar_columnas_excel(df, nombre_archivo, columnas_esperadas):
