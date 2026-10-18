@@ -548,3 +548,34 @@ def calcular_zscore_wellness(df_master, fecha_objetivo):
         res[jug] = {'media': media, 'std': std}
         
     return res
+def calcular_zscores_eficiencia(df_master, fecha_objetivo):
+    """
+    Calcula la media y desviación estándar de la Eficiencia Cardiovascular y Neuromuscular intra-sujeto.
+    Excluye la fecha objetivo para evitar contaminación de la línea base.
+    """
+    if df_master.empty or 'DIS' not in df_master.columns: 
+        return {}
+        
+    df_hist = df_master[df_master['FECHA'] < fecha_objetivo].copy()
+    if df_hist.empty: 
+        return {}
+        
+    df_hist['m_min'] = np.where(df_hist['MIN'] > 0, (df_hist['DIS'] * 1000) / df_hist['MIN'], 0)
+    df_hist['mec_total'] = df_hist['ACC'] + df_hist['DCC'] + df_hist['Nº SPR']
+    
+    # Eficiencia = RPE dividido por densidad externa
+    df_hist['EFI_CARDIO'] = np.where(df_hist['m_min'] > 0, df_hist['RPE'] / df_hist['m_min'], np.nan)
+    df_hist['EFI_NEURO'] = np.where(df_hist['mec_total'] > 0, df_hist['RPE'] / df_hist['mec_total'], np.nan)
+    
+    stats_c = df_hist.groupby('JUGADOR')['EFI_CARDIO'].agg(['mean', 'std']).fillna({'mean': 0, 'std': 0.05})
+    stats_n = df_hist.groupby('JUGADOR')['EFI_NEURO'].agg(['mean', 'std']).fillna({'mean': 0, 'std': 0.05})
+    
+    res = {}
+    for jug in df_hist['JUGADOR'].unique():
+        res[jug] = {
+            'cardio_mean': stats_c.loc[jug, 'mean'] if jug in stats_c.index else 0,
+            'cardio_std': stats_c.loc[jug, 'std'] if jug in stats_c.index and stats_c.loc[jug, 'std'] > 0 else 0.05,
+            'neuro_mean': stats_n.loc[jug, 'mean'] if jug in stats_n.index else 0,
+            'neuro_std': stats_n.loc[jug, 'std'] if jug in stats_n.index and stats_n.loc[jug, 'std'] > 0 else 0.05
+        }
+    return res
