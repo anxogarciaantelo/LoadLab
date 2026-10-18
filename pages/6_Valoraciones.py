@@ -195,9 +195,9 @@ with tab_informes:
             cmj_uni_sum = safe_float(cmj_d) + safe_float(cmj_i)
             dbl = round(100 * (cmj_bi / cmj_uni_sum) - 100, 1) if cmj_uni_sum > 0 else 0
             
-            if dbl < -10: dbl_txt = "🟢 Facilitación Bilateral Óptima"
-            elif dbl < 0: dbl_txt = "🟡 Adecuado"
-            else: dbl_txt = "🔴 Déficit Bilateral"
+            if dbl < -15: dbl_txt = "🔴 Déficit Bilateral Alto (Priorizar fuerza Bi)"
+            elif -15 <= dbl < 0: dbl_txt = "🟢 Índice Bilateral Óptimo"
+            else: dbl_txt = "🟡 Facilitación Bilateral""
             
             ratio_vectores = round(sh_bi / cmj_bi, 2) if cmj_bi > 0 else 0
             if ratio_vectores > 4.5: perfil_vector = "🏃 Dominancia Horizontal (Acelerador)"
@@ -208,7 +208,7 @@ with tab_informes:
             ca1, ca2, ca3, ca4 = st.columns(4)
             with ca1: tarjeta_kpi("Asimetría Vertical", f"{asi_cmj:.1f}%", badge_asi_detallado(asi_cmj, cmj_d, cmj_i).split(' ', 1)[1])
             with ca2: tarjeta_kpi("Asimetría Horizontal", f"{asi_sh:.1f}%", badge_asi_detallado(asi_sh, sh_d, sh_i).split(' ', 1)[1])
-            with ca3: tarjeta_kpi("Déficit Bilateral (BLD)", f"{dbl}%", dbl_txt, tooltip="Óptimo: < -10% | Adecuado: < 0% | Déficit: > 0%")
+            with ca3: tarjeta_kpi("Déficit Bilateral (BLD)", f"{dbl}%", dbl_txt, tooltip="Óptimo: -15% a 0% | Déficit Alto: < -15% | Facilitación (Falta fuerza Uni): > 0%")
             with ca4: tarjeta_kpi("Ratio Vectores (H/V)", str(ratio_vectores), perfil_vector, tooltip="Dom. Vertical: < 3.5 | Equilibrado: 3.5 - 4.5 | Dom. Horizontal: > 4.5")
 
             st.markdown("---")
