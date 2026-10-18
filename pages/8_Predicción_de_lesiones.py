@@ -113,22 +113,11 @@ def construir_dataset_entrenamiento(sesiones, lesiones):
         
     df = pd.DataFrame(registros).sort_values("FECHA")
     
-    fecha_max_global = max(df["FECHA"].max(), pd.to_datetime(datetime.today().strftime("%Y-%m-%d")))
     features = []
     for jug, group in df.groupby("JUGADOR"):
         group = group.set_index("FECHA").resample('D').sum().fillna(0)
-        # Extender hasta la fecha actual para que la carga decaiga en días de inactividad recientes
-        rango_jug = pd.date_range(start=group.index.min(), end=fecha_max_global, freq='D')
-        group = group.reindex(rango_jug, fill_value=0)
-        
-        # Enmascarar días previos al primer entrenamiento real
-        primer_dia = group[group['CARGA'] > 0].first_valid_index()
-        carga_serie = group['CARGA'].copy()
-        if primer_dia:
-            carga_serie.loc[:primer_dia - pd.Timedelta(days=1)] = np.nan
-            
-        group['Carga_Aguda'] = (carga_serie.ewm(span=7, adjust=False).mean() * 7).fillna(0)
-        group['Carga_Cronica'] = (carga_serie.ewm(span=28, adjust=False).mean() * 7).fillna(0)
+        group['Carga_Aguda'] = group['CARGA'].ewm(span=7, adjust=False).mean() * 7
+        group['Carga_Cronica'] = group['CARGA'].ewm(span=28, adjust=False).mean() * 7
         group['Ratio_AC'] = np.where(group['Carga_Cronica'] > 0, group['Carga_Aguda'] / group['Carga_Cronica'], 1.0)
         group['HSR_7d'] = group['HSR'].rolling(window=7, min_periods=1).sum()
         group['Sprints_7d'] = group['SPRINTS'].rolling(window=7, min_periods=1).sum()
