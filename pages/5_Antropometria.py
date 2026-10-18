@@ -499,6 +499,16 @@ with tab_antro_jug:
             mostrar_tabla_moderna(df_historial.style.hide(axis="index"))
 
             # --- PREPARACIÓN DE DICCIONARIOS PARA EL PDF ---
+            prom_muslo_jug = (ultimo_valido['Per_Muslo_D'] + ultimo_valido['Per_Muslo_I']) / 2 if (ultimo_valido['Per_Muslo_D']>0 and ultimo_valido['Per_Muslo_I']>0) else ultimo_valido['Per_Muslo_D'] or ultimo_valido['Per_Muslo_I']
+            prom_pierna_jug = (ultimo_valido['Per_Pierna_D'] + ultimo_valido['Per_Pierna_I']) / 2 if (ultimo_valido['Per_Pierna_D']>0 and ultimo_valido['Per_Pierna_I']>0) else ultimo_valido['Per_Pierna_D'] or ultimo_valido['Per_Pierna_I']
+            prom_biceps_jug = (ultimo_valido['Per_Biceps_D'] + ultimo_valido['Per_Biceps_I']) / 2 if (ultimo_valido['Per_Biceps_D']>0 and ultimo_valido['Per_Biceps_I']>0) else ultimo_valido['Per_Biceps_D'] or ultimo_valido['Per_Biceps_I']
+            
+            def calc_asim_str_jug(d, i):
+                if d == 0 or i == 0: return "-"
+                dif = d - i
+                pct = (abs(dif) / max(d, i)) * 100
+                return f"{dif:+.1f} cm ({pct:.1f}%)"
+
             kpis_perimetros = {
                 'Pecho': f"{ultimo_valido['Per_Pecho']:.1f} cm" if ultimo_valido['Per_Pecho'] > 0 else "-",
                 'Cintura': f"{ultimo_valido['Per_Cintura']:.1f} cm" if ultimo_valido['Per_Cintura'] > 0 else "-",
