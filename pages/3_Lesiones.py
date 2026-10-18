@@ -539,17 +539,34 @@ else:
                     and s.get("tipo") == "Entrenamiento"
                 ]
                 
-                # Extraer minutos medios del equipo para CRIT_1
-                minutos_disponibles_eq = []
+                # --- Cálculo de promedios del equipo en el microciclo (Alineado con Pestaña Microciclo) ---
+                df_eq_micro = []
                 for s in sesiones_micro:
                     if not s.get("informe_generado"): continue
                     disp = {limpiar_nombre(k): v for k, v in s.get("disponibilidad", {}).items()}
                     for d in s.get("datos_informe", []):
-                        if disp.get(limpiar_nombre(d["JUGADOR"])) in ["Disponible", "Titular", "Suplente"]:
-                            minutos_disponibles_eq.append(safe_float(d.get("MIN", 0)))
+                        j_n = limpiar_nombre(d["JUGADOR"])
+                        if disp.get(j_n) in ["Disponible", "Titular", "Suplente"]:
+                            df_eq_micro.append({
+                                "FECHA": s["fecha"],
+                                "MIN": safe_float(d.get("MIN", 0))
+                            })
                             
-                avg_min_eq = np.sum(minutos_disponibles_eq) / len(set([d["JUGADOR"] for s in sesiones_micro for d in s.get("datos_informe", []) if {limpiar_nombre(k): v for k, v in s.get("disponibilidad", {}).items()}.get(limpiar_nombre(d["JUGADOR"])) in ["Disponible", "Titular", "Suplente"]])) if minutos_disponibles_eq else 1
+                if df_eq_micro:
+                    df_micro_disp = pd.DataFrame(df_eq_micro)
+                    # Sumamos las medias diarias para que coincida EXACTAMENTE con la pestaña de Microciclo
+                    avg_min_eq = df_micro_disp.groupby("FECHA")["MIN"].mean().sum()
+                else:
+                    avg_min_eq = 1
 
+                # --- EWMA del equipo (Fotografía a día de hoy) ---
+                ewma_hoy_eq = calcular_ewma_historico(st.session_state.sesiones, hoy_str)
+                ewma_a_vals = [v["EWMA AGUDA"] for k, v in ewma_hoy_eq.items() if k != limpiar_nombre(jug_rtp) and v["EWMA AGUDA"] > 0]
+                ewma_c_vals = [v["EWMA CRÓNICA"] for k, v in ewma_hoy_eq.items() if k != limpiar_nombre(jug_rtp) and v["EWMA CRÓNICA"] > 0]
+                
+                avg_ewma_a_eq = np.mean(ewma_a_vals) if ewma_a_vals else 1
+                avg_ewma_c_eq = np.mean(ewma_c_vals) if ewma_c_vals else 1
+                
                 # Extracción semanal del jugador
                 min_jug = 0
                 gps_jug_micro = {"DIS": 0, "HSR": 0, "SPR": 0, "ACC": 0, "DCC": 0}
