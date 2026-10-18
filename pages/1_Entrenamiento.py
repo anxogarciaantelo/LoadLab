@@ -939,6 +939,7 @@ with tab_ses:
                         std_carga = df_para_medias['CARGA'].std(ddof=0) if not df_para_medias.empty else 0
                         umbral_carga = media_carga + (2.0 * std_carga) if std_carga > 0 else media_carga * 1.4
 
+                        dict_zscore = calcular_zscore_wellness(st.session_state.df_master_informes, sesion["fecha"])
                         alertas_jugadores = {}
                         activos = df_informe[df_informe['ESTADO'].isin(["Disponible", "Titular", "Suplente"])]
 
@@ -951,8 +952,16 @@ with tab_ses:
                                 if tqr <= 3: alertas_jugadores[jug]['recuperacion'].append(f"🔴 Recuperación Crítica ({tqr:.1f})"); alertas_jugadores[jug]['total'] += 1
                                 elif tqr == 4: alertas_jugadores[jug]['recuperacion'].append(f"🟡 Recuperación Moderada ({tqr:.1f})"); alertas_jugadores[jug]['total'] += 1
                             if well > 0:
-                                if well >= 24: alertas_jugadores[jug]['recuperacion'].append(f"🔴 Wellness Crítico ({well:.1f})"); alertas_jugadores[jug]['total'] += 1
-                                elif 18 <= well <= 23: alertas_jugadores[jug]['recuperacion'].append(f"🟡 Wellness Moderado ({well:.1f})"); alertas_jugadores[jug]['total'] += 1
+                                st_j = dict_zscore.get(jug, {'media': 0, 'std': 1.0})
+                                if st_j['media'] > 0:
+                                    z_score = (well - st_j['media']) / st_j['std']
+                                    if z_score >= 1.5: 
+                                        alertas_jugadores[jug]['recuperacion'].append(f"🔴 Fatiga Anormal (Z-Score: +{z_score:.1f})"); alertas_jugadores[jug]['total'] += 1
+                                    elif 1.0 <= z_score < 1.5: 
+                                        alertas_jugadores[jug]['recuperacion'].append(f"🟡 Alerta Fatiga (Z-Score: +{z_score:.1f})"); alertas_jugadores[jug]['total'] += 1
+                                else:
+                                    if well >= 24: alertas_jugadores[jug]['recuperacion'].append(f"🔴 Wellness Crítico ({well:.1f})"); alertas_jugadores[jug]['total'] += 1
+                                    elif 18 <= well <= 23: alertas_jugadores[jug]['recuperacion'].append(f"🟡 Wellness Moderado ({well:.1f})"); alertas_jugadores[jug]['total'] += 1
 
                             ratio_ac, carga_aguda, carga_sesion = safe_float(row.get('RATIO A/C')), safe_float(row.get('EWMA AGUDA')), safe_float(row.get('CARGA'))
                             
@@ -1074,8 +1083,14 @@ with tab_ses:
                                 for i, factor in enumerate(list(nombres_limpios.values())):
                                     fig_well.add_trace(go.Bar(x=df_well['JUGADOR'], y=df_well[factor], name=factor, marker_color=px.colors.qualitative.Set2[i]))
                                 fig_well.update_layout(title="<b>Desglose de Wellness</b>", barmode='stack', yaxis_title="Puntos", legend_title_text="Factores", yaxis_range=[0, 35], plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', margin=dict(t=40, b=120, l=40, r=40), hovermode="x unified")
-                                fig_well.add_hline(y=18, line_dash="dot", line_color="orange", annotation_text="Moderado (18)", annotation_position="bottom right")
-                                fig_well.add_hline(y=24, line_dash="dash", line_color="red", annotation_text="Crítico (24)", annotation_position="top right")
+                                
+                                umbrales_z = []
+                                for jug_bar in df_well['JUGADOR']:
+                                    st_j = dict_zscore.get(jug_bar, {'media': 0, 'std': 1.0})
+                                    umbrales_z.append(st_j['media'] + (1.5 * st_j['std']) if st_j['media'] > 0 else 24)
+                                    
+                                fig_well.add_trace(go.Scatter(x=df_well['JUGADOR'], y=umbrales_z, mode='lines+markers', name='Límite Z-Score (+1.5)', line=dict(color='red', width=2, dash='dot'), marker=dict(symbol='diamond-open', size=8)))
+                                
                                 st.plotly_chart(fig_well, use_container_width=True, key=f"ses_w_{idx_real}")
                         with cg2:
                             if df_graficos['TQR'].sum() > 0:
