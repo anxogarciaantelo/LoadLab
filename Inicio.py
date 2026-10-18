@@ -103,7 +103,7 @@ if not st.session_state.autenticado:
         
         with tab_login:
             # Título de Marca Profesional
-            st.markdown("<h2 style='text-align: center; color: #0a0a0a; font-weight: 800; margin-bottom: 25px; font-size: 2.2rem; letter-spacing: -1px;'>LOAD<span style='color: #dc2626;'>LAB</span></h2>", unsafe_allow_html=True)
+            st.markdown("<h2 style='text-align: center; color: #f8fafc; font-weight: 800; margin-bottom: 25px; font-size: 2.2rem; letter-spacing: -1px;'>LOAD<span style='color: #dc2626;'>LAB</span></h2>", unsafe_allow_html=True)
             
             with st.form(key="login_form"):
                 email = st.text_input("Correo electrónico", key="log_email")
@@ -129,7 +129,7 @@ if not st.session_state.autenticado:
                 
                 # Aviso rediseñado al estilo Carbón
                 st.markdown("""
-                    <div style="font-size: 0.75rem; color: #475569; margin-bottom: 15px; line-height: 1.5; background-color: #f4f4f5; padding: 12px; border-radius: 6px; border-left: 3px solid #1c1c1e;">
+                    <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 15px; line-height: 1.5; background-color: #0f172a; padding: 12px; border-radius: 6px; border-left: 3px solid #3b82f6;">
                         🔒 <strong>Aviso de Privacidad (RGPD):</strong><br>
                         Al registrarte asumes la figura de <strong>Responsable del Tratamiento</strong> de los datos.<br>
                         ⚠️ <strong>Recomendación:</strong> Utiliza alias o iniciales para los deportistas a menos que cuentes con su consentimiento explícito.
