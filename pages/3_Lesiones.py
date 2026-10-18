@@ -181,8 +181,12 @@ else:
             for s in sesiones_ordenadas_crono:
                 s_dt = datetime.strptime(s["fecha"], "%Y-%m-%d")
                 if s_dt > fecha_lesion:
-                    disp_jug = s.get("disponibilidad", {}).get(les_obj["jugador"], "")
-                    if disp_jug in ["Disponible", "Titular", "Suplente"]:
+                    # Normalizamos la búsqueda ignorando posibles espacios o mayúsculas en el diccionario
+                    disp_dict_clean = {limpiar_nombre(k): v for k, v in s.get("disponibilidad", {}).items()}
+                    disp_jug = disp_dict_clean.get(limpiar_nombre(les_obj["jugador"]), "")
+                    
+                    # Añadido "Readaptación" como estado válido de alta médica
+                    if disp_jug in ["Disponible", "Readaptación", "Titular", "Suplente"]:
                         fecha_alta_sugerida = s_dt
                         dias_sugeridos = (fecha_alta_sugerida - fecha_lesion).days
                         break
@@ -293,16 +297,23 @@ else:
         st.markdown("#### 🏃‍♂️ Motor Automatizado de Return To Play (RTP)")
         st.caption("Sistema inteligente de fases. Analiza automáticamente el volumen, la tolerancia a la carga (Ratio A/C ajustado), el dolor post-sesión y la exposición a alta velocidad. Evalúa los criterios de alta competitiva cruzándolos con el historial pre-lesión del jugador.")
 
-        # 1. IDENTIFICACIÓN AUTOMÁTICA DE JUGADORES EN READAPTACIÓN
+        # 1. IDENTIFICACIÓN AUTOMÁTICA DE JUGADORES EN READAPTACIÓN (Exclusivo de Entrenamientos)
         jugadores_readaptacion = []
         if st.session_state.sesiones:
+            # Ordenamos todas las sesiones para el uso general posterior del RTP
             sesiones_ordenadas = sorted(st.session_state.sesiones, key=lambda x: x["fecha"])
-            ult_sesion = sesiones_ordenadas[-1]
-            disp_ult = {limpiar_nombre(k): v for k, v in ult_sesion.get("disponibilidad", {}).items()}
             
-            for j in st.session_state.plantilla:
-                if disp_ult.get(limpiar_nombre(j["JUGADOR"])) == "Readaptación":
-                    jugadores_readaptacion.append(j["JUGADOR"])
+            # Filtramos solo los entrenamientos para evaluar el estado médico/disponibilidad real
+            entrenamientos = [s for s in st.session_state.sesiones if s.get("tipo") == "Entrenamiento"]
+            
+            if entrenamientos:
+                entrenamientos_ordenados = sorted(entrenamientos, key=lambda x: x["fecha"])
+                ult_entreno = entrenamientos_ordenados[-1]
+                disp_ult = {limpiar_nombre(k): v for k, v in ult_entreno.get("disponibilidad", {}).items()}
+                
+                for j in st.session_state.plantilla:
+                    if disp_ult.get(limpiar_nombre(j["JUGADOR"])) == "Readaptación":
+                        jugadores_readaptacion.append(j["JUGADOR"])
 
         if not jugadores_readaptacion:
             st.success("✅ No hay ningún jugador en proceso de readaptación actualmente (basado en la disponibilidad de la última sesión registrada).")
@@ -373,9 +384,11 @@ else:
                 ewma_pre = calcular_ewma_historico(st.session_state.sesiones, fecha_pre_lesion)
                 cronica_pre_lesion = ewma_pre.get(jug_rtp, {}).get("EWMA CRÓNICA", 0)
 
-                # 4. MOTOR DE PROGRESIÓN (EVALUACIÓN DE SESIONES COMPLETADAS)
+                # 4. MOTOR DE PROGRESIÓN (EVALUACIÓN DE SESIONES DE ENTRENAMIENTO COMPLETADAS)
                 sesiones_rehab = []
                 for s in sesiones_ordenadas:
+                    if s.get("tipo") != "Entrenamiento": continue # Ignoramos partidos
+                    
                     s_dt = datetime.strptime(s["fecha"], "%Y-%m-%d").date()
                     if s_dt >= fecha_lesion_dt:
                         d_disp = {limpiar_nombre(k): v for k, v in s.get("disponibilidad", {}).items()}
@@ -489,7 +502,13 @@ else:
                 
                 hoy_str = str(date.today())
                 _, _, lunes, domingo = obtener_rango_fechas_semana(hoy_str)
-                sesiones_micro = [s for s in sesiones_ordenadas if str(lunes.date()) <= s['fecha'] <= str(domingo.date())]
+                
+                # Filtramos estrictamente por Entrenamientos para evaluar volumen, HSR y VMax sin distorsión de partidos
+                sesiones_micro = [
+                    s for s in sesiones_ordenadas 
+                    if str(lunes.date()) <= s['fecha'] <= str(domingo.date()) 
+                    and s.get("tipo") == "Entrenamiento"
+                ]
                 
                 # Extraer minutos medios del equipo para CRIT_1
                 minutos_disponibles_eq = []
