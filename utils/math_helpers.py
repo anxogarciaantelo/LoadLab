@@ -521,3 +521,26 @@ def render_kpi_elite(titulo, valor, subtitulo="", icono="", color_borde="#3b82f6
     """
     import streamlit as st
     st.markdown(html, unsafe_allow_html=True)
+def calcular_zscore_wellness(df_master, fecha_objetivo):
+    """
+    Calcula la media y desviación estándar histórica intra-sujeto para el Wellness.
+    Excluye la fecha objetivo para evitar que el valor actual contamine su propio baseline.
+    """
+    if df_master.empty or 'WELLNESS' not in df_master.columns:
+        return {}
+        
+    df_hist = df_master[df_master['FECHA'] < fecha_objetivo].copy()
+    if df_hist.empty:
+        return {}
+        
+    df_hist['WELLNESS'] = df_hist['WELLNESS'].replace(0, np.nan)
+    stats = df_hist.groupby('JUGADOR')['WELLNESS'].agg(['mean', 'std']).fillna(0)
+    
+    res = {}
+    for jug, row in stats.iterrows():
+        media = row['mean']
+        # Se establece una desviación mínima de 1.0 para evitar división por cero en varianzas nulas
+        std = row['std'] if row['std'] > 0 else 1.0 
+        res[jug] = {'media': media, 'std': std}
+        
+    return res
