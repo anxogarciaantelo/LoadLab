@@ -110,7 +110,7 @@ def categorizar_duracion(dias):
     if dias <= 28: return "Moderada (8-28d)"
     return "Grave (>28d)"
 
-def calcular_monotonia_7d(_sesiones, jugador, fecha_objetivo):
+def calcular_monotonia_7d(_sesiones, jugador, fecha_objetivo, devolver_strain=False):
     fecha_fin = datetime.strptime(fecha_objetivo, "%Y-%m-%d")
     fecha_ini = fecha_fin - timedelta(days=6)
     
@@ -124,15 +124,20 @@ def calcular_monotonia_7d(_sesiones, jugador, fecha_objetivo):
                     break
                     
     cargas = list(dic_cargas.values())
-    media = np.mean(cargas)
-    desviacion = np.std(cargas)
+    carga_7d = float(np.sum(cargas))
+    media = float(np.mean(cargas))
+    desviacion = float(np.std(cargas, ddof=1)) # Desviación estándar muestral (Foster, 1998)
     
     if desviacion > 0:
-        return media / desviacion
+        monotonia = media / desviacion
     elif media > 0:
-        return 1.0
-    return 0.0
-import tempfile
+        monotonia = 4.0 # Tope de seguridad cuando la carga es idéntica los 7 días
+    else:
+        monotonia = 0.0
+        
+    if devolver_strain:
+        return monotonia, carga_7d * monotonia
+    return monotonia
 
 def validar_estructuras_memoria():
     for p in st.session_state.get("plantilla", []):
