@@ -50,49 +50,56 @@ def obtener_rango_fechas_semana(fecha_str):
     return lunes.strftime("%d/%m"), domingo.strftime("%d/%m"), lunes, domingo
 
 def calcular_ewma_historico(_sesiones, fecha_objetivo):
-    registros = []
-    for s in _sesiones: 
-        if s.get("informe_generado") and s["fecha"] <= fecha_objetivo:
-            for d in s["datos_informe"]:
-                registros.append({"fecha": s["fecha"], "JUGADOR": d["JUGADOR"], "CARGA": float(d.get("CARGA", 0))})
-    if not registros: return {}
-    
-    df_hist = pd.DataFrame(registros)
-    df_hist['fecha'] = pd.to_datetime(df_hist['fecha'])
-    df_pivot = df_hist.pivot_table(index='fecha', columns='JUGADOR', values='CARGA', aggfunc='sum').fillna(0)
-    
-    fecha_fin = pd.to_datetime(fecha_objetivo)
-    fecha_ini = min(df_pivot.index.min(), fecha_fin)
-    rango_fechas = pd.date_range(start=fecha_ini, end=fecha_fin, freq='D')
-    df_pivot = df_pivot.reindex(rango_fechas, fill_value=0)
-    
-    for col in df_pivot.columns:
-        s_cargas = df_pivot[col]
-        primer_dia_valido = s_cargas[s_cargas > 0].first_valid_index()
-        if primer_dia_valido:
-            df_pivot.loc[:primer_dia_valido - pd.Timedelta(days=1), col] = np.nan
-
-    aguda = df_pivot.ewm(span=7, adjust=False).mean()
-    cronica = df_pivot.ewm(span=28, adjust=False).mean()
-    
-    aguda_hoy = aguda.loc[fecha_fin]
-    cronica_hoy = cronica.loc[fecha_fin]
-    
+    metricas = {'CARGA': '', 'DIS AI': ' HSR', 'ACC': ' ACC'}
     res = {}
-    for jug in df_pivot.columns:
-        a = aguda_hoy.get(jug, 0.0)
-        c = cronica_hoy.get(jug, 0.0)
+    fecha_fin = pd.to_datetime(fecha_objetivo)
+    
+    df_hist = pd.DataFrame([
+        {
+            "fecha": s["fecha"], "JUGADOR": d["JUGADOR"], 
+            "CARGA": float(d.get("CARGA", 0)), 
+            "DIS AI": float(d.get("DIS AI", d.get("HID >21", 0))), 
+            "ACC": float(d.get("ACC", d.get("ACC >3", 0)))
+        }
+        for s in _sesiones if s.get("informe_generado") and s["fecha"] <= fecha_objetivo
+        for d in s["datos_informe"]
+    ])
+    
+    if df_hist.empty: return {}
+    df_hist['fecha'] = pd.to_datetime(df_hist['fecha'])
+    
+    for jug in df_hist['JUGADOR'].unique():
+        res[jug] = {}
         
-        if pd.isna(a): a = 0.0
-        if pd.isna(c): c = 0.0
+    for col_metrica, sufijo in metricas.items():
+        df_pivot = df_hist.pivot_table(index='fecha', columns='JUGADOR', values=col_metrica, aggfunc='sum').fillna(0)
+        fecha_ini = min(df_pivot.index.min(), fecha_fin)
+        rango_fechas = pd.date_range(start=fecha_ini, end=fecha_fin, freq='D')
+        df_pivot = df_pivot.reindex(rango_fechas, fill_value=0)
         
-        # Carga Semanal Equivalente
-        a_semanal = a * 7
-        c_semanal = c * 7
+        for col in df_pivot.columns:
+            s_cargas = df_pivot[col]
+            primer_dia_valido = s_cargas[s_cargas > 0].first_valid_index()
+            if primer_dia_valido:
+                df_pivot.loc[:primer_dia_valido - pd.Timedelta(days=1), col] = np.nan
+
+        aguda = df_pivot.ewm(span=7, adjust=False).mean()
+        cronica = df_pivot.ewm(span=28, adjust=False).mean()
         
-        r = a_semanal / c_semanal if c_semanal > 0 else 1.0
-        res[jug] = {"EWMA AGUDA": round(a_semanal, 2), "EWMA CRÓNICA": round(c_semanal, 2), "RATIO A/C": round(r, 2)}
+        aguda_hoy = aguda.loc[fecha_fin]
+        cronica_hoy = cronica.loc[fecha_fin]
         
+        for jug in df_pivot.columns:
+            a = aguda_hoy.get(jug, 0.0)
+            c = cronica_hoy.get(jug, 0.0)
+            a_sem = (a if pd.notna(a) else 0.0) * 7
+            c_sem = (c if pd.notna(c) else 0.0) * 7
+            r = a_sem / c_sem if c_sem > 0 else 1.0
+            
+            res[jug][f"EWMA AGUDA{sufijo}"] = round(a_sem, 2)
+            res[jug][f"EWMA CRÓNICA{sufijo}"] = round(c_sem, 2)
+            res[jug][f"RATIO A/C{sufijo}"] = round(r, 2)
+            
     return res
 
 def color_ratio_ac(valor):
@@ -110,7 +117,7 @@ def categorizar_duracion(dias):
     if dias <= 28: return "Moderada (8-28d)"
     return "Grave (>28d)"
 
-def calcular_monotonia_7d(_sesiones, jugador, fecha_objetivo, devolver_strain=False):
+def calcular_monotonia_7d(_sesiones, jugador, fecha_objetivo, metrica="CARGA", devolver_strain=False):
     fecha_fin = datetime.strptime(fecha_objetivo, "%Y-%m-%d")
     fecha_ini = fecha_fin - timedelta(days=6)
     
@@ -120,18 +127,18 @@ def calcular_monotonia_7d(_sesiones, jugador, fecha_objetivo, devolver_strain=Fa
         if s.get("informe_generado") and s["fecha"] in dic_cargas:
             for d in s["datos_informe"]:
                 if limpiar_nombre(d["JUGADOR"]) == limpiar_nombre(jugador):
-                    dic_cargas[s["fecha"]] += safe_float(d.get("CARGA", 0))
+                    dic_cargas[s["fecha"]] += safe_float(d.get(metrica, 0))
                     break
                     
     cargas = list(dic_cargas.values())
     carga_7d = float(np.sum(cargas))
     media = float(np.mean(cargas))
-    desviacion = float(np.std(cargas, ddof=1)) # Desviación estándar muestral (Foster, 1998)
+    desviacion = float(np.std(cargas, ddof=1)) 
     
     if desviacion > 0:
         monotonia = media / desviacion
     elif media > 0:
-        monotonia = 4.0 # Tope de seguridad cuando la carga es idéntica los 7 días
+        monotonia = 4.0 
     else:
         monotonia = 0.0
         
