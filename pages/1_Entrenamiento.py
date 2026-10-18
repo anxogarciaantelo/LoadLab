@@ -943,6 +943,7 @@ with tab_ses:
                         umbral_carga = media_carga + (2.0 * std_carga) if std_carga > 0 else media_carga * 1.4
 
                         dict_zscore = calcular_zscore_wellness(st.session_state.df_master_informes, sesion["fecha"])
+                        dict_zscore_efi = calcular_zscores_eficiencia(st.session_state.df_master_informes, sesion["fecha"])
                         alertas_jugadores = {}
                         activos = df_informe[df_informe['ESTADO'].isin(["Disponible", "Titular", "Suplente"])]
 
@@ -973,20 +974,24 @@ with tab_ses:
                             carga_sesion = safe_float(row.get('CARGA', 0.0))
                             dis_sesion = safe_float(row.get('DIS', 0.0))
                             
-                            # Eficiencia Locomotora (Carga Interna requerida por Km)
-                            eficiencia = carga_sesion / dis_sesion if dis_sesion > 0 else 0
+                            min_sesion = safe_float(row.get('MIN', 0.0))
+                            m_min = (dis_sesion * 1000) / min_sesion if min_sesion > 0 else 0
+                            mec_total = safe_float(row.get('ACC', 0)) + safe_float(row.get('DCC', 0)) + safe_float(row.get('Nº SPR', 0))
                             
-                            if carga_aguda > 1000:
-                                if ratio_ac >= 1.5: alertas_jugadores[jug]['carga'].append(f"🔴 Ratio A/C Interno alto ({ratio_ac:.2f})"); alertas_jugadores[jug]['total'] += 1
-                                elif 1.35 <= ratio_ac < 1.5: alertas_jugadores[jug]['carga'].append(f"🟡 Ratio A/C Interno mod. ({ratio_ac:.2f})"); alertas_jugadores[jug]['total'] += 1
-                                
-                            if ratio_hsr >= 1.5:
-                                alertas_jugadores[jug]['carga'].append(f"🔴 Ratio A/C HSR Crítico ({ratio_hsr:.2f}) - Riesgo Isquiosural"); alertas_jugadores[jug]['total'] += 1
-                            if ratio_acc >= 1.5:
-                                alertas_jugadores[jug]['carga'].append(f"🔴 Ratio A/C ACC Crítico ({ratio_acc:.2f}) - Riesgo Articular"); alertas_jugadores[jug]['total'] += 1
+                            efi_cardio = safe_float(row.get('RPE', 0)) / m_min if m_min > 0 else 0
+                            efi_neuro = safe_float(row.get('RPE', 0)) / mec_total if mec_total > 0 else 0
                             
-                            if 0 < dis_sesion and eficiencia > 150:
-                                alertas_jugadores[jug]['carga'].append(f"🟡 Baja Eficiencia Locomotora ({eficiencia:.0f} UA/km)"); alertas_jugadores[jug]['total'] += 1
+                            st_efi = dict_zscore_efi.get(jug, {'cardio_mean': 0, 'cardio_std': 0.05, 'neuro_mean': 0, 'neuro_std': 0.05})
+                            
+                            if efi_cardio > 0 and st_efi['cardio_mean'] > 0:
+                                z_cardio = (efi_cardio - st_efi['cardio_mean']) / st_efi['cardio_std']
+                                if z_cardio >= 1.5: 
+                                    alertas_jugadores[jug]['carga'].append(f"🟡 Baja Efic. Cardio (Z: +{z_cardio:.1f}) - Posible falta adaptación aeróbica"); alertas_jugadores[jug]['total'] += 1
+                                    
+                            if efi_neuro > 0 and st_efi['neuro_mean'] > 0:
+                                z_neuro = (efi_neuro - st_efi['neuro_mean']) / st_efi['neuro_std']
+                                if z_neuro >= 1.5: 
+                                    alertas_jugadores[jug]['carga'].append(f"🟡 Baja Efic. Neuro (Z: +{z_neuro:.1f}) - Posible fatiga neuromuscular"); alertas_jugadores[jug]['total'] += 1
                                 
                             monot, strain = calcular_monotonia_7d(st.session_state.sesiones, jug, sesion['fecha'], devolver_strain=True)
                             monot_hsr, strain_hsr = calcular_monotonia_7d(st.session_state.sesiones, jug, sesion['fecha'], metrica="DIS AI", devolver_strain=True)
@@ -1051,13 +1056,16 @@ with tab_ses:
                             st.markdown(html_tarjeta_doble("#10b981", f"{tqr_m:.1f}", f"{well_m:.1f}", "TQR", "Wellness"), unsafe_allow_html=True)
                             
                         with col_i:
-                            st.markdown("<h5 style='color: #f8fafc; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; margin-top: 0;'>🔥 Carga Interna & Eficiencia</h5>", unsafe_allow_html=True)
+                            st.markdown("<h5 style='color: #f8fafc; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; margin-top: 0;'>🔥 Carga & Eficiencia (Medias)</h5>", unsafe_allow_html=True)
                             c_i1, c_i2 = st.columns(2)
+                            
+                            efi_c_media = rpe_m / ((dis_m * 1000) / min_m) if min_m > 0 and dis_m > 0 else 0
+                            efi_n_media = rpe_m / (acc_m + dcc_m + spr_m) if (acc_m + dcc_m + spr_m) > 0 else 0
+                            
                             with c_i1:
-                                st.markdown(html_tarjeta_doble("#f59e0b", f"{min_m:.0f}'", f"{rpe_m:.1f}", "Minutos", "RPE"), unsafe_allow_html=True)
+                                st.markdown(html_tarjeta_doble("#f59e0b", f"{carga_m:.0f}", f"{rpe_m:.1f}", "Carga (UA)", "RPE"), unsafe_allow_html=True)
                             with c_i2:
-                                efi_media = carga_m / dis_m if dis_m > 0 else 0
-                                st.markdown(html_tarjeta_doble("#f59e0b", f"{carga_m:.0f}", f"{efi_media:.0f}", "Carga (UA)", "Efic. (UA/km)"), unsafe_allow_html=True)
+                                st.markdown(html_tarjeta_doble("#f59e0b", f"{efi_c_media:.4f}", f"{efi_n_media:.2f}", "Efic. Cardio", "Efic. Neuro"), unsafe_allow_html=True)
                                 
                         with col_e:
                             st.markdown("<h5 style='color: #f8fafc; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; margin-top: 0;'>🏃‍♂️ Carga Externa & Densidad</h5>", unsafe_allow_html=True)
@@ -1144,16 +1152,24 @@ with tab_ses:
                                 st.plotly_chart(fig2, use_container_width=True, key=f"ses_c_{idx_real}")
                         with cg4:
                             if df_graficos['RATIO A/C'].sum() > 0:
-                                df_ac = df_graficos[df_graficos['RATIO A/C'] > 0].sort_values('RATIO A/C', ascending=False).copy()
-                                df_ac['Color_AC'] = df_ac['RATIO A/C'].apply(color_ratio_ac)
-                                fig3 = go.Figure(data=[go.Bar(x=df_ac['JUGADOR'], y=df_ac['RATIO A/C'], marker_color=df_ac['Color_AC'], text=df_ac['RATIO A/C'].round(2), textposition='auto')])
-                                fig3.update_layout(title="Riesgo de Lesión (Ratio A/C)")
-                                fig3.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
-                                fig3.add_hline(y=1.4, line_dash="dash", line_color="#ff4b4b")
+                                df_ac = df_graficos[df_graficos['RATIO A/C'] > 0].copy()
+                                fig3 = go.Figure()
+                                fig3.add_trace(go.Bar(x=df_ac['JUGADOR'], y=df_ac['RATIO A/C'], name="Interno (sRPE)", marker_color="#3b82f6"))
+                                fig3.add_trace(go.Bar(x=df_ac['JUGADOR'], y=df_ac['RATIO A/C HSR'], name="HSR (>21)", marker_color="#f59e0b"))
+                                fig3.add_trace(go.Bar(x=df_ac['JUGADOR'], y=df_ac['RATIO A/C ACC'], name="Mecánico (ACC)", marker_color="#ef4444"))
+                                
+                                fig3.add_hline(y=1.5, line_dash="dash", line_color="#ff4b4b", annotation_text="Peligro (1.5)")
+                                fig3.add_hline(y=1.3, line_dash="dot", line_color="#f59e0b")
+                                
+                                fig3.update_layout(title="Riesgo Multidimensional (ACWR)", barmode='group', plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
                                 st.plotly_chart(fig3, use_container_width=True, key=f"ses_ac_{idx_real}")
                         
-                        cols_ver_ci = ['JUGADOR', 'POS', 'ESTADO', 'MIN', 'RPE', 'CARGA', 'EWMA AGUDA', 'EWMA CRÓNICA', 'RATIO A/C']
-                        estilo_ci = (df_informe[cols_ver_ci].style.hide(axis="index").format(precision=2).background_gradient(subset=['RPE'], cmap='Reds', vmin=0, vmax=10).map(lambda x: f"background-color: {color_ratio_ac(x)}; color: black;" if isinstance(x, (int, float)) else "", subset=['RATIO A/C']))
+                        # Tabla Consolidada de Control de Riesgo (Sin variables crónicas para no saturar)
+                        cols_ver_ci = ['JUGADOR', 'POS', 'MIN', 'RPE', 'CARGA', 'RATIO A/C', 'RATIO A/C HSR', 'RATIO A/C ACC']
+                        df_tabla_riesgo = df_informe[cols_ver_ci].rename(columns={'RATIO A/C': 'A/C INT', 'RATIO A/C HSR': 'A/C HSR', 'RATIO A/C ACC': 'A/C ACC'})
+                        
+                        estilo_ci = (df_tabla_riesgo.style.hide(axis="index").format(precision=2)
+                                     .map(lambda x: f"background-color: {color_ratio_ac(x)}; color: black;" if isinstance(x, (int, float)) else "", subset=['A/C INT', 'A/C HSR', 'A/C ACC']))
                         mostrar_tabla_moderna(estilo_ci)
                         
                         st.markdown("---")
