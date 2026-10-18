@@ -126,7 +126,7 @@ with tab_antro_res:
             from utils.math_helpers import render_kpi_elite
             k1, k2, k3, k4 = st.columns(4)
             with k1: render_kpi_elite("Peso Medio", f"{kpi_peso:.1f} kg" if pd.notna(kpi_peso) else "-", color_borde="#00b4d8")
-            with k2: render_kpi_elite("% Graso (Yuhasz)", f"{kpi_grasa:.2f} %" if pd.notna(kpi_grasa) else "-", color_borde="#ff4b4b")
+            with k2: render_kpi_elite("% Graso (Faulkner)", f"{kpi_grasa:.2f} %" if pd.notna(kpi_grasa) else "-", color_borde="#ff4b4b")
             with k3: render_kpi_elite("Masa Magra", f"{kpi_magro:.1f} kg" if pd.notna(kpi_magro) else "-", color_borde="#10b981")
             with k4: render_kpi_elite("∑ Pliegues", f"{kpi_pliegues:.1f} mm" if pd.notna(kpi_pliegues) else "-", color_borde="#f59e0b")
             
@@ -205,7 +205,7 @@ with tab_antro_res:
                 fig_quad.add_hline(y=media_ffmi, line_dash="dot", line_color="gray", opacity=0.7)
 
                 fig_quad.update_layout(
-                    xaxis_title="% Grasa (Yuhasz)",
+                    xaxis_title="% Grasa (Faulkner)",
                     yaxis_title="FFMI (Índice de Masa Magra)",
                     height=550,
                     margin=dict(l=20, r=20, t=40, b=20),
@@ -546,7 +546,7 @@ with tab_antro_jug:
             
             fig_quad_j.update_layout(
                 title="Posición en el Cuadrante Élite Corporal",
-                xaxis_title="% Grasa (Yuhasz)", yaxis_title="FFMI (Índice de Masa Magra)",
+                xaxis_title="% Grasa (Faulkner)", yaxis_title="FFMI (Índice de Masa Magra)",
                 xaxis=dict(range=[min(5.0, grasa_actual-2), max(15.0, grasa_actual+2)]),
                 yaxis=dict(range=[min(17.0, ffmi_actual-1), max(24.0, ffmi_actual+1)]),
                 margin=dict(l=20, r=20, t=40, b=20),
@@ -686,7 +686,7 @@ with tab_antro_jug:
                                 fig_quad_m.add_vline(x=10.0, line_dash="dot", line_color="gray", opacity=0.7)
                                 fig_quad_m.add_hline(y=20.0, line_dash="dot", line_color="gray", opacity=0.7)
                                 fig_quad_m.update_layout(
-                                    title="Posición en el Cuadrante Élite Corporal", xaxis_title="% Grasa (Yuhasz)", yaxis_title="FFMI (Índice de Masa Magra)",
+                                    title="Posición en el Cuadrante Élite Corporal", xaxis_title="% Grasa (Faulkner)", yaxis_title="FFMI (Índice de Masa Magra)",
                                     xaxis=dict(range=[min(5.0, grasa_actual_m-2), max(15.0, grasa_actual_m+2)]),
                                     yaxis=dict(range=[min(17.0, ffmi_actual_m-1), max(24.0, ffmi_actual_m+1)]),
                                     margin=dict(l=20, r=20, t=40, b=20)
