@@ -8,6 +8,7 @@ font = "sans serif"
 
 [client]
 showErrorDetails = false
+showSidebarNavigation = false
 
 [server]
 enableCORS = false
