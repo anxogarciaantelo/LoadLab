@@ -385,13 +385,12 @@ def aplicar_color_sidebar():
     </style>
     """
     import streamlit as st
+    
+    # 1. Inyectar CSS dinámico del sidebar
     st.markdown(css_dinamico, unsafe_allow_html=True)
     
-    try:
-        with open("style.css", "r") as f:
-            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
-    except:
-        pass
+    # 2. Inyectar CSS global desde la memoria caché (Sustituye al try/except)
+    st.markdown(cargar_css_global(), unsafe_allow_html=True)
 
     if st.session_state.get("equipo_seleccionado", False):
         with st.sidebar:
