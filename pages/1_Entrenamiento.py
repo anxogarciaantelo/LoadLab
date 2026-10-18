@@ -993,10 +993,20 @@ with tab_ses:
                             
                             if monot > 2.0 and strain > 4000:
                                 alertas_jugadores[jug]['carga'].append(f"🟡 Fatiga Interna Acumulada (Strain {strain:.0f})"); alertas_jugadores[jug]['total'] += 1
+                            # ESTE ES EL FINAL DEL BLOQUE ANTERIOR:
                             if monot_hsr > 2.0 and strain_hsr > 1500:
                                 alertas_jugadores[jug]['carga'].append(f"🔴 Monotonía Mecánica HSR (Strain {strain_hsr:.0f}) - Riesgo Tendinoso"); alertas_jugadores[jug]['total'] += 1
-
+                                
+                        # --- AÑADE ESTO JUSTO AQUÍ (Alineado con el for _, row in activos.iterrows():) ---
+                        alertas_multi, alertas_rec, alertas_car = [], [], []
+                        for jug, data in alertas_jugadores.items():
+                            if data['total'] >= 2: 
+                                alertas_multi.append(f"**{jug}**: " + " | ".join(data['recuperacion'] + data['carga']))
+                            elif data['total'] == 1:
+                                if data['recuperacion']: alertas_rec.append(f"**{jug}**: {data['recuperacion'][0]}")
+                                if data['carga']: alertas_car.append(f"**{jug}**: {data['carga'][0]}")
                         # --- 3. RENDERIZADO DE KPIs GLOBALES EN UNA SOLA FILA ---
+                        tqr_m = df_para_medias['TQR'].mean() if pd.notna(df_para_medias['TQR'].mean()) else 0.0
                         tqr_m = df_para_medias['TQR'].mean() if pd.notna(df_para_medias['TQR'].mean()) else 0.0
                         well_m = df_para_medias['WELLNESS'].mean() if pd.notna(df_para_medias['WELLNESS'].mean()) else 0.0
                         rpe_m = df_para_medias['RPE'].mean() if pd.notna(df_para_medias['RPE'].mean()) else 0.0
