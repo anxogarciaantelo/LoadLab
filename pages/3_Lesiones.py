@@ -290,81 +290,337 @@ else:
                 st.info("No hay lesiones en el historial para eliminar.")
                 
     with tab_rtp:
-        st.markdown("#### 🏃‍♂️ Gestión de Return To Play (RTP)")
-        st.caption("Sistema de progresión estructurada basado en los 4 pasos, duraciones mínimas y criterios de alta competitiva.")
+        st.markdown("#### 🏃‍♂️ Motor Automatizado de Return To Play (RTP)")
+        st.caption("Sistema inteligente de fases. Analiza automáticamente el volumen, la tolerancia a la carga (Ratio A/C) y el dolor post-sesión para determinar la progresión o regresión de fase. Evalúa los criterios de alta competitiva en tiempo real.")
 
-        # Seleccionar lesión
-        lesiones_rtp = sorted(df_les.to_dict('records'), key=lambda x: x.get('id_sesion', ''), reverse=True)
-        opciones_rtp = [f"{l['id_sesion']} | {l['jugador']} - {l['tipo']} ({l['estado']})" for l in lesiones_rtp]
-        rtp_sel_idx = st.selectbox("Selecciona la lesión para evaluar su RTP:", range(len(lesiones_rtp)), format_func=lambda x: opciones_rtp[x])
-        
-        l_rtp = lesiones_rtp[rtp_sel_idx]
-        jug_rtp = l_rtp['jugador']
-        
-        # Calcular los días exactos para determinar la gravedad
-        if l_rtp['estado'] == 'Activa':
-            dias_rtp = max((date.today() - datetime.strptime(l_rtp['id_sesion'], "%Y-%m-%d").date()).days, 0)
+        # 1. IDENTIFICACIÓN AUTOMÁTICA DE JUGADORES EN READAPTACIÓN
+        jugadores_readaptacion = []
+        if st.session_state.sesiones:
+            sesiones_ordenadas = sorted(st.session_state.sesiones, key=lambda x: x["fecha"])
+            ult_sesion = sesiones_ordenadas[-1]
+            disp_ult = {limpiar_nombre(k): v for k, v in ult_sesion.get("disponibilidad", {}).items()}
+            
+            for j in st.session_state.plantilla:
+                if disp_ult.get(limpiar_nombre(j["JUGADOR"])) == "Readaptación":
+                    jugadores_readaptacion.append(j["JUGADOR"])
+
+        if not jugadores_readaptacion:
+            st.success("✅ No hay ningún jugador en proceso de readaptación actualmente (basado en la disponibilidad de la última sesión registrada).")
         else:
-            dias_rtp = int(safe_float(l_rtp.get('dias_baja', 0)))
-        
-        # 1. Determinar Gravedad y Sesiones Mínimas
-        if dias_rtp <= 4: grav_rtp = "Mínima"
-        elif dias_rtp <= 7: grav_rtp = "Leve"
-        elif dias_rtp <= 14: grav_rtp = "Moderada I"
-        elif dias_rtp <= 28: grav_rtp = "Moderada II"
-        else: grav_rtp = "Grave"
-
-        s1, s2, s3 = 0, 0, 0
-        if grav_rtp == "Leve": s3 = 1
-        elif grav_rtp == "Moderada I": s1, s2, s3 = 1, 1, 1
-        elif grav_rtp == "Moderada II": s1, s2, s3 = 2, 2, 2
-        elif grav_rtp == "Grave": s1, s2, s3 = 3, 3, 3
-
-        # Aplicar regla de penalización por tejido o recidiva
-        mod_txt = ""
-        if l_rtp.get('recidiva') == "Sí" or l_rtp.get('tipo') == "Tendinosa":
-            s1 += 1; s2 += 1; s3 += 1
-            mod_txt = "⚠️ Se ha sumado **+1 sesión obligatoria por fase** debido al protocolo de seguridad (Lesión Tendinosa o Recidiva)."
-
-        st.markdown(f"**Deportista:** {jug_rtp} | **Gravedad Base:** {grav_rtp} ({dias_rtp} días de baja)")
-        if mod_txt: st.warning(mod_txt)
-        
-        st.markdown("---")
-        st.markdown("##### 🧱 Fases de Progresión (Sesiones Mínimas Requeridas)")
-        
-        # Tarjetas de los 4 Pasos
-        c_p1, c_p2, c_p3, c_p4 = st.columns(4)
-        c_p1.info(f"**Paso 1: Analítico / Comodín**\n\nMin. Sesiones: **{s1}**\n\n*30-40% del tiempo total.*")
-        c_p2.info(f"**Paso 2: Espacios Reducidos**\n\nMin. Sesiones: **{s2}**\n\n*50-75% vol. ACC/DCC.*")
-        c_p3.info(f"**Paso 3: Espacios Amplios**\n\nMin. Sesiones: **{s3}**\n\n*80-90% HSR / Dist. Total.*")
-        c_p4.success(f"**Paso 4: Entreno Completo**\n\nMin. Sesiones: **Libre**\n\n*100% de la sesión.*")
-
-        st.markdown("---")
-        st.markdown("##### 🚨 Regla de No Progresión / Regresión")
-        st.error("Detener avance o retroceder de fase si se cumple alguna de estas banderas rojas post-entrenamiento:\n- **Dolor > 3/10 (EVA)** o inflamación visible en las 12-24 horas posteriores.\n- **Ratio A/C > 1.5** posterior a la sesión de campo.")
-
-        st.markdown("---")
-        st.markdown("##### ✅ Criterios Finales de RTP Competitivo (Checklist)")
-        
-        # Extracción inteligente de métricas actuales del jugador
-        ewma_actual = calcular_ewma_historico(st.session_state.sesiones, str(date.today()))
-        j_ewma = ewma_actual.get(jug_rtp, {"RATIO A/C": 0})
-        ratio_actual = j_ewma.get("RATIO A/C", 0)
-        
-        vals_jug = [v for v in st.session_state.get('val_rom', []) if v.get('jugador') == jug_rtp]
-        asim_cmj_txt = "Sin datos de salto registrados"
-        if vals_jug:
-            v_latest = sorted(vals_jug, key=lambda x: x.get('fecha', ''))[-1]
-            d, i = safe_float(v_latest.get('cmj_uni_d', 0)), safe_float(v_latest.get('cmj_uni_i', 0))
-            if max(d, i) > 0:
-                lsi = (min(d, i) / max(d, i)) * 100
-                asim_cmj_txt = f"{lsi:.1f}% LSI en última prueba"
+            c_sel_rtp, _ = st.columns([1, 2])
+            jug_rtp = c_sel_rtp.selectbox("Selecciona al deportista en proceso RTP:", sorted(jugadores_readaptacion))
+            
+            lesiones_jugador = [l for l in df_les.to_dict('records') if l['jugador'] == jug_rtp]
+            
+            if not lesiones_jugador:
+                st.warning(f"⚠️ {jug_rtp} está marcado como 'Readaptación', pero no tiene registros de lesiones previas en la base de datos.")
+            else:
+                l_rtp = sorted(lesiones_jugador, key=lambda x: x['id_sesion'])[-1]
+                fecha_lesion_dt = datetime.strptime(l_rtp['id_sesion'], "%Y-%m-%d").date()
                 
-        # Interfaz del Checklist
-        st.checkbox("Igualar (>100%) las demandas individuales de partido o de posición (>90%) en microciclo (Dist, HSR, ACC/DCC, Vmax).")
-        st.checkbox("Completar una semana al 100% del volumen grupal.")
-        st.checkbox(f"Mantenimiento de la simetría (LSI > 90%) en CMJ post MD-3/MD-4. *(Auto-detectado: {asim_cmj_txt})*")
-        st.checkbox("Sin dolor entre las 12 y 48 horas tras los entrenamientos.")
-        st.checkbox("Cuestionario subjetivo de RTP apto.")
-        st.checkbox(f"Igualar EWMA Aguda y Crónica de la media del equipo (>90%). *(Actual Ratio A/C: {ratio_actual:.2f})*")
-        st.checkbox("Alcanzar el 90% del 1RM en Sentadilla.")
+                # Calcular días de baja
+                if l_rtp['estado'] == 'Activa':
+                    dias_rtp = max((date.today() - fecha_lesion_dt).days, 0)
+                else:
+                    dias_rtp = int(safe_float(l_rtp.get('dias_baja', 0)))
+                
+                # 2. DETERMINAR GRAVEDAD Y FASES BASE
+                if dias_rtp <= 4: grav_rtp = "Mínima"
+                elif dias_rtp <= 7: grav_rtp = "Leve"
+                elif dias_rtp <= 14: grav_rtp = "Moderada I"
+                elif dias_rtp <= 28: grav_rtp = "Moderada II"
+                else: grav_rtp = "Grave"
+
+                s1, s2, s3 = 0, 0, 0
+                if grav_rtp == "Leve": s3 = 1
+                elif grav_rtp == "Moderada I": s1, s2, s3 = 1, 1, 1
+                elif grav_rtp == "Moderada II": s1, s2, s3 = 2, 2, 2
+                elif grav_rtp == "Grave": s1, s2, s3 = 3, 3, 3
+
+                # Penalización inicial por tejido o recidiva
+                es_tend_o_recidiva = (l_rtp.get('recidiva') == "Sí" or l_rtp.get('tipo') == "Tendinosa")
+                if es_tend_o_recidiva:
+                    s1 += 1; s2 += 1; s3 += 1
+
+                req_fases = [s1, s2, s3, 999] # Fase 4 es indefinida hasta el alta
+                
+                st.markdown(f"**Lesión Evaluada:** {l_rtp['tipo']} en {l_rtp['zona']} ({l_rtp['id_sesion']}) | **Gravedad Base:** {grav_rtp} ({dias_rtp} días)")
+                if es_tend_o_recidiva: 
+                    st.warning("⚠️ **Penalización estructural aplicada:** +1 sesión requerida por fase (Lesión tendinosa o recidiva).")
+
+                # 3. MOTOR DE PROGRESIÓN (EVALUACIÓN DE SESIONES COMPLETADAS)
+                sesiones_rehab = []
+                for s in sesiones_ordenadas:
+                    s_dt = datetime.strptime(s["fecha"], "%Y-%m-%d").date()
+                    if s_dt >= fecha_lesion_dt:
+                        d_disp = {limpiar_nombre(k): v for k, v in s.get("disponibilidad", {}).items()}
+                        if d_disp.get(limpiar_nombre(jug_rtp)) == "Readaptación":
+                            # Comprobar si realmente entrenó (MIN > 0)
+                            datos_jug = next((d for d in s.get("datos_informe", []) if limpiar_nombre(d["JUGADOR"]) == limpiar_nombre(jug_rtp)), None)
+                            if datos_jug and safe_float(datos_jug.get("MIN", 0)) > 0:
+                                sesiones_rehab.append({"fecha": s["fecha"], "datos": datos_jug})
+
+                comp_fases = [0, 0, 0, 0]
+                fase_actual = 0
+                historial_progresion = []
+
+                def get_dolor_siguiente_dia(fecha_actual, nombre_jug):
+                    f_dt = datetime.strptime(fecha_actual, "%Y-%m-%d")
+                    next_day_str = (f_dt + timedelta(days=1)).strftime("%Y-%m-%d")
+                    s_next = next((s for s in sesiones_ordenadas if s["fecha"] == next_day_str), None)
+                    if s_next and s_next.get("datos_informe"):
+                        for d in s_next["datos_informe"]:
+                            if limpiar_nombre(d["JUGADOR"]) == limpiar_nombre(nombre_jug):
+                                return safe_float(d.get("W_Dolor", 0))
+                    return 0.0
+
+                for i, ses in enumerate(sesiones_rehab):
+                    ewma_dia = calcular_ewma_historico(st.session_state.sesiones, ses["fecha"])
+                    ratio_ac = ewma_dia.get(jug_rtp, {}).get("RATIO A/C", 1.0)
+                    dolor_post = get_dolor_siguiente_dia(ses["fecha"], jug_rtp)
+                    
+                    penalizado = False
+                    motivos = []
+                    
+                    if ratio_ac > 1.5:
+                        penalizado = True
+                        motivos.append(f"Ratio A/C Alto ({ratio_ac:.2f})")
+                    if dolor_post >= 4:
+                        penalizado = True
+                        motivos.append(f"Dolor Post-Sesión ({dolor_post:.0f}/7)")
+                        
+                    if penalizado:
+                        req_fases[fase_actual] += 1
+                        
+                    comp_fases[fase_actual] += 1
+                    
+                    historial_progresion.append({
+                        "Fecha": ses["fecha"],
+                        "Fase Cursada": f"Fase {fase_actual + 1}",
+                        "Ratio A/C": f"{ratio_ac:.2f}",
+                        "Dolor D+1": f"{dolor_post:.0f}",
+                        "Estado": "🔴 Regresión (+1 Sesión req.)" if penalizado else "🟢 Superada",
+                        "Motivo Penalización": " | ".join(motivos) if penalizado else "-"
+                    })
+                    
+                    # Avanzar fase si cumple requisitos
+                    if comp_fases[fase_actual] >= req_fases[fase_actual] and fase_actual < 3:
+                        fase_actual += 1
+
+                # 4. RENDERIZADO VISUAL DE FASES
+                st.markdown("---")
+                st.markdown(f"#### 🧱 Estado de Progresión: **Fase {fase_actual + 1}**")
+                
+                c_p1, c_p2, c_p3, c_p4 = st.columns(4)
+                fases_ui = [
+                    (c_p1, "1. Analítico", "30-40% vol. tiempo"),
+                    (c_p2, "2. Espacios Reducidos", "50-75% vol. ACC/DCC"),
+                    (c_p3, "3. Espacios Amplios", "80-90% vol. DIS/HSR"),
+                    (c_p4, "4. Entreno Completo", "100% de la sesión")
+                ]
+                
+                for idx, (col, titulo, desc) in enumerate(fases_ui):
+                    req_txt = str(req_fases[idx]) if idx < 3 else "Libre"
+                    comp_txt = str(comp_fases[idx])
+                    
+                    if idx < fase_actual: 
+                        bg, border = "#064e3b", "#10b981" # Completado (Verde oscuro)
+                        estado = "✅ COMPLETADO"
+                    elif idx == fase_actual: 
+                        bg, border = "#1e293b", "#3b82f6" # En curso (Azul)
+                        estado = f"🔄 EN CURSO ({comp_txt}/{req_txt})"
+                    else: 
+                        bg, border = "#0f172a", "#334155" # Pendiente (Gris)
+                        estado = f"⏳ PENDIENTE (0/{req_txt})"
+                        
+                    col.markdown(f"""
+                    <div style="background-color: {bg}; border: 1px solid {border}; border-top: 4px solid {border}; padding: 10px; border-radius: 8px; height: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
+                        <p style="color: #f8fafc; font-size: 0.85rem; font-weight: 800; margin: 0 0 5px 0; text-transform: uppercase;">{titulo}</p>
+                        <p style="color: #94a3b8; font-size: 0.7rem; margin: 0 0 10px 0;">{desc}</p>
+                        <div style="background-color: rgba(0,0,0,0.2); padding: 4px; border-radius: 4px; text-align: center; font-size: 0.75rem; font-weight: 800; color: {border};">{estado}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                if historial_progresion:
+                    with st.expander("🔍 Ver Historial de Sesiones de Readaptación"):
+                        df_hist = pd.DataFrame(historial_progresion)
+                        mostrar_tabla_moderna(df_hist.style.hide(axis="index").map(lambda x: "color: #ef4444;" if "🔴" in str(x) else "color: #10b981;", subset=["Estado"]))
+
+                st.markdown("---")
+                
+                # 5. EVALUACIÓN AUTOMÁTICA DE CRITERIOS DE ALTA COMPETITIVA
+                st.markdown("#### ✅ Criterios de Alta Competitiva (RTP)")
+                
+                hoy_str = str(date.today())
+                _, _, lunes, domingo = obtener_rango_fechas_semana(hoy_str)
+                sesiones_micro = [s for s in sesiones_ordenadas if str(lunes.date()) <= s['fecha'] <= str(domingo.date())]
+                
+                # --- Cálculo de promedios del equipo en el microciclo ---
+                minutos_disponibles_eq = []
+                ewma_aguda_eq, ewma_cronica_eq = [], []
+                
+                for s in sesiones_micro:
+                    if not s.get("informe_generado"): continue
+                    disp = {limpiar_nombre(k): v for k, v in s.get("disponibilidad", {}).items()}
+                    ewma_dia = calcular_ewma_historico(st.session_state.sesiones, s["fecha"])
+                    
+                    for d in s.get("datos_informe", []):
+                        j_n = limpiar_nombre(d["JUGADOR"])
+                        if disp.get(j_n) in ["Disponible", "Titular", "Suplente"]:
+                            minutos_disponibles_eq.append(safe_float(d.get("MIN", 0)))
+                            if j_n in ewma_dia:
+                                ewma_aguda_eq.append(ewma_dia[j_n]["EWMA AGUDA"])
+                                ewma_cronica_eq.append(ewma_dia[j_n]["EWMA CRÓNICA"])
+                                
+                avg_min_eq = np.sum(minutos_disponibles_eq) / len(set([d["JUGADOR"] for s in sesiones_micro for d in s.get("datos_informe", []) if {limpiar_nombre(k): v for k, v in s.get("disponibilidad", {}).items()}.get(limpiar_nombre(d["JUGADOR"])) in ["Disponible", "Titular", "Suplente"]])) if minutos_disponibles_eq else 1
+                avg_ewma_a_eq = np.mean(ewma_aguda_eq) if ewma_aguda_eq else 1
+                avg_ewma_c_eq = np.mean(ewma_cronica_eq) if ewma_cronica_eq else 1
+
+                # --- Cálculo del jugador en el microciclo ---
+                min_jug = 0
+                gps_jug_micro = {"DIS": 0, "HSR": 0, "SPR": 0, "ACC": 0, "DCC": 0}
+                vmax_micro = 0
+                dolores, fatigas = [], []
+                
+                for s in sesiones_micro:
+                    if not s.get("informe_generado"): continue
+                    d_jug = next((d for d in s.get("datos_informe", []) if limpiar_nombre(d["JUGADOR"]) == limpiar_nombre(jug_rtp)), None)
+                    if d_jug:
+                        min_jug += safe_float(d_jug.get("MIN", 0))
+                        gps_jug_micro["DIS"] += safe_float(d_jug.get("DIS", 0))
+                        gps_jug_micro["HSR"] += safe_float(d_jug.get("DIS AI", d_jug.get("HID >21", 0)))
+                        gps_jug_micro["SPR"] += safe_float(d_jug.get("Nº SPR", d_jug.get("SPR >24", 0)))
+                        gps_jug_micro["ACC"] += safe_float(d_jug.get("ACC", d_jug.get("ACC >3", 0)))
+                        gps_jug_micro["DCC"] += safe_float(d_jug.get("DCC", d_jug.get("DCC >3", 0)))
+                        
+                        v = safe_float(d_jug.get("VMAX", d_jug.get("V_Max", 0)))
+                        if v > vmax_micro: vmax_micro = v
+                        
+                        dol = safe_float(d_jug.get("W_Dolor", 0))
+                        fat = safe_float(d_jug.get("W_Fatiga", 0))
+                        if dol > 0: dolores.append(dol)
+                        if fat > 0: fatigas.append(fat)
+
+                ewma_jug = calcular_ewma_historico(st.session_state.sesiones, hoy_str).get(jug_rtp, {"EWMA AGUDA": 0, "EWMA CRÓNICA": 0})
+                
+                # --- Demandas en 90min de Partido del Jugador ---
+                partidos_jug = []
+                vmax_hist = 0
+                for s in sesiones_ordenadas:
+                    if s.get("informe_generado"):
+                        d_jug = next((d for d in s.get("datos_informe", []) if limpiar_nombre(d["JUGADOR"]) == limpiar_nombre(jug_rtp)), None)
+                        if d_jug:
+                            vh = safe_float(d_jug.get("VMAX", d_jug.get("V_Max", 0)))
+                            if vh > vmax_hist: vmax_hist = vh
+                            
+                            if "Partido" in s.get("tipo", "") and safe_float(d_jug.get("MIN", 0)) > 0:
+                                m = safe_float(d_jug.get("MIN", 0))
+                                partidos_jug.append({
+                                    "DIS_pm": safe_float(d_jug.get("DIS", 0)) / m,
+                                    "HSR_pm": safe_float(d_jug.get("DIS AI", d_jug.get("HID >21", 0))) / m,
+                                    "SPR_pm": safe_float(d_jug.get("Nº SPR", d_jug.get("SPR >24", 0))) / m,
+                                    "ACC_pm": safe_float(d_jug.get("ACC", d_jug.get("ACC >3", 0))) / m,
+                                    "DCC_pm": safe_float(d_jug.get("DCC", d_jug.get("DCC >3", 0))) / m,
+                                })
+                                
+                gps_90 = {"DIS": 0, "HSR": 0, "SPR": 0, "ACC": 0, "DCC": 0}
+                if partidos_jug:
+                    df_p = pd.DataFrame(partidos_jug)
+                    gps_90 = (df_p.mean() * 90).to_dict()
+                else:
+                    # Fallback si no tiene partidos: Asumir que debe igualar un estándar genérico bajito para no bloquear el alta
+                    gps_90 = {"DIS_pm": 9, "HSR_pm": 400, "SPR_pm": 10, "ACC_pm": 20, "DCC_pm": 20}
+
+                # --- Evaluación Booleana ---
+                crit_1 = min_jug >= (avg_min_eq * 0.85)
+                
+                crit_2 = True
+                falla_demanda = []
+                for m_key in ["DIS", "HSR", "SPR", "ACC", "DCC"]:
+                    val_90 = gps_90.get(f"{m_key}_pm", 0)
+                    if gps_jug_micro[m_key] < val_90:
+                        crit_2 = False
+                        falla_demanda.append(m_key)
+                        
+                crit_3 = vmax_micro >= (vmax_hist * 0.85) if vmax_hist > 0 else False
+                
+                avg_dolor = np.mean(dolores) if dolores else 0
+                avg_fatiga = np.mean(fatigas) if fatigas else 0
+                crit_4 = (avg_dolor < 4 and avg_fatiga < 4) if (dolores and fatigas) else False
+                
+                crit_5 = (ewma_jug["EWMA AGUDA"] >= avg_ewma_a_eq * 0.9) and (ewma_jug["EWMA CRÓNICA"] >= avg_ewma_c_eq * 0.9)
+
+                # --- RENDERIZADO DE LOS CRITERIOS AUTOMÁTICOS ---
+                def render_criterio(cumple, titulo, detalle):
+                    icon = "✅" if cumple else "❌"
+                    color = "#10b981" if cumple else "#ef4444"
+                    bg = "rgba(16, 185, 129, 0.1)" if cumple else "rgba(239, 68, 68, 0.1)"
+                    st.markdown(f"""
+                    <div style="background-color: {bg}; border-left: 4px solid {color}; padding: 12px; margin-bottom: 8px; border-radius: 6px; display: flex; align-items: center;">
+                        <span style="font-size: 1.2rem; margin-right: 12px;">{icon}</span>
+                        <div>
+                            <strong style="color: #f8fafc; font-size: 0.9rem; display: block;">{titulo}</strong>
+                            <span style="color: #94a3b8; font-size: 0.8rem;">{detalle}</span>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                c_auto1, c_auto2 = st.columns(2)
+                with c_auto1:
+                    render_criterio(crit_1, "Microciclo Completo (>85% Minutos)", f"Completados {min_jug:.0f}' vs {avg_min_eq*0.85:.0f}' requeridos (Media Disp. {avg_min_eq:.0f}')")
+                    render_criterio(crit_3, "Velocidad Máxima Recuperada (>85%)", f"Alcanzados {vmax_micro:.1f} km/h vs {vmax_hist*0.85:.1f} km/h requeridos (VMax Hist: {vmax_hist:.1f})")
+                    render_criterio(crit_5, "Tolerancia a la Carga (EWMA >90% Media)", f"Aguda: {ewma_jug['EWMA AGUDA']:.0f} (Req: {avg_ewma_a_eq*0.9:.0f}) | Crónica: {ewma_jug['EWMA CRÓNICA']:.0f} (Req: {avg_ewma_c_eq*0.9:.0f})")
+                
+                with c_auto2:
+                    fallos_txt = f"Falla en: {', '.join(falla_demanda)}" if not crit_2 else "Todas las métricas superan su media."
+                    render_criterio(crit_2, "Demandas de Partido Alcanzadas", f"Volumen GPS semanal >= a 90' de partido. {fallos_txt}")
+                    render_criterio(crit_4, "Dolor y Fatiga bajo control (< 4/7)", f"Media Semanal -> Dolor: {avg_dolor:.1f} | Fatiga: {avg_fatiga:.1f}")
+
+                st.markdown("---")
+                
+                # 6. EVALUACIÓN MANUAL (TESTS ESPECÍFICOS)
+                st.markdown("#### 🧠 Criterios Médicos y Neuromusculares (Inputs)")
+                c_man1, c_man2 = st.columns(2)
+                
+                with c_man1:
+                    with st.container(border=True):
+                        st.markdown("**Cuestionario Subjetivo de RTP**")
+                        punt_cuest = st.number_input("Puntuación (sobre 60):", min_value=0, max_value=60, value=0, help="Debe ser >= 42 para el alta.")
+                        if punt_cuest >= 42:
+                            st.success(f"✅ Apto ({punt_cuest}/60)")
+                        elif punt_cuest > 0:
+                            st.error(f"❌ No Apto ({punt_cuest}/60)")
+                            
+                with c_man2:
+                    with st.container(border=True):
+                        st.markdown("**Test CMJ en Fatiga (Simetría)**")
+                        
+                        # Extraer Baseline
+                        vals_jug = [v for v in st.session_state.get('val_rom', []) if limpiar_nombre(v.get('jugador')) == limpiar_nombre(jug_rtp)]
+                        cmj_base_d, cmj_base_i = 0, 0
+                        asim_base = 0
+                        if vals_jug:
+                            v_latest = sorted(vals_jug, key=lambda x: x.get('fecha', ''))[-1]
+                            cmj_base_d = safe_float(v_latest.get('cmj_uni_d', 0))
+                            cmj_base_i = safe_float(v_latest.get('cmj_uni_i', 0))
+                            if max(cmj_base_d, cmj_base_i) > 0:
+                                asim_base = (min(cmj_base_d, cmj_base_i) / max(cmj_base_d, cmj_base_i)) * 100
+                                
+                        st.caption(f"Baseline Previo: DER {cmj_base_d:.1f}cm | IZQ {cmj_base_i:.1f}cm (LSI: {asim_base:.1f}%)")
+                        
+                        cj1, cj2 = st.columns(2)
+                        cmj_d_act = cj1.number_input("CMJ Der. Actual (cm):", min_value=0.0, step=0.5)
+                        cmj_i_act = cj2.number_input("CMJ Izq. Actual (cm):", min_value=0.0, step=0.5)
+                        
+                        if cmj_d_act > 0 and cmj_i_act > 0:
+                            lsi_act = (min(cmj_d_act, cmj_i_act) / max(cmj_d_act, cmj_i_act)) * 100
+                            pct_base_d = (cmj_d_act / cmj_base_d * 100) if cmj_base_d > 0 else 100
+                            pct_base_i = (cmj_i_act / cmj_base_i * 100) if cmj_base_i > 0 else 100
+                            
+                            crit_lsi = lsi_act >= 90
+                            crit_recup = pct_base_d >= 90 and pct_base_i >= 90
+                            
+                            if crit_lsi and crit_recup:
+                                st.success(f"✅ Apto. LSI: {lsi_act:.1f}% | Recup. Fuerza: {min(pct_base_d, pct_base_i):.1f}%")
+                            else:
+                                st.error(f"❌ Falla criterio. LSI: {lsi_act:.1f}% | Recup. Fuerza: {min(pct_base_d, pct_base_i):.1f}%")
