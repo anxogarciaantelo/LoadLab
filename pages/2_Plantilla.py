@@ -348,8 +348,7 @@ else:
                         
                         ratio_ac_ind = j_ewma['RATIO A/C']
                         carga_aguda_ind = j_ewma['EWMA AGUDA']
-                        monot_ind = calcular_monotonia_7d(st.session_state.sesiones, jugador["JUGADOR"], str(date.today()))
-                        strain_ind = carga_aguda_ind * monot_ind
+                        monot_ind, strain_ind = calcular_monotonia_7d(st.session_state.sesiones, jugador["JUGADOR"], str(date.today()), devolver_strain=True)
                         
                         alertas_carga_ind = []
                         if carga_aguda_ind > 1000:
