@@ -376,29 +376,32 @@ else:
                             j_n = limpiar_nombre(d["JUGADOR"])
                             v_actual = safe_float(d.get("VMAX", d.get("V_Max", 0)))
                             m_actual = safe_float(d.get("MIN", 0))
+                            dis_actual = safe_float(d.get("DIS", 0)) # CLAVE: Filtrar registros sin GPS
                             
                             # Datos propios del jugador lesionado
                             if j_n == limpiar_nombre(jug_rtp):
                                 if v_actual > vmax_hist: vmax_hist = v_actual
                                 
-                                if es_partido and m_actual > 0:
+                                # Solo sumamos si realmente llevó GPS en el partido (DIS > 0)
+                                if es_partido and m_actual > 0 and dis_actual > 0:
                                     partidos_jug.append({
-                                        "DIS_pm": safe_float(d.get("DIS", 0)) / m_actual,
+                                        "DIS_pm": dis_actual / m_actual,
                                         "HSR_pm": safe_float(d.get("DIS AI", d.get("HID >21", 0))) / m_actual,
                                         "SPR_pm": safe_float(d.get("Nº SPR", d.get("SPR >24", 0))) / m_actual,
                                         "ACC_pm": safe_float(d.get("ACC", d.get("ACC >3", 0))) / m_actual,
                                         "DCC_pm": safe_float(d.get("DCC", d.get("DCC >3", 0))) / m_actual,
                                     })
-                            # Datos de compañeros para posible herencia
+                            # Datos de compañeros para herencia posicional
                             else:
                                 comp_datos = next((j for j in st.session_state.plantilla if limpiar_nombre(j["JUGADOR"]) == j_n), None)
                                 pos_esp_comp = comp_datos.get("pos_1", comp_datos.get("POS", "")) if comp_datos else ""
                                 
                                 if pos_esp_comp == pos_esp_rtp:
                                     if v_actual > vmax_posicion: vmax_posicion = v_actual
-                                    if es_partido and m_actual > 0:
+                                    # Solo sumamos si el compañero realmente llevó GPS en el partido (DIS > 0)
+                                    if es_partido and m_actual > 0 and dis_actual > 0:
                                         partidos_posicion.append({
-                                            "DIS_pm": safe_float(d.get("DIS", 0)) / m_actual,
+                                            "DIS_pm": dis_actual / m_actual,
                                             "HSR_pm": safe_float(d.get("DIS AI", d.get("HID >21", 0))) / m_actual,
                                             "SPR_pm": safe_float(d.get("Nº SPR", d.get("SPR >24", 0))) / m_actual,
                                             "ACC_pm": safe_float(d.get("ACC", d.get("ACC >3", 0))) / m_actual,
