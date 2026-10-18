@@ -1341,16 +1341,17 @@ with tab_ses:
                             # Imputar GPS automático antes de guardar
                             full_records = aplicar_imputacion_gps(full_records, sesion, es_partido)
                             
-                            st.session_state.sesiones[idx_real]['datos_informe'] = full_records
+                            st.session_state.sesiones[idx_real]['datos_informe'] = full_records # (o registros_sesion en el bloque Excel)
                             st.session_state.sesiones[idx_real]['informe_generado'] = True
-                            guardar_datos(modulo="sesiones")
-                            # Delegamos el mensaje al renderizador global para que sobreviva al rerun
-                            st.session_state[f'msg_sync_{idx_real}'] = ["✅ ¡Datos manuales calculados y guardados correctamente!"]
-                            st.rerun()
                             
-                        elif del_manual:
-                            st.session_state.sesiones[idx_real]['datos_informe'] = []
-                            st.session_state.sesiones[idx_real]['informe_generado'] = False
+                            # NUEVO: Recalcular EWMA incluyendo la sesión actual recién guardada
+                            ewma_post = calcular_ewma_historico(st.session_state.sesiones, sesion["fecha"])
+                            for reg_item in st.session_state.sesiones[idx_real]['datos_informe']:
+                                d_ewma = ewma_post.get(reg_item["JUGADOR"], {})
+                                reg_item["EWMA AGUDA"] = d_ewma.get("EWMA AGUDA", reg_item["CARGA"])
+                                reg_item["EWMA CRÓNICA"] = d_ewma.get("EWMA CRÓNICA", reg_item["CARGA"])
+                                reg_item["RATIO A/C"] = d_ewma.get("RATIO A/C", 1.0)
+                                
                             guardar_datos(modulo="sesiones")
                             st.success("✅ Datos de la sesión borrados correctamente.")
                             st.rerun()
