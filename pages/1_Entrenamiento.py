@@ -85,17 +85,24 @@ with tab_cal:
         html_cal += f"<div style='color: #94a3b8; font-weight: 800; font-size: 0.8rem; text-transform: uppercase; padding-bottom: 6px; border-bottom: 2px solid #334155;'>{d}</div>"
     html_cal += "</div>"
     
+    # --- MAPA CRONOLÓGICO DE MICROCICLOS ---
+    semanas_unicas_cal = set()
+    for s in st.session_state.sesiones:
+        semanas_unicas_cal.add(obtener_numero_semana(s["fecha"]))
+    mapa_micros_cal = {n_sem: i + 1 for i, n_sem in enumerate(sorted(list(semanas_unicas_cal)))}
+    
     # --- FILAS DE SEMANAS (Tarjetas horizontales largas) ---
     for week in cal:
         dia_sem = next((d for d in week if d != 0), None)
         num_sem = obtener_numero_semana(f"{year}-{month:02d}-{dia_sem:02d}") if dia_sem else 0
+        micro_relativo = mapa_micros_cal.get(num_sem)
         
         # Tarjeta contenedora de la semana completa
         html_cal += "<div style='background-color: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 10px; margin-bottom: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); display: grid; grid-template-columns: 60px repeat(7, 1fr); gap: 8px;'>"
         
         # Etiqueta del Microciclo (Píldora azul a la izquierda)
-        if num_sem > 0:
-            html_cal += f"<div style='background-color: transparent; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.2);'><span style='font-size: 0.65rem; font-weight: 800; text-transform: uppercase; margin-bottom: 2px; opacity: 0.9;'>Micro</span><span style='font-size: 1.4rem; font-weight: 800; line-height: 1;'>{num_sem}</span></div>"
+        if micro_relativo is not None:
+            html_cal += f"<div style='background-color: transparent; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.2);'><span style='font-size: 0.65rem; font-weight: 800; text-transform: uppercase; margin-bottom: 2px; opacity: 0.9;'>Micro</span><span style='font-size: 1.4rem; font-weight: 800; line-height: 1;'>{micro_relativo}</span></div>"
         else:
             html_cal += "<div></div>"
 
