@@ -894,11 +894,14 @@ with tab_ses:
 
                     df_master_sesion = st.session_state.df_master_informes[st.session_state.df_master_informes['FECHA'] == sesion["fecha"]]
                     df_master_sesion = df_master_sesion.drop_duplicates(subset=['JUGADOR'], keep='last')
-                    dic_ewma = df_master_sesion.set_index('JUGADOR')[['EWMA AGUDA', 'EWMA CRÓNICA', 'RATIO A/C']].to_dict('index')
+                    cols_ewma = [c for c in ['EWMA AGUDA', 'EWMA CRÓNICA', 'RATIO A/C', 'RATIO A/C HSR', 'RATIO A/C ACC', 'EWMA AGUDA HSR'] if c in df_master_sesion.columns]
+                    dic_ewma = df_master_sesion.set_index('JUGADOR')[cols_ewma].to_dict('index') if not df_master_sesion.empty else {}
                     
                     df_informe['EWMA AGUDA'] = df_informe['JUGADOR'].map(lambda j: dic_ewma.get(j, {}).get('EWMA AGUDA', 0.0))
                     df_informe['EWMA CRÓNICA'] = df_informe['JUGADOR'].map(lambda j: dic_ewma.get(j, {}).get('EWMA CRÓNICA', 0.0))
-                    df_informe['RATIO A/C'] = df_informe['JUGADOR'].map(lambda j: dic_ewma.get(j, {}).get('RATIO A/C', 0.0))
+                    df_informe['RATIO A/C'] = df_informe['JUGADOR'].map(lambda j: dic_ewma.get(j, {}).get('RATIO A/C', 1.0))
+                    df_informe['RATIO A/C HSR'] = df_informe['JUGADOR'].map(lambda j: dic_ewma.get(j, {}).get('RATIO A/C HSR', 1.0))
+                    df_informe['RATIO A/C ACC'] = df_informe['JUGADOR'].map(lambda j: dic_ewma.get(j, {}).get('RATIO A/C ACC', 1.0))
 
                     col_filt1, col_filt2 = st.columns(2)
                     with col_filt1:
@@ -963,24 +966,35 @@ with tab_ses:
                                     if well >= 24: alertas_jugadores[jug]['recuperacion'].append(f"🔴 Wellness Crítico ({well:.1f})"); alertas_jugadores[jug]['total'] += 1
                                     elif 18 <= well <= 23: alertas_jugadores[jug]['recuperacion'].append(f"🟡 Wellness Moderado ({well:.1f})"); alertas_jugadores[jug]['total'] += 1
 
-                            ratio_ac, carga_aguda, carga_sesion = safe_float(row.get('RATIO A/C')), safe_float(row.get('EWMA AGUDA')), safe_float(row.get('CARGA'))
+                            ratio_ac = safe_float(row.get('RATIO A/C', 1.0))
+                            carga_aguda = safe_float(row.get('EWMA AGUDA', 0.0))
+                            ratio_hsr = safe_float(row.get('RATIO A/C HSR', 1.0))
+                            ratio_acc = safe_float(row.get('RATIO A/C ACC', 1.0))
+                            carga_sesion = safe_float(row.get('CARGA', 0.0))
+                            dis_sesion = safe_float(row.get('DIS', 0.0))
+                            
+                            # Eficiencia Locomotora (Carga Interna requerida por Km)
+                            eficiencia = carga_sesion / dis_sesion if dis_sesion > 0 else 0
                             
                             if carga_aguda > 1000:
-                                if ratio_ac >= 1.5: alertas_jugadores[jug]['carga'].append(f"🔴 Ratio A/C en riesgo alto ({ratio_ac:.2f})"); alertas_jugadores[jug]['total'] += 1
-                                elif 1.35 <= ratio_ac < 1.5: alertas_jugadores[jug]['carga'].append(f"🟡 Ratio A/C en riesgo moderado ({ratio_ac:.2f})"); alertas_jugadores[jug]['total'] += 1
-                            if media_carga > 0 and carga_sesion > umbral_carga:
-                                alertas_jugadores[jug]['carga'].append(f"🟠 Carga Anormal ({carga_sesion:.0f} UA vs Media {media_carga:.0f} UA)"); alertas_jugadores[jug]['total'] += 1
+                                if ratio_ac >= 1.5: alertas_jugadores[jug]['carga'].append(f"🔴 Ratio A/C Interno alto ({ratio_ac:.2f})"); alertas_jugadores[jug]['total'] += 1
+                                elif 1.35 <= ratio_ac < 1.5: alertas_jugadores[jug]['carga'].append(f"🟡 Ratio A/C Interno mod. ({ratio_ac:.2f})"); alertas_jugadores[jug]['total'] += 1
+                                
+                            if ratio_hsr >= 1.5:
+                                alertas_jugadores[jug]['carga'].append(f"🔴 Ratio A/C HSR Crítico ({ratio_hsr:.2f}) - Riesgo Isquiosural"); alertas_jugadores[jug]['total'] += 1
+                            if ratio_acc >= 1.5:
+                                alertas_jugadores[jug]['carga'].append(f"🔴 Ratio A/C ACC Crítico ({ratio_acc:.2f}) - Riesgo Articular"); alertas_jugadores[jug]['total'] += 1
+                            
+                            if 0 < dis_sesion and eficiencia > 150:
+                                alertas_jugadores[jug]['carga'].append(f"🟡 Baja Eficiencia Locomotora ({eficiencia:.0f} UA/km)"); alertas_jugadores[jug]['total'] += 1
                                 
                             monot, strain = calcular_monotonia_7d(st.session_state.sesiones, jug, sesion['fecha'], devolver_strain=True)
+                            monot_hsr, strain_hsr = calcular_monotonia_7d(st.session_state.sesiones, jug, sesion['fecha'], metrica="DIS AI", devolver_strain=True)
+                            
                             if monot > 2.0 and strain > 4000:
-                                alertas_jugadores[jug]['carga'].append(f"🟡 Riesgo por monotonía y fatiga (Strain {strain:.0f})"); alertas_jugadores[jug]['total'] += 1
-                                
-                        alertas_multi, alertas_rec, alertas_car = [], [], []
-                        for jug, data in alertas_jugadores.items():
-                            if data['total'] >= 2: alertas_multi.append(f"**{jug}**: " + " | ".join(data['recuperacion'] + data['carga']))
-                            elif data['total'] == 1:
-                                if data['recuperacion']: alertas_rec.append(f"**{jug}**: {data['recuperacion'][0]}")
-                                if data['carga']: alertas_car.append(f"**{jug}**: {data['carga'][0]}")
+                                alertas_jugadores[jug]['carga'].append(f"🟡 Fatiga Interna Acumulada (Strain {strain:.0f})"); alertas_jugadores[jug]['total'] += 1
+                            if monot_hsr > 2.0 and strain_hsr > 1500:
+                                alertas_jugadores[jug]['carga'].append(f"🔴 Monotonía Mecánica HSR (Strain {strain_hsr:.0f}) - Riesgo Tendinoso"); alertas_jugadores[jug]['total'] += 1
 
                         # --- 3. RENDERIZADO DE KPIs GLOBALES EN UNA SOLA FILA ---
                         tqr_m = df_para_medias['TQR'].mean() if pd.notna(df_para_medias['TQR'].mean()) else 0.0
@@ -1027,21 +1041,25 @@ with tab_ses:
                             st.markdown(html_tarjeta_doble("#10b981", f"{tqr_m:.1f}", f"{well_m:.1f}", "TQR", "Wellness"), unsafe_allow_html=True)
                             
                         with col_i:
-                            st.markdown("<h5 style='color: #f8fafc; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; margin-top: 0;'>🔥 Carga Interna</h5>", unsafe_allow_html=True)
-                            # Anidamos columnas internamente para que queden en la misma línea
+                            st.markdown("<h5 style='color: #f8fafc; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; margin-top: 0;'>🔥 Carga Interna & Eficiencia</h5>", unsafe_allow_html=True)
                             c_i1, c_i2 = st.columns(2)
                             with c_i1:
                                 st.markdown(html_tarjeta_doble("#f59e0b", f"{min_m:.0f}'", f"{rpe_m:.1f}", "Minutos", "RPE"), unsafe_allow_html=True)
                             with c_i2:
-                                st.markdown(html_tarjeta_simple("#f59e0b", f"{carga_m:.0f} UA", "Carga Interna"), unsafe_allow_html=True)
+                                efi_media = carga_m / dis_m if dis_m > 0 else 0
+                                st.markdown(html_tarjeta_doble("#f59e0b", f"{carga_m:.0f}", f"{efi_media:.0f}", "Carga (UA)", "Efic. (UA/km)"), unsafe_allow_html=True)
                                 
                         with col_e:
-                            st.markdown("<h5 style='color: #f8fafc; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; margin-top: 0;'>🏃‍♂️ Carga Externa</h5>", unsafe_allow_html=True)
+                            st.markdown("<h5 style='color: #f8fafc; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; margin-top: 0;'>🏃‍♂️ Carga Externa & Densidad</h5>", unsafe_allow_html=True)
                             c_e1, c_e2, c_e3 = st.columns(3)
+                            
+                            densidad_m = (dis_m * 1000) / min_m if min_m > 0 else 0
+                            densidad_hsr = hsr_m / min_m if min_m > 0 else 0
+                            
                             with c_e1:
-                                st.markdown(html_tarjeta_doble("#3b82f6", f"{dis_m:.2f} km", f"{hsr_m:.0f} m", "Distancia", "HSR (>21)"), unsafe_allow_html=True)
+                                st.markdown(html_tarjeta_doble("#3b82f6", f"{dis_m:.2f} km", f"{densidad_m:.0f}", "Distancia", "m/min"), unsafe_allow_html=True)
                             with c_e2:
-                                st.markdown(html_tarjeta_doble("#3b82f6", f"{spr_m:.1f}", f"{pct_vmax_m:.1f} %", "Sprints", "% V. Máx"), unsafe_allow_html=True)
+                                st.markdown(html_tarjeta_doble("#3b82f6", f"{hsr_m:.0f} m", f"{densidad_hsr:.1f}", "HSR (>21)", "HSR/min"), unsafe_allow_html=True)
                             with c_e3:
                                 st.markdown(html_tarjeta_doble("#3b82f6", f"{acc_m:.0f}", f"{dcc_m:.0f}", "ACC (>3)", "DCC (>3)"), unsafe_allow_html=True)
 
