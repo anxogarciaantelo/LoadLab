@@ -506,17 +506,27 @@ if st.session_state.get("equipo_seleccionado", False):
 
     for jug, vals in ewma_hoy.items():
         if jug in [b["jug"] for b in bajas_medicas]: continue
-        ratio = vals.get("RATIO A/C", 0)
-        aguda = vals.get("EWMA AGUDA", 0)
-        hsr_7d = hsr_dict.get(jug, 0)
         
-        if aguda > 800:
-            if ratio >= 1.5: alertas_carga.append({"jug": jug, "txt": f"A/C: {ratio:.2f}", "lvl": "rojo"})
-            elif 1.35 <= ratio < 1.5: alertas_carga.append({"jug": jug, "txt": f"A/C: {ratio:.2f}", "lvl": "amarillo"})
-            elif ratio < 0.8: alertas_carga.append({"jug": jug, "txt": f"A/C: {ratio:.2f}", "lvl": "amarillo"})
+        ratio_int = vals.get("RATIO A/C", 0)
+        aguda_int = vals.get("EWMA AGUDA", 0)
+        ratio_hsr = vals.get("RATIO A/C HSR", 0)
+        aguda_hsr = vals.get("EWMA AGUDA HSR", 0)
+        ratio_acc = vals.get("RATIO A/C ACC", 0)
+        
+        # Riesgo Interno
+        if aguda_int > 800:
+            if ratio_int >= 1.5: alertas_carga.append({"jug": jug, "txt": f"A/C Carga: {ratio_int:.2f}", "lvl": "rojo"})
+            elif 1.35 <= ratio_int < 1.5: alertas_carga.append({"jug": jug, "txt": f"A/C Carga: {ratio_int:.2f}", "lvl": "amarillo"})
+            elif ratio_int < 0.8: alertas_carga.append({"jug": jug, "txt": f"A/C Carga: {ratio_int:.2f}", "lvl": "amarillo"})
             
-        if hsr_7d > 2500:
-            alertas_carga.append({"jug": jug, "txt": f"HSR 7d: {hsr_7d:.0f}m", "lvl": "amarillo"})
+        # Riesgo Mecánico Tisular (Isquiosural)
+        if aguda_hsr > 400:
+            if ratio_hsr >= 1.5: alertas_carga.append({"jug": jug, "txt": f"A/C HSR: {ratio_hsr:.2f}", "lvl": "rojo"})
+            elif 1.35 <= ratio_hsr < 1.5: alertas_carga.append({"jug": jug, "txt": f"A/C HSR: {ratio_hsr:.2f}", "lvl": "amarillo"})
+            
+        # Riesgo Mecánico Periférico (Articular/Cadera)
+        if ratio_acc >= 1.5:
+             alertas_carga.append({"jug": jug, "txt": f"A/C ACC: {ratio_acc:.2f}", "lvl": "rojo"})
 
     def dedup_alertas(lista):
         vistos = {}
