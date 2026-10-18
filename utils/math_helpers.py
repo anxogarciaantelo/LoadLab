@@ -62,7 +62,7 @@ def calcular_ewma_historico(_sesiones, fecha_objetivo):
     df_pivot = df_hist.pivot_table(index='fecha', columns='JUGADOR', values='CARGA', aggfunc='sum').fillna(0)
     
     fecha_fin = pd.to_datetime(fecha_objetivo)
-    fecha_ini = df_pivot.index.min()
+    fecha_ini = min(df_pivot.index.min(), fecha_fin)
     rango_fechas = pd.date_range(start=fecha_ini, end=fecha_fin, freq='D')
     df_pivot = df_pivot.reindex(rango_fechas, fill_value=0)
     
