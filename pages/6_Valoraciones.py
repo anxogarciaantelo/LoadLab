@@ -197,7 +197,7 @@ with tab_informes:
             
             if dbl < -15: dbl_txt = "🔴 Déficit Bilateral Alto (Priorizar fuerza Bi)"
             elif -15 <= dbl < 0: dbl_txt = "🟢 Índice Bilateral Óptimo"
-            else: dbl_txt = "🟡 Facilitación Bilateral""
+            else: dbl_txt = "🟡 Facilitación Bilateral"
             
             ratio_vectores = round(sh_bi / cmj_bi, 2) if cmj_bi > 0 else 0
             if ratio_vectores > 4.5: perfil_vector = "🏃 Dominancia Horizontal (Acelerador)"
