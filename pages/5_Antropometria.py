@@ -539,9 +539,9 @@ with tab_antro_jug:
                 xaxis_title="% Grasa (Yuhasz)", yaxis_title="FFMI (Índice de Masa Magra)",
                 xaxis=dict(range=[min(5.0, grasa_actual-2), max(15.0, grasa_actual+2)]),
                 yaxis=dict(range=[min(17.0, ffmi_actual-1), max(24.0, ffmi_actual+1)]),
-                margin=dict(l=20, r=20, t=40, b=20)
-                paper_bgcolor="rgba(0,0,0,0)
-                plot_bgcolor="rgba(0,0,0,0)
+                margin=dict(l=20, r=20, t=40, b=20),
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)"
             )
 
             # --- DICCIONARIO DE GRÁFICOS ACTUALIZADO ---
