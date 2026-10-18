@@ -339,29 +339,26 @@ def aplicar_color_sidebar():
     """Inyecta el color dinámico, la tipografía, el CSS global, el escudo y los botones de sesión en orden estricto."""
     css_dinamico = """
     <style>
-        /* Ocultamos el menú de páginas automático de Streamlit que alteraba el orden */
-        [data-testid="stSidebarNav"] {
-            display: none !important;
-        }
+        /* 1. Ajustes del contenedor del menú lateral para tu navegación custom */
         [data-testid="stSidebar"] {
             background-color: #0f172a !important;
             border-right: 1px solid #1e293b !important;
         }
         
-        /* 1. Ajustamos la altura restando los márgenes nativos para evitar el scroll */
+        /* 2. Ajustamos la altura restando los márgenes nativos para evitar el scroll */
         [data-testid="stSidebarUserContent"] {
             height: calc(100vh - 6rem) !important;
             padding-bottom: 0 !important;
         }
         
-        /* 2. Convertimos el bloque interno invisible de Streamlit en un contenedor Flexbox */
+        /* 3. Convertimos el bloque interno invisible de Streamlit en un contenedor Flexbox */
         [data-testid="stSidebarUserContent"] > div {
             display: flex !important;
             flex-direction: column !important;
             height: 100% !important;
         }
         
-        /* 3. Magia CSS: Identificamos el espaciador y le obligamos a empujar todo hacia abajo */
+        /* 4. Magia CSS: Identificamos el espaciador y le obligamos a empujar todo hacia abajo */
         div.element-container:has(.spacer-bottom) {
             margin-top: auto !important;
         }
