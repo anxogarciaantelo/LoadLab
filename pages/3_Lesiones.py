@@ -359,25 +359,51 @@ else:
                 if es_tend_o_recidiva: 
                     st.warning("⚠️ **Penalización estructural aplicada:** +1 sesión requerida por fase (Lesión tendinosa o recidiva).")
 
-                # 3. BASELINE DEL JUGADOR (Vmax histórica y Carga Crónica Pre-Lesión)
+                # 3. BASELINE DEL JUGADOR (Vmax histórica, Carga Crónica y Demandas Posicionales)
                 partidos_jug = []
                 vmax_hist = 0
+                
+                # Variables para el fallback posicional
+                jugador_datos_rtp = next((j for j in st.session_state.plantilla if limpiar_nombre(j["JUGADOR"]) == limpiar_nombre(jug_rtp)), None)
+                pos_esp_rtp = jugador_datos_rtp.get("pos_1", jugador_datos_rtp.get("POS", "DEF")) if jugador_datos_rtp else "DEF"
+                partidos_posicion = []
+                vmax_posicion = 0
+                
                 for s in sesiones_ordenadas:
                     if s.get("informe_generado"):
-                        d_jug = next((d for d in s.get("datos_informe", []) if limpiar_nombre(d["JUGADOR"]) == limpiar_nombre(jug_rtp)), None)
-                        if d_jug:
-                            vh = safe_float(d_jug.get("VMAX", d_jug.get("V_Max", 0)))
-                            if vh > vmax_hist: vmax_hist = vh
+                        es_partido = "Partido" in s.get("tipo", "")
+                        for d in s.get("datos_informe", []):
+                            j_n = limpiar_nombre(d["JUGADOR"])
+                            v_actual = safe_float(d.get("VMAX", d.get("V_Max", 0)))
+                            m_actual = safe_float(d.get("MIN", 0))
                             
-                            if "Partido" in s.get("tipo", "") and safe_float(d_jug.get("MIN", 0)) > 0:
-                                m = safe_float(d_jug.get("MIN", 0))
-                                partidos_jug.append({
-                                    "DIS_pm": safe_float(d_jug.get("DIS", 0)) / m,
-                                    "HSR_pm": safe_float(d_jug.get("DIS AI", d_jug.get("HID >21", 0))) / m,
-                                    "SPR_pm": safe_float(d_jug.get("Nº SPR", d_jug.get("SPR >24", 0))) / m,
-                                    "ACC_pm": safe_float(d_jug.get("ACC", d_jug.get("ACC >3", 0))) / m,
-                                    "DCC_pm": safe_float(d_jug.get("DCC", d_jug.get("DCC >3", 0))) / m,
-                                })
+                            # Datos propios del jugador lesionado
+                            if j_n == limpiar_nombre(jug_rtp):
+                                if v_actual > vmax_hist: vmax_hist = v_actual
+                                
+                                if es_partido and m_actual > 0:
+                                    partidos_jug.append({
+                                        "DIS_pm": safe_float(d.get("DIS", 0)) / m_actual,
+                                        "HSR_pm": safe_float(d.get("DIS AI", d.get("HID >21", 0))) / m_actual,
+                                        "SPR_pm": safe_float(d.get("Nº SPR", d.get("SPR >24", 0))) / m_actual,
+                                        "ACC_pm": safe_float(d.get("ACC", d.get("ACC >3", 0))) / m_actual,
+                                        "DCC_pm": safe_float(d.get("DCC", d.get("DCC >3", 0))) / m_actual,
+                                    })
+                            # Datos de compañeros para posible herencia
+                            else:
+                                comp_datos = next((j for j in st.session_state.plantilla if limpiar_nombre(j["JUGADOR"]) == j_n), None)
+                                pos_esp_comp = comp_datos.get("pos_1", comp_datos.get("POS", "")) if comp_datos else ""
+                                
+                                if pos_esp_comp == pos_esp_rtp:
+                                    if v_actual > vmax_posicion: vmax_posicion = v_actual
+                                    if es_partido and m_actual > 0:
+                                        partidos_posicion.append({
+                                            "DIS_pm": safe_float(d.get("DIS", 0)) / m_actual,
+                                            "HSR_pm": safe_float(d.get("DIS AI", d.get("HID >21", 0))) / m_actual,
+                                            "SPR_pm": safe_float(d.get("Nº SPR", d.get("SPR >24", 0))) / m_actual,
+                                            "ACC_pm": safe_float(d.get("ACC", d.get("ACC >3", 0))) / m_actual,
+                                            "DCC_pm": safe_float(d.get("DCC", d.get("DCC >3", 0))) / m_actual,
+                                        })
                 
                 # Crónica Pre-Lesión
                 fecha_pre_lesion = (fecha_lesion_dt - timedelta(days=1)).strftime("%Y-%m-%d")
@@ -548,13 +574,22 @@ else:
 
                 ewma_jug = calcular_ewma_historico(st.session_state.sesiones, hoy_str).get(jug_rtp, {"EWMA AGUDA": 0, "EWMA CRÓNICA": 0})
                 
-                # Demandas en 90min de Partido del Jugador
-                gps_90 = {"DIS": 0, "HSR": 0, "SPR": 0, "ACC": 0, "DCC": 0}
+                # --- Demandas en 90min de Partido del Jugador (Con Fallback Posicional) ---
+                gps_90 = {"DIS_pm": 0, "HSR_pm": 0, "SPR_pm": 0, "ACC_pm": 0, "DCC_pm": 0}
+                usa_fallback = False
+                
                 if partidos_jug:
                     df_p = pd.DataFrame(partidos_jug)
                     gps_90 = (df_p.mean() * 90).to_dict()
+                elif partidos_posicion:
+                    df_p_pos = pd.DataFrame(partidos_posicion)
+                    gps_90 = (df_p_pos.mean() * 90).to_dict()
+                    usa_fallback = True
+                    # Si nunca ha entrenado con GPS, hereda también el pico de velocidad de su posición
+                    if vmax_hist == 0: vmax_hist = vmax_posicion 
                 else:
                     gps_90 = {"DIS_pm": 9, "HSR_pm": 400, "SPR_pm": 10, "ACC_pm": 20, "DCC_pm": 20}
+                    usa_fallback = True
 
                 # --- Evaluación Booleana ---
                 crit_1 = min_jug >= (avg_min_eq * 0.85)
@@ -603,8 +638,13 @@ else:
                     render_criterio(crit_5, "Tolerancia Crónica Individual (>90% Pre-Lesión)", f"Crónica Actual: {ewma_jug['EWMA CRÓNICA']:.0f} UA | Crónica Pre-lesión: {cronica_pre_lesion:.0f} UA")
                 
                 with c_auto2:
-                    fallos_txt = f"Falla en: {', '.join(falla_demanda)}" if not crit_2 else "Todas las métricas superan su media."
-                    render_criterio(crit_2, "Demandas de Partido Alcanzadas", f"Volumen GPS semanal >= a 90' de partido propio. {fallos_txt}")
+                    if usa_fallback:
+                        fallos_txt = f"Falla en: {', '.join(falla_demanda)}" if not crit_2 else "Métricas superan estándar."
+                        render_criterio(crit_2, "Demandas de Partido Alcanzadas", f"Volumen semanal >= 90' (Heredadas de su posición: {pos_esp_rtp}). {fallos_txt}")
+                    else:
+                        fallos_txt = f"Falla en: {', '.join(falla_demanda)}" if not crit_2 else "Todas las métricas superan su media."
+                        render_criterio(crit_2, "Demandas de Partido Alcanzadas", f"Volumen semanal >= a 90' de partido propio. {fallos_txt}")
+                        
                     render_criterio(crit_4, "Dolor y Fatiga bajo control (< 4/7)", f"Media Semanal -> Dolor: {avg_dolor:.1f} | Fatiga: {avg_fatiga:.1f}")
                     render_criterio(crit_6, f"Exposiciones Vmax (>90%) en Fase 3/4", f"Conseguidas {exposiciones_vmax} exposiciones de {req_exposiciones} requeridas.")
 
