@@ -297,17 +297,21 @@ else:
         st.markdown("#### 🏃‍♂️ Motor Automatizado de Return To Play (RTP)")
         st.caption("Sistema inteligente de fases. Analiza automáticamente el volumen, la tolerancia a la carga (Ratio A/C ajustado), el dolor post-sesión y la exposición a alta velocidad. Evalúa los criterios de alta competitiva cruzándolos con el historial pre-lesión del jugador.")
 
-        # 1. IDENTIFICACIÓN AUTOMÁTICA DE JUGADORES EN READAPTACIÓN (Exclusivo de Entrenamientos)
+        # 1. IDENTIFICACIÓN AUTOMÁTICA DE JUGADORES EN READAPTACIÓN (Exclusivo de Entrenamientos hasta HOY)
         jugadores_readaptacion = []
         if st.session_state.sesiones:
+            hoy_str_rtp = str(date.today())
             # Ordenamos todas las sesiones para el uso general posterior del RTP
             sesiones_ordenadas = sorted(st.session_state.sesiones, key=lambda x: x["fecha"])
             
-            # Filtramos solo los entrenamientos para evaluar el estado médico/disponibilidad real
-            entrenamientos = [s for s in st.session_state.sesiones if s.get("tipo") == "Entrenamiento"]
+            # Filtramos solo los entrenamientos que ya han ocurrido o son de hoy
+            entrenamientos_pasados = [
+                s for s in st.session_state.sesiones 
+                if s.get("tipo") == "Entrenamiento" and s["fecha"] <= hoy_str_rtp
+            ]
             
-            if entrenamientos:
-                entrenamientos_ordenados = sorted(entrenamientos, key=lambda x: x["fecha"])
+            if entrenamientos_pasados:
+                entrenamientos_ordenados = sorted(entrenamientos_pasados, key=lambda x: x["fecha"])
                 ult_entreno = entrenamientos_ordenados[-1]
                 disp_ult = {limpiar_nombre(k): v for k, v in ult_entreno.get("disponibilidad", {}).items()}
                 
