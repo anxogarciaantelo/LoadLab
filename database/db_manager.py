@@ -327,45 +327,47 @@ def reconstruir_dataframes_globales():
         # --- CÁLCULO VECTORIZADO DEL RATIO A/C (EWMA) ---
         df_master['FECHA_DT'] = pd.to_datetime(df_master['FECHA'])
         
-        # Crear pivote de cargas para asegurar que los días sin entreno computan como 0 (fundamental para que la media exponencial decaiga)
-        df_pivot = df_master.pivot_table(index='FECHA_DT', columns='JUGADOR', values='CARGA', aggfunc='sum').fillna(0)
+        # Mapeo de columnas objetivo y sus sufijos para el DataFrame Maestro
+        metricas_ewma = {'CARGA': '', 'DIS AI': ' HSR', 'ACC': ' ACC'}
         
-        if not df_pivot.empty:
-            rango_fechas = pd.date_range(start=df_pivot.index.min(), end=df_pivot.index.max(), freq='D')
-            df_pivot = df_pivot.reindex(rango_fechas, fill_value=0)
+        # Eliminar las columnas estáticas si vienen del JSON de Supabase para evitar conflictos de sufijos
+        columnas_dinamicas = ['EWMA AGUDA', 'EWMA CRÓNICA', 'RATIO A/C', 'EWMA AGUDA HSR', 'EWMA CRÓNICA HSR', 'RATIO A/C HSR', 'EWMA AGUDA ACC', 'EWMA CRÓNICA ACC', 'RATIO A/C ACC']
+        df_master.drop(columns=[col for col in columnas_dinamicas if col in df_master.columns], inplace=True, errors='ignore')
+        
+        for col_metrica, sufijo in metricas_ewma.items():
+            if col_metrica not in df_master.columns: continue
+                
+            df_pivot = df_master.pivot_table(index='FECHA_DT', columns='JUGADOR', values=col_metrica, aggfunc='sum').fillna(0)
             
-            # Enmascarar con np.nan los días previos al primer registro real del jugador
-            for col in df_pivot.columns:
-                s_cargas = df_pivot[col]
-                primer_dia_valido = s_cargas[s_cargas > 0].first_valid_index()
-                if primer_dia_valido:
-                    df_pivot.loc[:primer_dia_valido - pd.Timedelta(days=1), col] = np.nan
-            
-            # Multiplicamos por 7 para obtener la Carga Semanal Equivalente
-            aguda = df_pivot.ewm(span=7, adjust=False).mean() * 7
-            cronica = df_pivot.ewm(span=28, adjust=False).mean() * 7
-            ratio = aguda / cronica.replace(0, np.nan)
-            
-            # Convertir a formato largo y fusionar
-            aguda_melt = aguda.reset_index().melt(id_vars='index', var_name='JUGADOR', value_name='EWMA AGUDA')
-            cronica_melt = cronica.reset_index().melt(id_vars='index', var_name='JUGADOR', value_name='EWMA CRÓNICA')
-            ratio_melt = ratio.reset_index().melt(id_vars='index', var_name='JUGADOR', value_name='RATIO A/C')
-            
-            for df_melt in [aguda_melt, cronica_melt, ratio_melt]:
-                df_melt.rename(columns={'index': 'FECHA_DT'}, inplace=True)
-            
-            # PARCHE: Eliminar las columnas estáticas si vienen del JSON de Supabase para evitar el conflicto de sufijos (_x, _y)
-            columnas_dinamicas = ['EWMA AGUDA', 'EWMA CRÓNICA', 'RATIO A/C']
-            df_master.drop(columns=[col for col in columnas_dinamicas if col in df_master.columns], inplace=True, errors='ignore')
-            
-            df_master = df_master.merge(aguda_melt, on=['FECHA_DT', 'JUGADOR'], how='left')
-            df_master = df_master.merge(cronica_melt, on=['FECHA_DT', 'JUGADOR'], how='left')
-            df_master = df_master.merge(ratio_melt, on=['FECHA_DT', 'JUGADOR'], how='left')
-            
-            df_master['RATIO A/C'] = df_master['RATIO A/C'].fillna(1.0)
-            df_master['EWMA AGUDA'] = df_master['EWMA AGUDA'].fillna(0.0)
-            df_master['EWMA CRÓNICA'] = df_master['EWMA CRÓNICA'].fillna(0.0)
-            
+            if not df_pivot.empty:
+                rango_fechas = pd.date_range(start=df_pivot.index.min(), end=df_pivot.index.max(), freq='D')
+                df_pivot = df_pivot.reindex(rango_fechas, fill_value=0)
+                
+                for col in df_pivot.columns:
+                    s_cargas = df_pivot[col]
+                    primer_dia_valido = s_cargas[s_cargas > 0].first_valid_index()
+                    if primer_dia_valido:
+                        df_pivot.loc[:primer_dia_valido - pd.Timedelta(days=1), col] = np.nan
+                
+                aguda = df_pivot.ewm(span=7, adjust=False).mean() * 7
+                cronica = df_pivot.ewm(span=28, adjust=False).mean() * 7
+                ratio = aguda / cronica.replace(0, np.nan)
+                
+                a_melt = aguda.reset_index().melt(id_vars='index', var_name='JUGADOR', value_name=f'EWMA AGUDA{sufijo}')
+                c_melt = cronica.reset_index().melt(id_vars='index', var_name='JUGADOR', value_name=f'EWMA CRÓNICA{sufijo}')
+                r_melt = ratio.reset_index().melt(id_vars='index', var_name='JUGADOR', value_name=f'RATIO A/C{sufijo}')
+                
+                for df_melt in [a_melt, c_melt, r_melt]:
+                    df_melt.rename(columns={'index': 'FECHA_DT'}, inplace=True)
+                
+                df_master = df_master.merge(a_melt, on=['FECHA_DT', 'JUGADOR'], how='left')
+                df_master = df_master.merge(c_melt, on=['FECHA_DT', 'JUGADOR'], how='left')
+                df_master = df_master.merge(r_melt, on=['FECHA_DT', 'JUGADOR'], how='left')
+                
+                df_master[f'RATIO A/C{sufijo}'] = df_master[f'RATIO A/C{sufijo}'].fillna(1.0)
+                df_master[f'EWMA AGUDA{sufijo}'] = df_master[f'EWMA AGUDA{sufijo}'].fillna(0.0)
+                df_master[f'EWMA CRÓNICA{sufijo}'] = df_master[f'EWMA CRÓNICA{sufijo}'].fillna(0.0)
+                
         df_master.drop(columns=['FECHA_DT'], inplace=True, errors='ignore')
         st.session_state.df_master_informes = df_master
     else:
