@@ -27,6 +27,33 @@ tab_antro_res, tab_antro_jug, tab_antro_up, tab_antro_edit = st.tabs(["📊 Resu
 
 antro_data = st.session_state.get("antropometria", [])
 
+# --- HELPER VISUAL: TARJETA DOBLE DE PERÍMETROS CON ASIMETRÍA ---
+def render_kpi_perimetro_doble(titulo, val_d, val_i):
+    if pd.isna(val_d) or pd.isna(val_i) or val_d == 0 or val_i == 0:
+        d_str, i_str, asi_str = "-", "-", "-"
+        color_asi = "#64748b"
+    else:
+        d_str, i_str = f"{val_d:.1f}", f"{val_i:.1f}"
+        dif = val_d - val_i
+        pct = (abs(dif) / max(val_d, val_i)) * 100
+        asi_str = f"{dif:+.1f} cm ({pct:.1f}%)"
+        color_asi = "#ef4444" if pct > 5 else ("#f59e0b" if pct > 2 else "#10b981")
+    
+    html = f"""
+    <div style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid #8b5cf6; padding: 10px 6px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.15); display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
+        <p style="color: #f8fafc; font-size: 0.75rem; font-weight: 800; margin: 0 0 8px 0; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.1; text-align: left;">{titulo}</p>
+        <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding: 0 5px;'>
+            <div style='text-align: center;'><span style='font-size: 0.65rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;'>Der</span><br><span style='font-size: 1.15rem; font-weight: 800; color: #f8fafc;'>{d_str}</span></div>
+            <div style='width: 1px; height: 20px; background-color: #334155;'></div>
+            <div style='text-align: center;'><span style='font-size: 0.65rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;'>Izq</span><br><span style='font-size: 1.15rem; font-weight: 800; color: #f8fafc;'>{i_str}</span></div>
+        </div>
+        <div style='border-top: 1px solid #334155; padding-top: 4px; text-align: center;'>
+            <span style='font-size: 0.6rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;'>Asimetría: </span>
+            <span style='font-size: 0.7rem; color: {color_asi}; font-weight: 800;'>{asi_str}</span>
+        </div>
+    </div>
+    """
+    st.markdown(html, unsafe_allow_html=True)
 with tab_antro_res:
     if not antro_data:
         st.info("Aún no hay datos antropométricos registrados. Sube tu Excel en la pestaña 'Cargar Datos'.")
@@ -44,40 +71,40 @@ with tab_antro_res:
         dict_pos = {j['JUGADOR']: j['POS'] for j in st.session_state.plantilla}
         df_antro['POS'] = df_antro['jugador'].map(lambda x: dict_pos.get(x, "N/A"))
 
-        st.markdown("#### 🔍 Filtros Antropométricos")
-        ca1, ca2, ca3, ca4 = st.columns(4)
-        
-        jugs_unicos = ["TODOS"] + sorted(df_antro['jugador'].unique())
-        filtro_jug = ca1.selectbox("Jugador:", jugs_unicos, key="ant_jug")
-        
-        filtro_pos = ca2.selectbox("Posición:", ["TODOS", "POR", "DEF", "MED", "ATA"], key="ant_pos")
-        
-        meses_unicos = ["TODOS Anual"] + list(df_antro['Mes'].dropna().unique())
-        filtro_mes = ca3.selectbox("Mes:", meses_unicos, key="ant_mes")
-        
-        df_filt = df_antro.copy()
-        if filtro_jug != "TODOS": df_filt = df_filt[df_filt['jugador'] == filtro_jug]
-        if filtro_pos != "TODOS": df_filt = df_filt[df_filt['POS'] == filtro_pos]
-        
-        if filtro_mes != "TODOS Anual": 
-            df_filt = df_filt[df_filt['Mes'] == filtro_mes]
-            fechas_mes = sorted(df_filt['fecha'].dropna().unique())
-            if fechas_mes:
-                opciones_fecha = ["Promedio"]
-                for i, f in enumerate(fechas_mes):
-                    opciones_fecha.append(f"Medición {i+1} ({f})")
-                
-                filtro_fecha = ca4.selectbox("Medición exacta:", opciones_fecha, key="ant_fecha")
-                
-                if filtro_fecha != "Promedio":
-                    # Extraer la fecha del string "Medición X (YYYY-MM-DD)"
-                    fecha_seleccionada = filtro_fecha.split("(")[1].replace(")", "")
-                    df_filt = df_filt[df_filt['fecha'] == fecha_seleccionada]
+        with st.expander("🔍 Filtros Antropométricos", expanded=False):
+            ca1, ca2, ca3, ca4 = st.columns(4)
+            
+            jugs_unicos = ["TODOS"] + sorted(df_antro['jugador'].unique())
+            filtro_jug = ca1.selectbox("Jugador:", jugs_unicos, key="ant_jug")
+            
+            filtro_pos = ca2.selectbox("Posición:", ["TODOS", "POR", "DEF", "MED", "ATA"], key="ant_pos")
+            
+            meses_unicos = ["TODOS Anual"] + list(df_antro['Mes'].dropna().unique())
+            filtro_mes = ca3.selectbox("Mes:", meses_unicos, key="ant_mes")
+            
+            df_filt = df_antro.copy()
+            if filtro_jug != "TODOS": df_filt = df_filt[df_filt['jugador'] == filtro_jug]
+            if filtro_pos != "TODOS": df_filt = df_filt[df_filt['POS'] == filtro_pos]
+            
+            if filtro_mes != "TODOS Anual": 
+                df_filt = df_filt[df_filt['Mes'] == filtro_mes]
+                fechas_mes = sorted(df_filt['fecha'].dropna().unique())
+                if fechas_mes:
+                    opciones_fecha = ["Promedio"]
+                    for i, f in enumerate(fechas_mes):
+                        opciones_fecha.append(f"Medición {i+1} ({f})")
+                    
+                    filtro_fecha = ca4.selectbox("Medición exacta:", opciones_fecha, key="ant_fecha")
+                    
+                    if filtro_fecha != "Promedio":
+                        fecha_seleccionada = filtro_fecha.split("(")[1].replace(")", "")
+                        df_filt = df_filt[df_filt['fecha'] == fecha_seleccionada]
+            else:
+                ca4.selectbox("Medición exacta:", ["-"], disabled=True)
         
         if df_filt.empty:
             st.warning("No hay datos para esta combinación.")
         else:
-            # 1. Ignorar ceros convirtiéndolos a NaN para que las medias sean reales
             df_filt_clean = df_filt.replace({'Suma_Pliegues': 0, 'Per_Pecho': 0, 'Per_Cintura': 0, 'Per_Cadera': 0, 'Per_Muslo_D': 0, 'Per_Muslo_I': 0, 'Per_Pierna_D': 0, 'Per_Pierna_I': 0, 'Per_Biceps_D': 0, 'Per_Biceps_I': 0}, np.nan)
 
             kpi_peso = df_filt_clean['Peso'].mean()
@@ -85,7 +112,6 @@ with tab_antro_res:
             kpi_magro = df_filt_clean['Kg Magros'].mean()
             kpi_pliegues = df_filt_clean['Suma_Pliegues'].mean()
             
-            # Promedios de perímetros (ignorando ceros)
             prom_pecho = df_filt_clean['Per_Pecho'].mean()
             prom_cintura = df_filt_clean['Per_Cintura'].mean()
             prom_cadera = df_filt_clean['Per_Cadera'].mean()
@@ -96,37 +122,22 @@ with tab_antro_res:
             prom_biceps_d = df_filt_clean['Per_Biceps_D'].mean()
             prom_biceps_i = df_filt_clean['Per_Biceps_I'].mean()
             
-            prom_muslo = df_filt_clean[['Per_Muslo_D', 'Per_Muslo_I']].mean().mean()
-            prom_pierna = df_filt_clean[['Per_Pierna_D', 'Per_Pierna_I']].mean().mean()
-            prom_biceps = df_filt_clean[['Per_Biceps_D', 'Per_Biceps_I']].mean().mean()
-            
             st.markdown("#### 🎯 Promedios del Filtro")
+            from utils.math_helpers import render_kpi_elite
             k1, k2, k3, k4 = st.columns(4)
-            k1.metric("Peso Medio", f"{kpi_peso:.1f} kg" if pd.notna(kpi_peso) else "0.0 kg")
-            k2.metric("% Graso Medio (Yuhasz)", f"{kpi_grasa:.2f} %" if pd.notna(kpi_grasa) else "0.00 %")
-            k3.metric("Masa Magra Media", f"{kpi_magro:.1f} kg" if pd.notna(kpi_magro) else "0.0 kg")
-            k4.metric("∑ Pliegues Medio", f"{kpi_pliegues:.1f} mm" if pd.notna(kpi_pliegues) else "0.0 mm")
+            with k1: render_kpi_elite("Peso Medio", f"{kpi_peso:.1f} kg" if pd.notna(kpi_peso) else "-", color_borde="#00b4d8")
+            with k2: render_kpi_elite("% Graso (Yuhasz)", f"{kpi_grasa:.2f} %" if pd.notna(kpi_grasa) else "-", color_borde="#ff4b4b")
+            with k3: render_kpi_elite("Masa Magra", f"{kpi_magro:.1f} kg" if pd.notna(kpi_magro) else "-", color_borde="#10b981")
+            with k4: render_kpi_elite("∑ Pliegues", f"{kpi_pliegues:.1f} mm" if pd.notna(kpi_pliegues) else "-", color_borde="#f59e0b")
             
-            st.markdown("##### 📏 Promedios de Perímetros (excluyendo sin medición)")
+            st.markdown("<br>", unsafe_allow_html=True)
             p1, p2, p3, p4, p5, p6 = st.columns(6)
-            p1.metric("Pecho", f"{prom_pecho:.1f} cm" if pd.notna(prom_pecho) else "-")
-            p2.metric("Cintura", f"{prom_cintura:.1f} cm" if pd.notna(prom_cintura) else "-")
-            p3.metric("Cadera", f"{prom_cadera:.1f} cm" if pd.notna(prom_cadera) else "-")
-            p4.metric("Muslo", f"{prom_muslo:.1f} cm" if pd.notna(prom_muslo) else "-")
-            p5.metric("Pierna", f"{prom_pierna:.1f} cm" if pd.notna(prom_pierna) else "-")
-            p6.metric("Bíceps", f"{prom_biceps:.1f} cm" if pd.notna(prom_biceps) else "-")
-            
-            st.markdown("##### ⚖️ Asimetrías Medias (Derecha - Izquierda)")
-            def calc_asim_str(d, i):
-                if pd.isna(d) or pd.isna(i) or d==0 or i==0: return "-"
-                dif = d - i
-                pct = (abs(dif) / max(d, i)) * 100
-                return f"{dif:+.1f} cm ({pct:.1f}%)"
-
-            a1, a2, a3 = st.columns(3)
-            a1.metric("Muslo (D - I)", calc_asim_str(prom_muslo_d, prom_muslo_i))
-            a2.metric("Pierna (D - I)", calc_asim_str(prom_pierna_d, prom_pierna_i))
-            a3.metric("Bíceps (D - I)", calc_asim_str(prom_biceps_d, prom_biceps_i))
+            with p1: render_kpi_elite("Pecho", f"{prom_pecho:.1f} cm" if pd.notna(prom_pecho) else "-", color_borde="#3b82f6")
+            with p2: render_kpi_elite("Cintura", f"{prom_cintura:.1f} cm" if pd.notna(prom_cintura) else "-", color_borde="#3b82f6")
+            with p3: render_kpi_elite("Cadera", f"{prom_cadera:.1f} cm" if pd.notna(prom_cadera) else "-", color_borde="#3b82f6")
+            with p4: render_kpi_perimetro_doble("Muslo", prom_muslo_d, prom_muslo_i)
+            with p5: render_kpi_perimetro_doble("Pierna", prom_pierna_d, prom_pierna_i)
+            with p6: render_kpi_perimetro_doble("Bíceps", prom_biceps_d, prom_biceps_i)
             
             # ==========================================
             # NUEVO: CUADRANTE DE COMPOSICIÓN CORPORAL (FFMI)
@@ -193,12 +204,13 @@ with tab_antro_res:
                 fig_quad.add_vline(x=media_grasa, line_dash="dot", line_color="gray", opacity=0.7)
                 fig_quad.add_hline(y=media_ffmi, line_dash="dot", line_color="gray", opacity=0.7)
 
-                # Configuración visual de los cuadrantes
                 fig_quad.update_layout(
                     xaxis_title="% Grasa (Yuhasz)",
                     yaxis_title="FFMI (Índice de Masa Magra)",
                     height=550,
-                    margin=dict(l=20, r=20, t=40, b=20)
+                    margin=dict(l=20, r=20, t=40, b=20),
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    plot_bgcolor="rgba(0,0,0,0)"
                 )
 
                 # Anotaciones descriptivas sutiles en las esquinas
@@ -222,12 +234,14 @@ with tab_antro_res:
                 fig_peso = px.bar(df_evo, x='Mes', y='Peso', title="Evolución Peso (kg)", color_discrete_sequence=['#00b4d8'])
                 fig_peso.update_yaxes(range=[60, 100])
                 fig_peso.update_xaxes(categoryorder='array', categoryarray=meses_temporada)
+                fig_peso.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
                 st.plotly_chart(fig_peso, use_container_width=True, key="res_peso")
             
             with cg_grasa:
                 fig_grasa = px.bar(df_evo, x='Mes', y='% Graso', title="Evolución % Graso", color_discrete_sequence=['#ff4b4b'])
                 fig_grasa.update_yaxes(range=[8, 13])
                 fig_grasa.update_xaxes(categoryorder='array', categoryarray=meses_temporada)
+                fig_grasa.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
                 st.plotly_chart(fig_grasa, use_container_width=True, key="res_grasa")
 
             st.markdown("---")
@@ -237,32 +251,32 @@ with tab_antro_res:
             cp1, cp2 = st.columns(2)
             with cp1:
                 fig_p1 = go.Figure()
-                fig_p1.add_trace(go.Scatter(x=df_evo_per['Mes'], y=df_evo_per['Per_Pecho'], name='Pecho', mode='lines+markers'))
-                fig_p1.add_trace(go.Scatter(x=df_evo_per['Mes'], y=df_evo_per['Per_Biceps_D'], name='Bíceps D', mode='lines+markers'))
-                fig_p1.add_trace(go.Scatter(x=df_evo_per['Mes'], y=df_evo_per['Per_Biceps_I'], name='Bíceps I', mode='lines+markers', line=dict(dash='dash')))
-                fig_p1.update_layout(title="Pecho y Bíceps", xaxis=dict(categoryorder='array', categoryarray=meses_temporada))
+                fig_p1.add_trace(go.Scatter(x=df_evo_per['Mes'], y=df_evo_per['Per_Pecho'], name='Pecho', mode='lines+markers', connectgaps=True))
+                fig_p1.add_trace(go.Scatter(x=df_evo_per['Mes'], y=df_evo_per['Per_Biceps_D'], name='Bíceps D', mode='lines+markers', connectgaps=True))
+                fig_p1.add_trace(go.Scatter(x=df_evo_per['Mes'], y=df_evo_per['Per_Biceps_I'], name='Bíceps I', mode='lines+markers', line=dict(dash='dash'), connectgaps=True))
+                fig_p1.update_layout(title="Pecho y Bíceps", xaxis=dict(categoryorder='array', categoryarray=meses_temporada), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
                 st.plotly_chart(fig_p1, use_container_width=True, key="res_per_1")
                 
             with cp2:
                 fig_p2 = go.Figure()
-                fig_p2.add_trace(go.Scatter(x=df_evo_per['Mes'], y=df_evo_per['Per_Cintura'], name='Cintura', mode='lines+markers'))
-                fig_p2.add_trace(go.Scatter(x=df_evo_per['Mes'], y=df_evo_per['Per_Cadera'], name='Cadera', mode='lines+markers'))
-                fig_p2.update_layout(title="Cintura y Cadera", xaxis=dict(categoryorder='array', categoryarray=meses_temporada))
+                fig_p2.add_trace(go.Scatter(x=df_evo_per['Mes'], y=df_evo_per['Per_Cintura'], name='Cintura', mode='lines+markers', connectgaps=True))
+                fig_p2.add_trace(go.Scatter(x=df_evo_per['Mes'], y=df_evo_per['Per_Cadera'], name='Cadera', mode='lines+markers', connectgaps=True))
+                fig_p2.update_layout(title="Cintura y Cadera", xaxis=dict(categoryorder='array', categoryarray=meses_temporada), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
                 st.plotly_chart(fig_p2, use_container_width=True, key="res_per_2")
 
             cp3, cp4 = st.columns(2)
             with cp3:
                 fig_p3 = go.Figure()
-                fig_p3.add_trace(go.Scatter(x=df_evo_per['Mes'], y=df_evo_per['Per_Muslo_D'], name='Muslo D', mode='lines+markers'))
-                fig_p3.add_trace(go.Scatter(x=df_evo_per['Mes'], y=df_evo_per['Per_Muslo_I'], name='Muslo I', mode='lines+markers', line=dict(dash='dash')))
-                fig_p3.update_layout(title="Muslo (D/I)", xaxis=dict(categoryorder='array', categoryarray=meses_temporada))
+                fig_p3.add_trace(go.Scatter(x=df_evo_per['Mes'], y=df_evo_per['Per_Muslo_D'], name='Muslo D', mode='lines+markers', connectgaps=True))
+                fig_p3.add_trace(go.Scatter(x=df_evo_per['Mes'], y=df_evo_per['Per_Muslo_I'], name='Muslo I', mode='lines+markers', line=dict(dash='dash'), connectgaps=True))
+                fig_p3.update_layout(title="Muslo (D/I)", xaxis=dict(categoryorder='array', categoryarray=meses_temporada), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
                 st.plotly_chart(fig_p3, use_container_width=True, key="res_per_3")
                 
             with cp4:
                 fig_p4 = go.Figure()
-                fig_p4.add_trace(go.Scatter(x=df_evo_per['Mes'], y=df_evo_per['Per_Pierna_D'], name='Pierna D', mode='lines+markers'))
-                fig_p4.add_trace(go.Scatter(x=df_evo_per['Mes'], y=df_evo_per['Per_Pierna_I'], name='Pierna I', mode='lines+markers', line=dict(dash='dash')))
-                fig_p4.update_layout(title="Pierna (D/I)", xaxis=dict(categoryorder='array', categoryarray=meses_temporada))
+                fig_p4.add_trace(go.Scatter(x=df_evo_per['Mes'], y=df_evo_per['Per_Pierna_D'], name='Pierna D', mode='lines+markers', connectgaps=True))
+                fig_p4.add_trace(go.Scatter(x=df_evo_per['Mes'], y=df_evo_per['Per_Pierna_I'], name='Pierna I', mode='lines+markers', line=dict(dash='dash'), connectgaps=True))
+                fig_p4.update_layout(title="Pierna (D/I)", xaxis=dict(categoryorder='array', categoryarray=meses_temporada), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
                 st.plotly_chart(fig_p4, use_container_width=True, key="res_per_4")
 
 with tab_antro_jug:
@@ -310,61 +324,52 @@ with tab_antro_jug:
             
             # --- NUEVO: KPIs EN TARJETAS Y TÍTULOS MODIFICADOS ---
             with st.container(border=True):
-                st.markdown(f"#### ⚖️ Pesaje ({ultimo_pesaje['fecha']})")
-                c1, c2, c3, c4 = st.columns(4)
-                c1.metric("Peso", f"{ultimo_pesaje['Peso']:.1f} kg")
-                c2.metric("% Graso (Yuhasz)", f"{ultimo_pesaje['% Graso']:.2f} %")
-                c3.metric("Masa Magra", f"{ultimo_pesaje['Kg Magros']:.1f} kg")
-                c4.metric("∑ 4 Pliegues", f"{ultimo_pesaje['Suma_Pliegues']:.1f} mm")
-                
-                # --- NUEVO: CÁLCULO DE OBJETIVOS AUTOMÁTICOS (ANCLADO A SU GENÉTICA) ---
-                st.markdown("---")
-                st.markdown("#### 🎯 Objetivos de Composición Corporal")
+                st.markdown(f"#### ⚖️ Análisis Estructural y Objetivos ({ultimo_pesaje['fecha']})")
                 
                 peso_actual = safe_float(ultimo_pesaje['Peso'])
                 grasa_actual = safe_float(ultimo_pesaje['% Graso'])
                 masa_magra_actual = safe_float(ultimo_pesaje['Kg Magros'])
-                
                 altura_cm = safe_float(jugador_datos.get('altura', 175)) if jugador_datos else 175
                 altura_m = altura_cm / 100.0
                 
-                # 1. Calculamos el FFMI real del jugador en este momento
                 ffmi_actual = masa_magra_actual / (altura_m ** 2) if altura_m > 0 else 21.0
-                
-                # 2. Creamos un rango muscular hiper-personalizado: Su FFMI actual ± 0.3
-                # Lo limitamos ("clipeamos") a los topes de salud del fútbol (20.0 mínimo, 23.0 máximo)
                 ffmi_min = max(20.0, ffmi_actual - 0.3)
                 ffmi_max = min(23.0, ffmi_actual + 0.3)
-                
-                # 3. Rango de grasa estándar de élite (ventana estrecha)
                 grasa_min, grasa_max = 8.0, 9.5
                 
-                st.caption(f"Metas individualizadas basadas en su propia estructura muscular actual (FFMI: **{ffmi_actual:.1f}**). Se ha calculado un rango objetivo de mantenimiento muscular ({ffmi_min:.1f} - {ffmi_max:.1f}) ajustando la grasa al nivel élite ({grasa_min}% - {grasa_max}%).")
-                
-                # 4. Cálculo de rangos de peso exactos (Esto generará una ventana de ~2 o 3 kg adaptada al 100% a él)
                 peso_min = (ffmi_min * (altura_m ** 2)) / (1 - (grasa_min / 100))
                 peso_max = (ffmi_max * (altura_m ** 2)) / (1 - (grasa_max / 100))
                 
-                # 5. Evaluador de estado (te dice exactamente cuántos kilos o % sobran o faltan)
                 def evaluar_objetivo(actual, v_min, v_max, unidad):
                     if actual < v_min:
-                        dif = v_min - actual
-                        return f"🟡 Faltan {dif:.1f} {unidad}"
+                        return f"<span style='color:#f59e0b;'>🟡 Faltan {v_min - actual:.1f} {unidad}</span>"
                     elif actual > v_max:
-                        dif = actual - v_max
-                        return f"🔴 Sobran {dif:.1f} {unidad}"
-                    else:
-                        return f"✅ En rango óptimo"
+                        return f"<span style='color:#ef4444;'>🔴 Sobran {actual - v_max:.1f} {unidad}</span>"
+                    return "<span style='color:#10b981;'>✅ En rango</span>"
 
                 est_peso = evaluar_objetivo(peso_actual, peso_min, peso_max, "kg")
                 est_grasa = evaluar_objetivo(grasa_actual, grasa_min, grasa_max, "%")
                 
-                co1, co2 = st.columns(2)
-                co1.info(f"**Rango de Peso Ideal:** {peso_min:.1f} kg — {peso_max:.1f} kg\n\n**Estado:** {est_peso}")
-                co2.info(f"**Rango de Grasa Ideal:** {grasa_min:.1f} % — {grasa_max:.1f} %\n\n**Estado:** {est_grasa}")
-            
+                def render_recomendacion(titulo, v_min, v_max, unidad, estado_html):
+                    return f"""
+                    <div style="background: #1e293b; border: 1px solid #334155; border-left: 4px solid #3b82f6; padding: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.15); height: 100%; display: flex; flex-direction: column; justify-content: center;">
+                        <span style="color: #94a3b8; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin-bottom: 4px;">{titulo}</span>
+                        <span style="color: #f8fafc; font-size: 1.1rem; font-weight: 800;">{v_min:.1f} - {v_max:.1f} {unidad}</span>
+                        <div style="margin-top: 4px; font-size: 0.8rem; font-weight: 800;">{estado_html}</div>
+                    </div>
+                    """
+                
+                k1, k2, k3, k4, r1, r2 = st.columns([1, 1, 1, 1, 1.5, 1.5])
+                with k1: render_kpi_elite("Peso", f"{ultimo_pesaje['Peso']:.1f} kg", color_borde="#00b4d8")
+                with k2: render_kpi_elite("% Graso", f"{ultimo_pesaje['% Graso']:.2f} %", color_borde="#ff4b4b")
+                with k3: render_kpi_elite("Magra", f"{ultimo_pesaje['Kg Magros']:.1f} kg", color_borde="#10b981")
+                with k4: render_kpi_elite("Pliegues", f"{ultimo_pesaje['Suma_Pliegues']:.1f} mm", color_borde="#f59e0b")
+                
+                with r1: st.markdown(render_recomendacion("Ideal Peso", peso_min, peso_max, "kg", est_peso), unsafe_allow_html=True)
+                with r2: st.markdown(render_recomendacion("Ideal Grasa", grasa_min, grasa_max, "%", est_grasa), unsafe_allow_html=True)
+
             with st.container(border=True):
-                st.markdown("#### 📏 Perímetros")
+                st.markdown("#### 📏 Perímetros y Asimetrías")
                 ultimo_valido = {}
                 para_buscar = ['Per_Pecho', 'Per_Cintura', 'Per_Cadera', 'Per_Muslo_D', 'Per_Muslo_I', 'Per_Pierna_D', 'Per_Pierna_I', 'Per_Biceps_D', 'Per_Biceps_I']
                 for col in para_buscar:
@@ -372,31 +377,12 @@ with tab_antro_jug:
                     ultimo_valido[col] = serie_valida.iloc[0][col] if not serie_valida.empty else 0.0
 
                 p1, p2, p3, p4, p5, p6 = st.columns(6)
-                prom_muslo_jug = (ultimo_valido['Per_Muslo_D'] + ultimo_valido['Per_Muslo_I']) / 2 if (ultimo_valido['Per_Muslo_D']>0 and ultimo_valido['Per_Muslo_I']>0) else ultimo_valido['Per_Muslo_D'] or ultimo_valido['Per_Muslo_I']
-                prom_pierna_jug = (ultimo_valido['Per_Pierna_D'] + ultimo_valido['Per_Pierna_I']) / 2 if (ultimo_valido['Per_Pierna_D']>0 and ultimo_valido['Per_Pierna_I']>0) else ultimo_valido['Per_Pierna_D'] or ultimo_valido['Per_Pierna_I']
-                prom_biceps_jug = (ultimo_valido['Per_Biceps_D'] + ultimo_valido['Per_Biceps_I']) / 2 if (ultimo_valido['Per_Biceps_D']>0 and ultimo_valido['Per_Biceps_I']>0) else ultimo_valido['Per_Biceps_D'] or ultimo_valido['Per_Biceps_I']
-
-                p1.metric("Pecho", f"{ultimo_valido['Per_Pecho']:.1f} cm" if ultimo_valido['Per_Pecho'] > 0 else "-")
-                p2.metric("Cintura", f"{ultimo_valido['Per_Cintura']:.1f} cm" if ultimo_valido['Per_Cintura'] > 0 else "-")
-                p3.metric("Cadera", f"{ultimo_valido['Per_Cadera']:.1f} cm" if ultimo_valido['Per_Cadera'] > 0 else "-")
-                p4.metric("Muslo", f"{prom_muslo_jug:.1f} cm" if prom_muslo_jug > 0 else "-")
-                p5.metric("Pierna", f"{prom_pierna_jug:.1f} cm" if prom_pierna_jug > 0 else "-")
-                p6.metric("Bíceps", f"{prom_biceps_jug:.1f} cm" if prom_biceps_jug > 0 else "-")
-
-            with st.container(border=True):
-                st.markdown("#### ⚖️ Asimetrías Perimetrales")
-                st.caption("Diferencia entre lados (Derecha - Izquierda) y porcentaje de asimetría.")
-                ca1, ca2, ca3 = st.columns(3)
-                
-                def calc_asim_str_jug(d, i):
-                    if d == 0 or i == 0: return "-"
-                    dif = d - i
-                    pct = (abs(dif) / max(d, i)) * 100
-                    return f"{dif:+.1f} cm ({pct:.1f}%)"
-
-                ca1.metric("Muslo (D - I)", calc_asim_str_jug(ultimo_valido['Per_Muslo_D'], ultimo_valido['Per_Muslo_I']))
-                ca2.metric("Pierna (D - I)", calc_asim_str_jug(ultimo_valido['Per_Pierna_D'], ultimo_valido['Per_Pierna_I']))
-                ca3.metric("Bíceps (D - I)", calc_asim_str_jug(ultimo_valido['Per_Biceps_D'], ultimo_valido['Per_Biceps_I']))
+                with p1: render_kpi_elite("Pecho", f"{ultimo_valido['Per_Pecho']:.1f} cm" if ultimo_valido['Per_Pecho'] > 0 else "-", color_borde="#3b82f6")
+                with p2: render_kpi_elite("Cintura", f"{ultimo_valido['Per_Cintura']:.1f} cm" if ultimo_valido['Per_Cintura'] > 0 else "-", color_borde="#3b82f6")
+                with p3: render_kpi_elite("Cadera", f"{ultimo_valido['Per_Cadera']:.1f} cm" if ultimo_valido['Per_Cadera'] > 0 else "-", color_borde="#3b82f6")
+                with p4: render_kpi_perimetro_doble("Muslo", ultimo_valido['Per_Muslo_D'], ultimo_valido['Per_Muslo_I'])
+                with p5: render_kpi_perimetro_doble("Pierna", ultimo_valido['Per_Pierna_D'], ultimo_valido['Per_Pierna_I'])
+                with p6: render_kpi_perimetro_doble("Bíceps", ultimo_valido['Per_Biceps_D'], ultimo_valido['Per_Biceps_I'])
             
             st.markdown("---")
             st.markdown("#### 📈 Evolución Histórica: Peso y % Graso")
@@ -413,12 +399,14 @@ with tab_antro_jug:
                 fig_peso_j = px.bar(df_evo_jug, x='Mes', y='Peso', title="Evolución Peso (kg)", color_discrete_sequence=['#00b4d8'])
                 fig_peso_j.update_yaxes(range=[60, 100])
                 fig_peso_j.update_xaxes(categoryorder='array', categoryarray=meses_temporada)
+                fig_peso_j.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
                 st.plotly_chart(fig_peso_j, use_container_width=True, key=f"jug_peso_{jugador_seleccionado}")
                 
             with cg_grasa_j:
                 fig_grasa_j = px.bar(df_evo_jug, x='Mes', y='% Graso', title="Evolución % Graso", color_discrete_sequence=['#ff4b4b'])
                 fig_grasa_j.update_yaxes(range=[7, 15])
                 fig_grasa_j.update_xaxes(categoryorder='array', categoryarray=meses_temporada)
+                fig_grasa_j.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
                 st.plotly_chart(fig_grasa_j, use_container_width=True, key=f"jug_grasa_{jugador_seleccionado}")
 
             st.markdown("---")
@@ -428,32 +416,32 @@ with tab_antro_jug:
             cp1_j, cp2_j = st.columns(2)
             with cp1_j:
                 fig_p1_j = go.Figure()
-                fig_p1_j.add_trace(go.Scatter(x=df_evo_per_j['Mes'], y=df_evo_per_j['Per_Pecho'], name='Pecho', mode='lines+markers'))
-                fig_p1_j.add_trace(go.Scatter(x=df_evo_per_j['Mes'], y=df_evo_per_j['Per_Biceps_D'], name='Bíceps D', mode='lines+markers'))
-                fig_p1_j.add_trace(go.Scatter(x=df_evo_per_j['Mes'], y=df_evo_per_j['Per_Biceps_I'], name='Bíceps I', mode='lines+markers', line=dict(dash='dash')))
-                fig_p1_j.update_layout(title="Pecho y Bíceps", xaxis=dict(categoryorder='array', categoryarray=meses_temporada))
+                fig_p1_j.add_trace(go.Scatter(x=df_evo_per_j['Mes'], y=df_evo_per_j['Per_Pecho'], name='Pecho', mode='lines+markers', connectgaps=True))
+                fig_p1_j.add_trace(go.Scatter(x=df_evo_per_j['Mes'], y=df_evo_per_j['Per_Biceps_D'], name='Bíceps D', mode='lines+markers', connectgaps=True))
+                fig_p1_j.add_trace(go.Scatter(x=df_evo_per_j['Mes'], y=df_evo_per_j['Per_Biceps_I'], name='Bíceps I', mode='lines+markers', line=dict(dash='dash'), connectgaps=True))
+                fig_p1_j.update_layout(title="Pecho y Bíceps", xaxis=dict(categoryorder='array', categoryarray=meses_temporada), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
                 st.plotly_chart(fig_p1_j, use_container_width=True, key=f"jug_per1_{jugador_seleccionado}")
                 
             with cp2_j:
                 fig_p2_j = go.Figure()
-                fig_p2_j.add_trace(go.Scatter(x=df_evo_per_j['Mes'], y=df_evo_per_j['Per_Cintura'], name='Cintura', mode='lines+markers'))
-                fig_p2_j.add_trace(go.Scatter(x=df_evo_per_j['Mes'], y=df_evo_per_j['Per_Cadera'], name='Cadera', mode='lines+markers'))
-                fig_p2_j.update_layout(title="Cintura y Cadera", xaxis=dict(categoryorder='array', categoryarray=meses_temporada))
+                fig_p2_j.add_trace(go.Scatter(x=df_evo_per_j['Mes'], y=df_evo_per_j['Per_Cintura'], name='Cintura', mode='lines+markers', connectgaps=True))
+                fig_p2_j.add_trace(go.Scatter(x=df_evo_per_j['Mes'], y=df_evo_per_j['Per_Cadera'], name='Cadera', mode='lines+markers', connectgaps=True))
+                fig_p2_j.update_layout(title="Cintura y Cadera", xaxis=dict(categoryorder='array', categoryarray=meses_temporada), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
                 st.plotly_chart(fig_p2_j, use_container_width=True, key=f"jug_per2_{jugador_seleccionado}")
 
             cp3_j, cp4_j = st.columns(2)
             with cp3_j:
                 fig_p3_j = go.Figure()
-                fig_p3_j.add_trace(go.Scatter(x=df_evo_per_j['Mes'], y=df_evo_per_j['Per_Muslo_D'], name='Muslo D', mode='lines+markers'))
-                fig_p3_j.add_trace(go.Scatter(x=df_evo_per_j['Mes'], y=df_evo_per_j['Per_Muslo_I'], name='Muslo I', mode='lines+markers', line=dict(dash='dash')))
-                fig_p3_j.update_layout(title="Muslo (D/I)", xaxis=dict(categoryorder='array', categoryarray=meses_temporada))
+                fig_p3_j.add_trace(go.Scatter(x=df_evo_per_j['Mes'], y=df_evo_per_j['Per_Muslo_D'], name='Muslo D', mode='lines+markers', connectgaps=True))
+                fig_p3_j.add_trace(go.Scatter(x=df_evo_per_j['Mes'], y=df_evo_per_j['Per_Muslo_I'], name='Muslo I', mode='lines+markers', line=dict(dash='dash'), connectgaps=True))
+                fig_p3_j.update_layout(title="Muslo (D/I)", xaxis=dict(categoryorder='array', categoryarray=meses_temporada), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
                 st.plotly_chart(fig_p3_j, use_container_width=True, key=f"jug_per3_{jugador_seleccionado}")
                 
             with cp4_j:
                 fig_p4_j = go.Figure()
-                fig_p4_j.add_trace(go.Scatter(x=df_evo_per_j['Mes'], y=df_evo_per_j['Per_Pierna_D'], name='Pierna D', mode='lines+markers'))
-                fig_p4_j.add_trace(go.Scatter(x=df_evo_per_j['Mes'], y=df_evo_per_j['Per_Pierna_I'], name='Pierna I', mode='lines+markers', line=dict(dash='dash')))
-                fig_p4_j.update_layout(title="Pierna (D/I)", xaxis=dict(categoryorder='array', categoryarray=meses_temporada))
+                fig_p4_j.add_trace(go.Scatter(x=df_evo_per_j['Mes'], y=df_evo_per_j['Per_Pierna_D'], name='Pierna D', mode='lines+markers', connectgaps=True))
+                fig_p4_j.add_trace(go.Scatter(x=df_evo_per_j['Mes'], y=df_evo_per_j['Per_Pierna_I'], name='Pierna I', mode='lines+markers', line=dict(dash='dash'), connectgaps=True))
+                fig_p4_j.update_layout(title="Pierna (D/I)", xaxis=dict(categoryorder='array', categoryarray=meses_temporada), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
                 st.plotly_chart(fig_p4_j, use_container_width=True, key=f"jug_per4_{jugador_seleccionado}")
 
             st.markdown("#### 📋 Historial Completo")
@@ -552,6 +540,8 @@ with tab_antro_jug:
                 xaxis=dict(range=[min(5.0, grasa_actual-2), max(15.0, grasa_actual+2)]),
                 yaxis=dict(range=[min(17.0, ffmi_actual-1), max(24.0, ffmi_actual+1)]),
                 margin=dict(l=20, r=20, t=40, b=20)
+                paper_bgcolor="rgba(0,0,0,0)
+                plot_bgcolor="rgba(0,0,0,0)
             )
 
             # --- DICCIONARIO DE GRÁFICOS ACTUALIZADO ---
