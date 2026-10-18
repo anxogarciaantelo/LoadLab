@@ -962,8 +962,7 @@ with tab_ses:
                             if media_carga > 0 and carga_sesion > umbral_carga:
                                 alertas_jugadores[jug]['carga'].append(f"🟠 Carga Anormal ({carga_sesion:.0f} UA vs Media {media_carga:.0f} UA)"); alertas_jugadores[jug]['total'] += 1
                                 
-                            monot = calcular_monotonia_7d(st.session_state.sesiones, jug, sesion['fecha'])
-                            strain = carga_aguda * monot
+                            monot, strain = calcular_monotonia_7d(st.session_state.sesiones, jug, sesion['fecha'], devolver_strain=True)
                             if monot > 2.0 and strain > 4000:
                                 alertas_jugadores[jug]['carga'].append(f"🟡 Riesgo por monotonía y fatiga (Strain {strain:.0f})"); alertas_jugadores[jug]['total'] += 1
                                 
