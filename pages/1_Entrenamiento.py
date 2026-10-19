@@ -1054,6 +1054,24 @@ with tab_ses:
                             </div>
                             """
 
+                        def html_tarjeta_triple(color, val1, val2, val3, lbl1, lbl2, lbl3):
+                            return f"""
+                            <div style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid {color}; border-radius: 8px; padding: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.15); display: flex; flex-direction: row; align-items: stretch; margin-bottom: 10px; height: 85px;">
+                                <div style='flex: 1; padding-right: 4px; border-right: 1px solid #334155; display: flex; flex-direction: column;'>
+                                    <span style='font-size: 0.75rem; color: #f8fafc; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; line-height: 1.1;'>{lbl1}</span>
+                                    <span style='font-size: 1.3rem; font-weight: 800; color: #f8fafc; text-align: center; margin-top: auto;'>{val1}</span>
+                                </div>
+                                <div style='flex: 1; padding-left: 8px; padding-right: 4px; border-right: 1px solid #334155; display: flex; flex-direction: column;'>
+                                    <span style='font-size: 0.75rem; color: #f8fafc; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; line-height: 1.1;'>{lbl2}</span>
+                                    <span style='font-size: 1.3rem; font-weight: 800; color: #f8fafc; text-align: center; margin-top: auto;'>{val2}</span>
+                                </div>
+                                <div style='flex: 1; padding-left: 8px; display: flex; flex-direction: column;'>
+                                    <span style='font-size: 0.75rem; color: #f8fafc; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; line-height: 1.1;'>{lbl3}</span>
+                                    <span style='font-size: 1.3rem; font-weight: 800; color: #f8fafc; text-align: center; margin-top: auto;'>{val3}</span>
+                                </div>
+                            </div>
+                            """
+
                         # Dividimos el espacio horizontal en proporciones 1:2:3 (6 tarjetas en total)
                         col_w, col_i, col_e = st.columns([1, 2, 3])
                         
@@ -1075,17 +1093,14 @@ with tab_ses:
                                 
                         with col_e:
                             st.markdown("<h5 style='color: #f8fafc; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; margin-top: 0;'>🏃‍♂️ Carga Externa & Densidad</h5>", unsafe_allow_html=True)
-                            c_e1, c_e2, c_e3 = st.columns(3)
                             
                             densidad_m = (dis_m * 1000) / min_m if min_m > 0 else 0
                             densidad_hsr = hsr_m / min_m if min_m > 0 else 0
+                            densidad_acc = acc_m / min_m if min_m > 0 else 0
+                            densidad_dcc = dcc_m / min_m if min_m > 0 else 0
                             
-                            with c_e1:
-                                st.markdown(html_tarjeta_doble("#3b82f6", f"{dis_m:.2f} km", f"{densidad_m:.0f}", "Distancia", "m/min"), unsafe_allow_html=True)
-                            with c_e2:
-                                st.markdown(html_tarjeta_doble("#3b82f6", f"{hsr_m:.0f} m", f"{densidad_hsr:.1f}", "HSR (>21)", "HSR/min"), unsafe_allow_html=True)
-                            with c_e3:
-                                st.markdown(html_tarjeta_doble("#3b82f6", f"{acc_m:.0f}", f"{dcc_m:.0f}", "ACC (>3)", "DCC (>3)"), unsafe_allow_html=True)
+                            st.markdown(html_tarjeta_triple("#3b82f6", f"{dis_m:.2f} km", f"{hsr_m:.0f} m", f"{acc_m:.0f} | {dcc_m:.0f}", "Distancia", "HSR (>21)", "ACC | DCC (>3)"), unsafe_allow_html=True)
+                            st.markdown(html_tarjeta_triple("#0ea5e9", f"{densidad_m:.0f} m", f"{densidad_hsr:.1f} m", f"{densidad_acc:.2f} | {densidad_dcc:.2f}", "m / min", "HSR / min", "ACC | DCC / min"), unsafe_allow_html=True)
 
                         st.markdown("---")
                         
@@ -1183,6 +1198,68 @@ with tab_ses:
                         # --- 7. CARGA EXTERNA (GRÁFICOS PRIMERO, TABLA DESPUÉS, CON % VMAX) ---
                         st.markdown("#### 🏃‍♂️ 3. Carga Externa (GPS)")
                         
+                        # --- HUELLA DACTILAR DE LA SESIÓN ---
+                        vol_actual = dis_m * 1000
+                        int_actual = hsr_m
+                        ten_actual = acc_m + dcc_m
+                        
+                        df_historico = st.session_state.df_master_informes
+                        
+                        df_partidos = df_historico[df_historico['TIPO_SESION'].str.contains("Partido", na=False)]
+                        if not df_partidos.empty:
+                            v_ref_partido = df_partidos['DIS'].mean() * 1000
+                            i_ref_partido = df_partidos['DIS AI'].mean()
+                            t_ref_partido = df_partidos['ACC'].mean() + df_partidos['DCC'].mean()
+                        else:
+                            v_ref_partido, i_ref_partido, t_ref_partido = 10000, 600, 100
+                            
+                        ses_md = sesion.get('descripcion', 'TD')
+                        df_md = df_historico[(df_historico['TIPO_SESION'] == "Entrenamiento") & (df_historico['MD'] == ses_md)]
+                        if not df_md.empty:
+                            v_ref_md = df_md['DIS'].mean() * 1000
+                            i_ref_md = df_md['DIS AI'].mean()
+                            t_ref_md = df_md['ACC'].mean() + df_md['DCC'].mean()
+                        else:
+                            v_ref_md = vol_actual if vol_actual > 0 else 1
+                            i_ref_md = int_actual if int_actual > 0 else 1
+                            t_ref_md = ten_actual if ten_actual > 0 else 1
+                            
+                        c_hd1, c_hd2 = st.columns([1, 1.5])
+                        with c_hd1:
+                            st.markdown("##### 🧭 Huella Dactilar")
+                            st.caption("Identifica de un vistazo la morfología de la carga y el enfoque físico-táctico de la sesión.")
+                            tipo_ref = st.radio("Referencia (100%):", ["Orientación (vs Partido)", f"Cumplimiento (vs {ses_md})"], key=f"rad_ref_{idx_real}")
+                            
+                            v_ref = v_ref_partido if "Partido" in tipo_ref else v_ref_md
+                            i_ref = i_ref_partido if "Partido" in tipo_ref else i_ref_md
+                            t_ref = t_ref_partido if "Partido" in tipo_ref else t_ref_md
+                            
+                            v_ref = v_ref if v_ref > 0 else 1
+                            i_ref = i_ref > 0 and i_ref or 1
+                            t_ref = t_ref if t_ref > 0 else 1
+                            
+                            p_vol = (vol_actual / v_ref) * 100
+                            p_int = (int_actual / i_ref) * 100
+                            p_ten = (ten_actual / t_ref) * 100
+                            
+                            if p_ten > p_vol and p_ten > p_int: insight = "🔥 **Predominancia de Tensión:** Espacios reducidos y transiciones cortas."
+                            elif p_vol >= p_ten and p_vol >= p_int: insight = "🏃‍♂️ **Predominancia de Volumen:** Sesión extensiva y carga aeróbica."
+                            else: insight = "⚡ **Predominancia de Intensidad:** Alta velocidad y transiciones largas."
+                                
+                            st.info(insight)
+                            
+                        with c_hd2:
+                            fig_hd = go.Figure()
+                            cats = ['Volumen<br>(Distancia)', 'Intensidad<br>(HSR)', 'Tensión<br>(ACC+DCC)']
+                            
+                            fig_hd.add_trace(go.Scatterpolar(r=[100, 100, 100, 100], theta=cats + [cats[0]], mode='lines', line=dict(color='gray', dash='dot', width=2), name='100% Ref.'))
+                            fig_hd.add_trace(go.Scatterpolar(r=[p_vol, p_int, p_ten, p_vol], theta=cats + [cats[0]], fill='toself', name='Sesión', line=dict(color='#0ea5e9', width=3), fillcolor='rgba(14, 165, 233, 0.4)'))
+                            
+                            fig_hd.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, max(120, p_vol, p_int, p_ten)], gridcolor="#334155", linecolor="#334155"), angularaxis=dict(gridcolor="#334155", linecolor="#334155")), showlegend=True, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='#f8fafc'), margin=dict(t=20, b=20, l=40, r=40), height=280)
+                            st.plotly_chart(fig_hd, use_container_width=True, key=f"hd_fig_{idx_real}")
+                            
+                        st.markdown("---")
+                        
                         cg5, cg6 = st.columns(2)
                         with cg5:
                             if df_graficos['DIS'].sum() > 0:
@@ -1213,7 +1290,7 @@ with tab_ses:
                         if pdf_key not in st.session_state:
                             if st.button("⚙️ Generar PDF de la Sesión", key=f"btn_prepara_pdf_ses_{idx_real}", type="primary", use_container_width=True):
                                 with st.spinner("Procesando gráficos y PDF..."):
-                                    st.session_state[pdf_key] = generar_pdf_completo(sesion, df_para_medias, df_graficos, alertas_multi, alertas_rec, alertas_car, {"Desglose de Wellness": fig_well, "Calidad de Recuperación (TQR)": fig_tqr, "Carga de Sesión": fig2, "Riesgo de Lesión (Ratio A/C)": fig3, "Volumen vs Intensidad": fig5, "ACC vs DCC": fig4})
+                                    st.session_state[pdf_key] = generar_pdf_completo(sesion, df_para_medias, df_graficos, alertas_multi, alertas_rec, alertas_car, {"Desglose de Wellness": fig_well, "Calidad de Recuperación (TQR)": fig_tqr, "Carga de Sesión": fig2, "Riesgo de Lesión (Ratio A/C)": fig3, "Huella Dactilar": fig_hd, "Volumen vs Intensidad": fig5, "ACC vs DCC": fig4})
                                 st.rerun()
                         else:
                             col_pdf1, col_pdf2 = st.columns(2)
