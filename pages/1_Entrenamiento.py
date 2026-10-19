@@ -1282,7 +1282,7 @@ with tab_ses:
                             i_ref_md = int_actual if int_actual > 0 else 1
                             t_ref_md = ten_actual if ten_actual > 0 else 1
                             
-                        c_hd1, c_hd2 = st.columns([1, 1.5])
+                        c_hd1, c_hd2 = st.columns([1, 2.2])
                         with c_hd1:
                             st.markdown("##### 🧭 Huella Dactilar")
                             st.caption("Identifica de un vistazo la morfología de la carga y el enfoque físico-táctico de la sesión.")
@@ -1293,7 +1293,7 @@ with tab_ses:
                             t_ref = t_ref_partido if "Partido" in tipo_ref else t_ref_md
                             
                             v_ref = v_ref if v_ref > 0 else 1
-                            i_ref = i_ref > 0 and i_ref or 1
+                            i_ref = i_ref if i_ref > 0 else 1
                             t_ref = t_ref if t_ref > 0 else 1
                             
                             p_vol = (vol_actual / v_ref) * 100
@@ -1310,10 +1310,36 @@ with tab_ses:
                             fig_hd = go.Figure()
                             cats = ['Volumen<br>(Distancia)', 'Intensidad<br>(HSR)', 'Tensión<br>(ACC+DCC)']
                             
-                            fig_hd.add_trace(go.Scatterpolar(r=[100, 100, 100, 100], theta=cats + [cats[0]], mode='lines', line=dict(color='gray', dash='dot', width=2), name='100% Ref.'))
-                            fig_hd.add_trace(go.Scatterpolar(r=[p_vol, p_int, p_ten, p_vol], theta=cats + [cats[0]], fill='toself', name='Sesión', line=dict(color='#0ea5e9', width=3), fillcolor='rgba(14, 165, 233, 0.4)'))
+                            # Línea base de referencia (100%)
+                            fig_hd.add_trace(go.Scatterpolar(
+                                r=[100, 100, 100, 100], theta=cats + [cats[0]], mode='lines', 
+                                line=dict(color='#94a3b8', dash='dot', width=2), name='100% Ref.'
+                            ))
+                            # Polígono de la sesión
+                            fig_hd.add_trace(go.Scatterpolar(
+                                r=[p_vol, p_int, p_ten, p_vol], theta=cats + [cats[0]], fill='toself', 
+                                name='Sesión', line=dict(color='#0ea5e9', width=3), fillcolor='rgba(14, 165, 233, 0.4)'
+                            ))
                             
-                            fig_hd.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, max(120, p_vol, p_int, p_ten)], gridcolor="#334155", linecolor="#334155"), angularaxis=dict(gridcolor="#334155", linecolor="#334155")), showlegend=True, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='#f8fafc'), margin=dict(t=20, b=20, l=40, r=40), height=280)
+                            # Forzamos la transparencia de la telaraña (bgcolor) y adaptamos los colores de los ejes
+                            fig_hd.update_layout(
+                                polar=dict(
+                                    bgcolor='rgba(0,0,0,0)', 
+                                    radialaxis=dict(
+                                        visible=True, range=[0, max(120, p_vol, p_int, p_ten)], 
+                                        gridcolor="#334155", linecolor="#334155", tickfont=dict(color='#94a3b8')
+                                    ),
+                                    angularaxis=dict(
+                                        gridcolor="#334155", linecolor="#334155", tickfont=dict(color='#f8fafc', size=11, weight='bold')
+                                    )
+                                ),
+                                showlegend=True, 
+                                paper_bgcolor='rgba(0,0,0,0)', 
+                                plot_bgcolor='rgba(0,0,0,0)', 
+                                font=dict(color='#f8fafc'), 
+                                margin=dict(t=30, b=30, l=60, r=60), 
+                                height=360
+                            )
                             st.plotly_chart(fig_hd, use_container_width=True, key=f"hd_fig_{idx_real}")
                             
                         st.markdown("---")
