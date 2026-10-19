@@ -1427,7 +1427,7 @@ with tab_ses:
                         
                         ses_md = sesion.get('descripcion', 'TD')
                         if es_partido: ses_md = "Partido" 
-                        zona_obj = {"DIS": [0.75, 1.20], "HSR": [0.75, 1.20], "ACC": [0.75, 1.20], "DCC": [0.75, 1.20]} if es_partido else zonas_pt.get(ses_md, zonas_pt["TD"]))
+                        zona_obj = {"DIS": [0.75, 1.20], "HSR": [0.75, 1.20], "ACC": [0.75, 1.20], "DCC": [0.75, 1.20]} if es_partido else zonas_pt.get(ses_md, zonas_pt["TD"])
                         
                         with cg5:
                             if df_graficos['DIS'].sum() > 0:
