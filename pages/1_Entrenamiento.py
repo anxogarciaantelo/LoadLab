@@ -822,7 +822,7 @@ with tab_ses:
                     opciones_disp = ["Suplente", "No convocado", "Lesionado", "Enfermo", "Selección", "No disponible"]
                     default_disp = "Titular"
                 else:
-                    opciones_disp = ["Lesionado", "Readaptación", "Enfermo", "Falta", "Selección", "No disponible"]
+                    opciones_disp = ["Recuperación Post-Partido", "Lesionado", "Readaptación", "Enfermo", "Falta", "Selección", "No disponible"]
                     default_disp = "Disponible"
                 
                 disp_dict_clean = {limpiar_nombre(k): v for k, v in sesion.get("disponibilidad", {}).items()}
@@ -867,8 +867,14 @@ with tab_ses:
                                 disp_final[j] = default_disp
                                 
                         st.session_state.sesiones[idx_real]["disponibilidad"] = disp_final
+                        
+                        # NUEVO: Recalcular imputación al cambiar la disponibilidad
+                        if st.session_state.sesiones[idx_real].get("informe_generado") and st.session_state.sesiones[idx_real].get("datos_informe"):
+                            from utils.math_helpers import aplicar_imputacion_gps_global
+                            st.session_state.sesiones[idx_real]["datos_informe"] = aplicar_imputacion_gps_global(st.session_state.sesiones[idx_real]["datos_informe"], st.session_state.sesiones[idx_real], st.session_state.plantilla)
+                            
                         guardar_datos(modulo="sesiones")
-                        st.success("Disponibilidad guardada correctamente.")
+                        st.success("Disponibilidad guardada y datos GPS re-imputados correctamente.")
                         st.rerun()
 
             # ---------------------------------------------------------
@@ -1222,70 +1228,6 @@ with tab_ses:
             # ---------------------------------------------------------
             elif active_view == "datos":
                 st.markdown(f"#### 📂 CARGA DE DATOS | {sesion['fecha']}")
-
-                # --- MOTOR DE IMPUTACIÓN DE GPS PARA JUGADORES SIN UNIDAD ---
-                def aplicar_imputacion_gps(registros, sesion_actual, es_partido_flag):
-                    disp_dict = {limpiar_nombre(k): v for k, v in sesion_actual.get("disponibilidad", {}).items()}
-                    default_estado = "Titular" if es_partido_flag else "Disponible"
-                    
-                    # 1. Analizamos a los que SÍ llevaron GPS para sacar los ratios
-                    datos_validos = []
-                    for reg in registros:
-                        jug = reg["JUGADOR"]
-                        pos = reg.get("POS", "DEF")
-                        if reg.get("DIS", 0) > 0 and pos != "POR":
-                            p_match = next((p for p in st.session_state.plantilla if p["JUGADOR"] == jug), {})
-                            pos_esp = p_match.get("pos_1", pos)
-                            min_gps = safe_float(reg.get("MIN_GPS", reg.get("MIN", 0)))
-                            if min_gps > 0:
-                                datos_validos.append({
-                                    "POS_ESP": pos_esp, "POS_GEN": pos,
-                                    "DIS_pm": safe_float(reg.get("DIS")) / min_gps,
-                                    "DIS_AI_pm": safe_float(reg.get("HID >21", reg.get("DIS AI", 0))) / min_gps,
-                                    "SPR_pm": safe_float(reg.get("SPR >24", reg.get("Nº SPR", 0))) / min_gps,
-                                    "ACC_pm": safe_float(reg.get("ACC >3", reg.get("ACC", 0))) / min_gps,
-                                    "DCC_pm": safe_float(reg.get("DCC >3", reg.get("DCC", 0))) / min_gps,
-                                    "VMAX": safe_float(reg.get("V_Max", reg.get("VMAX", 0)))
-                                })
-                                
-                    if datos_validos:
-                        df_val = pd.DataFrame(datos_validos)
-                        medias_esp = df_val.groupby("POS_ESP").mean(numeric_only=True).fillna(0.0).to_dict('index')
-                        medias_gen = df_val.groupby("POS_GEN").mean(numeric_only=True).fillna(0.0).to_dict('index')
-                        medias_eq = df_val.mean(numeric_only=True).fillna(0.0).to_dict()
-                        
-                        # 2. Imputamos a los que no tienen GPS pero entrenaron
-                        for reg in registros:
-                            jug = reg["JUGADOR"]
-                            pos = reg.get("POS", "DEF")
-                            estado = disp_dict.get(limpiar_nombre(jug), default_estado)
-                            
-                            elegible = estado in ["Disponible", "Titular", "Suplente"]
-                            min_jug = safe_float(reg.get("MIN", 0))
-                            
-                            # Condición: Elegible, de campo, con 0 distancia y que haya entrenado (MIN > 0)
-                            if elegible and pos != "POR" and safe_float(reg.get("DIS", 0)) == 0 and min_jug > 0:
-                                p_match = next((p for p in st.session_state.plantilla if p["JUGADOR"] == jug), {})
-                                pos_esp = p_match.get("pos_1", pos)
-                                
-                                # Escala de fallback: Misma posición específica -> Posición general -> Media de equipo
-                                ratios = medias_esp.get(pos_esp, medias_gen.get(pos, medias_eq))
-                                
-                                def seguro(v): return 0.0 if pd.isna(v) else float(v)
-
-                                reg["MIN_GPS"] = seguro(min_jug)
-                                reg["DIS"] = seguro(ratios.get("DIS_pm", 0) * min_jug)
-                                reg["DIS AI"] = seguro(ratios.get("DIS_AI_pm", 0) * min_jug)
-                                reg["HID >21"] = seguro(ratios.get("DIS_AI_pm", 0) * min_jug)
-                                reg["Nº SPR"] = seguro(ratios.get("SPR_pm", 0) * min_jug)
-                                reg["SPR >24"] = seguro(ratios.get("SPR_pm", 0) * min_jug)
-                                reg["ACC"] = seguro(ratios.get("ACC_pm", 0) * min_jug)
-                                reg["ACC >3"] = seguro(ratios.get("ACC_pm", 0) * min_jug)
-                                reg["DCC"] = seguro(ratios.get("DCC_pm", 0) * min_jug)
-                                reg["DCC >3"] = seguro(ratios.get("DCC_pm", 0) * min_jug)
-                                reg["VMAX"] = seguro(ratios.get("VMAX", 0))
-                                reg["V_Max"] = seguro(ratios.get("VMAX", 0))
-                    return registros
                 if f'msg_sync_{idx_real}' in st.session_state:
                     for msg in st.session_state[f'msg_sync_{idx_real}']:
                         if "✅" in msg: st.success(msg)
@@ -1398,7 +1340,8 @@ with tab_ses:
                                 })
                                 
                             # Imputar GPS automático antes de guardar
-                            full_records = aplicar_imputacion_gps(full_records, sesion, es_partido)
+                            from utils.math_helpers import aplicar_imputacion_gps_global
+                            full_records = aplicar_imputacion_gps_global(full_records, sesion, st.session_state.plantilla)
                             
                             st.session_state.sesiones[idx_real]['datos_informe'] = full_records # (o registros_sesion en el bloque Excel)
                             st.session_state.sesiones[idx_real]['informe_generado'] = True
@@ -1581,7 +1524,8 @@ with tab_ses:
                                     registros_sesion.append(reg)
                                     
                                 # Imputar GPS automático antes de guardar
-                                registros_sesion = aplicar_imputacion_gps(registros_sesion, sesion, es_partido)
+                                from utils.math_helpers import aplicar_imputacion_gps_global
+                                registros_sesion = aplicar_imputacion_gps_global(registros_sesion, sesion, st.session_state.plantilla)
                                 
                                 st.session_state.sesiones[idx_real]['datos_informe'] = registros_sesion
                                 st.session_state.sesiones[idx_real]['informe_generado'] = True
@@ -1696,8 +1640,14 @@ with tab_ses:
                             sesion["estadisticas_partido"] = stats_dict
                             sesion["estadisticas_invitados"] = invitados_actualizados
                             sesion["goles_contra"] = goles_contra_totales
+                            
+                            # NUEVO: Recalcular imputación al cambiar los minutos del partido
+                            if sesion.get("informe_generado") and sesion.get("datos_informe"):
+                                from utils.math_helpers import aplicar_imputacion_gps_global
+                                sesion["datos_informe"] = aplicar_imputacion_gps_global(sesion["datos_informe"], sesion, st.session_state.plantilla)
+
                             guardar_datos(modulo="sesiones")
-                            st.success(f"✅ ¡Estadísticas guardadas con éxito! (Goles en contra totales: {goles_contra_totales})")
+                            st.success(f"✅ ¡Estadísticas guardadas y datos GPS re-imputados con éxito! (Goles en contra totales: {goles_contra_totales})")
                             st.rerun()
 with tab_add:
     st.markdown("### ➕ Planificación de Sesiones")
