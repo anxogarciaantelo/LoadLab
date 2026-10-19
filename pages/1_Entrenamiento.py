@@ -1433,24 +1433,37 @@ with tab_ses:
                             if df_graficos['DIS'].sum() > 0:
                                 df_gps_sesion = df_graficos[df_graficos['DIS'] > 0].copy()
                                 
-                                # Evaluar Cumplimiento (Verde, Amarillo, Rojo)
+                                # Evaluar Cumplimiento Individual/Grupal (Verde, Amarillo, Rojo)
                                 def eval_cump_vol_int(r):
-                                    d_ok = zona_obj["DIS"][0] * dis_100_eq <= r['DIS'] <= zona_obj["DIS"][1] * dis_100_eq
-                                    h_ok = zona_obj["HSR"][0] * hsr_100_eq <= r.get('DIS AI', r.get('HID >21', 0)) <= zona_obj["HSR"][1] * hsr_100_eq
+                                    if es_partido:
+                                        ref_d = medias_indiv_partido.get(r['JUGADOR'], {}).get('DIS', dis_100_eq)
+                                        ref_h = medias_indiv_partido.get(r['JUGADOR'], {}).get('DIS AI', hsr_100_eq)
+                                    else:
+                                        ref_d, ref_h = dis_100_eq, hsr_100_eq
+                                        
+                                    ref_d = ref_d if ref_d > 0 else 10.0
+                                    ref_h = ref_h if ref_h > 0 else 600.0
+                                    
+                                    val_h = r.get('DIS AI', r.get('HID >21', 0))
+                                    d_ok = zona_obj["DIS"][0] * ref_d <= r['DIS'] <= zona_obj["DIS"][1] * ref_d
+                                    h_ok = zona_obj["HSR"][0] * ref_h <= val_h <= zona_obj["HSR"][1] * ref_h
+                                    
                                     if d_ok and h_ok: return "Óptimo (En Objetivo)"
-                                    elif r['DIS'] > zona_obj["DIS"][1] * dis_100_eq or r.get('DIS AI', r.get('HID >21', 0)) > zona_obj["HSR"][1] * hsr_100_eq: return "Excesivo"
+                                    elif r['DIS'] > zona_obj["DIS"][1] * ref_d or val_h > zona_obj["HSR"][1] * ref_h: return "Excesivo"
                                     else: return "Deficiente"
                                 
                                 df_gps_sesion['DIS AI'] = df_gps_sesion.get('DIS AI', df_gps_sesion.get('HID >21', 0))
                                 df_gps_sesion['Cumplimiento'] = df_gps_sesion.apply(eval_cump_vol_int, axis=1)
                                 
-                                fig5 = px.scatter(df_gps_sesion, x='DIS', y='DIS AI', color='Cumplimiento', hover_name='JUGADOR', text='JUGADOR', title=f"Vol. vs Int. (Banda Obj: {ses_md})", color_discrete_map={"Óptimo (En Objetivo)": "#10b981", "Excesivo": "#ef4444", "Deficiente": "#f59e0b"})
+                                tit_v = "Vol. vs Int. (Banda Obj. Individual)" if es_partido else f"Vol. vs Int. (Banda Obj: {ses_md})"
+                                fig5 = px.scatter(df_gps_sesion, x='DIS', y='DIS AI', color='Cumplimiento', hover_name='JUGADOR', text='JUGADOR', title=tit_v, color_discrete_map={"Óptimo (En Objetivo)": "#10b981", "Excesivo": "#ef4444", "Deficiente": "#f59e0b"})
                                 fig5.update_traces(textposition='top center', marker=dict(size=12, opacity=0.8, line=dict(width=1, color='DarkSlateGrey')))
                                 fig5.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
                                 
-                                # Añadir Banda Sombreada Objetivo Metabólico
-                                fig5.add_shape(type="rect", x0=zona_obj["DIS"][0]*dis_100_eq, x1=zona_obj["DIS"][1]*dis_100_eq, y0=zona_obj["HSR"][0]*hsr_100_eq, y1=zona_obj["HSR"][1]*hsr_100_eq, fillcolor="green", opacity=0.15, line_width=2, line_color="green", layer="below")
-                                fig5.add_annotation(x=zona_obj["DIS"][1]*dis_100_eq, y=zona_obj["HSR"][1]*hsr_100_eq, text="ZONA OBJETIVO", showarrow=False, font=dict(color="green", size=10), xanchor="right", yanchor="bottom")
+                                # La zona objetivo global solo se dibuja en entrenamientos (en partidos es individual para cada punto)
+                                if not es_partido:
+                                    fig5.add_shape(type="rect", x0=zona_obj["DIS"][0]*dis_100_eq, x1=zona_obj["DIS"][1]*dis_100_eq, y0=zona_obj["HSR"][0]*hsr_100_eq, y1=zona_obj["HSR"][1]*hsr_100_eq, fillcolor="green", opacity=0.15, line_width=2, line_color="green", layer="below")
+                                    fig5.add_annotation(x=zona_obj["DIS"][1]*dis_100_eq, y=zona_obj["HSR"][1]*hsr_100_eq, text="ZONA OBJETIVO", showarrow=False, font=dict(color="green", size=10), xanchor="right", yanchor="bottom")
                                 
                                 st.plotly_chart(fig5, use_container_width=True, key=f"ses_h_{idx_real}")
                                 
@@ -1459,22 +1472,32 @@ with tab_ses:
                                 df_accdcc = df_graficos[df_graficos['DIS'] > 0].copy()
                                 
                                 def eval_cump_ten(r):
-                                    a_ok = zona_obj["ACC"][0] * acc_100_eq <= r['ACC'] <= zona_obj["ACC"][1] * acc_100_eq
-                                    d_ok = zona_obj["DCC"][0] * dcc_100_eq <= r['DCC'] <= zona_obj["DCC"][1] * dcc_100_eq
+                                    if es_partido:
+                                        ref_a = medias_indiv_partido.get(r['JUGADOR'], {}).get('ACC', acc_100_eq)
+                                        ref_d = medias_indiv_partido.get(r['JUGADOR'], {}).get('DCC', dcc_100_eq)
+                                    else:
+                                        ref_a, ref_d = acc_100_eq, dcc_100_eq
+                                        
+                                    ref_a = ref_a if ref_a > 0 else 40.0
+                                    ref_d = ref_d if ref_d > 0 else 40.0
+                                    
+                                    a_ok = zona_obj["ACC"][0] * ref_a <= r['ACC'] <= zona_obj["ACC"][1] * ref_a
+                                    d_ok = zona_obj["DCC"][0] * ref_d <= r['DCC'] <= zona_obj["DCC"][1] * ref_d
                                     if a_ok and d_ok: return "Óptimo (En Objetivo)"
-                                    elif r['ACC'] > zona_obj["ACC"][1] * acc_100_eq or r['DCC'] > zona_obj["DCC"][1] * dcc_100_eq: return "Excesivo"
+                                    elif r['ACC'] > zona_obj["ACC"][1] * ref_a or r['DCC'] > zona_obj["DCC"][1] * ref_d: return "Excesivo"
                                     else: return "Deficiente"
                                     
                                 df_accdcc['Cumplimiento'] = df_accdcc.apply(eval_cump_ten, axis=1)
                                 
                                 max_val = max(df_accdcc['ACC'].max(), df_accdcc['DCC'].max(), zona_obj["ACC"][1]*acc_100_eq*1.1) if not df_accdcc.empty else 10
-                                fig4 = px.scatter(df_accdcc, x='DCC', y='ACC', color='Cumplimiento', hover_name='JUGADOR', text='JUGADOR', title=f"Tensión Mecánica (Banda Obj: {ses_md})", color_discrete_map={"Óptimo (En Objetivo)": "#10b981", "Excesivo": "#ef4444", "Deficiente": "#f59e0b"})
+                                tit_t = "Tensión Mecánica (Banda Obj. Individual)" if es_partido else f"Tensión Mecánica (Banda Obj: {ses_md})"
+                                fig4 = px.scatter(df_accdcc, x='DCC', y='ACC', color='Cumplimiento', hover_name='JUGADOR', text='JUGADOR', title=tit_t, color_discrete_map={"Óptimo (En Objetivo)": "#10b981", "Excesivo": "#ef4444", "Deficiente": "#f59e0b"})
                                 fig4.update_traces(textposition='top center', marker=dict(size=12, opacity=0.8, line=dict(width=1, color='DarkSlateGrey')))
                                 fig4.add_shape(type="line", x0=0, y0=0, x1=max_val, y1=max_val, line=dict(color="gray", dash="dot"))
                                 
-                                # Añadir Banda Sombreada Objetivo Mecánico
-                                fig4.add_shape(type="rect", x0=zona_obj["DCC"][0]*dcc_100_eq, x1=zona_obj["DCC"][1]*dcc_100_eq, y0=zona_obj["ACC"][0]*acc_100_eq, y1=zona_obj["ACC"][1]*acc_100_eq, fillcolor="green", opacity=0.15, line_width=2, line_color="green", layer="below")
-                                fig4.add_annotation(x=zona_obj["DCC"][1]*dcc_100_eq, y=zona_obj["ACC"][1]*acc_100_eq, text="ZONA OBJETIVO", showarrow=False, font=dict(color="green", size=10), xanchor="right", yanchor="bottom")
+                                if not es_partido:
+                                    fig4.add_shape(type="rect", x0=zona_obj["DCC"][0]*dcc_100_eq, x1=zona_obj["DCC"][1]*dcc_100_eq, y0=zona_obj["ACC"][0]*acc_100_eq, y1=zona_obj["ACC"][1]*acc_100_eq, fillcolor="green", opacity=0.15, line_width=2, line_color="green", layer="below")
+                                    fig4.add_annotation(x=zona_obj["DCC"][1]*dcc_100_eq, y=zona_obj["ACC"][1]*acc_100_eq, text="ZONA OBJETIVO", showarrow=False, font=dict(color="green", size=10), xanchor="right", yanchor="bottom")
                                 
                                 fig4.update_layout(yaxis=dict(scaleanchor="x", scaleratio=1), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
                                 st.plotly_chart(fig4, use_container_width=True, key=f"ses_a_{idx_real}")
