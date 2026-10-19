@@ -1036,7 +1036,6 @@ with tab_ses:
                                 if data['carga']: alertas_car.append(f"**{jug}**: {data['carga'][0]}")
                         # --- 3. RENDERIZADO DE KPIs GLOBALES EN UNA SOLA FILA ---
                         tqr_m = df_para_medias['TQR'].mean() if pd.notna(df_para_medias['TQR'].mean()) else 0.0
-                        tqr_m = df_para_medias['TQR'].mean() if pd.notna(df_para_medias['TQR'].mean()) else 0.0
                         well_m = df_para_medias['WELLNESS'].mean() if pd.notna(df_para_medias['WELLNESS'].mean()) else 0.0
                         rpe_m = df_para_medias['RPE'].mean() if pd.notna(df_para_medias['RPE'].mean()) else 0.0
                         carga_m = df_para_medias['CARGA'].mean() if pd.notna(df_para_medias['CARGA'].mean()) else 0.0
@@ -1049,17 +1048,70 @@ with tab_ses:
                         dcc_m = df_para_medias_gps['DCC'].mean() if pd.notna(df_para_medias_gps['DCC'].mean()) else 0.0
                         pct_vmax_m = df_para_medias_gps['% VMAX'].mean() if pd.notna(df_para_medias_gps['% VMAX'].mean()) else 0.0
 
+                        efi_c_media = rpe_m / ((dis_m * 1000) / min_m) if min_m > 0 and dis_m > 0 else 0
+                        efi_n_media = rpe_m / (acc_m + dcc_m + spr_m) if (acc_m + dcc_m + spr_m) > 0 else 0
+
+                        # --- CÁLCULO DE LÍNEAS DE TENDENCIA (VS MISMO MD HISTÓRICO) ---
+                        ses_md_tend = sesion.get('descripcion', 'TD') if not es_partido else "Partido"
+                        
+                        # Extraemos el histórico limpio excluyendo la sesión de hoy
+                        df_hist_tend = df_master_hist[df_master_hist['FECHA'] < sesion["fecha"]].copy()
+                        if not es_partido:
+                            df_hist_tend = df_hist_tend[df_hist_tend['MD'] == ses_md_tend]
+                        else:
+                            df_hist_tend = df_hist_tend[df_hist_tend['TIPO_SESION'].str.contains("Partido", na=False)]
+                        
+                        hist_tqr_m = df_hist_tend['TQR'].replace(0, np.nan).mean() if not df_hist_tend.empty else 0
+                        hist_well_m = df_hist_tend['WELLNESS'].replace(0, np.nan).mean() if not df_hist_tend.empty else 0
+                        hist_rpe_m = df_hist_tend['RPE'].replace(0, np.nan).mean() if not df_hist_tend.empty else 0
+                        hist_carga_m = df_hist_tend['CARGA'].replace(0, np.nan).mean() if not df_hist_tend.empty else 0
+                        
+                        hist_efi_c = 0
+                        hist_efi_n = 0
+                        if not df_hist_tend.empty:
+                            df_hist_tend['m_min_h'] = np.where(df_hist_tend['MIN'] > 0, (df_hist_tend['DIS'] * 1000) / df_hist_tend['MIN'], 0)
+                            df_hist_tend['mec_h'] = df_hist_tend['ACC'] + df_hist_tend['DCC'] + df_hist_tend['Nº SPR']
+                            
+                            df_c_val = df_hist_tend[(df_hist_tend['m_min_h'] > 0) & (df_hist_tend['RPE'] > 0)]
+                            df_n_val = df_hist_tend[(df_hist_tend['mec_h'] > 0) & (df_hist_tend['RPE'] > 0)]
+                            
+                            hist_efi_c = (df_c_val['RPE'] / df_c_val['m_min_h']).mean() if not df_c_val.empty else 0
+                            hist_efi_n = (df_n_val['RPE'] / df_n_val['mec_h']).mean() if not df_n_val.empty else 0
+
+                        def calc_tend_html(actual, historico, inverso=False):
+                            if pd.isna(historico) or historico == 0: return ""
+                            diff = ((actual - historico) / historico) * 100
+                            if abs(diff) < 2: return "<span style='color: #94a3b8; font-size: 0.65rem; margin-left: 5px;'>▬ 0%</span>"
+                            
+                            if diff > 0:
+                                color = "#ef4444" if inverso else "#10b981"
+                                return f"<span style='color: {color}; font-size: 0.65rem; margin-left: 5px;' title='vs Media Histórica {ses_md_tend}'>▲ {abs(diff):.0f}%</span>"
+                            else:
+                                color = "#10b981" if inverso else "#ef4444"
+                                return f"<span style='color: {color}; font-size: 0.65rem; margin-left: 5px;' title='vs Media Histórica {ses_md_tend}'>▼ {abs(diff):.0f}%</span>"
+
+                        t_tqr = calc_tend_html(tqr_m, hist_tqr_m, inverso=False)
+                        t_well = calc_tend_html(well_m, hist_well_m, inverso=True) # Más fatiga = Peor
+                        t_rpe = calc_tend_html(rpe_m, hist_rpe_m, inverso=True)    # Más esfuerzo = Peor
+                        t_carga = calc_tend_html(carga_m, hist_carga_m, inverso=True)
+                        t_efic = calc_tend_html(efi_c_media, hist_efi_c, inverso=True) # Más coste = Peor
+                        t_efin = calc_tend_html(efi_n_media, hist_efi_n, inverso=True)
+
                         # Estructuras HTML Forzadas para igualar el CSS de style.css
-                        def html_tarjeta_doble(color, val1, val2, lbl1, lbl2):
+                        def html_tarjeta_doble(color, val1, val2, lbl1, lbl2, tend1="", tend2=""):
                             return f"""
                             <div style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid {color}; border-radius: 8px; padding: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.15); display: flex; flex-direction: row; align-items: stretch; margin-bottom: 10px; height: 85px;">
                                 <div style='flex: 1; padding-right: 8px; border-right: 1px solid #334155; display: flex; flex-direction: column;'>
                                     <span style='font-size: 0.85rem; color: #f8fafc; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; line-height: 1.1;'>{lbl1}</span>
-                                    <span style='font-size: 1.4rem; font-weight: 800; color: #f8fafc; text-align: center; margin-top: auto;'>{val1}</span>
+                                    <div style='text-align: center; margin-top: auto;'>
+                                        <span style='font-size: 1.4rem; font-weight: 800; color: #f8fafc;'>{val1}</span>{tend1}
+                                    </div>
                                 </div>
                                 <div style='flex: 1; padding-left: 8px; display: flex; flex-direction: column;'>
                                     <span style='font-size: 0.85rem; color: #f8fafc; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; line-height: 1.1;'>{lbl2}</span>
-                                    <span style='font-size: 1.4rem; font-weight: 800; color: #f8fafc; text-align: center; margin-top: auto;'>{val2}</span>
+                                    <div style='text-align: center; margin-top: auto;'>
+                                        <span style='font-size: 1.4rem; font-weight: 800; color: #f8fafc;'>{val2}</span>{tend2}
+                                    </div>
                                 </div>
                             </div>
                             """
@@ -1095,19 +1147,16 @@ with tab_ses:
                         
                         with col_w:
                             st.markdown("<h5 style='color: #f8fafc; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; margin-top: 0;'>🧠 Bienestar</h5>", unsafe_allow_html=True)
-                            st.markdown(html_tarjeta_doble("#10b981", f"{tqr_m:.1f}", f"{well_m:.1f}", "TQR", "Wellness"), unsafe_allow_html=True)
+                            st.markdown(html_tarjeta_doble("#10b981", f"{tqr_m:.1f}", f"{well_m:.1f}", "TQR", "Wellness", t_tqr, t_well), unsafe_allow_html=True)
                             
                         with col_i:
                             st.markdown("<h5 style='color: #f8fafc; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; margin-top: 0;'>🔥 Carga & Eficiencia (Medias)</h5>", unsafe_allow_html=True)
                             c_i1, c_i2 = st.columns(2)
                             
-                            efi_c_media = rpe_m / ((dis_m * 1000) / min_m) if min_m > 0 and dis_m > 0 else 0
-                            efi_n_media = rpe_m / (acc_m + dcc_m + spr_m) if (acc_m + dcc_m + spr_m) > 0 else 0
-                            
                             with c_i1:
-                                st.markdown(html_tarjeta_doble("#f59e0b", f"{carga_m:.0f}", f"{rpe_m:.1f}", "Carga (UA)", "RPE"), unsafe_allow_html=True)
+                                st.markdown(html_tarjeta_doble("#f59e0b", f"{carga_m:.0f}", f"{rpe_m:.1f}", "Carga (UA)", "RPE", t_carga, t_rpe), unsafe_allow_html=True)
                             with c_i2:
-                                st.markdown(html_tarjeta_doble("#f59e0b", f"{efi_c_media:.4f}", f"{efi_n_media:.2f}", "Efic. Cardio", "Efic. Neuro"), unsafe_allow_html=True)
+                                st.markdown(html_tarjeta_doble("#f59e0b", f"{efi_c_media:.4f}", f"{efi_n_media:.2f}", "Efic. Cardio", "Efic. Neuro", t_efic, t_efin), unsafe_allow_html=True)
                                 
                         with col_e:
                             st.markdown("<h5 style='color: #f8fafc; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; margin-top: 0;'>🏃‍♂️ Carga Externa & Densidad</h5>", unsafe_allow_html=True)
