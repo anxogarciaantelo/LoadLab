@@ -1161,19 +1161,36 @@ with tab_ses:
                         with col_e:
                             st.markdown("<h5 style='color: #f8fafc; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; margin-top: 0;'>🏃‍♂️ Carga Externa & Densidad</h5>", unsafe_allow_html=True)
                             
-                            # --- CÁLCULO DE REFERENCIAS DE PARTIDO (100%) ---
-                            # Obtenemos el histórico de competición para las referencias absolutas (Equipo e Individuo)
-                            df_historico_partidos = st.session_state.df_master_informes[(st.session_state.df_master_informes['TIPO_SESION'].str.contains("Partido", na=False)) & (st.session_state.df_master_informes['DIS'] > 0)]
+                            # --- CÁLCULO DE REFERENCIAS DE PARTIDO (100%) NORMALIZADO A 90' ---
+                            df_historico_partidos = st.session_state.df_master_informes[(st.session_state.df_master_informes['TIPO_SESION'].str.contains("Partido", na=False)) & (st.session_state.df_master_informes['DIS'] > 0)].copy()
+                            
                             if not df_historico_partidos.empty:
-                                dis_100_eq = df_historico_partidos['DIS'].mean()
-                                hsr_100_eq = df_historico_partidos['DIS AI'].mean()
-                                acc_100_eq = df_historico_partidos['ACC'].mean()
-                                dcc_100_eq = df_historico_partidos['DCC'].mean()
+                                # Priorizamos los minutos de GPS reales si existen
+                                df_historico_partidos['MIN_REAL'] = np.where(df_historico_partidos.get('MIN_GPS', df_historico_partidos['MIN']) > 0, df_historico_partidos.get('MIN_GPS', df_historico_partidos['MIN']), df_historico_partidos['MIN'])
                                 
-                                # Diccionario de medias individuales en competición (Para la tabla inferior)
-                                medias_indiv_partido = df_historico_partidos.groupby('JUGADOR')[['DIS', 'DIS AI', 'ACC', 'DCC']].mean().to_dict('index')
+                                # 1. Media del Equipo Normalizada a 90'
+                                min_totales_eq = df_historico_partidos['MIN_REAL'].sum()
+                                if min_totales_eq > 0:
+                                    dis_100_eq = (df_historico_partidos['DIS'].sum() / min_totales_eq) * 90
+                                    hsr_100_eq = (df_historico_partidos['DIS AI'].sum() / min_totales_eq) * 90
+                                    acc_100_eq = (df_historico_partidos['ACC'].sum() / min_totales_eq) * 90
+                                    dcc_100_eq = (df_historico_partidos['DCC'].sum() / min_totales_eq) * 90
+                                else:
+                                    dis_100_eq, hsr_100_eq, acc_100_eq, dcc_100_eq = 10.0, 600.0, 40.0, 40.0
+                                
+                                # 2. Medias Individuales Normalizadas a 90'
+                                df_sum_indiv = df_historico_partidos.groupby('JUGADOR')[['DIS', 'DIS AI', 'ACC', 'DCC', 'MIN_REAL']].sum()
+                                medias_indiv_partido = {}
+                                for j_nom, j_row in df_sum_indiv.iterrows():
+                                    m_jug = j_row['MIN_REAL']
+                                    if m_jug > 0:
+                                        medias_indiv_partido[j_nom] = {
+                                            'DIS': (j_row['DIS'] / m_jug) * 90,
+                                            'DIS AI': (j_row['DIS AI'] / m_jug) * 90,
+                                            'ACC': (j_row['ACC'] / m_jug) * 90,
+                                            'DCC': (j_row['DCC'] / m_jug) * 90
+                                        }
                             else:
-                                # Fallback estándar si aún no hay partidos jugados en la base de datos
                                 dis_100_eq, hsr_100_eq, acc_100_eq, dcc_100_eq = 10.0, 600.0, 40.0, 40.0
                                 medias_indiv_partido = {}
 
