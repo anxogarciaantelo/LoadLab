@@ -1193,24 +1193,38 @@ with tab_ses:
                         with cg4:
                             if df_graficos['RATIO A/C'].sum() > 0:
                                 df_ac = df_graficos[df_graficos['RATIO A/C'] > 0].copy()
-                                fig3 = go.Figure()
-                                fig3.add_trace(go.Bar(x=df_ac['JUGADOR'], y=df_ac['RATIO A/C'], name="Interno (sRPE)", marker_color="#3b82f6"))
-                                fig3.add_trace(go.Bar(x=df_ac['JUGADOR'], y=df_ac['RATIO A/C HSR'], name="HSR (>21)", marker_color="#f59e0b"))
-                                fig3.add_trace(go.Bar(x=df_ac['JUGADOR'], y=df_ac['RATIO A/C ACC'], name="Mecánico (ACC)", marker_color="#ef4444"))
+                                df_ac = df_ac.sort_values('RATIO A/C', ascending=False)
                                 
-                                fig3.add_hline(y=1.5, line_dash="dash", line_color="#ff4b4b", annotation_text="Peligro (1.5)")
-                                fig3.add_hline(y=1.3, line_dash="dot", line_color="#f59e0b")
+                                z_data = df_ac[['RATIO A/C', 'RATIO A/C HSR', 'RATIO A/C ACC']].values
+                                y_labels = df_ac['JUGADOR'].tolist()
+                                x_labels = ['A/C INT', 'A/C HSR', 'A/C ACC']
                                 
-                                fig3.update_layout(title="Riesgo Multidimensional (ACWR)", barmode='group', plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
+                                # Escala de colores estricta adaptada al Sweet Spot Model (0.8 - 1.3)
+                                colorscale = [
+                                    [0.0, "#3b82f6"], [0.44, "#3b82f6"],  # 0.0 a ~0.8 (Azul - Under-loading)
+                                    [0.44, "#10b981"], [0.72, "#10b981"], # ~0.8 a ~1.3 (Verde - Sweet Spot)
+                                    [0.72, "#f59e0b"], [0.83, "#f59e0b"], # ~1.3 a ~1.5 (Amarillo - Danger Zone)
+                                    [0.83, "#ef4444"], [1.0, "#ef4444"]   # > 1.5 (Rojo - Riesgo Crítico)
+                                ]
+                                
+                                fig3 = go.Figure(data=go.Heatmap(
+                                    z=z_data, x=x_labels, y=y_labels,
+                                    colorscale=colorscale, zmin=0.0, zmax=1.8,
+                                    text=np.round(z_data, 2), texttemplate="%{text}",
+                                    textfont={"color": "white", "weight": "bold"},
+                                    hoverongaps=False, showscale=False
+                                ))
+                                
+                                fig3.update_layout(title="Riesgo Multidimensional (ACWR)", plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', margin=dict(l=10, r=10, t=40, b=10), yaxis={'autorange': 'reversed'})
                                 st.plotly_chart(fig3, use_container_width=True, key=f"ses_ac_{idx_real}")
                         
-                        # Tabla Consolidada de Control de Riesgo (Sin variables crónicas para no saturar)
-                        cols_ver_ci = ['JUGADOR', 'POS', 'MIN', 'RPE', 'CARGA', 'RATIO A/C', 'RATIO A/C HSR', 'RATIO A/C ACC']
-                        df_tabla_riesgo = df_informe[cols_ver_ci].rename(columns={'RATIO A/C': 'A/C INT', 'RATIO A/C HSR': 'A/C HSR', 'RATIO A/C ACC': 'A/C ACC'})
-                        
-                        estilo_ci = (df_tabla_riesgo.style.hide(axis="index").format(precision=2)
-                                     .map(lambda x: f"background-color: {color_ratio_ac(x)}; color: black;" if isinstance(x, (int, float)) else "", subset=['A/C INT', 'A/C HSR', 'A/C ACC']))
-                        mostrar_tabla_moderna(estilo_ci)
+                        with st.expander("📋 Ver Tabla Detallada de Carga Interna"):
+                            cols_ver_ci = ['JUGADOR', 'POS', 'MIN', 'RPE', 'CARGA', 'RATIO A/C', 'RATIO A/C HSR', 'RATIO A/C ACC']
+                            df_tabla_riesgo = df_informe[cols_ver_ci].rename(columns={'RATIO A/C': 'A/C INT', 'RATIO A/C HSR': 'A/C HSR', 'RATIO A/C ACC': 'A/C ACC'})
+                            
+                            estilo_ci = (df_tabla_riesgo.style.hide(axis="index").format(precision=2)
+                                         .map(lambda x: f"background-color: {color_ratio_ac(x)}; color: black;" if isinstance(x, (int, float)) else "", subset=['A/C INT', 'A/C HSR', 'A/C ACC']))
+                            mostrar_tabla_moderna(estilo_ci)
                         
                         st.markdown("---")
 
@@ -1354,21 +1368,42 @@ with tab_ses:
                                 
                                 fig4.update_layout(yaxis=dict(scaleanchor="x", scaleratio=1), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
                                 st.plotly_chart(fig4, use_container_width=True, key=f"ses_a_{idx_real}")
-                                
-                        # --- TABLA DE CARGA EXTERNA (CON % RELATIVO INDIVIDUAL) ---
-                        df_tabla_ce = df_informe[df_informe['DIS'] > 0].copy()
-                        df_tabla_ce['DIS AI'] = df_tabla_ce.get('DIS AI', df_tabla_ce.get('HID >21', 0))
-                        
-                        def calc_pct_match(row, metric):
-                            val_partido = medias_indiv_partido.get(row['JUGADOR'], {}).get(metric, 0)
-                            return (row[metric] / val_partido) * 100 if val_partido > 0 else 0
+
+                        # --- GRÁFICOS DE DENSIDAD (NORMALIZADOS POR MINUTOS) ---
+                        df_den = df_graficos[df_graficos['DIS'] > 0].copy()
+                        if not df_den.empty:
+                            df_den['DIS AI'] = df_den.get('DIS AI', df_den.get('HID >21', 0))
+                            df_den['m/min'] = np.where(df_den['MIN'] > 0, (df_den['DIS'] * 1000) / df_den['MIN'], 0)
+                            df_den['HSR/min'] = np.where(df_den['MIN'] > 0, df_den['DIS AI'] / df_den['MIN'], 0)
+                            df_den['Mec/min'] = np.where(df_den['MIN'] > 0, (df_den['ACC'] + df_den['DCC']) / df_den['MIN'], 0)
                             
-                        df_tabla_ce['% DIS (Part)'] = df_tabla_ce.apply(lambda r: calc_pct_match(r, 'DIS'), axis=1)
-                        df_tabla_ce['% HSR (Part)'] = df_tabla_ce.apply(lambda r: calc_pct_match(r, 'DIS AI'), axis=1)
-                        df_tabla_ce['% ACC (Part)'] = df_tabla_ce.apply(lambda r: calc_pct_match(r, 'ACC'), axis=1)
-                        
-                        cols_ver_ce = ['JUGADOR', 'POS', 'ESTADO', 'DIS', '% DIS (Part)', 'DIS AI', '% HSR (Part)', 'ACC', '% ACC (Part)', 'DCC', 'VMAX', '% VMAX']
-                        mostrar_tabla_moderna(df_tabla_ce[cols_ver_ce].style.hide(axis="index").format(precision=1))
+                            cg7, cg8 = st.columns(2)
+                            with cg7:
+                                fig_den_v = px.scatter(df_den, x='MIN', y='m/min', color='POS', size='HSR/min', hover_name='JUGADOR', text='JUGADOR', title="Densidad Volumen (m/min) vs Minutos", color_discrete_map={"POR": "gray", "DEF": "#00b4d8", "MED": "#28a745", "ATA": "#ff4b4b"})
+                                fig_den_v.update_traces(textposition='top center', marker=dict(opacity=0.8, line=dict(width=1, color='DarkSlateGrey')))
+                                fig_den_v.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+                                st.plotly_chart(fig_den_v, use_container_width=True, key=f"ses_den_v_{idx_real}")
+                            with cg8:
+                                fig_den_m = px.scatter(df_den, x='MIN', y='Mec/min', color='POS', hover_name='JUGADOR', text='JUGADOR', title="Densidad Mecánica (ACC+DCC/min) vs Minutos", color_discrete_map={"POR": "gray", "DEF": "#00b4d8", "MED": "#28a745", "ATA": "#ff4b4b"})
+                                fig_den_m.update_traces(textposition='top center', marker=dict(size=12, opacity=0.8, line=dict(width=1, color='DarkSlateGrey')))
+                                fig_den_m.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+                                st.plotly_chart(fig_den_m, use_container_width=True, key=f"ses_den_m_{idx_real}")
+
+                        # --- TABLA DE CARGA EXTERNA (CON % RELATIVO INDIVIDUAL) ---
+                        with st.expander("📋 Ver Tabla Detallada de Carga Externa"):
+                            df_tabla_ce = df_informe[df_informe['DIS'] > 0].copy()
+                            df_tabla_ce['DIS AI'] = df_tabla_ce.get('DIS AI', df_tabla_ce.get('HID >21', 0))
+                            
+                            def calc_pct_match(row, metric):
+                                val_partido = medias_indiv_partido.get(row['JUGADOR'], {}).get(metric, 0)
+                                return (row[metric] / val_partido) * 100 if val_partido > 0 else 0
+                                
+                            df_tabla_ce['% DIS (Part)'] = df_tabla_ce.apply(lambda r: calc_pct_match(r, 'DIS'), axis=1)
+                            df_tabla_ce['% HSR (Part)'] = df_tabla_ce.apply(lambda r: calc_pct_match(r, 'DIS AI'), axis=1)
+                            df_tabla_ce['% ACC (Part)'] = df_tabla_ce.apply(lambda r: calc_pct_match(r, 'ACC'), axis=1)
+                            
+                            cols_ver_ce = ['JUGADOR', 'POS', 'ESTADO', 'DIS', '% DIS (Part)', 'DIS AI', '% HSR (Part)', 'ACC', '% ACC (Part)', 'DCC', 'VMAX', '% VMAX']
+                            mostrar_tabla_moderna(df_tabla_ce[cols_ver_ce].style.hide(axis="index").format(precision=1))
                         
                         st.markdown("---")
                         pdf_key = f"pdf_sesion_listo_{idx_real}"
