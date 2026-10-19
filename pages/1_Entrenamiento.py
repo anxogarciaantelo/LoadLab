@@ -1316,9 +1316,22 @@ with tab_ses:
                         st.markdown("#### 🏃‍♂️ 3. Carga Externa (GPS)")
                         
                         # --- HUELLA DACTILAR DE LA SESIÓN ---
-                        vol_actual = dis_m * 1000
-                        int_actual = hsr_m
-                        ten_actual = acc_m + dcc_m
+                        if es_partido:
+                            # Normalizamos el rendimiento global de ESTE partido a 90' para compararlo con justeza
+                            min_efectivo_sesion = np.where(df_para_medias_gps.get('MIN_GPS', df_para_medias_gps['MIN']) > 0, df_para_medias_gps.get('MIN_GPS', df_para_medias_gps['MIN']), df_para_medias_gps['MIN'])
+                            min_totales = min_efectivo_sesion.sum()
+                            
+                            if min_totales > 0:
+                                vol_actual = (df_para_medias_gps['DIS'].sum() / min_totales) * 90 * 1000
+                                int_actual = (df_para_medias_gps['DIS AI'].sum() / min_totales) * 90
+                                ten_actual = ((df_para_medias_gps['ACC'].sum() + df_para_medias_gps['DCC'].sum()) / min_totales) * 90
+                            else:
+                                vol_actual, int_actual, ten_actual = 0, 0, 0
+                        else:
+                            # En entrenamientos usamos valores absolutos (la referencia también es absoluta)
+                            vol_actual = dis_m * 1000
+                            int_actual = hsr_m
+                            ten_actual = acc_m + dcc_m
                         
                         df_historico = st.session_state.df_master_informes
                         # Exclusión estricta de porteros y de registros sin GPS real para no falsear medias
