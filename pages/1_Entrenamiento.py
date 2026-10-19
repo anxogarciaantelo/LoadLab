@@ -987,17 +987,35 @@ with tab_ses:
                             efi_cardio = safe_float(row.get('RPE', 0)) / m_min if m_min > 0 else 0
                             efi_neuro = safe_float(row.get('RPE', 0)) / mec_total if mec_total > 0 else 0
                             
-                            st_efi = dict_zscore_efi.get(jug, {'cardio_mean': 0, 'cardio_std': 0.05, 'neuro_mean': 0, 'neuro_std': 0.05})
+                            # --- CÁLCULO DE EFICIENCIA POR CONTEXTO ESPECÍFICO (MD) ---
+                            sesion_md_eval = sesion.get('descripcion', 'TD') if not es_partido else "Partido"
                             
-                            if efi_cardio > 0 and st_efi['cardio_mean'] > 0:
-                                z_cardio = (efi_cardio - st_efi['cardio_mean']) / st_efi['cardio_std']
-                                if z_cardio >= 1.5: 
-                                    alertas_jugadores[jug]['carga'].append(f"🟡 Baja Efic. Cardio (Z: +{z_cardio:.1f}) - Posible falta adaptación aeróbica"); alertas_jugadores[jug]['total'] += 1
+                            # Extraemos el histórico limpio excluyendo la sesión de hoy para no falsear la línea base
+                            df_hist_jug_md = df_master_hist[(df_master_hist['JUGADOR'] == jug) & (df_master_hist['FECHA'] < sesion["fecha"])].copy()
+                            
+                            if not es_partido:
+                                df_hist_jug_md = df_hist_jug_md[df_hist_jug_md['MD'] == sesion_md_eval]
+                            else:
+                                df_hist_jug_md = df_hist_jug_md[df_hist_jug_md['TIPO_SESION'].str.contains("Partido", na=False)]
+                                
+                            if not df_hist_jug_md.empty:
+                                df_hist_jug_md['m_min_h'] = np.where(df_hist_jug_md['MIN'] > 0, (df_hist_jug_md['DIS'] * 1000) / df_hist_jug_md['MIN'], 0)
+                                df_hist_jug_md['mec_h'] = df_hist_jug_md['ACC'] + df_hist_jug_md['DCC'] + df_hist_jug_md['Nº SPR']
+                                
+                                df_c_val = df_hist_jug_md[(df_hist_jug_md['m_min_h'] > 0) & (df_hist_jug_md['RPE'] > 0)]
+                                df_n_val = df_hist_jug_md[(df_hist_jug_md['mec_h'] > 0) & (df_hist_jug_md['RPE'] > 0)]
+                                
+                                media_c = (df_c_val['RPE'] / df_c_val['m_min_h']).mean() if not df_c_val.empty else 0
+                                media_n = (df_n_val['RPE'] / df_n_val['mec_h']).mean() if not df_n_val.empty else 0
+                                
+                                # Evaluamos si la demanda interna supera en un >20% a la media histórica del mismo tipo de sesión
+                                if media_c > 0 and efi_cardio > (media_c * 1.20):
+                                    empeoramiento = ((efi_cardio - media_c) / media_c) * 100
+                                    alertas_jugadores[jug]['carga'].append(f"🟡 Alerta de Eficiencia Cardio: -{empeoramiento:.0f}% vs su línea base en {sesion_md_eval}"); alertas_jugadores[jug]['total'] += 1
                                     
-                            if efi_neuro > 0 and st_efi['neuro_mean'] > 0:
-                                z_neuro = (efi_neuro - st_efi['neuro_mean']) / st_efi['neuro_std']
-                                if z_neuro >= 1.5: 
-                                    alertas_jugadores[jug]['carga'].append(f"🟡 Baja Efic. Neuro (Z: +{z_neuro:.1f}) - Posible fatiga neuromuscular"); alertas_jugadores[jug]['total'] += 1
+                                if media_n > 0 and efi_neuro > (media_n * 1.20):
+                                    empeoramiento = ((efi_neuro - media_n) / media_n) * 100
+                                    alertas_jugadores[jug]['carga'].append(f"🟡 Alerta de Eficiencia Neuro: -{empeoramiento:.0f}% vs su línea base en {sesion_md_eval}"); alertas_jugadores[jug]['total'] += 1
                                 
                             monot, strain = calcular_monotonia_7d(st.session_state.sesiones, jug, sesion['fecha'], devolver_strain=True)
                             monot_hsr, strain_hsr = calcular_monotonia_7d(st.session_state.sesiones, jug, sesion['fecha'], metrica="DIS AI", devolver_strain=True)
