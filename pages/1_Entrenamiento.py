@@ -1094,14 +1094,33 @@ with tab_ses:
                         with col_e:
                             st.markdown("<h5 style='color: #f8fafc; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; margin-top: 0;'>🏃‍♂️ Carga Externa & Densidad</h5>", unsafe_allow_html=True)
                             
+                            # --- CÁLCULO DE REFERENCIAS DE PARTIDO (100%) ---
+                            # Obtenemos el histórico de competición para las referencias absolutas (Equipo e Individuo)
+                            df_historico_partidos = st.session_state.df_master_informes[(st.session_state.df_master_informes['TIPO_SESION'].str.contains("Partido", na=False)) & (st.session_state.df_master_informes['DIS'] > 0)]
+                            if not df_historico_partidos.empty:
+                                dis_100_eq = df_historico_partidos['DIS'].mean()
+                                hsr_100_eq = df_historico_partidos['DIS AI'].mean()
+                                acc_100_eq = df_historico_partidos['ACC'].mean()
+                                dcc_100_eq = df_historico_partidos['DCC'].mean()
+                                
+                                # Diccionario de medias individuales en competición (Para la tabla inferior)
+                                medias_indiv_partido = df_historico_partidos.groupby('JUGADOR')[['DIS', 'DIS AI', 'ACC', 'DCC']].mean().to_dict('index')
+                            else:
+                                # Fallback estándar si aún no hay partidos jugados en la base de datos
+                                dis_100_eq, hsr_100_eq, acc_100_eq, dcc_100_eq = 10.0, 600.0, 40.0, 40.0
+                                medias_indiv_partido = {}
+
+                            pct_dis_eq = (dis_m / dis_100_eq) * 100 if dis_100_eq > 0 else 0
+                            pct_hsr_eq = (hsr_m / hsr_100_eq) * 100 if hsr_100_eq > 0 else 0
+                            pct_acc_eq = (acc_m / acc_100_eq) * 100 if acc_100_eq > 0 else 0
+                            
                             densidad_m = (dis_m * 1000) / min_m if min_m > 0 else 0
                             densidad_hsr = hsr_m / min_m if min_m > 0 else 0
                             densidad_acc = acc_m / min_m if min_m > 0 else 0
                             densidad_dcc = dcc_m / min_m if min_m > 0 else 0
                             
-                            st.markdown(html_tarjeta_triple("#3b82f6", f"{dis_m:.2f} km", f"{hsr_m:.0f} m", f"{acc_m:.0f} | {dcc_m:.0f}", "Distancia", "HSR (>21)", "ACC | DCC (>3)"), unsafe_allow_html=True)
+                            st.markdown(html_tarjeta_triple("#3b82f6", f"{dis_m:.2f} km <span style='font-size:0.6em; color:#94a3b8;'>({pct_dis_eq:.0f}%)</span>", f"{hsr_m:.0f} m <span style='font-size:0.6em; color:#94a3b8;'>({pct_hsr_eq:.0f}%)</span>", f"{acc_m:.0f} | {dcc_m:.0f} <span style='font-size:0.6em; color:#94a3b8;'>({pct_acc_eq:.0f}%)</span>", "Distancia (vs Partido)", "HSR >21 (vs Partido)", "ACC|DCC (vs Partido)"), unsafe_allow_html=True)
                             st.markdown(html_tarjeta_triple("#0ea5e9", f"{densidad_m:.0f} m", f"{densidad_hsr:.1f} m", f"{densidad_acc:.2f} | {densidad_dcc:.2f}", "m / min", "HSR / min", "ACC | DCC / min"), unsafe_allow_html=True)
-
                         st.markdown("---")
                         
                         # --- 4. ALERTAS DE RIESGO MOVIDAS ARRIBA (EN 3 COLUMNAS) ---
@@ -1268,29 +1287,88 @@ with tab_ses:
                         st.markdown("---")
                         
                         cg5, cg6 = st.columns(2)
+                        
+                        # --- MOTOR DE PERIODIZACIÓN TÁCTICA (ZONAS OBJETIVO) ---
+                        # Se definen las bandas objetivo como porcentajes [Min, Max] respecto a la media del partido
+                        zonas_pt = {
+                            "MD-5": {"DIS": [0.20, 0.40], "HSR": [0.00, 0.15], "ACC": [0.20, 0.40], "DCC": [0.20, 0.40]},
+                            "MD-4": {"DIS": [0.45, 0.65], "HSR": [0.10, 0.30], "ACC": [0.80, 1.20], "DCC": [0.80, 1.20]},
+                            "MD-3": {"DIS": [0.65, 0.85], "HSR": [0.60, 0.90], "ACC": [0.40, 0.65], "DCC": [0.40, 0.65]},
+                            "MD-2": {"DIS": [0.35, 0.50], "HSR": [0.20, 0.40], "ACC": [0.30, 0.50], "DCC": [0.30, 0.50]},
+                            "MD-1": {"DIS": [0.15, 0.30], "HSR": [0.00, 0.15], "ACC": [0.10, 0.25], "DCC": [0.10, 0.25]},
+                            "MD+1": {"DIS": [0.20, 0.40], "HSR": [0.00, 0.10], "ACC": [0.10, 0.30], "DCC": [0.10, 0.30]},
+                            "MD+2": {"DIS": [0.35, 0.50], "HSR": [0.10, 0.30], "ACC": [0.30, 0.50], "DCC": [0.30, 0.50]},
+                            "TD":   {"DIS": [0.50, 0.75], "HSR": [0.30, 0.60], "ACC": [0.50, 0.75], "DCC": [0.50, 0.75]}
+                        }
+                        
+                        ses_md = sesion.get('descripcion', 'TD')
+                        if es_partido: ses_md = "Partido" 
+                        zona_obj = {"DIS": [0.9, 1.1], "HSR": [0.9, 1.1], "ACC": [0.9, 1.1], "DCC": [0.9, 1.1]} if es_partido else zonas_pt.get(ses_md, zonas_pt["TD"])
+                        
                         with cg5:
                             if df_graficos['DIS'].sum() > 0:
                                 df_gps_sesion = df_graficos[df_graficos['DIS'] > 0].copy()
-                                fig5 = px.scatter(df_gps_sesion, x='DIS', y='DIS AI', color='POS', hover_name='JUGADOR', text='JUGADOR', title="Volumen vs Intensidad", color_discrete_map={"POR": "gray", "DEF": "#00b4d8", "MED": "#28a745", "ATA": "#ff4b4b"})
+                                
+                                # Evaluar Cumplimiento (Verde, Amarillo, Rojo)
+                                def eval_cump_vol_int(r):
+                                    d_ok = zona_obj["DIS"][0] * dis_100_eq <= r['DIS'] <= zona_obj["DIS"][1] * dis_100_eq
+                                    h_ok = zona_obj["HSR"][0] * hsr_100_eq <= r.get('DIS AI', r.get('HID >21', 0)) <= zona_obj["HSR"][1] * hsr_100_eq
+                                    if d_ok and h_ok: return "Óptimo (En Objetivo)"
+                                    elif r['DIS'] > zona_obj["DIS"][1] * dis_100_eq or r.get('DIS AI', r.get('HID >21', 0)) > zona_obj["HSR"][1] * hsr_100_eq: return "Excesivo"
+                                    else: return "Deficiente"
+                                
+                                df_gps_sesion['DIS AI'] = df_gps_sesion.get('DIS AI', df_gps_sesion.get('HID >21', 0))
+                                df_gps_sesion['Cumplimiento'] = df_gps_sesion.apply(eval_cump_vol_int, axis=1)
+                                
+                                fig5 = px.scatter(df_gps_sesion, x='DIS', y='DIS AI', color='Cumplimiento', hover_name='JUGADOR', text='JUGADOR', title=f"Vol. vs Int. (Banda Obj: {ses_md})", color_discrete_map={"Óptimo (En Objetivo)": "#10b981", "Excesivo": "#ef4444", "Deficiente": "#f59e0b"})
                                 fig5.update_traces(textposition='top center', marker=dict(size=12, opacity=0.8, line=dict(width=1, color='DarkSlateGrey')))
-                                fig5.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
-                                fig5.add_vline(x=df_gps_sesion['DIS'].mean(), line_dash="dot", line_color="gray", opacity=0.6)
-                                fig5.add_hline(y=df_gps_sesion['DIS AI'].mean(), line_dash="dot", line_color="gray", opacity=0.6)
+                                fig5.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
+                                
+                                # Añadir Banda Sombreada Objetivo Metabólico
+                                fig5.add_shape(type="rect", x0=zona_obj["DIS"][0]*dis_100_eq, x1=zona_obj["DIS"][1]*dis_100_eq, y0=zona_obj["HSR"][0]*hsr_100_eq, y1=zona_obj["HSR"][1]*hsr_100_eq, fillcolor="green", opacity=0.15, line_width=2, line_color="green", layer="below")
+                                fig5.add_annotation(x=zona_obj["DIS"][1]*dis_100_eq, y=zona_obj["HSR"][1]*hsr_100_eq, text="ZONA OBJETIVO", showarrow=False, font=dict(color="green", size=10), xanchor="right", yanchor="bottom")
+                                
                                 st.plotly_chart(fig5, use_container_width=True, key=f"ses_h_{idx_real}")
+                                
                         with cg6:
                             if df_graficos['ACC'].sum() > 0 or df_graficos['DCC'].sum() > 0:
-                                df_accdcc = df_graficos[df_graficos['DIS'] > 0]
-                                max_val = max(df_accdcc['ACC'].max(), df_accdcc['DCC'].max()) * 1.1 if not df_accdcc.empty else 10
-                                fig4 = px.scatter(df_accdcc, x='DCC', y='ACC', color='POS', hover_name='JUGADOR', text='JUGADOR', title="ACC vs DCC", color_discrete_map={"POR": "gray", "DEF": "#00b4d8", "MED": "#28a745", "ATA": "#ff4b4b"})
+                                df_accdcc = df_graficos[df_graficos['DIS'] > 0].copy()
+                                
+                                def eval_cump_ten(r):
+                                    a_ok = zona_obj["ACC"][0] * acc_100_eq <= r['ACC'] <= zona_obj["ACC"][1] * acc_100_eq
+                                    d_ok = zona_obj["DCC"][0] * dcc_100_eq <= r['DCC'] <= zona_obj["DCC"][1] * dcc_100_eq
+                                    if a_ok and d_ok: return "Óptimo (En Objetivo)"
+                                    elif r['ACC'] > zona_obj["ACC"][1] * acc_100_eq or r['DCC'] > zona_obj["DCC"][1] * dcc_100_eq: return "Excesivo"
+                                    else: return "Deficiente"
+                                    
+                                df_accdcc['Cumplimiento'] = df_accdcc.apply(eval_cump_ten, axis=1)
+                                
+                                max_val = max(df_accdcc['ACC'].max(), df_accdcc['DCC'].max(), zona_obj["ACC"][1]*acc_100_eq*1.1) if not df_accdcc.empty else 10
+                                fig4 = px.scatter(df_accdcc, x='DCC', y='ACC', color='Cumplimiento', hover_name='JUGADOR', text='JUGADOR', title=f"Tensión Mecánica (Banda Obj: {ses_md})", color_discrete_map={"Óptimo (En Objetivo)": "#10b981", "Excesivo": "#ef4444", "Deficiente": "#f59e0b"})
                                 fig4.update_traces(textposition='top center', marker=dict(size=12, opacity=0.8, line=dict(width=1, color='DarkSlateGrey')))
                                 fig4.add_shape(type="line", x0=0, y0=0, x1=max_val, y1=max_val, line=dict(color="gray", dash="dot"))
-                                fig4.update_layout(yaxis=dict(scaleanchor="x", scaleratio=1), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+                                
+                                # Añadir Banda Sombreada Objetivo Mecánico
+                                fig4.add_shape(type="rect", x0=zona_obj["DCC"][0]*dcc_100_eq, x1=zona_obj["DCC"][1]*dcc_100_eq, y0=zona_obj["ACC"][0]*acc_100_eq, y1=zona_obj["ACC"][1]*acc_100_eq, fillcolor="green", opacity=0.15, line_width=2, line_color="green", layer="below")
+                                fig4.add_annotation(x=zona_obj["DCC"][1]*dcc_100_eq, y=zona_obj["ACC"][1]*acc_100_eq, text="ZONA OBJETIVO", showarrow=False, font=dict(color="green", size=10), xanchor="right", yanchor="bottom")
+                                
+                                fig4.update_layout(yaxis=dict(scaleanchor="x", scaleratio=1), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
                                 st.plotly_chart(fig4, use_container_width=True, key=f"ses_a_{idx_real}")
                                 
-                        # AÑADIDO: '% VMAX' en la tabla de GPS
-                        cols_ver_ce = ['JUGADOR', 'POS', 'ESTADO', 'DIS', 'HID >21', 'Nº SPR', 'ACC', 'DCC', 'VMAX', '% VMAX']
-                        df_tabla_ce = df_informe[df_informe['DIS'] > 0]
-                        mostrar_tabla_moderna(df_tabla_ce[cols_ver_ce].style.hide(axis="index").format(precision=2))
+                        # --- TABLA DE CARGA EXTERNA (CON % RELATIVO INDIVIDUAL) ---
+                        df_tabla_ce = df_informe[df_informe['DIS'] > 0].copy()
+                        df_tabla_ce['DIS AI'] = df_tabla_ce.get('DIS AI', df_tabla_ce.get('HID >21', 0))
+                        
+                        def calc_pct_match(row, metric):
+                            val_partido = medias_indiv_partido.get(row['JUGADOR'], {}).get(metric, 0)
+                            return (row[metric] / val_partido) * 100 if val_partido > 0 else 0
+                            
+                        df_tabla_ce['% DIS (Part)'] = df_tabla_ce.apply(lambda r: calc_pct_match(r, 'DIS'), axis=1)
+                        df_tabla_ce['% HSR (Part)'] = df_tabla_ce.apply(lambda r: calc_pct_match(r, 'DIS AI'), axis=1)
+                        df_tabla_ce['% ACC (Part)'] = df_tabla_ce.apply(lambda r: calc_pct_match(r, 'ACC'), axis=1)
+                        
+                        cols_ver_ce = ['JUGADOR', 'POS', 'ESTADO', 'DIS', '% DIS (Part)', 'DIS AI', '% HSR (Part)', 'ACC', '% ACC (Part)', 'DCC', 'VMAX', '% VMAX']
+                        mostrar_tabla_moderna(df_tabla_ce[cols_ver_ce].style.hide(axis="index").format(precision=1))
                         
                         st.markdown("---")
                         pdf_key = f"pdf_sesion_listo_{idx_real}"
