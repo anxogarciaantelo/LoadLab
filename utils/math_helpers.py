@@ -579,3 +579,112 @@ def calcular_zscores_eficiencia(df_master, fecha_objetivo):
             'neuro_std': stats_n.loc[jug, 'std'] if jug in stats_n.index and stats_n.loc[jug, 'std'] > 0 else 0.05
         }
     return res
+def aplicar_imputacion_gps_global(registros, sesion_actual, plantilla_global):
+    """
+    Motor de imputación de élite. 
+    Traspasa TODAS las métricas GPS (incluidos MIN_GPS) aislando por Estado y Posición.
+    Añade la bandera GPS_VIRTUAL = True para proteger los perfiles de rendimiento individual.
+    """
+    import pandas as pd
+    es_partido_flag = "Partido" in sesion_actual.get("tipo", "")
+    disp_dict = {limpiar_nombre(k): v for k, v in sesion_actual.get("disponibilidad", {}).items()}
+    default_estado = "Titular" if es_partido_flag else "Disponible"
+    stats_partido = {limpiar_nombre(k): v for k, v in sesion_actual.get("estadisticas_partido", {}).items()}
+    
+    datos_validos = []
+    for reg in registros:
+        jug = reg["JUGADOR"]
+        pos = reg.get("POS", "DEF")
+        estado = disp_dict.get(limpiar_nombre(jug), default_estado)
+        
+        # Solo usamos datos como referencia si tienen GPS real (DIS > 0 y NO virtual) y no son porteros
+        if safe_float(reg.get("DIS", 0)) > 0 and not reg.get("GPS_VIRTUAL", False) and pos != "POR":
+            p_match = next((p for p in plantilla_global if p["JUGADOR"] == jug), {})
+            pos_esp = p_match.get("pos_1", pos)
+            min_gps = safe_float(reg.get("MIN_GPS", reg.get("MIN", 0)))
+            if min_gps > 0:
+                datos_validos.append({
+                    "ESTADO": estado, "POS_ESP": pos_esp, "POS_GEN": pos, "MIN_GPS": min_gps,
+                    "DIS": safe_float(reg.get("DIS")), "DIS AI": safe_float(reg.get("HID >21", reg.get("DIS AI", 0))),
+                    "Nº SPR": safe_float(reg.get("SPR >24", reg.get("Nº SPR", 0))),
+                    "ACC": safe_float(reg.get("ACC >3", reg.get("ACC", 0))), "DCC": safe_float(reg.get("DCC >3", reg.get("DCC", 0))),
+                    "VMAX": safe_float(reg.get("V_Max", reg.get("VMAX", 0))),
+                    "Z1": safe_float(reg.get("Z1", 0)), "Z2": safe_float(reg.get("Z2", 0)), "Z3": safe_float(reg.get("Z3", 0)),
+                    "Z4": safe_float(reg.get("Z4", 0)), "Z5": safe_float(reg.get("Z5", 0)), "Z6": safe_float(reg.get("Z6", 0))
+                })
+                
+    if datos_validos:
+        df_val = pd.DataFrame(datos_validos)
+        df_val["DIS_pm"] = df_val["DIS"] / df_val["MIN_GPS"]
+        df_val["DIS_AI_pm"] = df_val["DIS AI"] / df_val["MIN_GPS"]
+        df_val["SPR_pm"] = df_val["Nº SPR"] / df_val["MIN_GPS"]
+        df_val["ACC_pm"] = df_val["ACC"] / df_val["MIN_GPS"]
+        df_val["DCC_pm"] = df_val["DCC"] / df_val["MIN_GPS"]
+        
+        medias_estado_esp = df_val.groupby(["ESTADO", "POS_ESP"]).mean(numeric_only=True).to_dict('index')
+        medias_estado_gen = df_val.groupby(["ESTADO", "POS_GEN"]).mean(numeric_only=True).to_dict('index')
+        medias_estado = df_val.groupby("ESTADO").mean(numeric_only=True).to_dict('index')
+        medias_eq = df_val.mean(numeric_only=True).to_dict()
+        
+        for reg in registros:
+            jug = reg["JUGADOR"]
+            pos = reg.get("POS", "DEF")
+            estado = disp_dict.get(limpiar_nombre(jug), default_estado)
+            elegible = estado in ["Disponible", "Recuperación Post-Partido", "Titular", "Suplente"]
+            
+            es_virtual_previo = reg.get("GPS_VIRTUAL", False)
+            sin_gps_real = safe_float(reg.get("DIS", 0)) == 0 or es_virtual_previo
+            min_jug = safe_float(reg.get("MIN", 0))
+            
+            if elegible and pos != "POR" and sin_gps_real:
+                p_match = next((p for p in plantilla_global if p["JUGADOR"] == jug), {})
+                pos_esp = p_match.get("pos_1", pos)
+                
+                # Respeto estricto del ESTADO de disponibilidad
+                ratios = medias_estado_esp.get((estado, pos_esp), 
+                         medias_estado_gen.get((estado, pos), 
+                         medias_estado.get(estado, medias_eq)))
+                
+                def seguro(v): return 0.0 if pd.isna(v) else float(v)
+
+                if es_partido_flag:
+                    min_partido = safe_float(stats_partido.get(limpiar_nombre(jug), {}).get("Minutos", min_jug))
+                    if min_partido == 0: continue
+                    
+                    reg["MIN_GPS"] = min_partido
+                    reg["MIN"] = min_partido
+                    reg["DIS"] = seguro(ratios.get("DIS_pm", 0) * min_partido)
+                    reg["DIS AI"] = seguro(ratios.get("DIS_AI_pm", 0) * min_partido)
+                    reg["HID >21"] = reg["DIS AI"]
+                    reg["Nº SPR"] = seguro(ratios.get("SPR_pm", 0) * min_partido)
+                    reg["SPR >24"] = reg["Nº SPR"]
+                    reg["ACC"] = seguro(ratios.get("ACC_pm", 0) * min_partido)
+                    reg["ACC >3"] = reg["ACC"]
+                    reg["DCC"] = seguro(ratios.get("DCC_pm", 0) * min_partido)
+                    reg["DCC >3"] = reg["DCC"]
+                else:
+                    min_grupo = seguro(ratios.get("MIN_GPS", 0))
+                    if min_grupo == 0: continue
+                    
+                    reg["MIN_GPS"] = min_grupo
+                    reg["DIS"] = seguro(ratios.get("DIS", 0))
+                    reg["DIS AI"] = seguro(ratios.get("DIS AI", 0))
+                    reg["HID >21"] = reg["DIS AI"]
+                    reg["Nº SPR"] = seguro(ratios.get("Nº SPR", 0))
+                    reg["SPR >24"] = reg["Nº SPR"]
+                    reg["ACC"] = seguro(ratios.get("ACC", 0))
+                    reg["ACC >3"] = reg["ACC"]
+                    reg["DCC"] = seguro(ratios.get("DCC", 0))
+                    reg["DCC >3"] = reg["DCC"]
+                    reg["Z1"] = seguro(ratios.get("Z1", 0))
+                    reg["Z2"] = seguro(ratios.get("Z2", 0))
+                    reg["Z3"] = seguro(ratios.get("Z3", 0))
+                    reg["Z4"] = seguro(ratios.get("Z4", 0))
+                    reg["Z5"] = seguro(ratios.get("Z5", 0))
+                    reg["Z6"] = seguro(ratios.get("Z6", 0))
+
+                reg["VMAX"] = seguro(ratios.get("VMAX", 0))
+                reg["V_Max"] = reg["VMAX"]
+                reg["GPS_VIRTUAL"] = True
+                
+    return registros
