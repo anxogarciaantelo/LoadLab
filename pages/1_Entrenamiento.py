@@ -1204,18 +1204,25 @@ with tab_ses:
                         ten_actual = acc_m + dcc_m
                         
                         df_historico = st.session_state.df_master_informes
+                        # Exclusión estricta de porteros y de registros sin GPS real para no falsear medias
+                        df_hist_campo = df_historico[(df_historico['POS'] != "POR") & (df_historico['DIS'] > 0)].copy()
                         
-                        df_partidos = df_historico[df_historico['TIPO_SESION'].str.contains("Partido", na=False)]
+                        # REFERENCIA 1: PARTIDO (Normalizado a 90 minutos)
+                        df_partidos = df_hist_campo[df_hist_campo['TIPO_SESION'].str.contains("Partido", na=False)]
                         if not df_partidos.empty:
-                            v_ref_partido = df_partidos['DIS'].mean() * 1000
-                            i_ref_partido = df_partidos['DIS AI'].mean()
-                            t_ref_partido = df_partidos['ACC'].mean() + df_partidos['DCC'].mean()
+                            min_efectivo_partido = np.where(df_partidos.get('MIN_GPS', df_partidos['MIN']) > 0, df_partidos.get('MIN_GPS', df_partidos['MIN']), df_partidos['MIN'])
+                            # Extraemos la densidad global y proyectamos un "Partido Teórico de 90'"
+                            v_ref_partido = (df_partidos['DIS'].sum() / min_efectivo_partido.sum()) * 90 * 1000
+                            i_ref_partido = (df_partidos['DIS AI'].sum() / min_efectivo_partido.sum()) * 90
+                            t_ref_partido = ((df_partidos['ACC'].sum() + df_partidos['DCC'].sum()) / min_efectivo_partido.sum()) * 90
                         else:
                             v_ref_partido, i_ref_partido, t_ref_partido = 10000, 600, 100
                             
+                        # REFERENCIA 2: ENTRENAMIENTO MD (Promedio Absoluto de Disponibles)
                         ses_md = sesion.get('descripcion', 'TD')
-                        df_md = df_historico[(df_historico['TIPO_SESION'] == "Entrenamiento") & (df_historico['MD'] == ses_md)]
+                        df_md = df_hist_campo[(df_hist_campo['TIPO_SESION'] == "Entrenamiento") & (df_hist_campo['MD'] == ses_md) & (df_hist_campo['ESTADO'] == "Disponible")]
                         if not df_md.empty:
+                            # Sin normalizar: buscamos el volumen físico real histórico de esta sesión
                             v_ref_md = df_md['DIS'].mean() * 1000
                             i_ref_md = df_md['DIS AI'].mean()
                             t_ref_md = df_md['ACC'].mean() + df_md['DCC'].mean()
