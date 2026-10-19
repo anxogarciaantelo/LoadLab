@@ -1008,14 +1008,29 @@ with tab_ses:
                                 media_c = (df_c_val['RPE'] / df_c_val['m_min_h']).mean() if not df_c_val.empty else 0
                                 media_n = (df_n_val['RPE'] / df_n_val['mec_h']).mean() if not df_n_val.empty else 0
                                 
-                                # Evaluamos si la demanda interna supera en un >20% a la media histórica del mismo tipo de sesión
-                                if media_c > 0 and efi_cardio > (media_c * 1.20):
-                                    empeoramiento = ((efi_cardio - media_c) / media_c) * 100
-                                    alertas_jugadores[jug]['carga'].append(f"🟡 Alerta de Eficiencia Cardio: -{empeoramiento:.0f}% vs su línea base en {sesion_md_eval}"); alertas_jugadores[jug]['total'] += 1
+                                # --- VALIDACIÓN CRUZADA DE EFICIENCIA (FILTRO DE FALSOS POSITIVOS) ---
+                                # Si el RPE es alto por falta de metros (Cardio mal), pero la tensión mecánica fue alta (Neuro bien), el RPE está justificado.
+                                cardio_mal = (media_c > 0 and efi_cardio > (media_c * 1.20))
+                                neuro_mal = (media_n > 0 and efi_neuro > (media_n * 1.20))
+                                
+                                neuro_bien = (media_n > 0 and efi_neuro <= (media_n * 1.20))
+                                cardio_bien = (media_c > 0 and efi_cardio <= (media_c * 1.20))
+
+                                if cardio_mal and neuro_mal:
+                                    # Ambas eficiencias han caído: Fatiga real y confirmada.
+                                    emp_c = ((efi_cardio - media_c) / media_c) * 100
+                                    emp_n = ((efi_neuro - media_n) / media_n) * 100
+                                    alertas_jugadores[jug]['carga'].append(f"🔴 Fatiga Integral: Caída Efic. Cardio (-{emp_c:.0f}%) y Neuro (-{emp_n:.0f}%) vs {sesion_md_eval}"); alertas_jugadores[jug]['total'] += 1
                                     
-                                if media_n > 0 and efi_neuro > (media_n * 1.20):
-                                    empeoramiento = ((efi_neuro - media_n) / media_n) * 100
-                                    alertas_jugadores[jug]['carga'].append(f"🟡 Alerta de Eficiencia Neuro: -{empeoramiento:.0f}% vs su línea base en {sesion_md_eval}"); alertas_jugadores[jug]['total'] += 1
+                                elif cardio_mal and not neuro_bien: 
+                                    # Cae cardio y no hay carga mecánica que justifique el RPE
+                                    emp_c = ((efi_cardio - media_c) / media_c) * 100
+                                    alertas_jugadores[jug]['carga'].append(f"🟡 Alerta Eficiencia Cardio: -{emp_c:.0f}% vs {sesion_md_eval}"); alertas_jugadores[jug]['total'] += 1
+                                    
+                                elif neuro_mal and not cardio_bien: 
+                                    # Cae neuro y no hay carga de metros que justifique el RPE
+                                    emp_n = ((efi_neuro - media_n) / media_n) * 100
+                                    alertas_jugadores[jug]['carga'].append(f"🟡 Alerta Eficiencia Neuro: -{emp_n:.0f}% vs {sesion_md_eval}"); alertas_jugadores[jug]['total'] += 1
                                 
                             monot, strain = calcular_monotonia_7d(st.session_state.sesiones, jug, sesion['fecha'], devolver_strain=True)
                             monot_hsr, strain_hsr = calcular_monotonia_7d(st.session_state.sesiones, jug, sesion['fecha'], metrica="DIS AI", devolver_strain=True)
