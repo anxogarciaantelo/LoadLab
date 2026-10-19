@@ -29,24 +29,47 @@ import plotly.graph_objects as go
 
 pio.templates["loadlab_elite_dark"] = go.layout.Template(
     layout=go.Layout(
-        font=dict(family="Plus Jakarta Sans, sans-serif", size=12, color="#94a3b8"),
+        font=dict(family="Plus Jakarta Sans, sans-serif", size=11, color="#94a3b8"),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        colorway=["#3b82f6", "#10b981", "#8b5cf6", "#ef4444", "#f59e0b", "#0ea5e9"],
+        colorway=["#3b82f6", "#10b981", "#ef4444", "#f59e0b", "#8b5cf6", "#0ea5e9"],
+        hovermode="closest",
+        hoverlabel=dict(
+            bgcolor="rgba(15, 23, 42, 0.95)",
+            font_size=12,
+            font_family="Plus Jakarta Sans, sans-serif",
+            bordercolor="#334155"
+        ),
         xaxis=dict(
             gridcolor="#1e293b",
+            gridwidth=1,
+            griddash="dot",
             zerolinecolor="#334155",
-            title=dict(font=dict(weight="bold", color="#e2e8f0")),
-            tickfont=dict(color="#94a3b8")
+            zerolinewidth=2,
+            showline=False,
+            title=dict(font=dict(size=12, color="#e2e8f0")),
+            tickfont=dict(size=10, color="#94a3b8")
         ),
         yaxis=dict(
             gridcolor="#1e293b",
+            gridwidth=1,
+            griddash="dot",
             zerolinecolor="#334155",
-            title=dict(font=dict(weight="bold", color="#e2e8f0")),
-            tickfont=dict(color="#94a3b8")
+            zerolinewidth=2,
+            showline=False,
+            title=dict(font=dict(size=12, color="#e2e8f0")),
+            tickfont=dict(size=10, color="#94a3b8")
         ),
-        title=dict(font=dict(color="#f8fafc", size=16, weight="bold")),
-        legend=dict(font=dict(color="#e2e8f0"))
+        title=dict(
+            font=dict(family="Plus Jakarta Sans, sans-serif", color="#f8fafc", size=15),
+            pad=dict(b=15)
+        ),
+        legend=dict(
+            font=dict(size=11, color="#cbd5e1"),
+            bgcolor="rgba(0,0,0,0)",
+            bordercolor="rgba(0,0,0,0)"
+        ),
+        margin=dict(l=40, r=20, t=50, b=30)
     )
 )
 pio.templates.default = "loadlab_elite_dark"
