@@ -30,7 +30,22 @@ def render_panel_principal():
                     guardar_datos(modulo="configuracion")
                     st.success("¡Datos actualizados!")
                     st.rerun()
-
+        with st.expander("🔄 Sincronización Retrospectiva de GPS"):
+            st.caption("Recalcula y traslada los datos de GPS (incluidos los minutos) a jugadores sin dispositivo basándose en su estado, posición y minutos de partido, en todas las sesiones pasadas.")
+            if st.button("🚀 Ejecutar Sincronización Histórica", use_container_width=True, type="primary"):
+                from utils.math_helpers import aplicar_imputacion_gps_global
+                sesiones_modificadas = 0
+                for s in st.session_state.sesiones:
+                    if s.get("informe_generado") and s.get("datos_informe"):
+                        s["datos_informe"] = aplicar_imputacion_gps_global(s["datos_informe"], s, st.session_state.plantilla)
+                        sesiones_modificadas += 1
+                
+                if sesiones_modificadas > 0:
+                    guardar_datos(modulo="sesiones")
+                    st.success(f"✅ ¡{sesiones_modificadas} sesiones recalculadas y protegidas con la etiqueta GPS_VIRTUAL!")
+                    st.rerun()
+                else:
+                    st.info("No hay sesiones con datos para sincronizar.")
     # --- COLUMNA 2: MAPEADOR DE EXCEL ---
     with col_mapeo:
         st.markdown("#### 🔄 Mapeador (Excel)")
