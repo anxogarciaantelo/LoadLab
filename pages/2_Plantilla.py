@@ -391,8 +391,10 @@ else:
                     f_md_g = "TODOS"
                     if f_tipo_g == "Entrenamiento": f_md_g = st.selectbox("Match Day:", ["TODOS", "MD-6", "MD-5", "MD-4", "MD-3", "MD-2", "MD-1", "MD+1", "MD+2", "TD"], key=f"g_m_{i}")
                     
-                    # Filtro estricto: Solo registros donde la distancia sea > 0 (No aplasta la media si estuvo lesionado)
-                    df_jg = df_j[df_j['DIS'] > 0].copy()
+                    # Filtro estricto: Solo registros donde la distancia sea > 0 y NO virtuales (protege VMAX y perfiles)
+                    if 'GPS_VIRTUAL' not in df_j.columns:
+                        df_j['GPS_VIRTUAL'] = False
+                    df_jg = df_j[(df_j['DIS'] > 0) & (df_j['GPS_VIRTUAL'] != True)].copy()
                     
                     if f_tipo_g != "TODOS": df_jg = df_jg[df_jg['TIPO'] == f_tipo_g]
                     if f_tipo_g == "Entrenamiento" and f_md_g != "TODOS": df_jg = df_jg[df_jg['MD'] == f_md_g]
