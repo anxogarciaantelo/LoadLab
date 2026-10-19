@@ -116,7 +116,10 @@ if "df_master_informes" in st.session_state and not st.session_state.df_master_i
     df_gps = st.session_state.df_master_informes.copy()
     
     # 2. Nos quedamos solo con los que llevaron GPS (Distancia > 0)
-    df_gps = df_gps[df_gps['DIS'] > 0]
+    if 'GPS_VIRTUAL' not in df_gps.columns:
+        df_gps['GPS_VIRTUAL'] = False
+    # Filtro Crítico: Excluir los datos imputados virtualmente para no contaminar perfiles
+    df_gps = df_gps[(df_gps['DIS'] > 0) & (df_gps['GPS_VIRTUAL'] != True)]
     
     # 3. Recreamos las columnas específicas que necesita esta vista (Microciclo, Nombre Sesión, POS_ESP)
     df_gps['Microciclo'] = df_gps['FECHA'].apply(lambda f: f"Microciclo {mapa_micros.get(obtener_numero_semana(f), obtener_numero_semana(f))}")
