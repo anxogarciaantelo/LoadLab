@@ -648,11 +648,12 @@ def aplicar_imputacion_gps_global(registros, sesion_actual, plantilla_global):
                 def seguro(v): return 0.0 if pd.isna(v) else float(v)
 
                 if es_partido_flag:
+                    # Los minutos de juego real (GPS) salen de las stats del partido
                     min_partido = safe_float(stats_partido.get(limpiar_nombre(jug), {}).get("Minutos", min_jug))
                     if min_partido == 0: continue
                     
+                    # IMPUTACIÓN ESTRICTA DE GPS (Respetando MIN y CARGA manuales)
                     reg["MIN_GPS"] = min_partido
-                    reg["MIN"] = min_partido
                     reg["DIS"] = seguro(ratios.get("DIS_pm", 0) * min_partido)
                     reg["DIS AI"] = seguro(ratios.get("DIS_AI_pm", 0) * min_partido)
                     reg["HID >21"] = reg["DIS AI"]
@@ -663,9 +664,11 @@ def aplicar_imputacion_gps_global(registros, sesion_actual, plantilla_global):
                     reg["DCC"] = seguro(ratios.get("DCC_pm", 0) * min_partido)
                     reg["DCC >3"] = reg["DCC"]
                 else:
+                    # En entrenamientos, usamos la media de MIN_GPS del grupo
                     min_grupo = seguro(ratios.get("MIN_GPS", 0))
                     if min_grupo == 0: continue
                     
+                    # IMPUTACIÓN ESTRICTA DE GPS (Respetando MIN y CARGA manuales)
                     reg["MIN_GPS"] = min_grupo
                     reg["DIS"] = seguro(ratios.get("DIS", 0))
                     reg["DIS AI"] = seguro(ratios.get("DIS AI", 0))
