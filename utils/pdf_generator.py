@@ -155,10 +155,13 @@ def generar_pdf_completo(sesion, df_para_medias, df_graficos, alertas_multi, ale
     pdf.ln(8)
 
     y_img = pdf.get_y()
+    w_img3 = 277 / 3
+    if "Huella Dactilar" in img_paths:
+        pdf.image(img_paths["Huella Dactilar"], x=10, y=y_img, w=w_img3)
     if "Volumen vs Intensidad" in img_paths:
-        pdf.image(img_paths["Volumen vs Intensidad"], x=10, y=y_img, w=135)
+        pdf.image(img_paths["Volumen vs Intensidad"], x=10 + w_img3, y=y_img, w=w_img3)
     if "ACC vs DCC" in img_paths:
-        pdf.image(img_paths["ACC vs DCC"], x=150, y=y_img, w=135)
+        pdf.image(img_paths["ACC vs DCC"], x=10 + w_img3*2, y=y_img, w=w_img3)
     
     # Salto de página para la segunda tabla
     pdf.add_page()
