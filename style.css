@@ -223,3 +223,39 @@ div[data-testid="stMetric"] div[data-testid="stMetricDelta"] {
     .modern-table { display: block; overflow-x: auto; white-space: nowrap; }
     .stTabs [data-baseweb="tab"] { font-size: 0.85rem !important; padding: 0 8px !important; }
 }
+/* --- ANIMACIONES Y TRANSICIONES FLUIDAS --- */
+
+/* 1. Definición de la animación base (Fade In + Slide Up suave) */
+@keyframes fadeInSlide {
+    0% { 
+        opacity: 0; 
+        transform: translateY(12px); 
+    }
+    100% { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
+/* 2. Transición global al cambiar de página en el menú lateral */
+.block-container {
+    animation: fadeInSlide 0.4s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+/* 3. Transición al hacer clic y cambiar entre pestañas (Tabs) */
+div[role="tabpanel"] {
+    animation: fadeInSlide 0.3s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+/* 4. Suavizado en la aparición y hover de tarjetas y métricas */
+div[data-testid="stMetric"], .card-elite, .modern-table {
+    animation: fadeInSlide 0.4s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+/* 5. Transición suave para expanders (Desplegables) */
+div[data-testid="stExpander"] details {
+    transition: all 0.3s ease-in-out;
+}
+div[data-testid="stExpander"] details[open] summary ~ * {
+    animation: fadeInSlide 0.3s ease-out forwards;
+}
