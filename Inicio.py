@@ -111,27 +111,75 @@ if not st.session_state.get("equipo_seleccionado", False):
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 1. PANTALLA DE LOGIN / REGISTRO
+# 1. PANTALLA DE LOGIN / REGISTRO (DISEÑO SPLIT ÉLITE)
 # ==========================================
 if not st.session_state.autenticado:
     set_login_background("fondo_login.jpg")
     
-    # Reducimos los saltos de línea para que quede bien centrado en pantalla
-    st.markdown("<br><br><br><br><br><br><br><br>", unsafe_allow_html=True)
+    # Espaciado superior dinámico
+    st.markdown("<div style='margin-top: 8vh;'></div>", unsafe_allow_html=True)
     
-    col_izq, col_centro, col_der = st.columns([1.2, 1, 1.2])
+    col_info, col_espacio, col_login = st.columns([1.4, 0.2, 1.1])
     
-    with col_centro:
-        tab_login, tab_reg = st.tabs(["INICIAR SESIÓN", "NUEVA CUENTA"])
+    # --- COLUMNA IZQUIERDA: PROPUESTA DE VALOR ---
+    with col_info:
+        st.markdown("""
+        <div style="padding-right: 20px;">
+            <h2 style='color: #f8fafc; font-weight: 900; font-size: 2.2rem; letter-spacing: -1px; margin-bottom: 30px;'>
+                LOAD<span style='color: #dc2626;'>LAB</span>
+            </h2>
+            <h1 style="font-size: 3.2rem; font-weight: 800; line-height: 1.1; margin-bottom: 20px; color: #f8fafc; letter-spacing: -1px;">
+                Decisiones basadas en datos, <br><span style="color: #3b82f6;">rendimiento de élite.</span>
+            </h1>
+            <p style="color: #94a3b8; font-size: 1.1rem; margin-bottom: 40px; max-width: 90%; line-height: 1.6;">
+                Centraliza métricas GPS, fatiga neuromuscular y prevención lesional en un único ecosistema diseñado para cuerpos técnicos profesionales.
+            </p>
+            
+            <!-- Tarjetas de Características -->
+            <div style="background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(51, 65, 85, 0.6); padding: 18px; border-radius: 12px; margin-bottom: 12px; display: flex; align-items: center; gap: 15px; backdrop-filter: blur(5px);">
+                <div style="background: rgba(59, 130, 246, 0.15); padding: 12px; border-radius: 8px; color: #3b82f6; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; width: 45px; height: 45px;">⚡</div>
+                <div>
+                    <h4 style="margin: 0 0 4px 0; font-size: 1rem; color: #f8fafc; font-weight: 700;">Carga y Demandas</h4>
+                    <p style="margin: 0; font-size: 0.85rem; color: #94a3b8;">Monitoriza el Ratio A/C (Sweet Spot) y la densidad competitiva por jugador.</p>
+                </div>
+            </div>
+            
+            <div style="background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(51, 65, 85, 0.6); padding: 18px; border-radius: 12px; margin-bottom: 12px; display: flex; align-items: center; gap: 15px; backdrop-filter: blur(5px);">
+                <div style="background: rgba(16, 185, 129, 0.15); padding: 12px; border-radius: 8px; color: #10b981; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; width: 45px; height: 45px;">📈</div>
+                <div>
+                    <h4 style="margin: 0 0 4px 0; font-size: 1rem; color: #f8fafc; font-weight: 700;">Evolución Individual</h4>
+                    <p style="margin: 0; font-size: 0.85rem; color: #94a3b8;">Seguimiento acumulado por microciclo, perfiles F-V y asimetrías.</p>
+                </div>
+            </div>
+            
+            <div style="background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(51, 65, 85, 0.6); padding: 18px; border-radius: 12px; margin-bottom: 12px; display: flex; align-items: center; gap: 15px; backdrop-filter: blur(5px);">
+                <div style="background: rgba(239, 68, 68, 0.15); padding: 12px; border-radius: 8px; color: #ef4444; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; width: 45px; height: 45px;">🧠</div>
+                <div>
+                    <h4 style="margin: 0 0 4px 0; font-size: 1rem; color: #f8fafc; font-weight: 700;">Oráculo Predictivo</h4>
+                    <p style="margin: 0; font-size: 0.85rem; color: #94a3b8;">Algoritmos XGBoost para detectar riesgo lesional inminente en la plantilla.</p>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # --- COLUMNA DERECHA: FORMULARIO DE ACCESO ---
+    with col_login:
+        # Espaciador para centrar verticalmente la tarjeta de login respecto a la info
+        st.markdown("<div style='margin-top: 4vh;'></div>", unsafe_allow_html=True)
+        
+        tab_login, tab_reg = st.tabs(["INICIAR SESIÓN", "REGISTRARSE"])
         
         with tab_login:
-            # Título de Marca Profesional
-            st.markdown("<h2 style='text-align: center; color: #f8fafc; font-weight: 800; margin-bottom: 25px; font-size: 2.2rem; letter-spacing: -1px;'>LOAD<span style='color: #dc2626;'>LAB</span></h2>", unsafe_allow_html=True)
+            st.markdown("<h3 style='color: #f8fafc; font-weight: 800; font-size: 1.6rem; margin-bottom: 5px; margin-top: 10px;'>Bienvenido de nuevo</h3>", unsafe_allow_html=True)
+            st.markdown("<p style='color: #94a3b8; font-size: 0.95rem; margin-bottom: 25px;'>Accede a tu cuenta para continuar.</p>", unsafe_allow_html=True)
             
             with st.form(key="login_form"):
-                email = st.text_input("Correo electrónico", key="log_email")
-                password = st.text_input("Contraseña", type="password", key="log_pass")
-                submit_btn = st.form_submit_button("Entrar al Sistema", use_container_width=True)
+                email = st.text_input("Correo electrónico", key="log_email", placeholder="tu@email.com")
+                password = st.text_input("Contraseña", type="password", key="log_pass", placeholder="••••••••")
+                
+                st.markdown("<div style='text-align: right; margin-bottom: 15px;'><a href='#' style='color: #3b82f6; font-size: 0.8rem; text-decoration: none; font-weight: 600;'>¿Has olvidado tu contraseña?</a></div>", unsafe_allow_html=True)
+                
+                submit_btn = st.form_submit_button("Iniciar Sesión", use_container_width=True)
                 
                 if submit_btn:
                     try:
@@ -145,30 +193,20 @@ if not st.session_state.autenticado:
                         st.error("Credenciales incorrectas o error de conexión.")
                         
         with tab_reg:
-            st.markdown("<h2 style='text-align: center; color: #0a0a0a; font-weight: 800; margin-bottom: 20px; font-size: 1.5rem;'>CREAR CUENTA</h2>", unsafe_allow_html=True)
+            st.markdown("<h3 style='color: #f8fafc; font-weight: 800; font-size: 1.6rem; margin-bottom: 5px; margin-top: 10px;'>Crear cuenta</h3>", unsafe_allow_html=True)
+            st.markdown("<p style='color: #94a3b8; font-size: 0.95rem; margin-bottom: 20px;'>Únete a la plataforma de alto rendimiento.</p>", unsafe_allow_html=True)
+            
             with st.form(key="register_form"):
-                reg_email = st.text_input("Correo electrónico", key="reg_email")
-                reg_password = st.text_input("Contraseña (mín. 6 caracteres)", type="password", key="reg_pass")
+                reg_email = st.text_input("Correo electrónico", key="reg_email", placeholder="tu@email.com")
+                reg_password = st.text_input("Contraseña", type="password", key="reg_pass", placeholder="Mínimo 6 caracteres")
                 
-                # Aviso rediseñado al estilo Carbón
                 st.markdown("""
-                    <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 15px; line-height: 1.5; background-color: #0f172a; padding: 12px; border-radius: 6px; border-left: 3px solid #3b82f6;">
-                        🔒 <strong>Aviso de Privacidad (RGPD):</strong><br>
-                        Al registrarte asumes la figura de <strong>Responsable del Tratamiento</strong> de los datos.<br>
-                        ⚠️ <strong>Recomendación:</strong> Utiliza alias o iniciales para los deportistas a menos que cuentes con su consentimiento explícito.
+                    <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 10px; margin-bottom: 15px; line-height: 1.5; background-color: rgba(15, 23, 42, 0.5); padding: 12px; border-radius: 6px; border-left: 3px solid #3b82f6;">
+                        🔒 <strong>Aviso RGPD:</strong> Eres el <strong>Responsable del Tratamiento</strong> de los datos. Usa alias si no tienes consentimiento explícito.
                     </div>
                 """, unsafe_allow_html=True)
-                
-                with st.expander("📄 Leer Términos y Condiciones"):
-                    st.markdown("""
-                        <small>
-                        **1. Responsabilidad de los Datos:** El usuario es el único responsable de la legalidad de los datos. LoadLab actúa como Encargado de Tratamiento.<br>
-                        **2. Uso de la Plataforma:** LoadLab no cederá ni explotará estos datos con terceros.<br>
-                        **3. Fase Beta:** Se recomienda exportar y mantener copias de seguridad de sus informes PDF.
-                        </small>
-                    """, unsafe_allow_html=True)
 
-                acepta_privacidad = st.checkbox("He leído y acepto el aviso de privacidad", key="check_privacidad")
+                acepta_privacidad = st.checkbox("Acepto los términos y el aviso de privacidad", key="check_privacidad")
                 submit_reg = st.form_submit_button("Registrarse", use_container_width=True)
                 
                 if submit_reg:
@@ -177,15 +215,8 @@ if not st.session_state.autenticado:
                     else:
                         try:
                             res = supabase.auth.sign_up({"email": reg_email, "password": reg_password})
-                            
-                            # NUEVO: Insertar el ID del usuario recién creado en la tabla pública 'usuarios'
-                            # Asegúrate de que las columnas ("id", "email") coinciden con tu tabla 'usuarios' real
                             if res.user:
-                                supabase.table("usuarios").insert({
-                                    "id": res.user.id,
-                                    "email": reg_email
-                                }).execute()
-                                
+                                supabase.table("usuarios").insert({"id": res.user.id, "email": reg_email}).execute()
                             st.success("¡Cuenta creada con éxito! Inicia sesión para continuar.")
                         except Exception as e:
                             st.error(f"Error al registrarse: {e}")
