@@ -9,7 +9,7 @@ def render_panel_principal():
     # --- COLUMNA 1: GESTIÓN DEL EQUIPO ---
     with col_gestion:
         st.markdown(f"#### 🛡️ Gestión del Equipo")
-        with st.expander("⚙️ Modificar Configuración y Datos", expanded=True):
+        with st.expander(":material/settings: Modificar Configuración y Datos", expanded=True):
             with st.form("form_modificar_cuenta"):
                 nuevo_nombre = st.text_input("Nombre del Equipo", value=st.session_state.get("nombre_equipo", ""))
                 nueva_categoria = st.text_input("Categoría", value=st.session_state.get("categoria_equipo", ""))
@@ -18,7 +18,7 @@ def render_panel_principal():
                 nueva_ubicacion = st.text_input("Ciudad del Equipo (Para clima):", value=st.session_state.get("ubicacion_local", ""))
                 nuevo_escudo_up = st.file_uploader("Escudo del Equipo (Imagen):", type=["jpg", "png", "jpeg"])
                 
-                btn_guardar_cuenta = st.form_submit_button("💾 Guardar Cambios", use_container_width=True)
+                btn_guardar_cuenta = st.form_submit_button(":material/save: Guardar Cambios", use_container_width=True)
                 if btn_guardar_cuenta:
                     st.session_state.nombre_equipo = nuevo_nombre
                     st.session_state.categoria_equipo = nueva_categoria
@@ -30,9 +30,9 @@ def render_panel_principal():
                     guardar_datos(modulo="configuracion")
                     st.success("¡Datos actualizados!")
                     st.rerun()
-        with st.expander("🔄 Sincronización Retrospectiva de GPS"):
+        with st.expander(":material/sync: Sincronización Retrospectiva de GPS"):
             st.caption("Recalcula y traslada los datos de GPS (incluidos los minutos) a jugadores sin dispositivo basándose en su estado, posición y minutos de partido, en todas las sesiones pasadas.")
-            if st.button("🚀 Ejecutar Sincronización Histórica", use_container_width=True, type="primary"):
+            if st.button(":material/update: Ejecutar Sincronización Histórica", use_container_width=True, type="primary"):
                 from utils.math_helpers import aplicar_imputacion_gps_global
                 sesiones_modificadas = 0
                 for s in st.session_state.sesiones:
@@ -64,10 +64,15 @@ def render_panel_principal():
                 }
             }
 
-        with st.expander("🛠️ Configurar Nombres de Columnas", expanded=True):
+        with st.expander(":material/build: Configurar Nombres de Columnas", expanded=True):
             with st.form("form_mapeo_columnas"):
-                t_well, t_rpe, t_gps1, t_gps2 = st.tabs(["🧠 Well", "🔥 RPE", "📡 GPS 1", "📡 GPS 2"])
-                
+                t_well, t_rpe, t_gps1, t_gps2 = st.tabs([
+                    ":material/psychology: Well", 
+                    ":material/local_fire_department: RPE", 
+                    ":material/satellite_alt: GPS 1", 
+                    ":material/satellite_alt: GPS 2"
+                ])
+                    
                 cfg_w = st.session_state.config_mapeo["wellness"]
                 cfg_r = st.session_state.config_mapeo["rpe"]
                 cfg_g = st.session_state.config_mapeo["gps"]
@@ -116,7 +121,7 @@ def render_panel_principal():
                     n_r27_30 = st.text_input("27-30 km/h:", value=cfg_g.get("r_27_30", "Distance Speed Range (27 - 30 km)"))
                     n_r30_45 = st.text_input(">30 km/h:", value=cfg_g.get("r_30_45", "Distance Speed Range (30 - 45 km)"))
 
-                btn_mapeo = st.form_submit_button("💾 Guardar Mapeo", use_container_width=True)
+                btn_mapeo = st.form_submit_button(":material/save: Guardar Mapeo", use_container_width=True)
                 
                 if btn_mapeo:
                     st.session_state.config_mapeo = {
@@ -139,9 +144,9 @@ def render_panel_principal():
     # --- COLUMNA 3: MANTENIMIENTO DEL CLIMA ---
     with col_clima:
         st.markdown("#### 🌦️ Sincronizar Clima")
-        with st.expander("☁️ Descargar Histórico (Meteo)", expanded=True):
+        with st.expander(":material/cloud_download: Descargar Histórico (Meteo)", expanded=True):
             st.caption("Añade el clima a sesiones pasadas.")
-            if st.button("☁️ Sincronizar Clima", use_container_width=True):
+            if st.button(":material/sync: Sincronizar Clima", use_container_width=True):
                 from utils.math_helpers import obtener_clima 
                 st.cache_data.clear()
                 sesiones_actualizadas = 0
@@ -179,11 +184,11 @@ def render_panel_principal():
     st.markdown("---")
     col_peligro, col_vacio = st.columns([1.5, 2])
     with col_peligro:
-        with st.expander("⚠️ Zona de Peligro: Borrado total"):
+        with st.expander(":material/warning: Zona de Peligro: Borrado total"):
             st.error("¡CUIDADO! Se eliminará permanentemente la plantilla y el historial.")
             confirmacion_borrado = st.checkbox("Entiendo las consecuencias.")
             
-            if st.button("🔄 Sí, borrar todos los datos", use_container_width=True, disabled=not confirmacion_borrado):
+            if st.button(":material/delete_forever: Sí, borrar todos los datos", use_container_width=True, disabled=not confirmacion_borrado):
                 st.session_state.plantilla = []
                 st.session_state.sesiones = []
                 st.session_state.lesiones = []
