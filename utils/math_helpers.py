@@ -445,19 +445,29 @@ def aplicar_color_sidebar():
     # 2. Inyectar CSS global desde la memoria caché (Sustituye al try/except)
     st.markdown(cargar_css_global(), unsafe_allow_html=True)
 
+    # Modifica la sección de inyección de imagen y nombre en la barra lateral en math_helpers.py
     if st.session_state.get("equipo_seleccionado", False):
         with st.sidebar:
+            # Aquí inyectamos tu logotipo arriba del todo en el lateral de forma ultra premium
+            try:
+                with open("assets/logo.png", "rb") as image_file:
+                    sidebar_logo_b64 = base64.b64encode(image_file.read()).decode()
+                img_src = f"data:image/png;base64,{sidebar_logo_b64}"
+            except FileNotFoundError:
+                img_src = None
+    
             escudo = st.session_state.get("escudo_equipo")
-            nombre = st.session_state.get("nombre_equipo", "")
-            img_src = escudo if str(escudo).startswith("http") else f"data:image/jpeg;base64,{escudo}" if escudo else ""
             
-            # 1. ESCUDO Y NOMBRE ARRIBA DEL TODO
+            # 1. LOGOTIPO DE LA APP Y NOMBRE DEL EQUIPO
             if img_src:
                 st.markdown(f"""
-                    <div style='text-align: center; margin-bottom: 15px;'>
-                        <img src='{img_src}' style='width: 85px; height: 85px; border-radius: 50%; object-fit: cover; border: 2px solid #3b82f6; box-shadow: 0 4px 10px rgba(0,0,0,0.3);'>
-                        <h3 style='color: #f8fafc; margin-top: 10px; margin-bottom: 0; font-size: 1.05rem; text-transform: uppercase; letter-spacing: 0.5px;'>{nombre}</h3>
-                        <hr style='border-color: #1e293b; margin-top: 15px; margin-bottom: 10px; border-width: 1px;'>
+                    <div style='text-align: center; margin-bottom: 10px; padding-top: 10px;'>
+                        <img src='{img_src}' style='width: 80px; object-fit: contain; margin-bottom: 5px;'>
+                        <h2 style='color: #E2E8F0; margin-top: 5px; margin-bottom: 0; font-size: 1.3rem; letter-spacing: -0.5px;'>
+                            LOAD<span style='color: #C5A059;'>LAB</span>
+                        </h2>
+                        <span style='font-size: 0.75rem; color: #a1a1aa; font-weight: 400;'>EQUIPO DEPORTIVO</span>
+                        <hr style='border-color: rgba(197, 160, 89, 0.1); margin-top: 15px; margin-bottom: 10px; border-width: 1px;'>
                     </div>
                 """, unsafe_allow_html=True)
             
