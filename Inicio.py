@@ -21,7 +21,7 @@ from database.db_manager import *
 from views.team_settings import render_panel_principal
 
 # Configuración inicial de la página
-st.set_page_config(page_title="LoadLab", page_icon="⚽", layout="wide")
+st.set_page_config(page_title="LoadLab", page_icon="assets/logo_icono.png", layout="wide")
 
 import plotly.io as pio
 import plotly.graph_objects as go
@@ -120,26 +120,11 @@ if not st.session_state.autenticado:
     col_info, col_espacio, col_login = st.columns([1.4, 0.2, 1.1])
     
     with col_info:
-        # Recuperar y transformar tu logo (puedes guardarlo en una carpeta assets o usar su base64)
-        # Reemplaza 'logo.png' por el archivo de imagen que has subido.
-        try:
-            with open("assets/logo.png", "rb") as image_file:
-                logo_b64 = base64.b64encode(image_file.read()).decode()
-            logo_html = f'<img src="data:image/png;base64,{logo_b64}" style="width: 140px; margin-bottom: 20px;">'
-        except FileNotFoundError:
-            logo_html = '<div style="font-size: 60px; margin-bottom: 20px;">🛡️</div>'
-
-        html_info = f"""<div style="padding-right: 20px;">
-            {logo_html}
-            <h2 style='color: #E2E8F0; font-weight: 900; font-size: 2.8rem; letter-spacing: -1.5px; margin-bottom: 5px; font-family: "Plus Jakarta Sans", sans-serif;'>
-                LOAD<span style='color: #C5A059;'>LAB</span>
-            </h2>
-            <h1 style="font-size: 2.2rem; font-weight: 800; line-height: 1.2; margin-bottom: 20px; color: #E2E8F0; letter-spacing: -0.5px;">
-                Decisiones basadas en datos,<br><span style="color: #C5A059;">rendimiento de élite.</span>
-            </h1>
-            <p style="color: #a1a1aa; font-size: 1.05rem; margin-bottom: 30px; max-width: 95%; line-height: 1.6;">
-                Centraliza y analiza las variables de rendimiento, carga y salud de tus futbolistas en un único ecosistema premium diseñado para cuerpos técnicos profesionales.
-            </p>
+        html_info = """<div style="padding-right: 20px;">
+<h2 style='color: #f8fafc; font-weight: 900; font-size: 2rem; letter-spacing: -1px; margin-bottom: 15px;'>
+LOAD<span style='color: #3b82f6;'>LAB</span>
+</h2>
+<h1 style="font-size: 2.8rem; font-weight: 800; line-height: 1.1; margin-bottom: 15px; color: #f8fafc; letter-spacing: -1px;">
 
             <!-- Sección de Características Científicas de LoadLab -->
             <div style="background: rgba(197, 160, 89, 0.03); border: 1px solid rgba(197, 160, 89, 0.15); padding: 16px; border-radius: 12px; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 14px; backdrop-filter: blur(5px);">
