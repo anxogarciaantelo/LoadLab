@@ -270,10 +270,10 @@ def set_login_background():
     <style>
     /* --- FONDO ANIMADO DE DATOS (Puro CSS, sin imágenes) --- */
     .stApp {
-        background-color: #0b1120 !important;
+        background-color: #111318 !important;
         background-image: 
-            radial-gradient(circle at 15% 50%, rgba(59, 130, 246, 0.08), transparent 25%),
-            radial-gradient(circle at 85% 30%, rgba(16, 185, 129, 0.05), transparent 25%);
+            radial-gradient(circle at 15% 50%, rgba(197, 160, 89, 0.04), transparent 30%),
+            radial-gradient(circle at 85% 30%, rgba(226, 232, 240, 0.02), transparent 25%);
         animation: bgShift 15s ease-in-out infinite alternate;
     }
     
@@ -283,9 +283,9 @@ def set_login_background():
         position: absolute;
         top: 0; left: 0; width: 100%; height: 100%;
         background-image: 
-            linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-        background-size: 40px 40px;
+            linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+        background-size: 50px 50px;
         pointer-events: none;
         z-index: 0;
     }
@@ -304,7 +304,7 @@ def set_login_background():
         padding: 30px 40px 40px 40px !important;
         border-radius: 20px !important;
         box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8) !important;
-        border: 1px solid #1e293b !important;
+        border: 1px solid rgba(197, 160, 89, 0.15) !important;
         backdrop-filter: blur(12px);
     }
     div[role="tabpanel"] { background-color: transparent !important; }
@@ -316,7 +316,7 @@ def set_login_background():
         color: #64748b !important; font-size: 0.85rem !important; font-weight: 700 !important; white-space: nowrap !important; min-width: max-content !important; background-color: transparent !important; padding: 0 5px 10px 5px !important; text-transform: uppercase; letter-spacing: 0.5px;
     }
     div[data-testid="stTabs"] [aria-selected="true"] { 
-        color: #f8fafc !important; border-bottom: 2px solid #3b82f6 !important; background-color: transparent !important; box-shadow: none !important;
+        color: #C5A059 !important; border-bottom: 2px solid #C5A059 !important; background-color: transparent !important; box-shadow: none !important;
     }
     
     div[data-testid="stTabs"] label { color: #cbd5e1 !important; font-size: 0.85rem !important; font-weight: 600 !important; margin-bottom: 4px !important; }
@@ -324,14 +324,14 @@ def set_login_background():
     div[data-testid="stTextInput"] input {
         background-color: #0f172a !important; border: 1px solid #1e293b !important; color: #f8fafc !important; padding: 12px 14px !important; border-radius: 8px !important; font-size: 0.95rem !important;
     }
-    div[data-testid="stTextInput"] input:focus { border: 1px solid #3b82f6 !important; box-shadow: none !important; }
+    div[data-testid="stTextInput"] input:focus { border: 1px solid #C5A059 !important; box-shadow: none !important; }
     
     div[data-testid="stFormSubmitButton"] button {
-        background-color: #3b82f6 !important; color: #ffffff !important; border: none !important; border-radius: 8px !important;
-        box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3) !important; width: 100% !important; margin-top: 5px; padding: 12px !important; font-size: 1rem !important; font-weight: 700 !important;
+        background-color: #C5A059 !important; color: #111318 !important; border: none !important; border-radius: 8px !important;
+        box-shadow: 0 4px 10px rgba(197, 160, 89, 0.3) !important; width: 100% !important; margin-top: 5px; padding: 12px !important; font-size: 1rem !important; font-weight: 800 !important;
         transition: all 0.2s ease;
     }
-    div[data-testid="stFormSubmitButton"] button:hover { background-color: #2563eb !important; transform: translateY(-1px); box-shadow: 0 6px 15px rgba(59, 130, 246, 0.4) !important; }
+    div[data-testid="stFormSubmitButton"] button:hover { background-color: #D6B26E !important; transform: translateY(-1px); box-shadow: 0 6px 15px rgba(197, 160, 89, 0.4) !important; }
     
     div[data-testid="stCheckbox"] label span { color: #94a3b8 !important; font-size: 0.85rem !important; }
     </style>
