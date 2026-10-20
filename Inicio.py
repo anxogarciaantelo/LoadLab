@@ -357,7 +357,7 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
     col_exp_izq, col_exp_cen, col_exp_der = st.columns([2, 1.5, 2])
     
     with col_exp_cen:
-        with st.expander("➕ CREAR NUEVO EQUIPO"):
+        with st.expander(":material/add_circle: CREAR NUEVO EQUIPO"):
             with st.form("form_nuevo_equipo"):
                 n_nombre = st.text_input("Nombre del Club / Equipo:")
                 n_categoria = st.selectbox("Categoría:", ["Senior", "Juvenil", "Cadete", "Infantil", "Alevín", "Benjamín", "Prebenjamín", "Biberón"])
@@ -385,7 +385,7 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
                 
                 c_btn1, c_btn2, c_btn3 = st.columns([1, 1.5, 1])
                 with c_btn2:
-                    btn_crear = st.form_submit_button("🚀 CREAR Y ACCEDER", use_container_width=True)
+                    btn_crear = st.form_submit_button(":material/rocket_launch: CREAR Y ACCEDER", use_container_width=True)
                 
                 if btn_crear and n_nombre:
                     res_insert = supabase.table("equipos").insert({
