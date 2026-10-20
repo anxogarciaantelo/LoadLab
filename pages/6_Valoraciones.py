@@ -26,10 +26,13 @@ if not st.session_state.get("autenticado", False) or not st.session_state.get("e
 
 aplicar_color_sidebar()
 
-st.title("📊 Valoraciones Condicionales")
+st.title(":material/fitness_center: Valoraciones Condicionales")
 
-tab_informes, tab_nuevo, tab_reg = st.tabs(["📈 Informes de valoraciones", "➕ Añadir Nueva Valoración", "📋 Tabla de registros"])
-
+tab_informes, tab_nuevo, tab_reg = st.tabs([
+    ":material/query_stats: Informes de valoraciones", 
+    ":material/add_chart: Añadir Nueva Valoración", 
+    ":material/table_view: Tabla de registros"
+])
 if "val_rom" not in st.session_state:
     st.session_state.val_rom = []
 
@@ -447,7 +450,7 @@ with tab_informes:
             pdf_key = f"pdf_val_{val_sel_id}"
             
             if pdf_key not in st.session_state:
-                if st.button("⚙️ Generar PDF de esta Valoración", use_container_width=True):
+                if st.button(":material/picture_as_pdf: Generar PDF de esta Valoración", use_container_width=True):
                     with st.spinner("Procesando gráficos y compilando PDF..."):
                         img_paths_ind = {}
                         for name, f_obj in [('fv', fig_sq), ('rad', fig_rad), ('tor', fig_tor)]:
@@ -481,9 +484,9 @@ with tab_informes:
             else:
                 c_down1, c_down2 = st.columns(2)
                 with c_down1:
-                    st.download_button("📥 Descargar PDF Individual", data=st.session_state[pdf_key], file_name=f"Valoracion_{jug_sel}_{v_data['fecha']}.pdf", mime="application/pdf", use_container_width=True)
+                    st.download_button(":material/download: Descargar PDF Individual", data=st.session_state[pdf_key], file_name=f"Valoracion_{jug_sel}_{v_data['fecha']}.pdf", mime="application/pdf", use_container_width=True)
                 with c_down2:
-                    if st.button("🗑️ Descartar PDF", use_container_width=True):
+                    if st.button(":material/delete: Descartar PDF", use_container_width=True):
                         del st.session_state[pdf_key]
                         st.rerun()
 
@@ -491,7 +494,7 @@ with tab_informes:
             st.markdown("---")
             st.markdown("#### 🗂️ Descarga Masiva (Toda la Plantilla)")
             
-            if st.button("📦 Generar ZIP con valoraciones de todo el equipo", use_container_width=True):
+            if st.button(":material/folder_zip: Generar ZIP con valoraciones de todo el equipo", use_container_width=True):
                 with st.status("Generando informes PDF maquetados...", expanded=True) as status:
                     zip_buffer = io.BytesIO()
                     
@@ -913,7 +916,7 @@ with tab_informes:
                 c_z1, c_z2 = st.columns(2)
                 with c_z1:
                     st.download_button(
-                        label="📥 Descargar archivo ZIP",
+                        label=":material/download: Descargar archivo ZIP",
                         data=st.session_state["zip_val_all"],
                         file_name="Informes_Valoraciones_Equipo.zip",
                         mime="application/zip",
@@ -993,7 +996,7 @@ with tab_nuevo:
                 st.markdown("---")
                 comentarios = st.text_input("Observaciones Generales:")
                 
-                if st.form_submit_button("💾 Guardar Valoración Completa", use_container_width=True):
+                if st.form_submit_button(":material/save: Guardar Valoración Completa", use_container_width=True):
                     nuevo_test = {
                         "id": str(uuid.uuid4()), "jugador": jugador_sel, "fecha": str(fecha_test), 
                         "lesion": lesion, "peso_corporal": float(peso),
@@ -1014,7 +1017,7 @@ with tab_nuevo:
 
             archivo = st.file_uploader("Sube tu plantilla Excel (.xlsx)", type=["xlsx"])
             
-            if archivo and st.button("🚀 Procesar e Importar", type="primary"):
+            if archivo and st.button(":material/upload: Procesar e Importar", type="primary"):
                 try:
                     df_import = pd.read_excel(archivo)
                     registros_exitosos = 0
@@ -1106,7 +1109,7 @@ with tab_reg:
         val_seleccionada = st.selectbox("Selecciona una valoración para gestionarla:", [None] + list(opciones_gestion.keys()), format_func=lambda x: opciones_gestion[x] if x else "Seleccionar registro...")
         
         if val_seleccionada:
-            if st.button("🗑️ Eliminar Registro Definitivamente", type="primary"):
+            if st.button(":material/delete_forever: Eliminar Registro Definitivamente", type="primary"):
                 st.session_state.val_rom = [v for v in st.session_state.val_rom if v['id'] != val_seleccionada]
                 guardar_datos(modulo="configuracion")
                 st.success("¡Registro eliminado correctamente!")
