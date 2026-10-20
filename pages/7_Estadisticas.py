@@ -12,7 +12,7 @@ if not st.session_state.get("autenticado", False) or not st.session_state.get("e
     st.warning("⚠️ La sesión ha expirado o no se ha seleccionado un equipo. Por favor, vuelve a iniciar sesión.")
     st.stop()
 
-st.title("📈 Estadísticas de Rendimiento")
+st.title(":material/query_stats: Estadísticas de Rendimiento")
 
 aplicar_color_sidebar()
 
@@ -29,8 +29,11 @@ def filtrar_partidos(competicion):
     else:
         return [p for p in partidos_totales if p.get("tipo") == "Partido Oficial" and p.get("competicion") == competicion]
 
-tab_equipo, tab_jugadores, tab_rivales = st.tabs(["🛡️ Estadísticas de Equipo", "👤 Estadísticas de Jugadores", "🆚 Estadísticas de Rival"])
-
+tab_equipo, tab_jugadores, tab_rivales = st.tabs([
+    ":material/shield: Estadísticas de Equipo", 
+    ":material/groups: Estadísticas de Jugadores", 
+    ":material/sports_martial_arts: Estadísticas de Rival"
+])
 # ==========================================
 # 🛡️ PESTAÑA 1: ESTADÍSTICAS DE EQUIPO
 # ==========================================
@@ -161,7 +164,7 @@ with tab_equipo:
     # CONFIGURACIONES DE LIGA/COPA
     if filtro_competicion_eq in ["Liga", "Copa"]:
         st.markdown("---")
-        with st.expander(f"⚙️ Configurar ID de Competición para: {filtro_competicion_eq}"):
+        with st.expander(f":material/settings: Configurar ID de Competición para: {filtro_competicion_eq}"):
             if filtro_competicion_eq == "Liga":
                 comp_id_default = st.session_state.get("lapreferente_comp_id", "26710")
                 nuevo_comp_id = st.text_input("ID de Competición de Liga (LaPreferente):", value=comp_id_default)
@@ -495,7 +498,7 @@ with tab_rivales:
     # ==========================================
     # SECCIÓN 2: AÑADIR NUEVO EQUIPO RIVAL (Movido abajo)
     # ==========================================
-    with st.expander("➕ Añadir o Registrar un Nuevo Equipo Rival"):
+    with st.expander(":material/add_moderator: Añadir o Registrar un Nuevo Equipo Rival"):
         with st.form("form_nuevo_rival"):
             col_fn1, col_fn2, col_fn3, col_fn4 = st.columns([2, 1.5, 1.5, 1])
             with col_fn1:
@@ -506,7 +509,7 @@ with tab_rivales:
                 ciudad_rival = st.text_input("Ciudad (Para Clima):")
             with col_fn4:
                 st.markdown("<br>", unsafe_allow_html=True)
-                submit_rival = st.form_submit_button("💾 Guardar")
+                submit_rival = st.form_submit_button(":material/save: Guardar")
             
             if submit_rival:
                 if nombre_nuevo_rival:
