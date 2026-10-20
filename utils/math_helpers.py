@@ -122,9 +122,11 @@ def calcular_ewma_historico(_sesiones, fecha_objetivo):
             a_sem = (a if pd.notna(a) else 0.0) * 7
             c_sem = (c if pd.notna(c) else 0.0) * 7
             
+            # Por:
             # Control de under-loading crónico (evita ratios infinitos irreales tras parón de verano)
             c_sem_seguro = max(c_sem, 10.0) if col_metrica == 'CARGA' else max(c_sem, 1.0)
             r = a_sem / c_sem_seguro if c_sem > 0 else 1.0
+            r = min(r, 4.0) # Límite fisiológico máximo para proteger matrices de color y modelo ML
             
             res[jug][f"EWMA AGUDA{sufijo}"] = round(a_sem, 2)
             res[jug][f"EWMA CRÓNICA{sufijo}"] = round(c_sem, 2)
