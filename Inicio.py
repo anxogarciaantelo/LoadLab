@@ -116,50 +116,50 @@ if not st.session_state.get("equipo_seleccionado", False):
 if not st.session_state.autenticado:
     set_login_background()
     
-    st.markdown("<div style='margin-top: 8vh;'></div>", unsafe_allow_html=True)
+    # Margen superior reducido al mínimo
+    st.markdown("<div style='margin-top: 2vh;'></div>", unsafe_allow_html=True)
     col_info, col_espacio, col_login = st.columns([1.4, 0.2, 1.1])
     
     with col_info:
-        # ATENCIÓN: El string está pegado a la izquierda a propósito para evitar el error de Markdown
         html_info = """<div style="padding-right: 20px;">
-<h2 style='color: #f8fafc; font-weight: 900; font-size: 2.2rem; letter-spacing: -1px; margin-bottom: 30px;'>
+<h2 style='color: #f8fafc; font-weight: 900; font-size: 2rem; letter-spacing: -1px; margin-bottom: 15px;'>
 LOAD<span style='color: #3b82f6;'>LAB</span>
 </h2>
-<h1 style="font-size: 3.2rem; font-weight: 800; line-height: 1.1; margin-bottom: 20px; color: #f8fafc; letter-spacing: -1px;">
+<h1 style="font-size: 2.8rem; font-weight: 800; line-height: 1.1; margin-bottom: 15px; color: #f8fafc; letter-spacing: -1px;">
 Decisiones basadas en datos, <br><span style="color: #3b82f6;">rendimiento de élite.</span>
 </h1>
-<p style="color: #94a3b8; font-size: 1.1rem; margin-bottom: 40px; max-width: 90%; line-height: 1.6;">
+<p style="color: #94a3b8; font-size: 1.05rem; margin-bottom: 25px; max-width: 90%; line-height: 1.5;">
 Centraliza métricas GPS, fatiga neuromuscular y prevención lesional en un único ecosistema diseñado para cuerpos técnicos profesionales.
 </p>
 
-<div style="background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(51, 65, 85, 0.6); padding: 18px; border-radius: 12px; margin-bottom: 12px; display: flex; align-items: center; gap: 15px; backdrop-filter: blur(5px);">
-<div style="background: rgba(59, 130, 246, 0.15); padding: 12px; border-radius: 8px; color: #3b82f6; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; width: 45px; height: 45px;">⚡</div>
+<div style="background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(51, 65, 85, 0.6); padding: 14px; border-radius: 10px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; backdrop-filter: blur(5px);">
+<div style="background: rgba(59, 130, 246, 0.15); padding: 10px; border-radius: 8px; color: #3b82f6; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px;">⚡</div>
 <div>
-<h4 style="margin: 0 0 4px 0; font-size: 1rem; color: #f8fafc; font-weight: 700;">Carga y Demandas</h4>
-<p style="margin: 0; font-size: 0.85rem; color: #94a3b8;">Monitoriza el Ratio A/C (Sweet Spot) y la densidad competitiva por jugador.</p>
+<h4 style="margin: 0 0 2px 0; font-size: 0.95rem; color: #f8fafc; font-weight: 700;">Carga y Demandas</h4>
+<p style="margin: 0; font-size: 0.8rem; color: #94a3b8;">Monitoriza el Ratio A/C (Sweet Spot) y la densidad competitiva por jugador.</p>
 </div>
 </div>
 
-<div style="background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(51, 65, 85, 0.6); padding: 18px; border-radius: 12px; margin-bottom: 12px; display: flex; align-items: center; gap: 15px; backdrop-filter: blur(5px);">
-<div style="background: rgba(59, 130, 246, 0.15); padding: 12px; border-radius: 8px; color: #3b82f6; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; width: 45px; height: 45px;">📈</div>
+<div style="background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(51, 65, 85, 0.6); padding: 14px; border-radius: 10px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; backdrop-filter: blur(5px);">
+<div style="background: rgba(59, 130, 246, 0.15); padding: 10px; border-radius: 8px; color: #3b82f6; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px;">📈</div>
 <div>
-<h4 style="margin: 0 0 4px 0; font-size: 1rem; color: #f8fafc; font-weight: 700;">Evolución Individual</h4>
-<p style="margin: 0; font-size: 0.85rem; color: #94a3b8;">Seguimiento acumulado por microciclo, perfiles F-V y asimetrías.</p>
+<h4 style="margin: 0 0 2px 0; font-size: 0.95rem; color: #f8fafc; font-weight: 700;">Evolución Individual</h4>
+<p style="margin: 0; font-size: 0.8rem; color: #94a3b8;">Seguimiento acumulado por microciclo, perfiles F-V y asimetrías.</p>
 </div>
 </div>
 
-<div style="background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(51, 65, 85, 0.6); padding: 18px; border-radius: 12px; margin-bottom: 12px; display: flex; align-items: center; gap: 15px; backdrop-filter: blur(5px);">
-<div style="background: rgba(59, 130, 246, 0.15); padding: 12px; border-radius: 8px; color: #3b82f6; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; width: 45px; height: 45px;">🧠</div>
+<div style="background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(51, 65, 85, 0.6); padding: 14px; border-radius: 10px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; backdrop-filter: blur(5px);">
+<div style="background: rgba(59, 130, 246, 0.15); padding: 10px; border-radius: 8px; color: #3b82f6; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px;">🧠</div>
 <div>
-<h4 style="margin: 0 0 4px 0; font-size: 1rem; color: #f8fafc; font-weight: 700;">Oráculo Predictivo</h4>
-<p style="margin: 0; font-size: 0.85rem; color: #94a3b8;">Algoritmos XGBoost para detectar riesgo lesional inminente en la plantilla.</p>
+<h4 style="margin: 0 0 2px 0; font-size: 0.95rem; color: #f8fafc; font-weight: 700;">Oráculo Predictivo</h4>
+<p style="margin: 0; font-size: 0.8rem; color: #94a3b8;">Algoritmos XGBoost para detectar riesgo lesional inminente en la plantilla.</p>
 </div>
 </div>
 </div>"""
         st.markdown(html_info, unsafe_allow_html=True)
 
     with col_login:
-        st.markdown("<div style='margin-top: 4vh;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='margin-top: 1vh;'></div>", unsafe_allow_html=True)
         tab_login, tab_reg = st.tabs(["INICIAR SESIÓN", "REGISTRARSE"])
         
         with tab_login:
