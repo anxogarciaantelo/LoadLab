@@ -93,7 +93,7 @@ def generar_radar_comparador(dict_medias, usar_C):
     fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 110], gridcolor="#334155", linecolor="#334155"), bgcolor="rgba(0,0,0,0)", angularaxis=dict(gridcolor="#334155", linecolor="#334155")), title="<b>Comparativa Multidimensional (100% = Valor Máximo)</b>", margin=dict(l=40, r=40, t=40, b=40), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='#f8fafc'))
     return fig
 
-st.subheader("📡 GPS")
+st.subheader(":material/satellite_alt: GPS")
 
 lista_micro_map = []
 for s in st.session_state.sesiones:
@@ -140,7 +140,10 @@ if "df_master_informes" in st.session_state and not st.session_state.df_master_i
 else:
     df_gps = pd.DataFrame()
 
-tab_gps_perf, tab_gps_comp = st.tabs(["📈 Perfil de Rendimiento", "⚖️ Comparador"])
+tab_gps_perf, tab_gps_comp = st.tabs([
+    ":material/insights: Perfil de Rendimiento", 
+    ":material/balance: Comparador"
+])
 
 if df_gps.empty:
     st.info("No hay datos de GPS registrados todavía. Procesa datos en alguna sesión para visualizarlos aquí.")
@@ -188,7 +191,7 @@ else:
 
     with tab_gps_perf:
         # --- FILTROS PLEGABLES DE UNA SOLA FILA ---
-        with st.expander("🔍 FILTROS DE RENDIMIENTO", expanded=True):
+        with st.expander(":material/filter_list: FILTROS DE RENDIMIENTO", expanded=True):
             # Usamos 6 columnas compactas para una lectura de izquierda a derecha
             c_f1, c_f2, c_f3, c_f4, c_f5, c_f6 = st.columns(6)
             
@@ -418,7 +421,7 @@ else:
     # ==========================================
     with tab_gps_comp:
         # --- DESPLEGABLE CON LOS FILTROS DE LOS PERFILES ---
-        with st.expander("⚖️ Configurar Perfiles a Comparar", expanded=False):
+        with st.expander(":material/tune: Configurar Perfiles a Comparar", expanded=False):
             
             def render_columna_filtro_comparador(prefijo, titulo, color_hex):
                 st.markdown(f"**<span style='color:{color_hex}'>■</span> {titulo}**", unsafe_allow_html=True)
