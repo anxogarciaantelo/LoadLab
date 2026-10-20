@@ -282,12 +282,10 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
     </style>
     """
     st.markdown(css_fondo_equipos, unsafe_allow_html=True)
-    except FileNotFoundError:
-        pass
 
     # Un poco de espacio superior y título rediseñado
     st.markdown("<br><br><br><br><br>", unsafe_allow_html=True)
-    st.markdown("<h2 style='text-align: center; color: #ffffff; font-weight: 800; margin-bottom: 40px; font-size: 2.5rem; letter-spacing: -1px; text-shadow: 0px 4px 15px rgba(0,0,0,0.8);'>SELECCIONA TU <span style='color: #dc2626;'>EQUIPO</span></h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center; color: #ffffff; font-weight: 800; margin-bottom: 40px; font-size: 2.5rem; letter-spacing: -1px; text-shadow: 0px 4px 15px rgba(0,0,0,0.8);'>SELECCIONA TU <span style='color: #3b82f6;'>EQUIPO</span></h2>", unsafe_allow_html=True)
     
     # Consulta a Supabase
     res_equipos = supabase.table("equipo_usuarios").select("equipo_id, equipos(nombre, categoria, division, escudo_base64)").eq("usuario_id", st.session_state.usuario_id).execute()
