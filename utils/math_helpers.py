@@ -535,10 +535,10 @@ def aplicar_color_sidebar():
                 </div>
             """, unsafe_allow_html=True)
 
-            if st.button("🔄 Cambiar Equipo", use_container_width=True, key="btn_cambiar_eq_sb"):
+            if st.button(":material/swap_horiz: Cambiar Equipo", use_container_width=True, key="btn_cambiar_eq_sb"):
                 st.session_state.equipo_seleccionado = False
                 st.rerun()
-            if st.button("🚪 Cerrar Sesión", use_container_width=True, key="btn_cerrar_ses_sb"):
+            if st.button(":material/logout: Cerrar Sesión", use_container_width=True, key="btn_cerrar_ses_sb"):
                 st.session_state.clear()
                 st.rerun()
                 
