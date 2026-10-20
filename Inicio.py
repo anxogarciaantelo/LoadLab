@@ -114,59 +114,52 @@ if not st.session_state.get("equipo_seleccionado", False):
 # 1. PANTALLA DE LOGIN / REGISTRO (DISEÑO SPLIT ÉLITE)
 # ==========================================
 if not st.session_state.autenticado:
-    set_login_background("fondo_login.jpg")
+    set_login_background()
     
-    # Espaciado superior dinámico
     st.markdown("<div style='margin-top: 8vh;'></div>", unsafe_allow_html=True)
-    
     col_info, col_espacio, col_login = st.columns([1.4, 0.2, 1.1])
     
-    # --- COLUMNA IZQUIERDA: PROPUESTA DE VALOR ---
     with col_info:
-        st.markdown("""
-        <div style="padding-right: 20px;">
-            <h2 style='color: #f8fafc; font-weight: 900; font-size: 2.2rem; letter-spacing: -1px; margin-bottom: 30px;'>
-                LOAD<span style='color: #dc2626;'>LAB</span>
-            </h2>
-            <h1 style="font-size: 3.2rem; font-weight: 800; line-height: 1.1; margin-bottom: 20px; color: #f8fafc; letter-spacing: -1px;">
-                Decisiones basadas en datos, <br><span style="color: #3b82f6;">rendimiento de élite.</span>
-            </h1>
-            <p style="color: #94a3b8; font-size: 1.1rem; margin-bottom: 40px; max-width: 90%; line-height: 1.6;">
-                Centraliza métricas GPS, fatiga neuromuscular y prevención lesional en un único ecosistema diseñado para cuerpos técnicos profesionales.
-            </p>
-            
-            <!-- Tarjetas de Características -->
-            <div style="background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(51, 65, 85, 0.6); padding: 18px; border-radius: 12px; margin-bottom: 12px; display: flex; align-items: center; gap: 15px; backdrop-filter: blur(5px);">
-                <div style="background: rgba(59, 130, 246, 0.15); padding: 12px; border-radius: 8px; color: #3b82f6; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; width: 45px; height: 45px;">⚡</div>
-                <div>
-                    <h4 style="margin: 0 0 4px 0; font-size: 1rem; color: #f8fafc; font-weight: 700;">Carga y Demandas</h4>
-                    <p style="margin: 0; font-size: 0.85rem; color: #94a3b8;">Monitoriza el Ratio A/C (Sweet Spot) y la densidad competitiva por jugador.</p>
-                </div>
-            </div>
-            
-            <div style="background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(51, 65, 85, 0.6); padding: 18px; border-radius: 12px; margin-bottom: 12px; display: flex; align-items: center; gap: 15px; backdrop-filter: blur(5px);">
-                <div style="background: rgba(16, 185, 129, 0.15); padding: 12px; border-radius: 8px; color: #10b981; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; width: 45px; height: 45px;">📈</div>
-                <div>
-                    <h4 style="margin: 0 0 4px 0; font-size: 1rem; color: #f8fafc; font-weight: 700;">Evolución Individual</h4>
-                    <p style="margin: 0; font-size: 0.85rem; color: #94a3b8;">Seguimiento acumulado por microciclo, perfiles F-V y asimetrías.</p>
-                </div>
-            </div>
-            
-            <div style="background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(51, 65, 85, 0.6); padding: 18px; border-radius: 12px; margin-bottom: 12px; display: flex; align-items: center; gap: 15px; backdrop-filter: blur(5px);">
-                <div style="background: rgba(239, 68, 68, 0.15); padding: 12px; border-radius: 8px; color: #ef4444; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; width: 45px; height: 45px;">🧠</div>
-                <div>
-                    <h4 style="margin: 0 0 4px 0; font-size: 1rem; color: #f8fafc; font-weight: 700;">Oráculo Predictivo</h4>
-                    <p style="margin: 0; font-size: 0.85rem; color: #94a3b8;">Algoritmos XGBoost para detectar riesgo lesional inminente en la plantilla.</p>
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        # ATENCIÓN: El string está pegado a la izquierda a propósito para evitar el error de Markdown
+        html_info = """<div style="padding-right: 20px;">
+<h2 style='color: #f8fafc; font-weight: 900; font-size: 2.2rem; letter-spacing: -1px; margin-bottom: 30px;'>
+LOAD<span style='color: #3b82f6;'>LAB</span>
+</h2>
+<h1 style="font-size: 3.2rem; font-weight: 800; line-height: 1.1; margin-bottom: 20px; color: #f8fafc; letter-spacing: -1px;">
+Decisiones basadas en datos, <br><span style="color: #3b82f6;">rendimiento de élite.</span>
+</h1>
+<p style="color: #94a3b8; font-size: 1.1rem; margin-bottom: 40px; max-width: 90%; line-height: 1.6;">
+Centraliza métricas GPS, fatiga neuromuscular y prevención lesional en un único ecosistema diseñado para cuerpos técnicos profesionales.
+</p>
 
-    # --- COLUMNA DERECHA: FORMULARIO DE ACCESO ---
+<div style="background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(51, 65, 85, 0.6); padding: 18px; border-radius: 12px; margin-bottom: 12px; display: flex; align-items: center; gap: 15px; backdrop-filter: blur(5px);">
+<div style="background: rgba(59, 130, 246, 0.15); padding: 12px; border-radius: 8px; color: #3b82f6; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; width: 45px; height: 45px;">⚡</div>
+<div>
+<h4 style="margin: 0 0 4px 0; font-size: 1rem; color: #f8fafc; font-weight: 700;">Carga y Demandas</h4>
+<p style="margin: 0; font-size: 0.85rem; color: #94a3b8;">Monitoriza el Ratio A/C (Sweet Spot) y la densidad competitiva por jugador.</p>
+</div>
+</div>
+
+<div style="background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(51, 65, 85, 0.6); padding: 18px; border-radius: 12px; margin-bottom: 12px; display: flex; align-items: center; gap: 15px; backdrop-filter: blur(5px);">
+<div style="background: rgba(59, 130, 246, 0.15); padding: 12px; border-radius: 8px; color: #3b82f6; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; width: 45px; height: 45px;">📈</div>
+<div>
+<h4 style="margin: 0 0 4px 0; font-size: 1rem; color: #f8fafc; font-weight: 700;">Evolución Individual</h4>
+<p style="margin: 0; font-size: 0.85rem; color: #94a3b8;">Seguimiento acumulado por microciclo, perfiles F-V y asimetrías.</p>
+</div>
+</div>
+
+<div style="background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(51, 65, 85, 0.6); padding: 18px; border-radius: 12px; margin-bottom: 12px; display: flex; align-items: center; gap: 15px; backdrop-filter: blur(5px);">
+<div style="background: rgba(59, 130, 246, 0.15); padding: 12px; border-radius: 8px; color: #3b82f6; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; width: 45px; height: 45px;">🧠</div>
+<div>
+<h4 style="margin: 0 0 4px 0; font-size: 1rem; color: #f8fafc; font-weight: 700;">Oráculo Predictivo</h4>
+<p style="margin: 0; font-size: 0.85rem; color: #94a3b8;">Algoritmos XGBoost para detectar riesgo lesional inminente en la plantilla.</p>
+</div>
+</div>
+</div>"""
+        st.markdown(html_info, unsafe_allow_html=True)
+
     with col_login:
-        # Espaciador para centrar verticalmente la tarjeta de login respecto a la info
         st.markdown("<div style='margin-top: 4vh;'></div>", unsafe_allow_html=True)
-        
         tab_login, tab_reg = st.tabs(["INICIAR SESIÓN", "REGISTRARSE"])
         
         with tab_login:
@@ -176,11 +169,9 @@ if not st.session_state.autenticado:
             with st.form(key="login_form"):
                 email = st.text_input("Correo electrónico", key="log_email", placeholder="tu@email.com")
                 password = st.text_input("Contraseña", type="password", key="log_pass", placeholder="••••••••")
-                
                 st.markdown("<div style='text-align: right; margin-bottom: 15px;'><a href='#' style='color: #3b82f6; font-size: 0.8rem; text-decoration: none; font-weight: 600;'>¿Has olvidado tu contraseña?</a></div>", unsafe_allow_html=True)
                 
                 submit_btn = st.form_submit_button("Iniciar Sesión", use_container_width=True)
-                
                 if submit_btn:
                     try:
                         res = supabase.auth.sign_in_with_password({"email": email, "password": password})
@@ -226,71 +217,71 @@ if not st.session_state.autenticado:
 # 2. SELECCIÓN DE EQUIPO
 # ==========================================
 if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
-    # 1. Aplicamos el fondo de imagen oscuro con efecto cristal (Glassmorphism)
-    try:
-        import base64
-        with open("fondo_login.jpg", "rb") as img_file:
-            encoded_string = base64.b64encode(img_file.read()).decode()
-        css_fondo_equipos = f"""
-        <style>
-        .stApp {{
-            background-image: linear-gradient(rgba(10, 10, 10, 0.6), rgba(10, 10, 10, 0.8)), url("data:image/jpeg;base64,{encoded_string}");
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            background-attachment: fixed;
-        }}
-        header[data-testid="stHeader"] {{
-            background-color: transparent !important;
-        }}
-        
-        /* Botones de acceder a los equipos (Azul MPA) */
-        div[data-testid="column"] button {{
-            background-color: #3b82f6 !important;
-            border: none !important;
-            color: #ffffff !important;
-            font-weight: 800 !important;
-            border-radius: 8px !important;
-            padding: 12px !important;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            transition: all 0.3s ease !important;
-            box-shadow: 0 4px 10px rgba(59, 130, 246, 0.4) !important;
-        }}
-        div[data-testid="column"] button:hover {{
-            background-color: #2563eb !important;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 15px rgba(59, 130, 246, 0.6) !important;
-        }}
-        
-        /* Fondo cristal para el desplegable de Crear Equipo */
-        div[data-testid="stExpander"] details {{
-            background-color: rgba(30, 41, 59, 0.95) !important;
-            border-radius: 12px !important;
-            border: 1px solid #334155 !important;
-            border-top: 4px solid #3b82f6 !important;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8) !important;
-        }}
-        div[data-testid="stExpander"] summary p {{
-            color: #f8fafc !important;
-            font-weight: 800 !important;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }}
-        
-        /* Inputs dentro de crear equipo */
-        div[data-testid="stExpander"] div[data-testid="stTextInput"] input,
-        div[data-testid="stExpander"] div[data-testid="stSelectbox"] div[data-baseweb="select"] {{
-            background-color: #f4f4f5 !important;
-            border: 1px solid #d4d4d8 !important;
-            border-radius: 6px !important;
-            color: #0a0a0a !important;
-            font-weight: 600 !important;
-        }}
-        </style>
-        """
-        st.markdown(css_fondo_equipos, unsafe_allow_html=True)
+    # 1. Aplicamos el fondo dinámico de datos (sin imagen local)
+    css_fondo_equipos = """
+    <style>
+    .stApp {
+        background-color: #0b1120 !important;
+        background-image: 
+            radial-gradient(circle at 15% 50%, rgba(59, 130, 246, 0.08), transparent 25%),
+            radial-gradient(circle at 85% 30%, rgba(16, 185, 129, 0.05), transparent 25%);
+        animation: bgShift 15s ease-in-out infinite alternate;
+    }
+    .stApp::before {
+        content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        background-size: 40px 40px; pointer-events: none; z-index: 0;
+    }
+    @keyframes bgShift { 0% { background-position: 0% 0%; } 100% { background-position: 100% 100%; } }
+    header[data-testid="stHeader"] { background-color: transparent !important; }
+    
+    /* Botones de acceder a los equipos */
+    div[data-testid="column"] button {
+        background-color: #3b82f6 !important;
+        border: none !important;
+        color: #ffffff !important;
+        font-weight: 800 !important;
+        border-radius: 8px !important;
+        padding: 12px !important;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        transition: all 0.3s ease !important;
+        box-shadow: 0 4px 10px rgba(59, 130, 246, 0.4) !important;
+    }
+    div[data-testid="column"] button:hover {
+        background-color: #2563eb !important;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 15px rgba(59, 130, 246, 0.6) !important;
+    }
+    
+    /* Fondo cristal para el desplegable de Crear Equipo */
+    div[data-testid="stExpander"] details {
+        background-color: rgba(30, 41, 59, 0.95) !important;
+        border-radius: 12px !important;
+        border: 1px solid #334155 !important;
+        border-top: 4px solid #3b82f6 !important;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8) !important;
+    }
+    div[data-testid="stExpander"] summary p {
+        color: #f8fafc !important;
+        font-weight: 800 !important;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    /* Inputs dentro de crear equipo */
+    div[data-testid="stExpander"] div[data-testid="stTextInput"] input,
+    div[data-testid="stExpander"] div[data-testid="stSelectbox"] div[data-baseweb="select"] {
+        background-color: #f4f4f5 !important;
+        border: 1px solid #d4d4d8 !important;
+        border-radius: 6px !important;
+        color: #0a0a0a !important;
+        font-weight: 600 !important;
+    }
+    </style>
+    """
+    st.markdown(css_fondo_equipos, unsafe_allow_html=True)
     except FileNotFoundError:
         pass
 
