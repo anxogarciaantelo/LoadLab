@@ -116,7 +116,8 @@ if not st.session_state.autenticado:
     set_login_background()
     
     st.markdown("<div style='margin-top: 2vh;'></div>", unsafe_allow_html=True)
-    col_info, col_espacio, col_login = st.columns([2.0, 0.2, 1.0])
+    # Proporción ajustada: Izquierda (1.5) - Separación (0.2) - Login más ancho (1.2)
+    col_info, col_espacio, col_login = st.columns([1.5, 0.2, 1.2])
     
     with col_info:
         import base64
