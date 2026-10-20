@@ -21,9 +21,14 @@ if not st.session_state.get("autenticado", False) or not st.session_state.get("e
 
 aplicar_color_sidebar()
 
-st.subheader("⚖️ Antropometría y Composición Corporal")
+st.subheader(":material/scale: Antropometría y Composición Corporal")
 
-tab_antro_res, tab_antro_jug, tab_antro_up, tab_antro_edit = st.tabs(["📊 Resumen Analítico", "👤 Jugadores", "📂 Cargar Datos", "✏️ Editar Registros"])
+tab_antro_res, tab_antro_jug, tab_antro_up, tab_antro_edit = st.tabs([
+    ":material/analytics: Resumen Analítico", 
+    ":material/accessibility_new: Jugadores", 
+    ":material/upload_file: Cargar Datos", 
+    ":material/edit_document: Editar Registros"
+])
 
 antro_data = st.session_state.get("antropometria", [])
 
@@ -71,7 +76,7 @@ with tab_antro_res:
         dict_pos = {j['JUGADOR']: j['POS'] for j in st.session_state.plantilla}
         df_antro['POS'] = df_antro['jugador'].map(lambda x: dict_pos.get(x, "N/A"))
 
-        with st.expander("🔍 Filtros Antropométricos", expanded=False):
+        with st.expander(":material/filter_alt: Filtros Antropométricos", expanded=False):
             ca1, ca2, ca3, ca4 = st.columns(4)
             
             jugs_unicos = ["TODOS"] + sorted(df_antro['jugador'].unique())
@@ -568,7 +573,7 @@ with tab_antro_jug:
             pdf_key = f"pdf_antro_{jugador_seleccionado}"
             
             if pdf_key not in st.session_state:
-                if st.button("⚙️ Generar PDF Antropométrico", use_container_width=True):
+                if st.button(":material/picture_as_pdf: Generar PDF Antropométrico", use_container_width=True):
                     with st.spinner("Procesando gráficos y compilando PDF..."):
                         jugador_info = f"{jugador_datos.get('pos_1', jugador_datos.get('POS', ''))} | Edad: {jugador_datos.get('edad', '-')} | Altura: {jugador_datos.get('altura', '-')} cm" if jugador_datos else ""
                         kpis_pes = {'Peso': f"{ultimo_pesaje['Peso']:.1f} kg", 'Grasa': f"{ultimo_pesaje['% Graso']:.2f} %", 'Magra': f"{ultimo_pesaje['Kg Magros']:.1f} kg", 'Pliegues': f"{ultimo_pesaje['Suma_Pliegues']:.1f} mm"}
@@ -587,14 +592,14 @@ with tab_antro_jug:
                 c_down1, c_down2 = st.columns(2)
                 with c_down1:
                     st.download_button(
-                        label="📥 Descargar PDF",
+                        label=":material/download: Descargar PDF",
                         data=st.session_state[pdf_key],
                         file_name=f"Antropometría {jugador_seleccionado}.pdf",
                         mime="application/pdf",
                         use_container_width=True
                     )
                 with c_down2:
-                    if st.button("🗑️ Descartar PDF", use_container_width=True):
+                    if st.button(":material/delete: Descartar PDF", use_container_width=True):
                         del st.session_state[pdf_key]
                         st.rerun()
 
@@ -602,10 +607,10 @@ with tab_antro_jug:
             # 2. DESCARGA MASIVA (TODA LA PLANTILLA EN ZIP)
             # ==========================================
             st.markdown("---")
-            st.markdown("#### 🗂️ Descarga Masiva (Toda la Plantilla)")
+            st.markdown("#### :material/folder_zip: Descarga Masiva (Toda la Plantilla)")
             st.caption("Genera un archivo ZIP que contendrá los informes individuales en PDF de todos los jugadores.")
             
-            if st.button("📦 Generar ZIP con todos los informes", use_container_width=True):
+            if st.button(":material/folder_zip: Generar ZIP con todos los informes", use_container_width=True):
                 import zipfile
                 import io
                 
@@ -728,7 +733,7 @@ with tab_antro_jug:
                 c_z1, c_z2 = st.columns(2)
                 with c_z1:
                     st.download_button(
-                        label="📥 Descargar archivo ZIP",
+                        label=":material/download: Descargar archivo ZIP",
                         data=st.session_state["zip_antro_all"],
                         file_name="Informes_Antropometria_Equipo.zip",
                         mime="application/zip",
@@ -766,7 +771,7 @@ with tab_antro_up:
     with c_up2:
         archivo_antro = st.file_uploader("Sube el Excel mensual de antropometría:", type=["xlsx"])
     
-    if st.button("Procesar Archivo Antropométrico") and archivo_antro is not None:
+    if st.button(":material/upload: Procesar Archivo Antropométrico") and archivo_antro is not None:
         try:
             df_up = pd.read_excel(archivo_antro)
             
@@ -843,7 +848,7 @@ with tab_antro_edit:
         )
         
         # Botón para consolidar cambios
-        if st.button("💾 Guardar Cambios de la Tabla"):
+        if st.button(":material/save: Guardar Cambios de la Tabla"):
             nuevos_registros = []
             for _, row in edited_df.iterrows():
                 # Validación de seguridad: no guardar filas vacías o sin jugador
