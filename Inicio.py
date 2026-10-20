@@ -112,51 +112,70 @@ if not st.session_state.get("equipo_seleccionado", False):
 # ==========================================
 # 1. PANTALLA DE LOGIN / REGISTRO (DISEÑO SPLIT ÉLITE)
 # ==========================================
+# Modifica la lógica de login de tu app.py con esta estructura renovada:
 if not st.session_state.autenticado:
     set_login_background()
     
-    # Margen superior reducido al mínimo
     st.markdown("<div style='margin-top: 2vh;'></div>", unsafe_allow_html=True)
     col_info, col_espacio, col_login = st.columns([1.4, 0.2, 1.1])
     
     with col_info:
-        html_info = """<div style="padding-right: 20px;">
-<h2 style='color: #f8fafc; font-weight: 900; font-size: 2rem; letter-spacing: -1px; margin-bottom: 15px;'>
-LOAD<span style='color: #3b82f6;'>LAB</span>
-</h2>
-<h1 style="font-size: 2.8rem; font-weight: 800; line-height: 1.1; margin-bottom: 15px; color: #f8fafc; letter-spacing: -1px;">
-Decisiones basadas en datos, <br><span style="color: #3b82f6;">rendimiento de élite.</span>
-</h1>
-<p style="color: #94a3b8; font-size: 1.05rem; margin-bottom: 25px; max-width: 90%; line-height: 1.5;">
-Centraliza métricas GPS, fatiga neuromuscular y prevención lesional en un único ecosistema diseñado para cuerpos técnicos profesionales.
-</p>
+        # Recuperar y transformar tu logo (puedes guardarlo en una carpeta assets o usar su base64)
+        # Reemplaza 'logo.png' por el archivo de imagen que has subido.
+        try:
+            with open("assets/logo.png", "rb") as image_file:
+                logo_b64 = base64.b64encode(image_file.read()).decode()
+            logo_html = f'<img src="data:image/png;base64,{logo_b64}" style="width: 140px; margin-bottom: 20px;">'
+        except FileNotFoundError:
+            logo_html = '<div style="font-size: 60px; margin-bottom: 20px;">🛡️</div>'
 
-<div style="background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(51, 65, 85, 0.6); padding: 14px; border-radius: 10px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; backdrop-filter: blur(5px);">
-<div style="background: rgba(59, 130, 246, 0.15); padding: 10px; border-radius: 8px; color: #3b82f6; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px;">⚡</div>
-<div>
-<h4 style="margin: 0 0 2px 0; font-size: 0.95rem; color: #f8fafc; font-weight: 700;">Carga y Demandas</h4>
-<p style="margin: 0; font-size: 0.8rem; color: #94a3b8;">Monitoriza el Ratio A/C (Sweet Spot) y la densidad competitiva por jugador.</p>
-</div>
-</div>
+        html_info = f"""<div style="padding-right: 20px;">
+            {logo_html}
+            <h2 style='color: #E2E8F0; font-weight: 900; font-size: 2.8rem; letter-spacing: -1.5px; margin-bottom: 5px; font-family: "Plus Jakarta Sans", sans-serif;'>
+                LOAD<span style='color: #C5A059;'>LAB</span>
+            </h2>
+            <h1 style="font-size: 2.2rem; font-weight: 800; line-height: 1.2; margin-bottom: 20px; color: #E2E8F0; letter-spacing: -0.5px;">
+                Decisiones basadas en datos,<br><span style="color: #C5A059;">rendimiento de élite.</span>
+            </h1>
+            <p style="color: #a1a1aa; font-size: 1.05rem; margin-bottom: 30px; max-width: 95%; line-height: 1.6;">
+                Centraliza y analiza las variables de rendimiento, carga y salud de tus futbolistas en un único ecosistema premium diseñado para cuerpos técnicos profesionales.
+            </p>
 
-<div style="background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(51, 65, 85, 0.6); padding: 14px; border-radius: 10px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; backdrop-filter: blur(5px);">
-<div style="background: rgba(59, 130, 246, 0.15); padding: 10px; border-radius: 8px; color: #3b82f6; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px;">📈</div>
-<div>
-<h4 style="margin: 0 0 2px 0; font-size: 0.95rem; color: #f8fafc; font-weight: 700;">Evolución Individual</h4>
-<p style="margin: 0; font-size: 0.8rem; color: #94a3b8;">Seguimiento acumulado por microciclo, perfiles F-V y asimetrías.</p>
-</div>
-</div>
+            <!-- Sección de Características Científicas de LoadLab -->
+            <div style="background: rgba(197, 160, 89, 0.03); border: 1px solid rgba(197, 160, 89, 0.15); padding: 16px; border-radius: 12px; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 14px; backdrop-filter: blur(5px);">
+                <div style="background: rgba(197, 160, 89, 0.1); padding: 10px; border-radius: 8px; color: #C5A059; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex-shrink: 0;">📉</div>
+                <div>
+                    <h4 style="margin: 0 0 3px 0; font-size: 0.95rem; color: #E2E8F0; font-weight: 800;">Carga y Demandas (EWMA / ACWR)</h4>
+                    <p style="margin: 0; font-size: 0.85rem; color: #94a3b8; line-height: 1.4;">Monitoriza el Ratio A/C (Sweet Spot), el strain acumulado y la densidad competitiva por jugador para mitigar el riesgo.</p>
+                </div>
+            </div>
 
-<div style="background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(51, 65, 85, 0.6); padding: 14px; border-radius: 10px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; backdrop-filter: blur(5px);">
-<div style="background: rgba(59, 130, 246, 0.15); padding: 10px; border-radius: 8px; color: #3b82f6; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px;">🧠</div>
-<div>
-<h4 style="margin: 0 0 2px 0; font-size: 0.95rem; color: #f8fafc; font-weight: 700;">Oráculo Predictivo</h4>
-<p style="margin: 0; font-size: 0.8rem; color: #94a3b8;">Algoritmos XGBoost para detectar riesgo lesional inminente en la plantilla.</p>
-</div>
-</div>
-</div>"""
+            <div style="background: rgba(197, 160, 89, 0.03); border: 1px solid rgba(197, 160, 89, 0.15); padding: 16px; border-radius: 12px; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 14px; backdrop-filter: blur(5px);">
+                <div style="background: rgba(197, 160, 89, 0.1); padding: 10px; border-radius: 8px; color: #C5A059; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex-shrink: 0;">🧠</div>
+                <div>
+                    <h4 style="margin: 0 0 3px 0; font-size: 0.95rem; color: #E2E8F0; font-weight: 800;">Oráculo Predictivo AI</h4>
+                    <p style="margin: 0; font-size: 0.85rem; color: #94a3b8; line-height: 1.4;">Algoritmos avanzados (XGBoost) para detectar y anticipar riesgo de lesión inminente en la plantilla.</p>
+                </div>
+            </div>
+
+            <div style="background: rgba(197, 160, 89, 0.03); border: 1px solid rgba(197, 160, 89, 0.15); padding: 16px; border-radius: 12px; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 14px; backdrop-filter: blur(5px);">
+                <div style="background: rgba(197, 160, 89, 0.1); padding: 10px; border-radius: 8px; color: #C5A059; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex-shrink: 0;">🏋️‍♂️</div>
+                <div>
+                    <h4 style="margin: 0 0 3px 0; font-size: 0.95rem; color: #E2E8F0; font-weight: 800;">Rendimiento & Fuerza VBT</h4>
+                    <p style="margin: 0; font-size: 0.85rem; color: #94a3b8; line-height: 1.4;">Seguimiento neuromuscular, perfiles Fuerza-Velocidad, test de salto (CMJ) y asimetrías bilaterales.</p>
+                </div>
+            </div>
+
+            <div style="background: rgba(197, 160, 89, 0.03); border: 1px solid rgba(197, 160, 89, 0.15); padding: 16px; border-radius: 12px; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 14px; backdrop-filter: blur(5px);">
+                <div style="background: rgba(197, 160, 89, 0.1); padding: 10px; border-radius: 8px; color: #C5A059; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex-shrink: 0;">🚑</div>
+                <div>
+                    <h4 style="margin: 0 0 3px 0; font-size: 0.95rem; color: #E2E8F0; font-weight: 800;">Enfermería, RTP & Antropometría</h4>
+                    <p style="margin: 0; font-size: 0.85rem; color: #94a3b8; line-height: 1.4;">Control de bajas, fases de readaptación (Return to Play) y composición corporal de élite.</p>
+                </div>
+            </div>
+        </div>"""
         st.markdown(html_info, unsafe_allow_html=True)
-
+        
     with col_login:
         st.markdown("<div style='margin-top: 1vh;'></div>", unsafe_allow_html=True)
         tab_login, tab_reg = st.tabs(["INICIAR SESIÓN", "REGISTRARSE"])
