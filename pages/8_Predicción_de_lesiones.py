@@ -344,7 +344,7 @@ st.dataframe(
             help="Probabilidad de sufrir una lesión muscular/tendinosa en los próximos 7 días.",
             format="%.0f%%",
             min_value=0,
-            max_value=100,
+            max_value=75, # Escala ajustada: un >70% llenará la barra advirtiendo de criticidad máxima
         ),
         "Ratio A/C": st.column_config.NumberColumn("Ratio A/C", format="%.2f"),
         "Carga Aguda (UA)": st.column_config.NumberColumn("Carga (7d)", format="%.0f"),
