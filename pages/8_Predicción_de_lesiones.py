@@ -193,7 +193,18 @@ if total_lesiones_reales >= MIN_LESIONES_REQUERIDAS:
         y = df_master['Lesion_Target']
         ratio_desbalanceo = len(y[y == 0]) / len(y[y == 1]) if len(y[y == 1]) > 0 else 1
         
-        modelo = xgb.XGBClassifier(n_estimators=100, max_depth=4, learning_rate=0.05, scale_pos_weight=ratio_desbalanceo, eval_metric='logloss')
+        modelo = xgb.XGBClassifier(
+            n_estimators=80, 
+            max_depth=2,  # Profundidad mínima para evitar memorización de ruido
+            learning_rate=0.01, # Aprendizaje más lento y conservador
+            scale_pos_weight=ratio_desbalanceo, 
+            min_child_weight=3, # Exige al menos 3 casos para ramificar
+            reg_lambda=2.0, # Penalización L2 (Ridge)
+            reg_alpha=0.5,  # Penalización L1 (Lasso)
+            subsample=0.8,
+            colsample_bytree=0.8,
+            eval_metric='logloss'
+        )
         scaler = StandardScaler()
         X_scaled = scaler.fit_transform(X)
         modelo.fit(X_scaled, y)
