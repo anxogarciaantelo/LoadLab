@@ -9,114 +9,63 @@ html, body, [class*="css"], .stMarkdown p, .stText p, label, .stSelectbox, .stTe
     font-family: 'Plus Jakarta Sans', -apple-system, sans-serif !important;
     color: #e2e8f0 !important;
     font-size: 0.95rem !important; 
-    -webkit-font-smoothing: antialiased !important;
-    -moz-osx-font-smoothing: grayscale !important;
-}
-h1, h2, h3, h4, h5, h6 { color: #f8fafc !important; font-weight: 800 !important; margin-bottom: 0.4rem !important; }
-
-/* Forzar alineación geométrica para métricas y tablas */
-div[data-testid="stMetricValue"], .modern-table td, .modern-table th, [data-testid="stDataFrame"], h2 {
-    font-variant-numeric: tabular-nums !important;
 }
 
-/* --- MENÚ LATERAL (Tipografía de enlaces) --- */
-[data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"] p {
-    font-weight: 800 !important;
-    font-size: 0.85rem !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.5px !important;
-}
-
-/* Reducción global de espacios entre bloques en Streamlit */
-div[data-testid="stVerticalBlock"] {
-    gap: 0.6rem !important;
-}
-.block-container {
-    padding-bottom: 1.2rem !important;
-    max-width: 98% !important;
-}
-
-/* --- OCULTACIÓN INTELIGENTE DE LA BARRA SUPERIOR --- */
-@media (min-width: 769px) {
-    header[data-testid="stHeader"] {
-        display: none !important;
-    }
-    .block-container {
-        padding-top: 2rem !important; 
-    }
-}
-@media (max-width: 768px) {
-    header[data-testid="stHeader"] {
-        background-color: transparent !important; 
-    }
-    .block-container {
-        padding-top: 4rem !important;
-    }
-}
-
-/* --- FONDO APP --- */
+/* --- FONDO OBSIDIANA CON RED DE DATOS PREMIUM --- */
 .stApp {
-    background-color: #0b1120 !important;
-    background-image: radial-gradient(circle at 50% 0%, #1e293b 0%, transparent 70%);
+    background-color: #111318 !important; /* Obsidiana */
+    background-image: 
+        radial-gradient(circle at 15% 50%, rgba(197, 160, 89, 0.04), transparent 30%), /* Sutil dorado champagne */
+        radial-gradient(circle at 85% 30%, rgba(226, 232, 240, 0.02), transparent 25%); /* Plata */
+    animation: bgShift 15s ease-in-out infinite alternate;
 }
 
-/* --- CONTENEDORES Y MICROCICLOS --- */
+/* Malla / Grid de Analytics Premium */
+.stApp::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background-image: 
+        linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+    background-size: 50px 50px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* --- LOGO EN MENÚ LATERAL Y BARS --- */
+[data-testid="stSidebar"] {
+    background-color: #0f1013 !important; /* Más oscuro para generar profundidad contra el fondo */
+    border-right: 1px solid rgba(197, 160, 89, 0.1) !important;
+}
+
+/* Elementos activos o seleccionados */
+.stTabs [aria-selected="true"] {
+    color: #C5A059 !important; /* Dorado */
+    border-bottom: 2px solid #C5A059 !important;
+}
+
+/* Tarjetas y Contenedores */
 div[data-testid="stVerticalBlock"] > div[data-testid="stContainer"],
 div[data-testid="stExpander"] details {
-    background: #1e293b !important;
+    background: #16191f !important;
+    border: 1px solid rgba(197, 160, 89, 0.12) !important;
     border-radius: 8px !important;
-    border: 1px solid #334155 !important;
-    box-shadow: 0 3px 8px rgba(0,0,0,0.4) !important;
-    padding: 6px !important;
-}
-div[data-testid="stExpander"] summary {
-    background: #1e293b !important;
-    border-radius: 6px !important;
-    padding: 8px 10px !important;
-}
-div[data-testid="stExpander"] summary p {
-    color: #f8fafc !important;
-    font-size: 0.95rem !important;
-    text-transform: uppercase;
-    letter-spacing: 1px;
 }
 
-/* --- PESTAÑAS --- */
-.stTabs [data-baseweb="tab-list"] {
-    gap: 8px;
-    background-color: transparent !important;
-    padding: 0 !important;
-    border-bottom: 2px solid #334155 !important;
-    overflow-x: visible !important;
-}
-.stTabs [data-baseweb="tab"] {
-    height: 34px !important;
-    background-color: transparent !important;
-    color: #94a3b8 !important;
-    font-weight: 700 !important;
-    font-size: 0.9rem !important;
-    border: none !important;
-    padding: 0 10px !important;
-    white-space: nowrap !important;
-    min-width: max-content !important;
-    transition: all 0.3s ease;
-}
-.stTabs [aria-selected="true"] {
-    color: #3b82f6 !important;
-    background-color: transparent !important;
-    border-bottom: 3px solid #3b82f6 !important;
-    box-shadow: none !important;
-}
-
-/* --- BOTONES (Transiciones suaves) --- */
+/* Botones principales */
 button[data-testid="baseButton-secondary"], 
 button[data-testid="baseButton-primary"] {
-    transition: transform 0.15s ease, filter 0.15s ease !important;
+    background-color: #C5A059 !important; /* Dorado */
+    color: #111318 !important; /* Texto oscuro para contraste */
+    font-weight: 800 !important;
+    border-radius: 6px !important;
+    transition: all 0.2s ease-in-out !important;
 }
 button[data-testid="baseButton-secondary"]:hover, 
 button[data-testid="baseButton-primary"]:hover {
+    box-shadow: 0 4px 14px rgba(197, 160, 89, 0.3) !important;
     transform: translateY(-1px);
-    filter: brightness(1.1);
 }
 
 /* --- TARJETAS KPI NATIVAS (st.metric) --- */
