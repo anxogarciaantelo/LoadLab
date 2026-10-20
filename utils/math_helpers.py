@@ -268,35 +268,50 @@ def mostrar_tabla_moderna(styler_obj):
 def set_login_background():
     css = """
     <style>
-    /* --- FONDO ANIMADO DE DATOS (Puro CSS, sin imágenes) --- */
+    /* --- FONDO ANIMADO NEURAL/DATA PREMIUM --- */
     .stApp {
         background-color: #111318 !important;
-        background-image: 
-            radial-gradient(circle at 15% 50%, rgba(197, 160, 89, 0.04), transparent 30%),
-            radial-gradient(circle at 85% 30%, rgba(226, 232, 240, 0.02), transparent 25%);
-        animation: bgShift 15s ease-in-out infinite alternate;
+        overflow-x: hidden;
     }
     
-    /* Malla / Grid de Analytics overlay */
+    /* Malla / Grid base de puntos sutil */
     .stApp::before {
         content: "";
-        position: absolute;
-        top: 0; left: 0; width: 100%; height: 100%;
-        background-image: 
-            linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
-        background-size: 50px 50px;
+        position: fixed;
+        top: 0; left: 0; width: 100vw; height: 100vh;
+        background-image: radial-gradient(rgba(226, 232, 240, 0.04) 1px, transparent 1px);
+        background-size: 40px 40px;
         pointer-events: none;
         z-index: 0;
     }
 
-    @keyframes bgShift {
-        0% { background-position: 0% 0%; }
-        100% { background-position: 100% 100%; }
+    /* Nodos de datos resplandecientes animados (Orbs) */
+    .stApp::after {
+        content: "";
+        position: fixed;
+        top: -50%; left: -50%; width: 200vw; height: 200vh;
+        background: 
+            radial-gradient(circle at 25% 30%, rgba(197, 160, 89, 0.06) 0%, transparent 25%),
+            radial-gradient(circle at 75% 65%, rgba(59, 130, 246, 0.04) 0%, transparent 30%),
+            radial-gradient(circle at 50% 85%, rgba(197, 160, 89, 0.05) 0%, transparent 20%);
+        animation: dataFlow 18s ease-in-out infinite alternate;
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    @keyframes dataFlow {
+        0% { transform: translate(0, 0) scale(1); }
+        50% { transform: translate(2%, -3%) scale(1.05); }
+        100% { transform: translate(-2%, 2%) scale(0.95); }
     }
 
     header[data-testid="stHeader"] { display: none !important; }
-    .block-container { padding-top: 2rem !important; max-width: 1200px !important; position: relative; z-index: 1; }
+    .block-container { padding-top: 2rem !important; max-width: 1300px !important; position: relative; z-index: 1; }
+    
+    /* --- OCULTAR EL AVISO "PRESS ENTER TO SUBMIT" --- */
+    [data-testid="InputInstructions"] {
+        display: none !important;
+    }
     
     /* --- TARJETA DE LOGIN OSCURA --- */
     div[data-testid="stTabs"] {
