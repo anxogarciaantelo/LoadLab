@@ -1019,15 +1019,15 @@ with tab_ses:
                                 if cardio_mal and neuro_mal:
                                     emp_c = ((efi_cardio - media_c) / media_c) * 100
                                     emp_n = ((efi_neuro - media_n) / media_n) * 100
-                                    alertas_jugadores[jug]['carga'].append(f"🔴 Fatiga Integral: Caída Efic. Cardio (-{emp_c:.0f}%) y Neuro (-{emp_n:.0f}%) vs {sesion_contexto}"); alertas_jugadores[jug]['total'] += 1
+                                    alertas_jugadores[jug]['carga'].append(f"🔴 Fatiga Integral: Aumento Coste Cardio (+{emp_c:.0f}%) y Neuro (+{emp_n:.0f}%) vs {sesion_contexto}"); alertas_jugadores[jug]['total'] += 1
                                     
                                 elif cardio_mal and not neuro_bien: 
                                     emp_c = ((efi_cardio - media_c) / media_c) * 100
-                                    alertas_jugadores[jug]['carga'].append(f"🟡 Alerta Eficiencia Cardio: -{emp_c:.0f}% vs {sesion_contexto}"); alertas_jugadores[jug]['total'] += 1
+                                    alertas_jugadores[jug]['carga'].append(f"🟡 Alerta Coste Cardio: +{emp_c:.0f}% vs {sesion_contexto}"); alertas_jugadores[jug]['total'] += 1
                                     
                                 elif neuro_mal and not cardio_bien: 
                                     emp_n = ((efi_neuro - media_n) / media_n) * 100
-                                    alertas_jugadores[jug]['carga'].append(f"🟡 Alerta Eficiencia Neuro: -{emp_n:.0f}% vs {sesion_contexto}"); alertas_jugadores[jug]['total'] += 1
+                                    alertas_jugadores[jug]['carga'].append(f"🟡 Alerta Coste Neuro: +{emp_n:.0f}% vs {sesion_contexto}"); alertas_jugadores[jug]['total'] += 1
                                 
                             monot, strain = calcular_monotonia_7d(st.session_state.sesiones, jug, sesion['fecha'], devolver_strain=True)
                             monot_hsr, strain_hsr = calcular_monotonia_7d(st.session_state.sesiones, jug, sesion['fecha'], metrica="DIS AI", devolver_strain=True)
@@ -1168,7 +1168,7 @@ with tab_ses:
                             with c_i1:
                                 st.markdown(html_tarjeta_doble("#f59e0b", f"{carga_m:.0f}", f"{rpe_m:.1f}", "Carga (UA)", "RPE", t_carga, t_rpe), unsafe_allow_html=True)
                             with c_i2:
-                                st.markdown(html_tarjeta_doble("#f59e0b", f"{efi_c_media:.4f}", f"{efi_n_media:.2f}", "Efic. Cardio", "Efic. Neuro", t_efic, t_efin), unsafe_allow_html=True)
+                                st.markdown(html_tarjeta_doble("#f59e0b", f"{efi_c_media:.4f}", f"{efi_n_media:.2f}", "Coste Cardio", "Coste Neuro", t_efic, t_efin), unsafe_allow_html=True)
                                 
                         with col_e:
                             st.markdown("<h5 style='color: #f8fafc; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; margin-top: 0;'>🏃‍♂️ Carga Externa & Densidad</h5>", unsafe_allow_html=True)
