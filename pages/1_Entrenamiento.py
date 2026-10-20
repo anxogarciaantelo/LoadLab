@@ -48,7 +48,13 @@ for s in sesiones_crono:
  
 st.subheader("📅 Entrenamiento")
 
-tab_cal, tab_temp, tab_micro, tab_ses, tab_add = st.tabs(["🗓️ Calendario", "🏆 Temporada", "🔄 Microciclos", "📋 Sesiones", "➕ Añadir Sesión"])
+tab_cal, tab_temp, tab_micro, tab_ses, tab_add = st.tabs([
+    ":material/calendar_view_month: Calendario", 
+    ":material/emoji_events: Temporada", 
+    ":material/sync: Microciclos", 
+    ":material/list_alt: Sesiones", 
+    ":material/add_circle: Añadir Sesión"
+])
 
 with tab_cal:
     # 1. ESTADO DE NAVEGACIÓN DEL CALENDARIO
