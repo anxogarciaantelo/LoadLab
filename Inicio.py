@@ -112,7 +112,6 @@ if not st.session_state.get("equipo_seleccionado", False):
 # ==========================================
 # 1. PANTALLA DE LOGIN / REGISTRO (DISEÑO SPLIT ÉLITE)
 # ==========================================
-# Modifica la lógica de login de tu app.py con esta estructura renovada:
 if not st.session_state.autenticado:
     set_login_background()
     
@@ -120,47 +119,68 @@ if not st.session_state.autenticado:
     col_info, col_espacio, col_login = st.columns([1.4, 0.2, 1.1])
     
     with col_info:
-        html_info = """<div style="padding-right: 20px;">
-<h2 style='color: #f8fafc; font-weight: 900; font-size: 2rem; letter-spacing: -1px; margin-bottom: 15px;'>
-LOAD<span style='color: #3b82f6;'>LAB</span>
-</h2>
-<h1 style="font-size: 2.8rem; font-weight: 800; line-height: 1.1; margin-bottom: 15px; color: #f8fafc; letter-spacing: -1px;">
-
-            <!-- Sección de Características Científicas de LoadLab -->
-            <div style="background: rgba(197, 160, 89, 0.03); border: 1px solid rgba(197, 160, 89, 0.15); padding: 16px; border-radius: 12px; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 14px; backdrop-filter: blur(5px);">
-                <div style="background: rgba(197, 160, 89, 0.1); padding: 10px; border-radius: 8px; color: #C5A059; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex-shrink: 0;">📉</div>
-                <div>
-                    <h4 style="margin: 0 0 3px 0; font-size: 0.95rem; color: #E2E8F0; font-weight: 800;">Carga y Demandas (EWMA / ACWR)</h4>
-                    <p style="margin: 0; font-size: 0.85rem; color: #94a3b8; line-height: 1.4;">Monitoriza el Ratio A/C (Sweet Spot), el strain acumulado y la densidad competitiva por jugador para mitigar el riesgo.</p>
-                </div>
-            </div>
-
-            <div style="background: rgba(197, 160, 89, 0.03); border: 1px solid rgba(197, 160, 89, 0.15); padding: 16px; border-radius: 12px; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 14px; backdrop-filter: blur(5px);">
-                <div style="background: rgba(197, 160, 89, 0.1); padding: 10px; border-radius: 8px; color: #C5A059; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex-shrink: 0;">🧠</div>
-                <div>
-                    <h4 style="margin: 0 0 3px 0; font-size: 0.95rem; color: #E2E8F0; font-weight: 800;">Oráculo Predictivo AI</h4>
-                    <p style="margin: 0; font-size: 0.85rem; color: #94a3b8; line-height: 1.4;">Algoritmos avanzados (XGBoost) para detectar y anticipar riesgo de lesión inminente en la plantilla.</p>
-                </div>
-            </div>
-
-            <div style="background: rgba(197, 160, 89, 0.03); border: 1px solid rgba(197, 160, 89, 0.15); padding: 16px; border-radius: 12px; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 14px; backdrop-filter: blur(5px);">
-                <div style="background: rgba(197, 160, 89, 0.1); padding: 10px; border-radius: 8px; color: #C5A059; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex-shrink: 0;">🏋️‍♂️</div>
-                <div>
-                    <h4 style="margin: 0 0 3px 0; font-size: 0.95rem; color: #E2E8F0; font-weight: 800;">Rendimiento & Fuerza VBT</h4>
-                    <p style="margin: 0; font-size: 0.85rem; color: #94a3b8; line-height: 1.4;">Seguimiento neuromuscular, perfiles Fuerza-Velocidad, test de salto (CMJ) y asimetrías bilaterales.</p>
-                </div>
-            </div>
-
-            <div style="background: rgba(197, 160, 89, 0.03); border: 1px solid rgba(197, 160, 89, 0.15); padding: 16px; border-radius: 12px; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 14px; backdrop-filter: blur(5px);">
-                <div style="background: rgba(197, 160, 89, 0.1); padding: 10px; border-radius: 8px; color: #C5A059; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex-shrink: 0;">🚑</div>
-                <div>
-                    <h4 style="margin: 0 0 3px 0; font-size: 0.95rem; color: #E2E8F0; font-weight: 800;">Enfermería, RTP & Antropometría</h4>
-                    <p style="margin: 0; font-size: 0.85rem; color: #94a3b8; line-height: 1.4;">Control de bajas, fases de readaptación (Return to Play) y composición corporal de élite.</p>
-                </div>
-            </div>
-        </div>"""
-        st.markdown(html_info, unsafe_allow_html=True)
+        import base64
+        import os
         
+        # Ruta exacta donde el sistema buscará tu logo
+        ruta_logo = os.path.join("assets", "logo_completo.png")
+        
+        try:
+            with open(ruta_logo, "rb") as image_file:
+                logo_b64 = base64.b64encode(image_file.read()).decode()
+            logo_html = f'<img src="data:image/png;base64,{logo_b64}" style="width: 140px; margin-bottom: 20px;">'
+        except FileNotFoundError:
+            # Si la ruta falla, te mostrará este error en pantalla para que sepas dónde poner la imagen
+            logo_html = f'<div style="color: #ef4444; border: 1px solid #ef4444; padding: 10px; border-radius: 5px; margin-bottom: 20px;">⚠️ FALTA EL LOGO: Crea una carpeta llamada "assets" y guarda ahí la imagen como "logo_completo.png"</div>'
+
+        html_info = f"""<div style="padding-right: 20px;">
+{logo_html}
+<h2 style='color: #E2E8F0; font-weight: 900; font-size: 2.8rem; letter-spacing: -1.5px; margin-bottom: 5px; font-family: "Plus Jakarta Sans", sans-serif;'>
+LOAD<span style='color: #C5A059;'>LAB</span>
+</h2>
+<h1 style="font-size: 2.2rem; font-weight: 800; line-height: 1.2; margin-bottom: 20px; color: #E2E8F0; letter-spacing: -0.5px;">
+Decisiones basadas en datos,<br><span style="color: #C5A059;">rendimiento de élite.</span>
+</h1>
+<p style="color: #a1a1aa; font-size: 1.05rem; margin-bottom: 30px; max-width: 95%; line-height: 1.6;">
+Centraliza y analiza las variables de rendimiento, carga y salud de tus futbolistas en un único ecosistema premium diseñado para cuerpos técnicos profesionales.
+</p>
+
+<!-- Sección de Características Científicas de LoadLab -->
+<div style="background: rgba(197, 160, 89, 0.03); border: 1px solid rgba(197, 160, 89, 0.15); padding: 16px; border-radius: 12px; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 14px; backdrop-filter: blur(5px);">
+<div style="background: rgba(197, 160, 89, 0.1); padding: 10px; border-radius: 8px; color: #C5A059; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex-shrink: 0;">📉</div>
+<div>
+<h4 style="margin: 0 0 3px 0; font-size: 0.95rem; color: #E2E8F0; font-weight: 800;">Carga y Demandas (EWMA / ACWR)</h4>
+<p style="margin: 0; font-size: 0.85rem; color: #94a3b8; line-height: 1.4;">Monitoriza el Ratio A/C (Sweet Spot), el strain acumulado y la densidad competitiva por jugador para mitigar el riesgo.</p>
+</div>
+</div>
+
+<div style="background: rgba(197, 160, 89, 0.03); border: 1px solid rgba(197, 160, 89, 0.15); padding: 16px; border-radius: 12px; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 14px; backdrop-filter: blur(5px);">
+<div style="background: rgba(197, 160, 89, 0.1); padding: 10px; border-radius: 8px; color: #C5A059; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex-shrink: 0;">🧠</div>
+<div>
+<h4 style="margin: 0 0 3px 0; font-size: 0.95rem; color: #E2E8F0; font-weight: 800;">Oráculo Predictivo AI</h4>
+<p style="margin: 0; font-size: 0.85rem; color: #94a3b8; line-height: 1.4;">Algoritmos avanzados (XGBoost) para detectar y anticipar riesgo de lesión inminente en la plantilla.</p>
+</div>
+</div>
+
+<div style="background: rgba(197, 160, 89, 0.03); border: 1px solid rgba(197, 160, 89, 0.15); padding: 16px; border-radius: 12px; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 14px; backdrop-filter: blur(5px);">
+<div style="background: rgba(197, 160, 89, 0.1); padding: 10px; border-radius: 8px; color: #C5A059; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex-shrink: 0;">🏋️‍♂️</div>
+<div>
+<h4 style="margin: 0 0 3px 0; font-size: 0.95rem; color: #E2E8F0; font-weight: 800;">Rendimiento & Fuerza VBT</h4>
+<p style="margin: 0; font-size: 0.85rem; color: #94a3b8; line-height: 1.4;">Seguimiento neuromuscular, perfiles Fuerza-Velocidad, test de salto (CMJ) y asimetrías bilaterales.</p>
+</div>
+</div>
+
+<div style="background: rgba(197, 160, 89, 0.03); border: 1px solid rgba(197, 160, 89, 0.15); padding: 16px; border-radius: 12px; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 14px; backdrop-filter: blur(5px);">
+<div style="background: rgba(197, 160, 89, 0.1); padding: 10px; border-radius: 8px; color: #C5A059; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex-shrink: 0;">🚑</div>
+<div>
+<h4 style="margin: 0 0 3px 0; font-size: 0.95rem; color: #E2E8F0; font-weight: 800;">Enfermería, RTP & Antropometría</h4>
+<p style="margin: 0; font-size: 0.85rem; color: #94a3b8; line-height: 1.4;">Control de bajas, fases de readaptación (Return to Play) y composición corporal de élite.</p>
+</div>
+</div>
+</div>"""
+        # ESTA ES LA LÍNEA CRÍTICA QUE SE PERDIÓ Y CAUSABA EL FALLO VISUAL:
+        st.markdown(html_info, unsafe_allow_html=True)
+
     with col_login:
         st.markdown("<div style='margin-top: 1vh;'></div>", unsafe_allow_html=True)
         tab_login, tab_reg = st.tabs(["INICIAR SESIÓN", "REGISTRARSE"])
@@ -172,7 +192,7 @@ LOAD<span style='color: #3b82f6;'>LAB</span>
             with st.form(key="login_form"):
                 email = st.text_input("Correo electrónico", key="log_email", placeholder="tu@email.com")
                 password = st.text_input("Contraseña", type="password", key="log_pass", placeholder="••••••••")
-                st.markdown("<div style='text-align: right; margin-bottom: 15px;'><a href='#' style='color: #3b82f6; font-size: 0.8rem; text-decoration: none; font-weight: 600;'>¿Has olvidado tu contraseña?</a></div>", unsafe_allow_html=True)
+                st.markdown("<div style='text-align: right; margin-bottom: 15px;'><a href='#' style='color: #C5A059; font-size: 0.8rem; text-decoration: none; font-weight: 600;'>¿Has olvidado tu contraseña?</a></div>", unsafe_allow_html=True)
                 
                 submit_btn = st.form_submit_button("Iniciar Sesión", use_container_width=True)
                 if submit_btn:
@@ -195,7 +215,7 @@ LOAD<span style='color: #3b82f6;'>LAB</span>
                 reg_password = st.text_input("Contraseña", type="password", key="reg_pass", placeholder="Mínimo 6 caracteres")
                 
                 st.markdown("""
-                    <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 10px; margin-bottom: 15px; line-height: 1.5; background-color: rgba(15, 23, 42, 0.5); padding: 12px; border-radius: 6px; border-left: 3px solid #3b82f6;">
+                    <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 10px; margin-bottom: 15px; line-height: 1.5; background-color: rgba(15, 23, 42, 0.5); padding: 12px; border-radius: 6px; border-left: 3px solid #C5A059;">
                         🔒 <strong>Aviso RGPD:</strong> Eres el <strong>Responsable del Tratamiento</strong> de los datos. Usa alias si no tienes consentimiento explícito.
                     </div>
                 """, unsafe_allow_html=True)
