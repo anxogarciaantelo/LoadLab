@@ -57,8 +57,8 @@ def calcular_rm_cientifico(pesos, vels, peso_corp):
             kg_max = kgs_barra[idx_max_kg]
             v_max_kg = v_array[idx_max_kg]
             
-            # Ecuación normativa estándar para sentadilla (100% a 0.3 m/s | 60% a 1.0 m/s)
-            porcentaje_rm = 117.14 - (57.14 * v_max_kg)
+            # Ecuación normativa estándar para sentadilla (100% a ~0.30 m/s | 60% a ~0.85 m/s)
+            porcentaje_rm = 122.1 - (71.2 * v_max_kg)
             porcentaje_rm = max(porcentaje_rm, 10.0) # Límite de seguridad
             
             rm_estimado = kg_max / (porcentaje_rm / 100.0)
@@ -73,11 +73,12 @@ def calcular_rm_cientifico(pesos, vels, peso_corp):
         rm_sq_barra = round(rm_sq_sistema - (peso_corp * 0.89), 1) if rm_sq_sistema > 0 else 0.0
         return max(rm_sq_barra, 0.0)
         
+    # Por:
     elif len(validas) == 1:
-        # Si solo hay un levantamiento, aplicamos directamente la normativa
+        # Si solo hay un levantamiento, aplicamos directamente la normativa de Sentadilla
         kg_unico = validas[0][0]
         v_unica = validas[0][1]
-        porcentaje_rm = 117.14 - (57.14 * v_unica)
+        porcentaje_rm = 122.1 - (71.2 * v_unica)
         return round(kg_unico / (max(porcentaje_rm, 10.0) / 100.0), 1)
         
     return 0.0
