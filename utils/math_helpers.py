@@ -268,45 +268,54 @@ def mostrar_tabla_moderna(styler_obj):
 def set_login_background():
     css = """
     <style>
+    /* --- EXPANSIÓN A LOS LATERALES (Aprovechamiento del espacio) --- */
+    .block-container { 
+        padding-top: 4rem !important; 
+        max-width: 96% !important; /* Expande todo el contenido hacia los márgenes */
+        position: relative; 
+        z-index: 1; 
+    }
+
+    /* --- ELIMINAR RECUADRO GRIS INTRUSO --- */
+    /* Anulamos cualquier borde fantasma que Streamlit asigne a los bloques verticales en esta vista */
+    div[data-testid="stVerticalBlockBorderWrapper"],
+    div[data-testid="stDecoration"] {
+        border: none !important;
+        box-shadow: none !important;
+        background: transparent !important;
+    }
+
     /* --- FONDO ANIMADO NEURAL/DATA PREMIUM --- */
     .stApp {
         background-color: #111318 !important;
+        background-image: 
+            radial-gradient(circle at 10% 20%, rgba(197, 160, 89, 0.12) 0%, transparent 40%),
+            radial-gradient(circle at 90% 80%, rgba(59, 130, 246, 0.08) 0%, transparent 40%),
+            radial-gradient(circle at 50% 50%, rgba(226, 232, 240, 0.03) 0%, transparent 60%);
+        background-size: 200% 200%;
+        animation: neuralGlow 15s ease-in-out infinite alternate;
         overflow-x: hidden;
     }
+
+    /* Animación de los destellos/nodos moviéndose suavemente */
+    @keyframes neuralGlow {
+        0% { background-position: 0% 0%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 100%; }
+    }
     
-    /* Malla / Grid base de puntos sutil */
+    /* Malla / Grid base de puntos para el toque analítico */
     .stApp::before {
         content: "";
         position: fixed;
         top: 0; left: 0; width: 100vw; height: 100vh;
-        background-image: radial-gradient(rgba(226, 232, 240, 0.04) 1px, transparent 1px);
+        background-image: radial-gradient(rgba(226, 232, 240, 0.06) 1px, transparent 1px);
         background-size: 40px 40px;
         pointer-events: none;
         z-index: 0;
     }
 
-    /* Nodos de datos resplandecientes animados (Orbs) */
-    .stApp::after {
-        content: "";
-        position: fixed;
-        top: -50%; left: -50%; width: 200vw; height: 200vh;
-        background: 
-            radial-gradient(circle at 25% 30%, rgba(197, 160, 89, 0.06) 0%, transparent 25%),
-            radial-gradient(circle at 75% 65%, rgba(59, 130, 246, 0.04) 0%, transparent 30%),
-            radial-gradient(circle at 50% 85%, rgba(197, 160, 89, 0.05) 0%, transparent 20%);
-        animation: dataFlow 18s ease-in-out infinite alternate;
-        pointer-events: none;
-        z-index: 0;
-    }
-
-    @keyframes dataFlow {
-        0% { transform: translate(0, 0) scale(1); }
-        50% { transform: translate(2%, -3%) scale(1.05); }
-        100% { transform: translate(-2%, 2%) scale(0.95); }
-    }
-
     header[data-testid="stHeader"] { display: none !important; }
-    .block-container { padding-top: 2rem !important; max-width: 1300px !important; position: relative; z-index: 1; }
     
     /* --- OCULTAR EL AVISO "PRESS ENTER TO SUBMIT" --- */
     [data-testid="InputInstructions"] {
@@ -315,17 +324,17 @@ def set_login_background():
     
     /* --- TARJETA DE LOGIN OSCURA --- */
     div[data-testid="stTabs"] {
-        background-color: #0B101A !important; 
-        padding: 30px 40px 40px 40px !important;
+        background-color: rgba(11, 16, 26, 0.85) !important; 
+        padding: 35px 40px 45px 40px !important;
         border-radius: 20px !important;
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8) !important;
-        border: 1px solid rgba(197, 160, 89, 0.15) !important;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 20px rgba(197, 160, 89, 0.1) !important;
+        border: 1px solid rgba(197, 160, 89, 0.2) !important;
         backdrop-filter: blur(12px);
     }
     div[role="tabpanel"] { background-color: transparent !important; }
     
     div[data-testid="stTabs"] [data-baseweb="tab-list"] {
-        background-color: transparent !important; border: none !important; border-bottom: 1px solid #1e293b !important; border-radius: 0 !important; overflow: visible !important; gap: 20px !important; margin-bottom: 15px !important;
+        background-color: transparent !important; border: none !important; border-bottom: 1px solid #1e293b !important; border-radius: 0 !important; overflow: visible !important; gap: 20px !important; margin-bottom: 20px !important;
     }
     div[data-testid="stTabs"] [data-baseweb="tab"] { 
         color: #64748b !important; font-size: 0.85rem !important; font-weight: 700 !important; white-space: nowrap !important; min-width: max-content !important; background-color: transparent !important; padding: 0 5px 10px 5px !important; text-transform: uppercase; letter-spacing: 0.5px;
@@ -343,10 +352,10 @@ def set_login_background():
     
     div[data-testid="stFormSubmitButton"] button {
         background-color: #C5A059 !important; color: #111318 !important; border: none !important; border-radius: 8px !important;
-        box-shadow: 0 4px 10px rgba(197, 160, 89, 0.3) !important; width: 100% !important; margin-top: 5px; padding: 12px !important; font-size: 1rem !important; font-weight: 800 !important;
+        box-shadow: 0 4px 10px rgba(197, 160, 89, 0.3) !important; width: 100% !important; margin-top: 10px; padding: 12px !important; font-size: 1rem !important; font-weight: 800 !important;
         transition: all 0.2s ease;
     }
-    div[data-testid="stFormSubmitButton"] button:hover { background-color: #D6B26E !important; transform: translateY(-1px); box-shadow: 0 6px 15px rgba(197, 160, 89, 0.4) !important; }
+    div[data-testid="stFormSubmitButton"] button:hover { background-color: #D6B26E !important; transform: translateY(-2px); box-shadow: 0 6px 15px rgba(197, 160, 89, 0.4) !important; }
     
     div[data-testid="stCheckbox"] label span { color: #94a3b8 !important; font-size: 0.85rem !important; }
     </style>
