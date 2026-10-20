@@ -458,16 +458,25 @@ def aplicar_color_sidebar():
     
             escudo = st.session_state.get("escudo_equipo")
             
-            # 1. LOGOTIPO DE LA APP Y NOMBRE DEL EQUIPO
+            # 1. LOGO DE LA APP Y ESCUDO DEL EQUIPO ARRIBA DEL TODO
+            import base64
+            try:
+                with open("assets/logo_completo.png", "rb") as image_file:
+                    app_logo_b64 = base64.b64encode(image_file.read()).decode()
+                app_logo_html = f"<img src='data:image/png;base64,{app_logo_b64}' style='width: 70px; object-fit: contain; margin-bottom: 10px;'>"
+            except FileNotFoundError:
+                app_logo_html = ""
+
             if img_src:
                 st.markdown(f"""
-                    <div style='text-align: center; margin-bottom: 10px; padding-top: 10px;'>
-                        <img src='{img_src}' style='width: 80px; object-fit: contain; margin-bottom: 5px;'>
-                        <h2 style='color: #E2E8F0; margin-top: 5px; margin-bottom: 0; font-size: 1.3rem; letter-spacing: -0.5px;'>
+                    <div style='text-align: center; margin-bottom: 15px;'>
+                        {app_logo_html}
+                        <h2 style='color: #E2E8F0; margin-top: 0; margin-bottom: 20px; font-size: 1.4rem; letter-spacing: -0.5px;'>
                             LOAD<span style='color: #C5A059;'>LAB</span>
                         </h2>
-                        <span style='font-size: 0.75rem; color: #a1a1aa; font-weight: 400;'>EQUIPO DEPORTIVO</span>
-                        <hr style='border-color: rgba(197, 160, 89, 0.1); margin-top: 15px; margin-bottom: 10px; border-width: 1px;'>
+                        <img src='{img_src}' style='width: 85px; height: 85px; border-radius: 50%; object-fit: cover; border: 2px solid #C5A059; box-shadow: 0 4px 10px rgba(0,0,0,0.3);'>
+                        <h3 style='color: #E2E8F0; margin-top: 10px; margin-bottom: 0; font-size: 1.05rem; text-transform: uppercase; letter-spacing: 0.5px;'>{nombre}</h3>
+                        <hr style='border-color: rgba(197, 160, 89, 0.15); margin-top: 15px; margin-bottom: 10px; border-width: 1px;'>
                     </div>
                 """, unsafe_allow_html=True)
             
