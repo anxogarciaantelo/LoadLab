@@ -271,48 +271,56 @@ def set_login_background(image_path):
         css = f"""
         <style>
         .stApp {{
-            background-image: linear-gradient(rgba(11, 17, 32, 0.8), rgba(11, 17, 32, 0.95)), url("data:image/jpeg;base64,{encoded_string}");
+            /* Gradiente más oscuro a la derecha para resaltar la tarjeta de login, y más transparente a la izquierda */
+            background-image: linear-gradient(to right, rgba(11, 17, 32, 0.85) 0%, rgba(11, 17, 32, 0.98) 100%), url("data:image/jpeg;base64,{encoded_string}");
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
         }}
-        header[data-testid="stHeader"] {{ background-color: transparent !important; box-shadow: none !important; }}
-        .block-container {{ padding-top: 1rem !important; }}
+        header[data-testid="stHeader"] {{ background-color: transparent !important; box-shadow: none !important; display: none !important; }}
+        .block-container {{ padding-top: 2rem !important; max-width: 1200px !important; }}
         
-        /* Tarjeta de Login Oscura */
+        /* --- TARJETA DE LOGIN OSCURA (Estilo Referencia) --- */
         div[data-testid="stTabs"] {{
-            background-color: rgba(30, 41, 59, 0.8) !important;
-            padding: 35px 30px !important;
-            border-radius: 16px !important;
+            background-color: #0B101A !important; /* Fondo casi negro */
+            padding: 30px 40px 40px 40px !important;
+            border-radius: 20px !important;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8) !important;
-            border: 1px solid #334155 !important;
-            border-top: 5px solid #3b82f6 !important;
+            border: 1px solid #1e293b !important;
             backdrop-filter: blur(12px);
         }}
         div[role="tabpanel"] {{ background-color: transparent !important; }}
         
+        /* Estilos de las pestañas superiores dentro de la tarjeta */
         div[data-testid="stTabs"] [data-baseweb="tab-list"] {{
-            background-color: transparent !important; border: none !important; border-bottom: 2px solid #334155 !important; border-radius: 0 !important; overflow: visible !important; gap: 15px !important;
+            background-color: transparent !important; border: none !important; border-bottom: 1px solid #1e293b !important; border-radius: 0 !important; overflow: visible !important; gap: 20px !important; margin-bottom: 15px !important;
         }}
         div[data-testid="stTabs"] [data-baseweb="tab"] {{ 
-            color: #94a3b8 !important; font-size: 1.25rem !important; white-space: nowrap !important; min-width: max-content !important; background-color: transparent !important; padding: 0 15px !important;
+            color: #64748b !important; font-size: 0.85rem !important; font-weight: 700 !important; white-space: nowrap !important; min-width: max-content !important; background-color: transparent !important; padding: 0 5px 10px 5px !important; text-transform: uppercase; letter-spacing: 0.5px;
         }}
         div[data-testid="stTabs"] [aria-selected="true"] {{ 
-            color: #3b82f6 !important; border-bottom: 3px solid #3b82f6 !important; background-color: transparent !important; box-shadow: none !important;
+            color: #f8fafc !important; border-bottom: 2px solid #3b82f6 !important; background-color: transparent !important; box-shadow: none !important;
         }}
         
-        div[data-testid="stTabs"] label {{ color: #e2e8f0 !important; font-size: 1.1rem !important; font-weight: 600 !important; margin-bottom: 5px !important; }}
+        /* Etiquetas de los inputs */
+        div[data-testid="stTabs"] label {{ color: #cbd5e1 !important; font-size: 0.85rem !important; font-weight: 600 !important; margin-bottom: 4px !important; }}
         
+        /* Inputs modernos (Bordes azules al focus) */
         div[data-testid="stTextInput"] input {{
-            background-color: #0f172a !important; border: 1px solid #334155 !important; color: #f8fafc !important;
+            background-color: #0f172a !important; border: 1px solid #1e293b !important; color: #f8fafc !important; padding: 12px 14px !important; border-radius: 8px !important; font-size: 0.95rem !important;
         }}
-        div[data-testid="stTextInput"] input:focus {{ border: 1px solid #3b82f6 !important; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important; }}
+        div[data-testid="stTextInput"] input:focus {{ border: 1px solid #3b82f6 !important; box-shadow: none !important; }}
         
+        /* Botón de Acción Principal */
         div[data-testid="stFormSubmitButton"] button {{
             background-color: #3b82f6 !important; color: #ffffff !important; border: none !important; border-radius: 8px !important;
-            box-shadow: 0 4px 10px rgba(59, 130, 246, 0.4) !important; width: 100% !important; margin-top: 15px;
+            box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3) !important; width: 100% !important; margin-top: 5px; padding: 12px !important; font-size: 1rem !important; font-weight: 700 !important;
+            transition: all 0.2s ease;
         }}
-        div[data-testid="stFormSubmitButton"] button:hover {{ background-color: #2563eb !important; transform: translateY(-2px); }}
+        div[data-testid="stFormSubmitButton"] button:hover {{ background-color: #2563eb !important; transform: translateY(-1px); box-shadow: 0 6px 15px rgba(59, 130, 246, 0.4) !important; }}
+        
+        /* Ajuste de Checkbox RGPD */
+        div[data-testid="stCheckbox"] label span {{ color: #94a3b8 !important; font-size: 0.85rem !important; }}
         </style>
         """
         st.markdown(css, unsafe_allow_html=True)
