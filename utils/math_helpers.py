@@ -268,21 +268,70 @@ def mostrar_tabla_moderna(styler_obj):
 def set_login_background():
     css = """
     <style>
+    /* --- EXPANSIÓN A LOS LATERALES --- */
     .block-container { 
         padding-top: 4rem !important; 
         max-width: 96% !important; 
         position: relative; 
         z-index: 1; 
     }
+
+    /* --- ELIMINAR RECUADROS GRISES --- */
     div[data-testid="stVerticalBlockBorderWrapper"],
     div[data-testid="stDecoration"] {
         border: none !important;
         box-shadow: none !important;
         background: transparent !important;
     }
+
+    /* --- FONDO ANIMADO DE PARTÍCULAS (LOGIN) --- */
+    .stApp {
+        background-color: #0b0e14 !important;
+        background-image: 
+            radial-gradient(circle at 15% 50%, rgba(197, 160, 89, 0.08), transparent 30%), 
+            radial-gradient(circle at 85% 30%, rgba(226, 232, 240, 0.05), transparent 25%) !important;
+    }
+
+    /* Malla / Grid base */
+    .stApp::before {
+        content: "";
+        position: fixed;
+        top: 0; left: 0; width: 100vw; height: 100vh;
+        background-image: 
+            linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+        background-size: 50px 50px;
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    /* Partículas Doradas y Plateadas en movimiento continuo */
+    .stApp::after {
+        content: "";
+        position: fixed;
+        top: -50%; left: -50%; width: 200%; height: 200%;
+        background-image: 
+            radial-gradient(2px 2px at 20px 30px, #C5A059, rgba(0,0,0,0)),
+            radial-gradient(2px 2px at 40px 70px, #E2E8F0, rgba(0,0,0,0)),
+            radial-gradient(2.5px 2.5px at 90px 40px, #C5A059, rgba(0,0,0,0)),
+            radial-gradient(2px 2px at 160px 120px, #E2E8F0, rgba(0,0,0,0)),
+            radial-gradient(2.5px 2.5px at 200px 50px, #C5A059, rgba(0,0,0,0));
+        background-size: 250px 250px;
+        animation: particleDrift 40s linear infinite;
+        pointer-events: none;
+        z-index: 0;
+        opacity: 0.7; /* Opacidad forzada para que las veas claramente */
+    }
+
+    @keyframes particleDrift {
+        0% { transform: translateY(0) translateX(0); }
+        100% { transform: translateY(-250px) translateX(-250px); }
+    }
+
     header[data-testid="stHeader"] { display: none !important; }
     [data-testid="InputInstructions"] { display: none !important; }
     
+    /* --- TARJETA DE LOGIN OSCURA --- */
     div[data-testid="stTabs"] {
         background-color: rgba(11, 16, 26, 0.85) !important; 
         padding: 35px 40px 45px 40px !important;
