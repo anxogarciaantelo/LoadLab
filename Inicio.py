@@ -342,7 +342,7 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
                         """
                         st.markdown(tarjeta_html, unsafe_allow_html=True)
                         
-                        if st.button("🚀 Acceder", key=f"btn_{eq_id}", use_container_width=True):
+                        if st.button(":material/login: Acceder", key=f"btn_{eq_id}", use_container_width=True):
                             if cargar_datos_equipo(eq_id):
                                 validar_estructuras_memoria()
                                 sincronizar_plantilla_sesiones()
