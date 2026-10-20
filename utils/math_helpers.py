@@ -277,7 +277,6 @@ def set_login_background():
     }
 
     /* --- ELIMINAR RECUADRO GRIS INTRUSO --- */
-    /* Anulamos cualquier borde fantasma que Streamlit asigne a los bloques verticales en esta vista */
     div[data-testid="stVerticalBlockBorderWrapper"],
     div[data-testid="stDecoration"] {
         border: none !important;
@@ -360,6 +359,7 @@ def set_login_background():
     div[data-testid="stCheckbox"] label span { color: #94a3b8 !important; font-size: 0.85rem !important; }
     </style>
     """
+    import streamlit as st
     st.markdown(css, unsafe_allow_html=True)
 
 import requests
