@@ -21,8 +21,7 @@ from database.db_manager import *
 from views.team_settings import render_panel_principal
 
 # Configuración inicial de la página
-# SUSTITUYE POR:
-st.set_page_config(page_title="My Performance AMS", page_icon="⚽", layout="wide")
+st.set_page_config(page_title="LoadLab", page_icon="⚽", layout="wide")
 
 import plotly.io as pio
 import plotly.graph_objects as go
