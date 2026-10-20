@@ -179,8 +179,9 @@ def guardar_datos(modulo="todo"):
                     # Lo subimos al mismo bucket de los jugadores
                     supabase.storage.from_("loadlab_media").upload(nombre_arch, img_bytes, file_options={"content-type": "image/jpeg", "upsert": "true"})
                     
-                    # Obtenemos la URL y machacamos el Base64 en la memoria RAM
-                    escudo_actual = supabase.storage.from_("loadlab_media").get_public_url(nombre_arch)
+                    import time
+                    url_base = supabase.storage.from_("loadlab_media").get_public_url(nombre_arch)
+                    escudo_actual = f"{url_base}?t={int(time.time())}" # Cache-busting
                     st.session_state.escudo_equipo = escudo_actual
                 except Exception as e:
                     print(f"Error subiendo escudo: {e}")
@@ -210,8 +211,10 @@ def guardar_datos(modulo="todo"):
                         img_bytes = base64.b64decode(b64_clean)
                         nombre_arch = f"{eq_id}/jugadores/{limpiar_nombre_archivo(p['JUGADOR'])}.jpg"
                         supabase.storage.from_("loadlab_media").upload(nombre_arch, img_bytes, file_options={"content-type": "image/jpeg", "upsert": "true"})
-                        foto_url = supabase.storage.from_("loadlab_media").get_public_url(nombre_arch)
-                        p["foto"] = foto_url 
+                        import time
+                        url_base = supabase.storage.from_("loadlab_media").get_public_url(nombre_arch)
+                        foto_url = f"{url_base}?t={int(time.time())}" # Cache-busting
+                        p["foto"] = foto_url
                     except Exception as e:
                         print(f"Error subiendo foto al guardar: {e}")
                 
