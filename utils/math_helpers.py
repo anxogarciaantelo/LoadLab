@@ -50,51 +50,81 @@ def obtener_rango_fechas_semana(fecha_str):
     return lunes.strftime("%d/%m"), domingo.strftime("%d/%m"), lunes, domingo
 
 def calcular_ewma_historico(_sesiones, fecha_objetivo):
+    """
+    Versión optimizada: Utiliza df_master_informes del session_state si existe,
+    evitando la costosa reconstrucción iterativa de diccionarios.
+    """
+    import pandas as pd
+    import numpy as np
+    import streamlit as st
+    
     metricas = {'CARGA': '', 'DIS AI': ' HSR', 'ACC': ' ACC'}
     res = {}
     fecha_fin = pd.to_datetime(fecha_objetivo)
     
-    df_hist = pd.DataFrame([
-        {
-            "fecha": s["fecha"], "JUGADOR": d["JUGADOR"], 
-            "CARGA": float(d.get("CARGA", 0)), 
-            "DIS AI": float(d.get("DIS AI", d.get("HID >21", 0))), 
-            "ACC": float(d.get("ACC", d.get("ACC >3", 0)))
-        }
-        for s in _sesiones if s.get("informe_generado") and s["fecha"] <= fecha_objetivo
-        for d in s["datos_informe"]
-    ])
+    # 1. Usar la caché maestra si está disponible para O(1) de acceso a datos base
+    if "df_master_informes" in st.session_state and not st.session_state.df_master_informes.empty:
+        df_hist = st.session_state.df_master_informes[st.session_state.df_master_informes['FECHA'] <= fecha_objetivo].copy()
+    else:
+        # Fallback de seguridad (solo se ejecuta si la caché falló)
+        df_hist = pd.DataFrame([
+            {
+                "fecha": s["fecha"], "JUGADOR": d["JUGADOR"], 
+                "CARGA": float(d.get("CARGA", 0)), 
+                "DIS AI": float(d.get("DIS AI", d.get("HID >21", 0))), 
+                "ACC": float(d.get("ACC", d.get("ACC >3", 0)))
+            }
+            for s in _sesiones if s.get("informe_generado") and s["fecha"] <= fecha_objetivo
+            for d in s["datos_informe"]
+        ])
+        if not df_hist.empty:
+            df_hist['fecha'] = pd.to_datetime(df_hist['fecha'])
     
     if df_hist.empty: return {}
-    df_hist['fecha'] = pd.to_datetime(df_hist['fecha'])
     
+    # Asegurar formato fecha para el pivot
+    if 'FECHA' in df_hist.columns:
+        df_hist['fecha'] = pd.to_datetime(df_hist['FECHA'])
+        
     for jug in df_hist['JUGADOR'].unique():
         res[jug] = {}
         
     for col_metrica, sufijo in metricas.items():
+        if col_metrica not in df_hist.columns: continue
+        
         df_pivot = df_hist.pivot_table(index='fecha', columns='JUGADOR', values=col_metrica, aggfunc='sum').fillna(0)
+        if df_pivot.empty: continue
+            
         fecha_ini = min(df_pivot.index.min(), fecha_fin)
         rango_fechas = pd.date_range(start=fecha_ini, end=fecha_fin, freq='D')
         df_pivot = df_pivot.reindex(rango_fechas, fill_value=0)
         
+        # Máscara para evitar que el EWMA se diluya antes de que el jugador llegue al club
         for col in df_pivot.columns:
             s_cargas = df_pivot[col]
-            primer_dia_valido = s_cargas[s_cargas > 0].first_valid_index()
-            if primer_dia_valido:
-                df_pivot.loc[:primer_dia_valido - pd.Timedelta(days=1), col] = np.nan
+            primer_idx = s_cargas[s_cargas > 0].first_valid_index()
+            if primer_idx:
+                df_pivot.loc[:primer_idx - pd.Timedelta(days=1), col] = np.nan
 
+        # Cálculo vectorizado C y A
         aguda = df_pivot.ewm(span=7, adjust=False).mean()
         cronica = df_pivot.ewm(span=28, adjust=False).mean()
         
-        aguda_hoy = aguda.loc[fecha_fin]
-        cronica_hoy = cronica.loc[fecha_fin]
+        try:
+            aguda_hoy = aguda.loc[fecha_fin]
+            cronica_hoy = cronica.loc[fecha_fin]
+        except KeyError:
+            continue
         
         for jug in df_pivot.columns:
             a = aguda_hoy.get(jug, 0.0)
             c = cronica_hoy.get(jug, 0.0)
             a_sem = (a if pd.notna(a) else 0.0) * 7
             c_sem = (c if pd.notna(c) else 0.0) * 7
-            r = a_sem / c_sem if c_sem > 0 else 1.0
+            
+            # Control de under-loading crónico (evita ratios infinitos irreales tras parón de verano)
+            c_sem_seguro = max(c_sem, 10.0) if col_metrica == 'CARGA' else max(c_sem, 1.0)
+            r = a_sem / c_sem_seguro if c_sem > 0 else 1.0
             
             res[jug][f"EWMA AGUDA{sufijo}"] = round(a_sem, 2)
             res[jug][f"EWMA CRÓNICA{sufijo}"] = round(c_sem, 2)
