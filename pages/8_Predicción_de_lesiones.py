@@ -264,7 +264,7 @@ st.caption(f"**Motor Activo:** {estado_txt} | Análisis a 7 días vista basado e
 c_kpi1, c_kpi2, c_kpi3 = st.columns(3)
 from utils.math_helpers import render_kpi_elite
 with c_kpi1: render_kpi_elite("Jugadores en Riesgo Crítico", f"{len(alto_riesgo)}", color_borde="#ef4444" if len(alto_riesgo)>0 else "#10b981")
-with c_kpi2: render_kpi_elite("Riesgo Medio Plantilla", f"{df_hoy['Riesgo_%'].mean():.1f}%", color_borde="#f59e0b" if df_hoy['Riesgo_%'].mean()>30 else "#3b82f6")
+with c_kpi2: render_kpi_elite("Riesgo Medio Plantilla", f"{df_hoy['Riesgo_%'].mean():.1f}%", color_borde="#f59e0b" if df_hoy['Riesgo_%'].mean()>30 else "#C5A059")
 with c_kpi3: render_kpi_elite("Ratio A/C Medio", f"{df_hoy['Ratio_AC'].mean():.2f}", color_borde="#10b981" if 0.8 <= df_hoy['Ratio_AC'].mean() <= 1.3 else "#ef4444")
 
 st.markdown("---")
@@ -303,7 +303,7 @@ with c_alertas:
     else:
         for _, row in alto_riesgo.head(3).iterrows():
             st.markdown(f"""
-            <div style="background: linear-gradient(145deg, #1e293b, #0f172a); border: 1px solid #334155; border-left: 4px solid #ef4444; padding: 15px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
+            <div style="background: linear-gradient(145deg, #111318, #0b0e14); border: 1px solid #1c1f26; border-left: 4px solid #ef4444; padding: 15px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                     <div style="display: flex; align-items: center;">
                         <span class="material-symbols-rounded" style="font-size: 1.2rem; color: #ef4444; margin-right: 8px;">warning</span>
