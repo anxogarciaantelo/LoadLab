@@ -814,7 +814,7 @@ with tab_ses:
             with col_title:
                 nom_h = sesion.get("nombre_dinamico", sesion["tipo"])
                 sub_h = sesion.get('rival', 'Rival') if es_partido else sesion.get('descripcion', 'TD')
-                st.markdown(f"<h4 style='margin-top: 5px; color: #f8fafc;'><span class='material-symbols-rounded' style='vertical-align: text-bottom; text-transform: none; font-size: 1.3rem; margin-right: 6px;'>settings</span> Gestión: {nom_h} ({sub_h}) | {sesion['fecha']}</h4>", unsafe_allow_html=True)
+                st.markdown(f"<h4 style='margin-top: 5px; color: #f8fafc;'><span class='material-symbols-rounded' style='vertical-align: text-bottom; text-transform: none; font-size: 1.3rem; margin-right: 6px;'{nom_h} ({sub_h}) | {sesion['fecha']}</h4>", unsafe_allow_html=True)
 
             st.markdown("---")
             
