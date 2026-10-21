@@ -13,3 +13,4 @@ geopy
 requests
 xgboost
 scikit-learn
+extra-streamlit-components
