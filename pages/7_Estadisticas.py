@@ -9,7 +9,7 @@ from database.db_manager import *
 
 # --- COMPROBACIÓN DE SEGURIDAD ---
 if not st.session_state.get("autenticado", False) or not st.session_state.get("equipo_seleccionado", False):
-    st.warning("⚠️ La sesión ha expirado o no se ha seleccionado un equipo. Por favor, vuelve a iniciar sesión.")
+    st.warning(":material/warning: La sesión ha expirado o no se ha seleccionado un equipo. Por favor, vuelve a iniciar sesión.")
     st.stop()
 
 st.title(":material/query_stats: Estadísticas de Rendimiento")
@@ -40,13 +40,13 @@ tab_equipo, tab_jugadores, tab_rivales = st.tabs([
 with tab_equipo:
     col_comp1_eq, col_comp2_eq = st.columns([1, 3])
     filtro_competicion_eq = col_comp1_eq.selectbox(
-        "🏆 Filtro de Competición:", 
+        "▪️ Filtro de Competición:", 
         ["Liga", "Copa", "Amistosos", "Global"],
         key="filtro_comp_eq"
     )
     partidos_eq = filtrar_partidos(filtro_competicion_eq)
     
-    st.markdown(f"### 🏆 Balance de Resultados | {filtro_competicion_eq}")
+    st.markdown(f"### :material/emoji_events: Balance de Resultados | {filtro_competicion_eq}")
     
     totales = {
         "Casa": {"P": 0, "V": 0, "E": 0, "D": 0, "GF": 0, "GC": 0}, 
@@ -89,7 +89,7 @@ with tab_equipo:
     
     col_t1, col_t2 = st.columns(2)
     with col_t1:
-        st.markdown("#### 🏠 Rendimiento como Local")
+        st.markdown("#### :material/home: Rendimiento como Local")
         pj_casa = totales["Casa"]["P"]
         pts_casa = (totales["Casa"]["V"] * 3) + (totales["Casa"]["E"] * 1)
         pts_pp_casa = (pts_casa / pj_casa) if pj_casa > 0 else 0
@@ -105,7 +105,7 @@ with tab_equipo:
         mostrar_tabla_moderna(df_casa.style.hide(axis="index").format({"Pts/P": "{:.2f}", "GF/P": "{:.2f}", "GC/P": "{:.2f}"}))
         
     with col_t2:
-        st.markdown("#### ✈️ Rendimiento como Visitante")
+        st.markdown("#### :material/flight_takeoff: Rendimiento como Visitante")
         pj_fuera = totales["Fuera"]["P"]
         pts_fuera = (totales["Fuera"]["V"] * 3) + (totales["Fuera"]["E"] * 1)
         pts_pp_fuera = (pts_fuera / pj_fuera) if pj_fuera > 0 else 0
@@ -124,18 +124,18 @@ with tab_equipo:
     if filtro_competicion_eq == "Liga":
         comp_id = st.session_state.get("lapreferente_comp_id", "26710")
         st.markdown("---")
-        st.markdown("### 📊 Jornada y Clasificación en Vivo (Liga)")
+        st.markdown("### :material/analytics: Jornada y Clasificación en Vivo (Liga)")
         
         col_widget1, col_widget2 = st.columns(2)
         with col_widget1:
-            st.markdown("#### 📋 Clasificación")
+            st.markdown("#### :material/list_alt: Clasificación")
             url_clasif = f"https://www.lapreferente.com/widgetClasificacion.php?comp={comp_id}&colorFondo=FFFFFF&colorFondoCabecera=&colorTextoCabecera=FFFFFF&anchoEscudos=25&fontSize=12&favorito=&ocultaEvolucion=1&ocultaPosicionAnterior=0"
             st.components.v1.html(
                 f'<iframe style="border:0px; width:100%;" height="570" src="{url_clasif}"></iframe>', 
                 height=590, scrolling=True
             )
         with col_widget2:
-            st.markdown("#### ⚽ Resultados y Próxima Jornada")
+            st.markdown("#### :material/sports_soccer: Resultados y Próxima Jornada")
             url_res_actual = f"https://www.lapreferente.com/widgetResultados.php?comp={comp_id}&colorFondo=FFFFFF&colorFondoCabecera=FFFFFF&colorTextoCabecera=000000&anchoEscudos=25&fontSize=12&favorito="
             url_res_prox = f"https://www.lapreferente.com/widgetResultados.php?comp={comp_id}&proximaJornada=1&colorFondo=FFFFFF&colorFondoCabecera=FFFFFF&colorTextoCabecera=000000&anchoEscudos=25&fontSize=12&favorito="
             
@@ -146,18 +146,18 @@ with tab_equipo:
     if filtro_competicion_eq == "Copa":
         copa_comp_id = st.session_state.get("lapreferente_copa_id", "")
         st.markdown("---")
-        st.markdown("### 🏆 Información de Copa en Vivo")
+        st.markdown("### :material/emoji_events: Información de Copa en Vivo")
         
         if not copa_comp_id:
-            st.info("💡 No hay configurado ningún ID de competición para la Copa. Añádelo abajo en la sección de configuración.")
+            st.info(":material/lightbulb: No hay configurado ningún ID de competición para la Copa. Añádelo abajo en la sección de configuración.")
         else:
             col_copa1, col_copa2 = st.columns(2)
             with col_copa1:
-                st.markdown("#### 📋 Cuadro / Clasificación de Copa")
+                st.markdown("#### :material/list_alt: Cuadro / Clasificación de Copa")
                 url_copa_clasif = f"https://www.lapreferente.com/widgetClasificacion.php?comp={copa_comp_id}&colorFondo=FFFFFF&colorFondoCabecera=&colorTextoCabecera=FFFFFF&anchoEscudos=25&fontSize=12&favorito=&ocultaEvolucion=1&ocultaPosicionAnterior=0"
                 st.components.v1.html(f'<iframe style="border:0px; width:100%;" height="570" src="{url_copa_clasif}"></iframe>', height=590, scrolling=True)
             with col_copa2:
-                st.markdown("#### ⚽ Resultados de Copa")
+                st.markdown("#### :material/sports_soccer: Resultados de Copa")
                 url_copa_res = f"https://www.lapreferente.com/widgetResultados.php?comp={copa_comp_id}&colorFondo=FFFFFF&colorFondoCabecera=FFFFFF&colorTextoCabecera=000000&anchoEscudos=25&fontSize=12&favorito="
                 st.components.v1.html(f'<iframe style="border:0px; width:100%;" height="570" src="{url_copa_res}"></iframe>', height=590, scrolling=True)
 
@@ -171,14 +171,14 @@ with tab_equipo:
                 if nuevo_comp_id != comp_id_default:
                     st.session_state["lapreferente_comp_id"] = nuevo_comp_id
                     guardar_datos(modulo="configuracion")
-                    st.success("✅ ID de Liga actualizado correctamente.")
+                    st.success(":material/check_circle: ID de Liga actualizado correctamente.")
             elif filtro_competicion_eq == "Copa":
                 copa_id_default = st.session_state.get("lapreferente_copa_id", "")
                 nuevo_copa_id = st.text_input("ID de Competición de Copa (LaPreferente):", value=copa_id_default)
                 if nuevo_copa_id != copa_id_default:
                     st.session_state["lapreferente_copa_id"] = nuevo_copa_id
                     guardar_datos(modulo="configuracion")
-                    st.success("✅ ID de Copa actualizado correctamente.")
+                    st.success(":material/check_circle: ID de Copa actualizado correctamente.")
 
 # ==========================================
 # 👤 PESTAÑA 2: ESTADÍSTICAS DE JUGADORES
@@ -186,13 +186,13 @@ with tab_equipo:
 with tab_jugadores:
     col_comp1_jug, col_comp2_jug = st.columns([1, 3])
     filtro_competicion_jug = col_comp1_jug.selectbox(
-        "🏆 Filtro de Competición:", 
+        "▪️ Filtro de Competición:", 
         ["Liga", "Copa", "Amistosos", "Global"],
         key="filtro_comp_jug"
     )
     partidos_jug = filtrar_partidos(filtro_competicion_jug)
 
-    st.markdown(f"### 📋 Rendimiento Individual | {filtro_competicion_jug}")
+    st.markdown(f"### :material/list_alt: Rendimiento Individual | {filtro_competicion_jug}")
     
     fotos_plantilla = {}
     for p in st.session_state.plantilla:
@@ -259,18 +259,18 @@ with tab_jugadores:
                     sancionados.append(f"{jug} ({tarjetas} TA)")
                     
         if apercibidos or sancionados:
-            st.markdown("#### ⚖️ Alertas Disciplinarias (Ciclos de 5 Amarillas)")
+            st.markdown("#### :material/balance: Alertas Disciplinarias (Ciclos de 5 Amarillas)")
             c_al1, c_al2 = st.columns(2)
             with c_al1:
                 if sancionados:
-                    for s in sancionados: st.error(f"🛑 **SANCIONADO:** {s}")
+                    for s in sancionados: st.error(f":material/block: **SANCIONADO:** {s}")
                 else:
-                    st.success("✅ Ningún jugador cumple ciclo.")
-            with c_al2:
-                if apercibidos:
-                    for a in apercibidos: st.warning(f"⚠️ **APERCIBIDO:** {a}")
-                else:
-                    st.info("✅ Ningún jugador apercibido.")
+                    st.success(":material/check_circle: Ningún jugador cumple ciclo.")
+                with c_al2:
+                    if apercibidos:
+                        for a in apercibidos: st.warning(f":material/warning: **APERCIBIDO:** {a}")
+                    else:
+                        st.info(":material/check_circle: Ningún jugador apercibido."))
             st.markdown("---")
 
     lista_stats = []
@@ -290,7 +290,7 @@ with tab_jugadores:
             "JUGADOR": jug, "POS": d["POS"], "Conv.": d["Convocatorias"], "PJ": d["Partidos Jugados"],
             "MIN": int(mins), "% MIN": porc_mins, "G": goles, "A": asistencias,
             "Min/Gol": min_por_gol, "Min/Asist": min_por_asist, "GE": d["Goles Encajados"],
-            "🟨 TA": d["Amarillas"], "🟥 TR": d["Rojas"]
+            "TA": d["Amarillas"], "TR": d["Rojas"]
         })
         
     df_jugadores = pd.DataFrame(lista_stats)
@@ -298,7 +298,7 @@ with tab_jugadores:
     if not df_jugadores.empty:
         df_jugadores = df_jugadores.sort_values(by="MIN", ascending=False)
         
-        st.markdown("#### 👑 Destacados")
+        st.markdown("#### :material/workspace_premium: Destacados")
         
         def render_tarjeta_top3(titulo_categoria, df_sub, columna_valor, sufijo=""):
             st.markdown(f"<strong style='color:#f8fafc;'>{titulo_categoria}</strong>", unsafe_allow_html=True)
@@ -313,7 +313,7 @@ with tab_jugadores:
                         img_src = foto_b64 if str(foto_b64).startswith("http") else f"data:image/jpeg;base64,{foto_b64}"
                         avatar_html = f'<img src="{img_src}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; margin-right: 10px; border: 1px solid #334155;">'
                     else:
-                        avatar_html = '<span style="font-size: 20px; margin-right: 10px;">👤</span>'
+                        avatar_html = '<span class="material-symbols-rounded" style="font-size: 20px; color: #64748b; margin-right: 10px; vertical-align: middle;">person</span>'
 
                     st.markdown(
                         f"""
@@ -333,31 +333,31 @@ with tab_jugadores:
         col_d1, col_d2, col_d3, col_d4, col_d5 = st.columns(5)
         
         with col_d1:
-            df_g = df_jugadores[df_jugadores["G"] > 0].sort_values(by="G", ascending=False).head(3)
-            render_tarjeta_top3("⚽ Goles", df_g, "G")
-            
+    df_g = df_jugadores[df_jugadores["G"] > 0].sort_values(by="G", ascending=False).head(3)
+    render_tarjeta_top3(":material/sports_soccer: Goles", df_g, "G")
+    
         with col_d2:
             df_a = df_jugadores[df_jugadores["A"] > 0].sort_values(by="A", ascending=False).head(3)
-            render_tarjeta_top3("🎯 Asistencias", df_a, "A")
+            render_tarjeta_top3(":material/my_location: Asistencias", df_a, "A")
             
         with col_d3:
             df_m = df_jugadores.sort_values(by="MIN", ascending=False).head(3)
-            render_tarjeta_top3("⏱️ Minutos", df_m, "MIN", " min")
+            render_tarjeta_top3(":material/timer: Minutos", df_m, "MIN", " min")
             
         with col_d4:
             df_mg = df_jugadores[df_jugadores["Min/Gol"] > 0].sort_values(by="Min/Gol", ascending=True).head(3)
-            render_tarjeta_top3("⚡ Min / Gol", df_mg, "Min/Gol", "'")
+            render_tarjeta_top3(":material/bolt: Min / Gol", df_mg, "Min/Gol", "'")
             
         with col_d5:
             df_ma = df_jugadores[df_jugadores["Min/Asist"] > 0].sort_values(by="Min/Asist", ascending=True).head(3)
-            render_tarjeta_top3("🎯 Min / Asist", df_ma, "Min/Asist", "'")
+            render_tarjeta_top3(":material/my_location: Min / Asist", df_ma, "Min/Asist", "'")
 
         st.markdown("---")
 
         # ==========================================
         # 📊 GRÁFICO: MINUTOS ACUMULADOS (Vertical ordenado por POR, DEF, MED, ATA)
         # ==========================================
-        st.markdown("#### 📊 Gráfico de Minutos Acumulados por Jugador")
+        st.markdown("#### :material/bar_chart: Gráfico de Minutos Acumulados por Jugador")
         
         # Definir el orden jerárquico de las posiciones
         orden_posiciones = ["POR", "DEF", "MED", "ATA", "CANTERA"]
@@ -385,7 +385,7 @@ with tab_jugadores:
         # ==========================================
         # 🗺️ MAPA DE DISTRIBUCIÓN DE MINUTOS POR LÍNEA (Ordenado POR, DEF, MED, ATA)
         # ==========================================
-        st.markdown("#### 🗺️ Distribución de Minutos por Demarcación")
+        st.markdown("#### :material/pie_chart: Distribución de Minutos por Demarcación")
         
         # Filtrar las posiciones que realmente existan y ordenarlas según POR, DEF, MED, ATA...
         posiciones_existentes = [p for p in orden_posiciones if p in df_jugadores["POS"].values]
@@ -426,7 +426,7 @@ with tab_jugadores:
                             })
                             .background_gradient(subset=["MIN"], cmap="Blues")
                             .background_gradient(subset=["G"], cmap="Greens")
-                            .background_gradient(subset=["🟨 TA"], cmap="YlOrBr")
+                            .background_gradient(subset=["TA"], cmap="YlOrBr")
                            )
                            
         mostrar_tabla_moderna(estilo_jugadores)
@@ -435,7 +435,7 @@ with tab_jugadores:
 # 🆚 PESTAÑA 3: ESTADÍSTICAS DE RIVAL
 # ==========================================
 with tab_rivales:
-    st.markdown("### 🆚 Análisis de Equipos Rival (LaPreferente)")
+    st.markdown("### :material/sports_score: Análisis de Equipos Rival (LaPreferente)")
     st.caption("Consulta la plantilla y las estadísticas de tus rivales en la liga. El sistema detectará automáticamente tu próximo enfrentamiento.")
 
     if "rivales_guardados" not in st.session_state:
@@ -461,7 +461,7 @@ with tab_rivales:
         idx_default = rivales_disponibles.index(rival_proximo) + 1
 
     if not rivales_disponibles:
-        st.info("💡 Aún no hay ningún equipo rival registrado. Despliega el menú inferior para añadir el primero.")
+        st.info(":material/lightbulb: Aún no hay ningún equipo rival registrado. Despliega el menú inferior para añadir el primero.")
     else:
         col_sel1, col_sel2 = st.columns([2, 2])
         with col_sel1:
@@ -477,7 +477,7 @@ with tab_rivales:
                 
             comp_id_actual = st.session_state.get("lapreferente_comp_id", "26710")
             
-            st.markdown(f"#### 📋 Plantilla y Estadísticas de: **{rival_elegido}**")
+            st.markdown(f"#### :material/list_alt: Plantilla y Estadísticas de: **{rival_elegido}**")
             
             url_widget_rival = f"https://www.lapreferente.com/widgetEquipo.php?tipo=plantilla&comp={comp_id_actual}&colorFondo=FFFFFF&colorFondoCabecera=&colorTextoCabecera=FFFFFF&anchoEscudos=25&fontSize=11&favorito=&IDequipo={id_equipo_final}"
             
@@ -487,7 +487,7 @@ with tab_rivales:
                 scrolling=True
             )
             
-            if st.button(f"🗑️ Eliminar a {rival_elegido} de la lista"):
+            if st.button(f":material/delete: Eliminar a {rival_elegido} de la lista"):
                 del st.session_state["rivales_guardados"][rival_elegido]
                 guardar_datos(modulo="configuracion")
                 st.success(f"Equipo {rival_elegido} eliminado.")
@@ -519,7 +519,7 @@ with tab_rivales:
                     }
                     from database.db_manager import guardar_datos
                     guardar_datos(modulo="configuracion")
-                    st.success(f"✅ ¡Rival '{nombre_nuevo_rival}' guardado correctamente!")
+                    st.success(f":material/check_circle: ¡Rival '{nombre_nuevo_rival}' guardado correctamente!")
                     st.rerun()
                 else:
-                    st.warning("⚠️ Debes rellenar tanto el nombre como el ID.")
+                    st.warning(":material/warning: Debes rellenar tanto el nombre como el ID.")
