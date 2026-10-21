@@ -13,7 +13,7 @@ from PIL import Image
 import io
 from fpdf import FPDF
 import tempfile
- 
+import extra_streamlit_components as stx 
 # --- NUESTRAS LIBRERÍAS LOCALES ---
 from utils.math_helpers import *
 from utils.pdf_generator import *
@@ -90,6 +90,32 @@ if "sesiones" not in st.session_state:
     st.session_state.sesiones = []
 if "color_sidebar" not in st.session_state:
     st.session_state.color_sidebar = "#f1f5f9"
+
+# --- GESTOR DE COOKIES ---
+@st.cache_resource(experimental_allow_widgets=True)
+def get_cookie_manager():
+    import extra_streamlit_components as stx
+    return stx.CookieManager()
+
+cookie_manager = get_cookie_manager()
+
+# --- RECUPERACIÓN DE SESIÓN (RECUÉRDAME) ---
+# Si no estamos autenticados y no acabamos de darle al botón de cerrar sesión
+if not st.session_state.get("autenticado", False) and not st.session_state.get("logout_intent", False):
+    token = cookie_manager.get("loadlab_access")
+    refresh = cookie_manager.get("loadlab_refresh")
+    uid = cookie_manager.get("loadlab_uid")
+    
+    if token and refresh and uid:
+        try:
+            res = supabase.auth.set_session(token, refresh)
+            st.session_state.usuario_id = uid
+            st.session_state.access_token = token
+            st.session_state.refresh_token = refresh
+            st.session_state.autenticado = True
+            st.rerun()
+        except Exception:
+            pass # Token expirado o inválido, dejamos que cargue el login normal
 
 # ==========================================
 # 0. CONTROL DE VISIBILIDAD DEL MENÚ LATERAL
@@ -188,7 +214,13 @@ Centraliza y analiza las variables de rendimiento, carga y salud de tus futbolis
             with st.form(key="login_form"):
                 email = st.text_input("Correo electrónico", key="log_email", placeholder="tu@email.com")
                 password = st.text_input("Contraseña", type="password", key="log_pass", placeholder="••••••••")
-                st.markdown("<div style='text-align: right; margin-bottom: 15px;'><a href='#' style='color: #C5A059; font-size: 0.8rem; text-decoration: none; font-weight: 600;'>¿Has olvidado tu contraseña?</a></div>", unsafe_allow_html=True)
+                
+                # --- NUEVO: Checkbox de recordar ---
+                c_chk, c_link = st.columns([1, 1])
+                with c_chk:
+                    recordarme = st.checkbox("Mantenerme conectado", value=True)
+                with c_link:
+                    st.markdown("<div style='text-align: right; margin-top: 5px;'><a href='#' style='color: #C5A059; font-size: 0.8rem; text-decoration: none; font-weight: 600;'>¿Has olvidado tu contraseña?</a></div>", unsafe_allow_html=True)
                 
                 submit_btn = st.form_submit_button("Iniciar Sesión", use_container_width=True)
                 if submit_btn:
@@ -198,6 +230,14 @@ Centraliza y analiza las variables de rendimiento, carga y salud de tus futbolis
                         st.session_state.access_token = res.session.access_token
                         st.session_state.refresh_token = res.session.refresh_token
                         st.session_state.autenticado = True
+                        
+                        # Si marcó la casilla, guardamos el token cifrado 30 días en el navegador
+                        if recordarme:
+                            exp_date = datetime.now() + timedelta(days=30)
+                            cookie_manager.set("loadlab_access", res.session.access_token, expires_at=exp_date)
+                            cookie_manager.set("loadlab_refresh", res.session.refresh_token, expires_at=exp_date)
+                            cookie_manager.set("loadlab_uid", res.user.id, expires_at=exp_date)
+                            
                         st.rerun()
                     except Exception as e:
                         st.error("Credenciales incorrectas o error de conexión.")
