@@ -13,7 +13,7 @@ from database.db_manager import *
 
 # --- COMPROBACIÓN DE SEGURIDAD Y SESIÓN ---
 if not st.session_state.get("autenticado", False) or not st.session_state.get("equipo_seleccionado", False):
-    st.warning("⚠️ La sesión ha expirado o no se ha seleccionado un equipo. Por favor, vuelve a iniciar sesión.")
+    st.warning(":material/warning: La sesión ha expirado o no se ha seleccionado un equipo. Por favor, vuelve a iniciar sesión.")
     if st.button("Ir al Login principal"):
         st.session_state.clear()
         st.rerun()
@@ -34,13 +34,13 @@ if st.session_state.vista_plantilla not in opciones_vista:
 if st.session_state.vista_plantilla == ":material/groups: Plantilla":
     if not st.session_state.plantilla:
         render_estado_vacio(
-            icono="👥", 
+            icono=":material/groups:", 
             titulo="Tu plantilla está vacía", 
             descripcion="El primer paso para dominar LoadLab es registrar a tus deportistas. Esto habilitará el control de cargas, estadísticas y predicción de lesiones.",
             accion_sugerida="Haz clic en el botón 'Modificar' inferior para añadir tu primer jugador."
         )
     else:
-        st.markdown("### 📋 Cuadro de Plantilla")
+        st.markdown("### :material/grid_view: Cuadro de Plantilla")
         st.caption("Haz clic en el botón de perfil de cualquier jugador para acceder directamente a sus datos detallados.")
         
         if "index_pestana_activa" not in st.session_state:
@@ -61,9 +61,9 @@ if st.session_state.vista_plantilla == ":material/groups: Plantilla":
                                 # Eliminado el style inline. Ahora lo controla .card-elite img del CSS
                                 img_html = f'<img src="{img_src}">'
                             except:
-                                img_html = '<div style="font-size: 40px; margin-bottom: 5px; line-height: 1;">👤</div>'
+                                img_html = '<div style="margin-bottom: 5px; line-height: 1; display: flex; justify-content: center;"><span class="material-symbols-rounded" style="font-size: 40px; color: #64748b;">person</span></div>'
                         else:
-                            img_html = '<div style="font-size: 40px; margin-bottom: 5px; line-height: 1;">👤</div>'
+                            img_html = '<div style="margin-bottom: 5px; line-height: 1; display: flex; justify-content: center;"><span class="material-symbols-rounded" style="font-size: 40px; color: #64748b;">person</span></div>'
                         
                         nombre = jug['JUGADOR']
                         
@@ -205,15 +205,15 @@ else:
                     img_src = jugador["foto"] if str(jugador["foto"]).startswith("http") else f"data:image/jpeg;base64,{jugador['foto']}"
                     st.markdown(f'<img src="{img_src}" style="width:100%; max-width:200px; border-radius:10px;">', unsafe_allow_html=True)
                 except:
-                    st.markdown("👤")
+                    st.markdown(":material/person:")
             else:
-                st.markdown("👤 (Sin foto)")
+                st.markdown(":material/person: (Sin foto)")
             
             st.markdown(f"## {jugador['dorsal']} | **{jugador['JUGADOR']}**")
             st.caption(f"{jugador['pos_1']} | {jugador['lateralidad']}")
             st.caption(f"{jugador['edad']} años | {jugador['altura']} cm")
             
-            with st.expander("✏️ Editar Perfil"):
+            with st.expander(":material/edit: Editar Perfil"):
                 with st.form(f"edit_jug_{i}"):
                     new_pos1 = st.selectbox("Posición 1:", ["Portero", "Central", "Lateral", "Mediocentro", "Mediapunta", "Extremo", "Delantero"], index=["Portero", "Central", "Lateral", "Mediocentro", "Mediapunta", "Extremo", "Delantero"].index(jugador['pos_1']))
                     
@@ -227,7 +227,7 @@ else:
                     new_dorsal = st.number_input("Dorsal:", value=jugador['dorsal'])
                     new_foto = st.file_uploader("Actualizar foto (Dejar vacío para mantener):", type=["jpg", "png", "jpeg"])
                     
-                    if st.form_submit_button("💾 Guardar Cambios"):
+                    if st.form_submit_button(":material/save: Guardar Cambios"):
                         st.session_state.plantilla[i]['pos_1'] = new_pos1
                         st.session_state.plantilla[i]['pos_2'] = new_pos2
                         st.session_state.plantilla[i]['POS'] = "POR" if new_pos1=="Portero" else ("DEF" if new_pos1 in ["Central", "Lateral"] else ("MED" if new_pos1 in ["Mediocentro", "Mediapunta"] else "ATA"))
@@ -240,7 +240,14 @@ else:
                         st.rerun()
 
     with col_i2:
-            sub_tabs = st.tabs(["🧠 Bienestar", "🔥 Carga Interna", "🏃‍♂️ Perfil GPS", "🚑 Historial Médico", "⚖️ Composición Corporal", "📊 Valoraciones"])
+            sub_tabs = st.tabs([
+                ":material/psychology: Bienestar", 
+                ":material/local_fire_department: Carga Interna", 
+                ":material/satellite_alt: Perfil GPS", 
+                ":material/healing: Historial Médico", 
+                ":material/scale: Composición Corporal", 
+                ":material/fitness_center: Valoraciones"
+            ])
             
             # --- NUEVO MOTOR OPTIMIZADO ---
             if "df_master_informes" in st.session_state and not st.session_state.df_master_informes.empty:
@@ -263,7 +270,7 @@ else:
                             df_w_sorted = df_w.sort_values("FECHA", ascending=True)
                             ultimo_w = df_w_sorted.iloc[-1]
                             
-                            st.markdown("#### ⚡ Estado Actual (Último Registro)")
+                            st.markdown("#### :material/bolt: Estado Actual (Último Registro)")
                             cu1, cu2, cu3, cu4, cu5, cu6, cu7 = st.columns(7)
                             cu1.metric("TQR", f"{safe_float(ultimo_w['TQR']):.1f}")
                             cu2.metric("Wellness", f"{safe_float(ultimo_w['WELLNESS']):.1f}")
@@ -274,7 +281,7 @@ else:
                             cu7.metric("Humor", f"{safe_float(ultimo_w.get('W_Humor', 0)):.1f}")
                             
                             # --- KPIs Promedio Originales ---
-                            st.markdown("#### 🧠 Promedios de Bienestar")
+                            st.markdown("#### :material/psychology: Promedios de Bienestar")
                             cw1, cw2, cw3, cw4, cw5, cw6, cw7 = st.columns(7)
                             cw1.metric("TQR Medio", f"{df_w['TQR'].mean():.1f}")
                             cw2.metric("Wellness (Tot)", f"{df_w['WELLNESS'].mean():.1f}")
@@ -303,7 +310,7 @@ else:
                             if alertas_w:
                                 for al in alertas_w: st.warning(al)
                             else:
-                                st.success("✅ Valores de bienestar en rangos óptimos.")
+                                st.success(":material/check_circle: Valores de bienestar en rangos óptimos.")
                                 
                             st.markdown("#### Últimos Registros")
                             # --- NUEVO: Renombrar columnas de la tabla ---
@@ -331,14 +338,14 @@ else:
                             ultimo_ci = df_ci_sorted.iloc[-1]
                             carga_aguda_ultima = ultimo_ci.get('EWMA AGUDA', 0.0)
                             
-                            st.markdown("#### ⚡ Estado Actual (Última Sesión)")
+                            st.markdown("#### :material/bolt: Estado Actual (Última Sesión)")
                             cu_ci1, cu_ci2, cu_ci3, cu_ci4 = st.columns(4)
                             cu_ci1.metric("Tipo de Sesión", ultimo_ci['TIPO'])
                             cu_ci2.metric("Minutos", f"{ultimo_ci['MIN']:.0f}'")
                             cu_ci3.metric("RPE", f"{ultimo_ci['RPE']:.1f}")
                             cu_ci4.metric("Carga Aguda", f"{carga_aguda_ultima:.0f} UA")
                         
-                        st.markdown("#### 🔥 Carga Interna (Acumulados y Promedios)")
+                        st.markdown("#### :material/local_fire_department: Carga Interna (Acumulados y Promedios)")
                         cc1, cc2, cc3, cc4, cc5 = st.columns(5)
                         cc1.metric("Total Minutos", f"{df_j['MIN'].sum():.0f}'")
                         cc2.metric("RPE Promedio", f"{df_j[df_j['RPE']>0]['RPE'].mean():.1f}")
@@ -361,9 +368,9 @@ else:
                         if alertas_carga_ind:
                             for al in alertas_carga_ind: st.warning(al)
                         else:
-                            st.success("✅ Parámetros de carga y ratio A/C en zona segura.")
+                            st.success(":material/check_circle: Parámetros de carga y ratio A/C en zona segura.")
 
-                        st.markdown("#### 📋 Últimos Registros de Carga Interna")
+                        st.markdown("#### :material/list_alt: Últimos Registros de Carga Interna")
                         
                         # Ya no hay cálculos forzados, la tabla hereda los datos calculados de forma segura
                         df_tabla_ci = df_j.copy()
@@ -386,7 +393,7 @@ else:
                     if 'DCC >3' in df_j.columns: df_j['DCC'] = df_j['DCC >3']
                     if 'V_Max' in df_j.columns: df_j['VMAX'] = df_j['V_Max']
                 
-                    st.markdown("#### 🏃‍♂️ Perfil de GPS Individual")
+                    st.markdown("#### :material/directions_run: Perfil de GPS Individual")
                     f_tipo_g = st.selectbox("Filtrar por:", ["TODOS", "Partido", "Entrenamiento"], key=f"g_t_{i}")
                     f_md_g = "TODOS"
                     if f_tipo_g == "Entrenamiento": f_md_g = st.selectbox("Match Day:", ["TODOS", "MD-6", "MD-5", "MD-4", "MD-3", "MD-2", "MD-1", "MD+1", "MD+2", "TD"], key=f"g_m_{i}")
@@ -421,7 +428,7 @@ else:
             with sub_tabs[3]:
                     les_jug = [l for l in st.session_state.lesiones if l['jugador'] == jugador['JUGADOR']]
                     if not les_jug:
-                        st.success("✅ El jugador está limpio. No ha sufrido lesiones esta temporada.")
+                        st.success(":material/check_circle: El jugador está limpio. No ha sufrido lesiones esta temporada.")
                     else:
                         df_l = pd.DataFrame(les_jug)
                         conteo_zonas = Counter([l['zona'] for l in les_jug])
@@ -439,7 +446,7 @@ else:
                         horas_exposicion = minutos_totales / 60.0
                         incidencia = (total_lesiones / horas_exposicion * 1000) if horas_exposicion > 0 else 0
                         
-                        st.markdown("#### 🚑 Historial Médico")
+                        st.markdown("#### :material/healing: Historial Médico")
                         cm1, cm2, cm3, cm4, cm5 = st.columns(5)
                         cm1.metric("Total Lesiones", total_lesiones)
                         cm2.metric("Días Baja (Tot.)", f"{dias_totales:.0f}")
@@ -449,7 +456,7 @@ else:
                         
                         alertas_med = [zona for zona, count in conteo_zonas.items() if count >= 2]
                         if alertas_med:
-                            st.error(f"🔴 **Riesgo Crónico:** El jugador ha sufrido múltiples lesiones en: {', '.join(alertas_med)}. Considerar protocolo preventivo específico.")
+                            st.error(f":material/error: **Riesgo Crónico:** El jugador ha sufrido múltiples lesiones en: {', '.join(alertas_med)}. Considerar protocolo preventivo específico.")
                         
                         # --- NUEVO: Renombrar columnas para la tabla visual ---
                         df_mostrar_med = df_l[['id_sesion', 'tipo', 'zona', 'lado', 'estado', 'dias_baja']].sort_values('id_sesion', ascending=False)
@@ -477,7 +484,7 @@ else:
                     df_aj['Kg Magros'] = df_aj['Peso'] - (df_aj['Peso'] * (df_aj['% Graso'] / 100))
                     
                     ultimo = df_aj.iloc[0]
-                    st.markdown(f"#### ⚖️ Último Pesaje ({ultimo['fecha']})")
+                    st.markdown(f"#### :material/scale: Último Pesaje ({ultimo['fecha']})")
                     ca1, ca2, ca3 = st.columns(3)
                     ca1.metric("Peso", f"{ultimo['Peso']:.1f} kg")
                     ca2.metric("% Graso (Yuhasz)", f"{ultimo['% Graso']:.2f} %")
@@ -506,13 +513,13 @@ else:
                     st.info("No hay valoraciones físicas registradas para este jugador.")
                 else:
                     v_latest = sorted(vals_jug, key=lambda x: x.get('fecha', ''))[-1]
-                    st.markdown(f"#### 📊 Última Valoración ({v_latest['fecha']})")
+                    st.markdown(f"#### :material/analytics: Última Valoración ({v_latest['fecha']})")
                     c1, c2, c3 = st.columns(3)
                     c1.metric("1RM Sentadilla", f"{safe_float(v_latest.get('rm_sq', v_latest.get('rm_sentadilla', 0)))} kg")
                     c2.metric("CMJ Bilateral", f"{safe_float(v_latest.get('cmj_bi', 0))} cm")
                     c3.metric("F. Iso Cuádriceps (D / I)", f"{safe_float(v_latest.get('iso_ext_d', 0))} / {safe_float(v_latest.get('iso_ext_i', 0))} N")
                     
-                    st.markdown("##### 🔍 Asimetrías Destacadas")
+                    st.markdown("##### :material/manage_search: Asimetrías Destacadas")
                     def get_asi_str(d, i):
                         d_v, i_v = safe_float(d), safe_float(i)
                         if max(d_v, i_v) == 0: return "0%"
