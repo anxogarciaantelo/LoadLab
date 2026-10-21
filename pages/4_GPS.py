@@ -67,7 +67,7 @@ def generar_grafico_radar_gps(df_target, df_ref, label_target, label_ref):
     fig.add_trace(go.Scatterpolar(r=valores_referencia + [valores_referencia[0]], theta=categorias + [categorias[0]], fill='toself', name=label_ref, line=dict(color='rgba(150, 150, 150, 0.8)', width=2), fillcolor='rgba(200, 200, 200, 0.2)'))
     fig.add_trace(go.Scatterpolar(r=valores_target + [valores_target[0]], theta=categorias + [categorias[0]], fill='toself', name=label_target, line=dict(color='#00b4d8', width=3), fillcolor='rgba(0, 180, 216, 0.3)'))
 
-    fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, max(150, max(valores_target) + 20)], gridcolor="#334155", linecolor="#334155"), bgcolor="rgba(0,0,0,0)", angularaxis=dict(gridcolor="#334155", linecolor="#334155")), title=f"<b>Perfil Radar: {label_target} vs {label_ref}</b>", showlegend=True, margin=dict(l=40, r=40, t=40, b=40), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='#f8fafc'))
+    fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, max(150, max(valores_target) + 20)], gridcolor="#1c1f26", linecolor="#1c1f26"), bgcolor="rgba(0,0,0,0)", angularaxis=dict(gridcolor="#1c1f26", linecolor="#1c1f26")), title=f"<b>Perfil Radar: {label_target} vs {label_ref}</b>", showlegend=True, margin=dict(l=40, r=40, t=40, b=40), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='#f8fafc'))
     return fig
 
 def generar_radar_comparador(dict_medias, usar_C):
@@ -90,7 +90,7 @@ def generar_radar_comparador(dict_medias, usar_C):
     fig.add_trace(go.Scatterpolar(r=datos_graf['B'] + [datos_graf['B'][0]], theta=categorias + [categorias[0]], fill='toself', name=dict_medias['B_label'], line=dict(color='#ff4b4b', width=2), fillcolor='rgba(255, 75, 75, 0.2)'))
     if usar_C: fig.add_trace(go.Scatterpolar(r=datos_graf['C'] + [datos_graf['C'][0]], theta=categorias + [categorias[0]], fill='toself', name=dict_medias['C_label'], line=dict(color='#28a745', width=2), fillcolor='rgba(40, 167, 69, 0.2)'))
 
-    fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 110], gridcolor="#334155", linecolor="#334155"), bgcolor="rgba(0,0,0,0)", angularaxis=dict(gridcolor="#334155", linecolor="#334155")), title="<b>Comparativa Multidimensional (100% = Valor Máximo)</b>", margin=dict(l=40, r=40, t=40, b=40), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='#f8fafc'))
+    fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 110], gridcolor="#1c1f26", linecolor="#1c1f26"), bgcolor="rgba(0,0,0,0)", angularaxis=dict(gridcolor="#1c1f26", linecolor="#1c1f26")), title="<b>Comparativa Multidimensional (100% = Valor Máximo)</b>", margin=dict(l=40, r=40, t=40, b=40), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='#f8fafc'))
     return fig
 
 st.subheader(":material/satellite_alt: GPS")
@@ -363,12 +363,12 @@ else:
             kpis_abs = df_perfil[['DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC', 'VMAX', '% VMAX']].mean()
             kpis_rel = df_perfil[['m/min', 'HSR/min', 'SPR/min', 'ACC/min', 'DCC/min']].mean()
 
-            def kpi_gps_card(titulo, val_abs, lbl_abs, val_rel, lbl_rel, color="#3b82f6"):
+            def kpi_gps_card(titulo, val_abs, lbl_abs, val_rel, lbl_rel, color="#C5A059"):
                 return f"""
-                <div style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid {color}; border-radius: 10px; padding: 15px; display: flex; flex-direction: column; height: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
+                <div style="background: #111318; border: 1px solid #1c1f26; border-top: 3px solid {color}; border-radius: 10px; padding: 15px; display: flex; flex-direction: column; height: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
                     <span style="color: #94a3b8; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; margin-bottom: 5px;">{titulo}</span>
                     <span style="color: #f8fafc; font-size: 1.8rem; font-weight: 800; line-height: 1;">{val_abs} <span style="font-size: 0.9rem; color: #94a3b8;">{lbl_abs}</span></span>
-                    <div style="margin-top: auto; padding-top: 10px; border-top: 1px solid #334155; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="margin-top: auto; padding-top: 10px; border-top: 1px solid #1c1f26; display: flex; justify-content: space-between; align-items: center;">
                         <span style="color: #cbd5e1; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">Densidad</span>
                         <span style="color: {color}; font-size: 0.95rem; font-weight: 800;">{val_rel} <span style="font-size: 0.75rem;">{lbl_rel}</span></span>
                     </div>
@@ -378,17 +378,17 @@ else:
             st.markdown("---")
             st.markdown("#### :material/track_changes: Rendimiento Físico Medio (Absoluto vs Relativo)")
             c1, c2, c3, c4, c5, c6 = st.columns(6)
-            with c1: st.markdown(kpi_gps_card("Distancia", f"{kpis_abs['DIS']:.2f}", "km", f"{kpis_rel['m/min']:.1f}", "m/min", "#3b82f6"), unsafe_allow_html=True)
+            with c1: st.markdown(kpi_gps_card("Distancia", f"{kpis_abs['DIS']:.2f}", "km", f"{kpis_rel['m/min']:.1f}", "m/min", "#C5A059"), unsafe_allow_html=True)
             with c2: st.markdown(kpi_gps_card("HSR (>21)", f"{kpis_abs['DIS AI']:.0f}", "m", f"{kpis_rel['HSR/min']:.2f}", "m/min", "#f59e0b"), unsafe_allow_html=True)
             with c3: st.markdown(kpi_gps_card("Sprints", f"{kpis_abs['Nº SPR']:.1f}", "nº", f"{kpis_rel['SPR/min']:.2f}", "n/min", "#ef4444"), unsafe_allow_html=True)
             with c4: st.markdown(kpi_gps_card("ACC (>3)", f"{kpis_abs['ACC']:.0f}", "nº", f"{kpis_rel['ACC/min']:.2f}", "n/min", "#10b981"), unsafe_allow_html=True)
             with c5: st.markdown(kpi_gps_card("DCC (>3)", f"{kpis_abs['DCC']:.0f}", "nº", f"{kpis_rel['DCC/min']:.2f}", "n/min", "#8b5cf6"), unsafe_allow_html=True)
             with c6: 
                 st.markdown(f"""
-                <div style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid #ec4899; border-radius: 10px; padding: 15px; display: flex; flex-direction: column; height: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
+                <div style="background: #111318; border: 1px solid #1c1f26; border-top: 3px solid #ec4899; border-radius: 10px; padding: 15px; display: flex; flex-direction: column; height: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
                     <span style="color: #94a3b8; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; margin-bottom: 5px;">Velocidad Máx</span>
                     <span style="color: #f8fafc; font-size: 1.8rem; font-weight: 800; line-height: 1;">{kpis_abs['VMAX']:.1f} <span style="font-size: 0.9rem; color: #94a3b8;">km/h</span></span>
-                    <div style="margin-top: auto; padding-top: 10px; border-top: 1px solid #334155; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="margin-top: auto; padding-top: 10px; border-top: 1px solid #1c1f26; display: flex; justify-content: space-between; align-items: center;">
                         <span style="color: #cbd5e1; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">% Histórico</span>
                         <span style="color: #ec4899; font-size: 0.95rem; font-weight: 800;">{kpis_abs['% VMAX']:.1f} <span style="font-size: 0.75rem;">%</span></span>
                     </div>
@@ -403,7 +403,7 @@ else:
                 'Nº SPR': 'mean', 'ACC': 'mean', 'DCC': 'mean', 'VMAX': 'max', '% VMAX': 'max'
             }).reset_index()
             
-            css_dark_table = "<style>.modern-dark-table { width: 100%; border-collapse: collapse; font-family: sans-serif; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4); background-color: #1e293b; color: #f8fafc; margin-bottom: 20px; } .modern-dark-table thead tr { background-color: #0f172a; color: #3b82f6; } .modern-dark-table th { padding: 12px 15px; font-weight: 800; text-transform: uppercase; font-size: 0.8rem; text-align: center !important; border-bottom: 2px solid #334155; } .modern-dark-table td { padding: 10px 15px; text-align: center !important; border-bottom: 1px solid #334155; font-weight: 700; font-size: 0.95rem; } .modern-dark-table tbody tr:hover td { filter: brightness(1.2); }</style>"
+            css_dark_table = "<style>.modern-dark-table { width: 100%; border-collapse: collapse; font-family: sans-serif; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4); background-color: #111318; color: #f8fafc; margin-bottom: 20px; } .modern-dark-table thead tr { background-color: #0b0e14; color: #C5A059; } .modern-dark-table th { padding: 12px 15px; font-weight: 800; text-transform: uppercase; font-size: 0.8rem; text-align: center !important; border-bottom: 2px solid #1c1f26; } .modern-dark-table td { padding: 10px 15px; text-align: center !important; border-bottom: 1px solid #1c1f26; font-weight: 700; font-size: 0.95rem; } .modern-dark-table tbody tr:hover td { filter: brightness(1.2); }</style>"
             
             cols_tabla = ['JUGADOR', 'POS', 'MIN_GPS', 'DIS', 'm/min', 'DIS AI', 'Nº SPR', 'ACC', 'DCC', 'VMAX', '% VMAX']
             
