@@ -116,7 +116,7 @@ else:
                 
                 # Tarjetas renderizadas con texto en el título para evitar el fallo HTML interno
                 k1, k2, k3, k4, k5 = st.columns(5)
-                with k1: render_kpi_elite("Lesiones Totales", f"{total_lesiones}", color_borde="#3b82f6")
+                with k1: render_kpi_elite("Lesiones Totales", f"{total_lesiones}", color_borde="#C5A059")
                 with k2: render_kpi_elite("Días de Baja Totales", f"{total_dias}", color_borde="#f59e0b")
                 with k3: render_kpi_elite("Días de baja  / Lesión", f"{promedio_dias:.1f}", color_borde="#8b5cf6")
                 with k4: render_kpi_elite("Incidencia Lesional", f"{incidencia:.1f}", color_borde="#ef4444")
@@ -513,10 +513,10 @@ else:
                         bg, border = "#064e3b", "#10b981" # Completado
                         estado = "<span class='material-symbols-rounded' style='vertical-align: text-bottom; font-size: 1rem; margin-right: 4px;'>check_circle</span> COMPLETADO"
                     elif idx == fase_actual: 
-                        bg, border = "#1e293b", "#3b82f6" # En curso
+                        bg, border = "#111318", "#C5A059" # En curso
                         estado = f"<span class='material-symbols-rounded' style='vertical-align: text-bottom; font-size: 1rem; margin-right: 4px;'>sync</span> EN CURSO ({comp_txt}/{req_txt})"
                     else: 
-                        bg, border = "#0f172a", "#334155" # Pendiente
+                        bg, border = "#0b0e14", "#1c1f26" # Pendiente
                         estado = f"<span class='material-symbols-rounded' style='vertical-align: text-bottom; font-size: 1rem; margin-right: 4px;'>hourglass_empty</span> PENDIENTE (0/{req_txt})"
                         
                     col.markdown(f"""
