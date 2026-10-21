@@ -92,7 +92,7 @@ if "color_sidebar" not in st.session_state:
     st.session_state.color_sidebar = "#f1f5f9"
 
 # --- GESTOR DE COOKIES ---
-@st.cache_resource(experimental_allow_widgets=True)
+@st.cache_resource
 def get_cookie_manager():
     import extra_streamlit_components as stx
     return stx.CookieManager()
