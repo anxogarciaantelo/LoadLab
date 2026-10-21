@@ -138,7 +138,7 @@ def color_ratio_ac(valor):
     if valor >= 1.5: return '#ef4444'
     if valor >= 1.31: return '#f59e0b'
     if valor >= 0.8: return '#10b981'
-    if valor > 0: return '#3b82f6'
+    if valor > 0: return '#C5A059'
     return '#64748b'
 
 def categorizar_duracion(dias):
@@ -341,11 +341,11 @@ def set_login_background():
         backdrop-filter: blur(12px);
     }
     div[role="tabpanel"] { background-color: transparent !important; }
-    div[data-testid="stTabs"] [data-baseweb="tab-list"] { background-color: transparent !important; border: none !important; border-bottom: 1px solid #1e293b !important; border-radius: 0 !important; gap: 20px !important; margin-bottom: 20px !important; }
+    div[data-testid="stTabs"] [data-baseweb="tab-list"] { background-color: transparent !important; border: none !important; border-bottom: 1px solid #111318 !important; border-radius: 0 !important; gap: 20px !important; margin-bottom: 20px !important; }
     div[data-testid="stTabs"] [data-baseweb="tab"] { color: #64748b !important; font-size: 0.85rem !important; font-weight: 700 !important; background-color: transparent !important; text-transform: uppercase; letter-spacing: 0.5px; }
     div[data-testid="stTabs"] [aria-selected="true"] { color: #C5A059 !important; border-bottom: 2px solid #C5A059 !important; background-color: transparent !important; }
     div[data-testid="stTabs"] label { color: #cbd5e1 !important; font-size: 0.85rem !important; font-weight: 600 !important; margin-bottom: 4px !important; }
-    div[data-testid="stTextInput"] input { background-color: #0f172a !important; border: 1px solid #1e293b !important; color: #f8fafc !important; padding: 12px 14px !important; border-radius: 8px !important; font-size: 0.95rem !important; }
+    div[data-testid="stTextInput"] input { background-color: #0b0e14 !important; border: 1px solid #111318 !important; color: #f8fafc !important; padding: 12px 14px !important; border-radius: 8px !important; font-size: 0.95rem !important; }
     div[data-testid="stTextInput"] input:focus { border: 1px solid #C5A059 !important; box-shadow: none !important; }
     div[data-testid="stFormSubmitButton"] button { background-color: #C5A059 !important; color: #111318 !important; border: none !important; border-radius: 8px !important; box-shadow: 0 4px 10px rgba(197, 160, 89, 0.3) !important; width: 100% !important; margin-top: 10px; padding: 12px !important; font-size: 1rem !important; font-weight: 800 !important; transition: all 0.2s ease; }
     div[data-testid="stFormSubmitButton"] button:hover { background-color: #D6B26E !important; transform: translateY(-2px); box-shadow: 0 6px 15px rgba(197, 160, 89, 0.4) !important; }
@@ -414,8 +414,8 @@ def aplicar_color_sidebar():
     <style>
         /* 1. Ajustes del contenedor del menú lateral para tu navegación custom */
         [data-testid="stSidebar"] {
-            background-color: #0f172a !important;
-            border-right: 1px solid #1e293b !important;
+            background-color: #0b0e14 !important;
+            border-right: 1px solid #111318 !important;
         }
         
         /* 2. Ajustamos la altura restando los márgenes nativos para evitar el scroll */
@@ -548,10 +548,10 @@ def aplicar_color_sidebar():
                 
 def render_estado_vacio(icono, titulo, descripcion, accion_sugerida=None):
     """Renderiza una tarjeta moderna Dark Mode para pantallas sin datos (Onboarding)"""
-    html_accion = f'<p style="color: #3b82f6; font-weight: 800; font-size: 0.85rem; margin-top: 20px; text-transform: uppercase; letter-spacing: 0.05em;">↳ {accion_sugerida}</p>' if accion_sugerida else ''
+    html_accion = f'<p style="color: #C5A059; font-weight: 800; font-size: 0.85rem; margin-top: 20px; text-transform: uppercase; letter-spacing: 0.05em;">↳ {accion_sugerida}</p>' if accion_sugerida else ''
     
     html = f"""
-    <div style="background-color: #1e293b; border: 2px dashed #334155; border-radius: 12px; padding: 50px 20px; text-align: center; margin: 20px 0; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);">
+    <div style="background-color: #111318; border: 2px dashed #1c1f26; border-radius: 12px; padding: 50px 20px; text-align: center; margin: 20px 0; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);">
         <div style="font-size: 3.5rem; margin-bottom: 15px; opacity: 0.9;">{icono}</div>
         <h3 style="color: #f8fafc; font-weight: 800; font-size: 1.3rem; margin-bottom: 10px; text-transform: uppercase;">{titulo}</h3>
         <p style="color: #94a3b8; font-size: 0.95rem; max-width: 500px; margin: 0 auto; line-height: 1.5;">{descripcion}</p>
@@ -580,7 +580,7 @@ def validar_columnas_excel(df, nombre_archivo, columnas_esperadas):
         return False, msg
         
     return True, "OK"
-def render_kpi_elite(titulo, valor, subtitulo="", icono="", color_borde="#3b82f6", tendencia=None):
+def render_kpi_elite(titulo, valor, subtitulo="", icono="", color_borde="#C5A059", tendencia=None):
     """
     Tarjeta KPI compacta unificada: Título a la izquierda, Valor centrado.
     """
@@ -605,7 +605,7 @@ def render_kpi_elite(titulo, valor, subtitulo="", icono="", color_borde="#3b82f6
         tendencia_html = f"<div style='color: {color}; font-size: 0.85rem; font-weight: 800; margin-top: 8px; line-height: 1.2; text-align: center;'>{flecha} {abs(val_t):.1f}% {texto_personalizado}</div>"
 
     html = f"""
-    <div style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid {color_borde}; padding: 10px 8px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.15); display: flex; flex-direction: column; justify-content: center; height: 100%;">
+    <div style="background: #111318; border: 1px solid #1c1f26; border-top: 3px solid {color_borde}; padding: 10px 8px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.15); display: flex; flex-direction: column; justify-content: center; height: 100%;">
         <p style="color: #f8fafc; font-size: 0.85rem; font-weight: 800; margin: 0 0 6px 0; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.1; word-wrap: break-word; text-align: left;">{titulo} {icono}</p>
         <h2 style="color: #f8fafc; font-size: 1.4rem; font-weight: 800; margin: 0; line-height: 1; text-align: center;">{valor}</h2>
         {tendencia_html}
