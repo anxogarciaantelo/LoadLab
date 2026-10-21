@@ -13,7 +13,7 @@ from database.db_manager import *
 
 # --- COMPROBACIÓN DE SEGURIDAD Y SESIÓN ---
 if not st.session_state.get("autenticado", False) or not st.session_state.get("equipo_seleccionado", False):
-    st.warning("⚠️ La sesión ha expirado o no se ha seleccionado un equipo. Por favor, vuelve a iniciar sesión.")
+    st.warning(":material/warning: La sesión ha expirado o no se ha seleccionado un equipo. Por favor, vuelve a iniciar sesión.")
     if st.button("Ir al Login principal"):
         st.session_state.clear()
         st.rerun()
@@ -146,7 +146,7 @@ tab_gps_perf, tab_gps_comp = st.tabs([
 ])
 
 if df_gps.empty:
-    st.info("No hay datos de GPS registrados todavía. Procesa datos en alguna sesión para visualizarlos aquí.")
+    st.info(":material/info: No hay datos de GPS registrados todavía. Procesa datos en alguna sesión para visualizarlos aquí.")
 else:
     cols_dinamicas = ['DIS', 'DIS AI', 'ACC', 'DCC', 'Nº SPR', 'Z1', 'Z2', 'Z3', 'Z4', 'Z5', 'Z6']
     for c in cols_dinamicas:
@@ -253,7 +253,7 @@ else:
         )
 
         if df_perfil.empty:
-            st.warning("No hay datos para esta combinación de filtros.")
+            st.warning(":material/warning: No hay datos para esta combinación de filtros.")
         else:
             # --- CONSTRUCCIÓN DINÁMICA DEL RADAR COMPARATIVO ---
             mostrar_radar = True
@@ -351,7 +351,7 @@ else:
                 if fig_radar:
                     st.plotly_chart(fig_radar, use_container_width=True)
                 else:
-                    st.info("No hay suficientes datos GPS para generar la comparación radar.")
+                    st.info(":material/info: No hay suficientes datos GPS para generar la comparación radar.")
 
             # --- REDISEÑO ÉLITE: TARJETAS KPI Y HEATMAP ---
             df_perfil['m/min'] = np.where(df_perfil['MIN_GPS'] > 0, (df_perfil['DIS'] * 1000) / df_perfil['MIN_GPS'], 0)
@@ -376,7 +376,7 @@ else:
                 """
 
             st.markdown("---")
-            st.markdown("#### 🎯 Rendimiento Físico Medio (Absoluto vs Relativo)")
+            st.markdown("#### :material/track_changes: Rendimiento Físico Medio (Absoluto vs Relativo)")
             c1, c2, c3, c4, c5, c6 = st.columns(6)
             with c1: st.markdown(kpi_gps_card("Distancia", f"{kpis_abs['DIS']:.2f}", "km", f"{kpis_rel['m/min']:.1f}", "m/min", "#3b82f6"), unsafe_allow_html=True)
             with c2: st.markdown(kpi_gps_card("HSR (>21)", f"{kpis_abs['DIS AI']:.0f}", "m", f"{kpis_rel['HSR/min']:.2f}", "m/min", "#f59e0b"), unsafe_allow_html=True)
@@ -396,7 +396,7 @@ else:
                 """, unsafe_allow_html=True)
 
             st.markdown("---")
-            st.markdown("#### 📋 Análisis Detallado (Heatmap de Intensidad)")
+            st.markdown("#### :material/grid_on: Análisis Detallado (Heatmap de Intensidad)")
             
             df_tabla = df_perfil.groupby(['JUGADOR', 'POS']).agg({
                 'MIN_GPS': 'mean', 'DIS': 'mean', 'm/min': 'mean', 'DIS AI': 'mean',
@@ -494,7 +494,7 @@ else:
 
         # --- CONTENIDO VISUAL EN PANTALLA PRINCIPAL (FUERA DEL EXPANDER) ---
         if df_A.empty or df_B.empty or (usar_C and df_C.empty):
-            st.warning("⚠️ Uno de los perfiles activos no tiene datos para los filtros seleccionados.")
+            st.warning(":material/warning: Uno de los perfiles activos no tiene datos para los filtros seleccionados.")
         else:
             # 1. CÁLCULO DE MEDIAS PARA EL RADAR MULTI-PERFIL
             metrics_radar = ['ACC/min', 'VMAX', 'DIS/min', 'Nº SPR/min', 'DIS AI/min', 'MIN', 'DIS', '% VMAX']
@@ -511,14 +511,14 @@ else:
             dict_medias_radar = {'A': mean_A, 'A_label': lbl_A, 'B': mean_B, 'B_label': lbl_B, 'C': mean_C, 'C_label': lbl_C}
 
             # 2. MOSTRAR RADAR
-            st.markdown("#### 🕸️ Radar Comparativo")
+            st.markdown("#### :material/radar: Radar Comparativo")
             fig_comp = generar_radar_comparador(dict_medias_radar, usar_C)
             st.plotly_chart(fig_comp, use_container_width=True)
             
             st.markdown("---")
 
             # 3. MOSTRAR TABLA COMPARATIVA
-            st.markdown("#### 📊 Tabla Analítica")
+            st.markdown("#### :material/table_chart: Tabla Analítica")
             modo_comp = st.radio("¿Qué tipo de métricas quieres comparar en la tabla?", ["Absolutas (Totales)", "Relativas (Por Minuto)"], horizontal=True)
             
             if modo_comp == "Absolutas (Totales)":
