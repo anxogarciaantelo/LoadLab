@@ -13,7 +13,7 @@ from database.db_manager import *
 
 # --- COMPROBACIÓN DE SEGURIDAD Y SESIÓN ---
 if not st.session_state.get("autenticado", False) or not st.session_state.get("equipo_seleccionado", False):
-    st.warning("⚠️ La sesión ha expirado o no se ha seleccionado un equipo. Por favor, vuelve a iniciar sesión.")
+    st.warning(":material/warning: La sesión ha expirado o no se ha seleccionado un equipo. Por favor, vuelve a iniciar sesión.")
     if st.button("Ir al Login principal"):
         st.session_state.clear()
         st.rerun()
@@ -127,7 +127,7 @@ with tab_antro_res:
             prom_biceps_d = df_filt_clean['Per_Biceps_D'].mean()
             prom_biceps_i = df_filt_clean['Per_Biceps_I'].mean()
             
-            st.markdown("#### 🎯 Promedios del Filtro")
+            st.markdown("#### :material/track_changes: Promedios del Filtro")
             from utils.math_helpers import render_kpi_elite
             k1, k2, k3, k4 = st.columns(4)
             with k1: render_kpi_elite("Peso Medio", f"{kpi_peso:.1f} kg" if pd.notna(kpi_peso) else "-", color_borde="#00b4d8")
@@ -148,7 +148,7 @@ with tab_antro_res:
             # NUEVO: CUADRANTE DE COMPOSICIÓN CORPORAL (FFMI)
             # ==========================================
             st.markdown("---")
-            st.markdown("#### 🎯 Cuadrante de Composición Corporal (Último Pesaje)")
+            st.markdown("#### :material/track_changes: Cuadrante de Composición Corporal (Último Pesaje)")
             st.caption("Relación entre % Graso y el Índice de Masa Libre de Grasa (FFMI). Aísla la masa muscular real anulando el sesgo de la estatura del jugador.")
 
             # 1. Obtener la altura de los jugadores desde la plantilla
@@ -229,7 +229,7 @@ with tab_antro_res:
                 st.info("No hay suficientes datos válidos (peso y altura en la plantilla) para generar el cuadrante.")
 
             st.markdown("---")
-            st.markdown("#### 📈 Evolución Mensual: Peso y % Graso")
+            st.markdown("#### :material/insights: Evolución Mensual: Peso y % Graso")
             
             meses_temporada = ["Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio"]
             df_evo = df_filt_clean.groupby('Mes')[['Peso', '% Graso', 'Kg Magros']].mean().reindex(meses_temporada).reset_index()
@@ -250,7 +250,7 @@ with tab_antro_res:
                 st.plotly_chart(fig_grasa, use_container_width=True, key="res_grasa")
 
             st.markdown("---")
-            st.markdown("#### 📏 Evolución de Perímetros")
+            st.markdown("#### :material/straighten: Evolución de Perímetros")
             df_evo_per = df_filt_clean.groupby('Mes')[['Per_Pecho', 'Per_Cintura', 'Per_Cadera', 'Per_Muslo_D', 'Per_Muslo_I', 'Per_Pierna_D', 'Per_Pierna_I', 'Per_Biceps_D', 'Per_Biceps_I']].mean().reindex(meses_temporada).reset_index()
 
             cp1, cp2 = st.columns(2)
@@ -304,9 +304,9 @@ with tab_antro_jug:
                     img_src = jugador_datos["foto"] if str(jugador_datos["foto"]).startswith("http") else f"data:image/jpeg;base64,{jugador_datos['foto']}"
                     st.markdown(f'<img src="{img_src}" style="width:100%; max-width:130px; border-radius:12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">', unsafe_allow_html=True)
                 except:
-                    st.markdown('<div style="font-size: 70px; text-align: center;">👤</div>', unsafe_allow_html=True)
+                    st.markdown('<div style="margin-bottom: 5px; line-height: 1; display: flex; justify-content: center;"><span class="material-symbols-rounded" style="font-size: 70px; color: #64748b;">person</span></div>', unsafe_allow_html=True)
             else:
-                st.markdown('<div style="font-size: 70px; text-align: center;">👤</div>', unsafe_allow_html=True)
+                st.markdown('<div style="margin-bottom: 5px; line-height: 1; display: flex; justify-content: center;"><span class="material-symbols-rounded" style="font-size: 70px; color: #64748b;">person</span></div>', unsafe_allow_html=True)
         with col_info:
             st.markdown(f"<h2 style='margin-bottom: 0px;'>{jugador_seleccionado}</h2>", unsafe_allow_html=True)
             if jugador_datos:
@@ -329,7 +329,7 @@ with tab_antro_jug:
             
             # --- NUEVO: KPIs EN TARJETAS Y TÍTULOS MODIFICADOS ---
             with st.container(border=True):
-                st.markdown(f"#### ⚖️ Análisis Estructural y Objetivos ({ultimo_pesaje['fecha']})")
+                st.markdown(f"#### :material/scale: Análisis Estructural y Objetivos ({ultimo_pesaje['fecha']})")
                 
                 peso_actual = safe_float(ultimo_pesaje['Peso'])
                 grasa_actual = safe_float(ultimo_pesaje['% Graso'])
@@ -347,10 +347,10 @@ with tab_antro_jug:
                 
                 def evaluar_objetivo(actual, v_min, v_max, unidad):
                     if actual < v_min:
-                        return f"<span style='color:#f59e0b;'>🟡 Faltan {v_min - actual:.1f} {unidad}</span>"
+                        return f"<span style='color:#f59e0b;'><span class='material-symbols-rounded' style='vertical-align: text-bottom; font-size: 1rem;'>warning</span> Faltan {v_min - actual:.1f} {unidad}</span>"
                     elif actual > v_max:
-                        return f"<span style='color:#ef4444;'>🔴 Sobran {actual - v_max:.1f} {unidad}</span>"
-                    return "<span style='color:#10b981;'>✅ En rango</span>"
+                        return f"<span style='color:#ef4444;'><span class='material-symbols-rounded' style='vertical-align: text-bottom; font-size: 1rem;'>error</span> Sobran {actual - v_max:.1f} {unidad}</span>"
+                    return "<span style='color:#10b981;'><span class='material-symbols-rounded' style='vertical-align: text-bottom; font-size: 1rem;'>check_circle</span> En rango</span>"
 
                 est_peso = evaluar_objetivo(peso_actual, peso_min, peso_max, "kg")
                 est_grasa = evaluar_objetivo(grasa_actual, grasa_min, grasa_max, "%")
@@ -374,7 +374,7 @@ with tab_antro_jug:
                 with r2: st.markdown(render_recomendacion("Ideal Grasa", grasa_min, grasa_max, "%", est_grasa), unsafe_allow_html=True)
 
             with st.container(border=True):
-                st.markdown("#### 📏 Perímetros y Asimetrías")
+                st.markdown("#### :material/straighten: Perímetros y Asimetrías")
                 ultimo_valido = {}
                 para_buscar = ['Per_Pecho', 'Per_Cintura', 'Per_Cadera', 'Per_Muslo_D', 'Per_Muslo_I', 'Per_Pierna_D', 'Per_Pierna_I', 'Per_Biceps_D', 'Per_Biceps_I']
                 for col in para_buscar:
@@ -390,7 +390,7 @@ with tab_antro_jug:
                 with p6: render_kpi_perimetro_doble("Bíceps", ultimo_valido['Per_Biceps_D'], ultimo_valido['Per_Biceps_I'])
             
             st.markdown("---")
-            st.markdown("#### 📈 Evolución Histórica: Peso y % Graso")
+            st.markdown("#### :material/insights: Evolución Histórica: Peso y % Graso")
             
             df_jug_antro_clean = df_jug_antro.replace({'Suma_Pliegues': 0, 'Per_Pecho': 0, 'Per_Cintura': 0, 'Per_Cadera': 0, 'Per_Muslo_D': 0, 'Per_Muslo_I': 0, 'Per_Pierna_D': 0, 'Per_Pierna_I': 0, 'Per_Biceps_D': 0, 'Per_Biceps_I': 0}, np.nan)
             df_jug_antro_clean['Mes_Num'] = df_jug_antro_clean['fecha_dt'].dt.month
@@ -415,7 +415,7 @@ with tab_antro_jug:
                 st.plotly_chart(fig_grasa_j, use_container_width=True, key=f"jug_grasa_{jugador_seleccionado}")
 
             st.markdown("---")
-            st.markdown("#### 📏 Evolución Histórica de Perímetros")
+            st.markdown("#### :material/straighten: Evolución Histórica de Perímetros")
             df_evo_per_j = df_jug_antro_clean.groupby('Mes')[['Per_Pecho', 'Per_Cintura', 'Per_Cadera', 'Per_Muslo_D', 'Per_Muslo_I', 'Per_Pierna_D', 'Per_Pierna_I', 'Per_Biceps_D', 'Per_Biceps_I']].mean().reindex(meses_temporada).reset_index()
 
             cp1_j, cp2_j = st.columns(2)
@@ -449,7 +449,7 @@ with tab_antro_jug:
                 fig_p4_j.update_layout(title="Pierna (D/I)", xaxis=dict(categoryorder='array', categoryarray=meses_temporada), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
                 st.plotly_chart(fig_p4_j, use_container_width=True, key=f"jug_per4_{jugador_seleccionado}")
 
-            st.markdown("#### 📋 Historial Completo")
+            st.markdown("#### :material/list_alt: Historial Completo")
             
             # Calcular asimetrías porcentuales para la tabla
             for part, col_d, col_i in [('Bíceps', 'Per_Biceps_D', 'Per_Biceps_I'), 
@@ -776,7 +776,7 @@ with tab_antro_up:
             df_up = pd.read_excel(archivo_antro)
             
             if len(df_up.columns) < 15:
-                st.error("❌ El archivo Excel no tiene las 15 columnas necesarias. Revisa la plantilla.")
+                st.error(":material/cancel: El archivo Excel no tiene las 15 columnas necesarias. Revisa la plantilla.")
             else:
                 registros_nuevos = 0
                 for idx, row in df_up.iterrows():
@@ -811,7 +811,7 @@ with tab_antro_up:
                     registros_nuevos += 1
                     
                 guardar_datos(modulo="antropometria")
-                st.success(f"✅ ¡{registros_nuevos} pesajes procesados e integrados con éxito!")
+                st.success(f":material/check_circle: ¡{registros_nuevos} pesajes procesados e integrados con éxito!")
                 st.rerun()
         except Exception as e:
             st.error(f"Error al leer el archivo. Asegúrate de que el formato es correcto. Detalle técnico: {e}")
@@ -819,7 +819,7 @@ with tab_antro_up:
 # PESTAÑA 4: EDICIÓN MANUAL DE REGISTROS
 # ==========================================
 with tab_antro_edit:
-    st.markdown("#### ✏️ Edición Manual de Registros")
+    st.markdown("#### :material/edit_document: Edición Manual de Registros")
     st.caption("Modifica cualquier valor haciendo doble clic en la celda (como en Excel). Puedes borrar una fila seleccionándola por la izquierda y pulsando la tecla 'Suprimir' o 'Retroceso'.")
     
     if not st.session_state.antropometria:
@@ -876,5 +876,5 @@ with tab_antro_edit:
             # Guardamos en la RAM y forzamos el volcado a Supabase
             st.session_state.antropometria = nuevos_registros
             guardar_datos(modulo="antropometria")
-            st.success("✅ ¡Registros antropométricos actualizados correctamente!")
+            st.success(":material/check_circle: ¡Registros antropométricos actualizados correctamente!")
             st.rerun()
