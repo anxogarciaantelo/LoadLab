@@ -270,7 +270,7 @@ with tab_jugadores:
                     if apercibidos:
                         for a in apercibidos: st.warning(f":material/warning: **APERCIBIDO:** {a}")
                     else:
-                        st.info(":material/check_circle: Ningún jugador apercibido."))
+                        st.info(":material/check_circle: Ningún jugador apercibido.")
             st.markdown("---")
 
     lista_stats = []
