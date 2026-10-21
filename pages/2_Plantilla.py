@@ -22,16 +22,16 @@ if not st.session_state.get("autenticado", False) or not st.session_state.get("e
 aplicar_color_sidebar()
 
 if "vista_plantilla" not in st.session_state:
-    st.session_state.vista_plantilla = "📋 Plantilla"
+    st.session_state.vista_plantilla = ":material/groups: Plantilla"
 
 plantilla_ordenada = sorted(st.session_state.plantilla, key=lambda x: int(x.get("dorsal", 99)))
 nombres_jugadores = [j["JUGADOR"] for j in plantilla_ordenada]
-opciones_vista = ["📋 Plantilla", "⚙️ Modificar Plantilla"] + [f"👤 {nombre}" for nombre in nombres_jugadores]
+opciones_vista = [":material/groups: Plantilla", ":material/settings: Modificar Plantilla"] + [f":material/person: {nombre}" for nombre in nombres_jugadores]
 
 if st.session_state.vista_plantilla not in opciones_vista:
-    st.session_state.vista_plantilla = "📋 Plantilla"
+    st.session_state.vista_plantilla = ":material/groups: Plantilla"
 
-if st.session_state.vista_plantilla == "📋 Plantilla":
+if st.session_state.vista_plantilla == ":material/groups: Plantilla":
     if not st.session_state.plantilla:
         render_estado_vacio(
             icono="👥", 
@@ -75,24 +75,24 @@ if st.session_state.vista_plantilla == "📋 Plantilla":
                         """
                         st.markdown(tarjeta_html, unsafe_allow_html=True)
                         
-                        if st.button("🔍 Perfil", key=f"btn_ver_perfil_{idx_global}", use_container_width=True):
-                            st.session_state.vista_plantilla = f"👤 {nombre}"
+                        if st.button(":material/search: Perfil", key=f"btn_ver_perfil_{idx_global}", use_container_width=True):
+                            st.session_state.vista_plantilla = f":material/person: {nombre}"
                             st.rerun()
 
         # --- BOTÓN INFERIOR DERECHO PARA MODIFICAR PLANTILLA ---
         st.markdown("---")
         c_vacio, c_btn_mod = st.columns([6, 1])
         with c_btn_mod:
-            if st.button("⚙️ Modificar", use_container_width=True):
-                st.session_state.vista_plantilla = "⚙️ Modificar Plantilla"
+            if st.button(":material/settings: Modificar", use_container_width=True):
+                st.session_state.vista_plantilla = ":material/settings: Modificar Plantilla"
                 st.rerun()
         
-elif st.session_state.vista_plantilla == "⚙️ Modificar Plantilla":
-    if st.button("⬅️ Volver a la Plantilla", key="btn_volver_mod"):
+elif st.session_state.vista_plantilla == ":material/settings: Modificar Plantilla":
+    if st.button(":material/arrow_back: Volver a la Plantilla", key="btn_volver_mod"):
         st.session_state.vista_plantilla = "📋 Plantilla"
         st.rerun()
         
-    with st.expander("➕ Añadir Jugador"):
+    with st.expander(":material/person_add: Añadir Jugador"):
         with st.form("form_alta_jugador"):
             c_m1, c_m2, c_m3 = st.columns(3)
             with c_m1:
@@ -125,7 +125,7 @@ elif st.session_state.vista_plantilla == "⚙️ Modificar Plantilla":
 
     st.markdown("---")
     
-    with st.expander("❌ Eliminar Jugador"):
+    with st.expander(":material/person_remove: Eliminar Jugador"):
         # Recopilar todos los nombres que existan en cualquier parte de la base de datos (Actuales y Fantasmas)
         nombres_historicos = set([j["JUGADOR"] for j in st.session_state.plantilla])
         for s in st.session_state.sesiones:
@@ -145,7 +145,7 @@ elif st.session_state.vista_plantilla == "⚙️ Modificar Plantilla":
                 jugador_a_borrar = st.selectbox("Selecciona el jugador a eliminar (Histórico o Actual):", lista_borrar)
                 st.warning("⚠️ Cuidado: Se borrarán TODOS sus registros históricos (Plantilla, Sesiones, GPS, Lesiones, Antropometría y Valoraciones). Esta acción es irreversible.")
                 
-                if st.form_submit_button("❌ Confirmar Eliminación Global"):
+                if st.form_submit_button(":material/delete_forever: Confirmar Eliminación Global"):
                     # 1. Borrar de Plantilla
                     st.session_state.plantilla = [j for j in st.session_state.plantilla if j["JUGADOR"] != jugador_a_borrar]
                     
@@ -184,7 +184,7 @@ elif st.session_state.vista_plantilla == "⚙️ Modificar Plantilla":
             st.info("No hay jugadores en la base de datos.")
         
 else:
-    nombre_jugador_actual = st.session_state.vista_plantilla.replace("👤 ", "")
+    nombre_jugador_actual = st.session_state.vista_plantilla.replace(":material/person: ", "")
     jugador = next((j for j in st.session_state.plantilla if j["JUGADOR"] == nombre_jugador_actual), None)
     
     # Salvavidas: Si el jugador no existe o hubo un error de estado, devolvemos a la vista general
