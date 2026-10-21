@@ -31,19 +31,19 @@ pio.templates["loadlab_elite_dark"] = go.layout.Template(
         font=dict(family="Plus Jakarta Sans, sans-serif", size=11, color="#94a3b8"),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        colorway=["#3b82f6", "#10b981", "#ef4444", "#f59e0b", "#8b5cf6", "#0ea5e9"],
+        colorway=["#C5A059", "#10b981", "#ef4444", "#f59e0b", "#8b5cf6", "#0ea5e9"],
         hovermode="closest",
         hoverlabel=dict(
             bgcolor="rgba(15, 23, 42, 0.95)",
             font_size=12,
             font_family="Plus Jakarta Sans, sans-serif",
-            bordercolor="#1e293b"
+            bordercolor="#111318"
         ),
         xaxis=dict(
             gridcolor="#111318",
             gridwidth=1,
             griddash="dot",
-            zerolinecolor="#1e293b",
+            zerolinecolor="#111318",
             zerolinewidth=2,
             showline=False,
             title=dict(font=dict(size=12, color="#e2e8f0")),
@@ -53,7 +53,7 @@ pio.templates["loadlab_elite_dark"] = go.layout.Template(
             gridcolor="#111318",
             gridwidth=1,
             griddash="dot",
-            zerolinecolor="#1e293b",
+            zerolinecolor="#111318",
             zerolinewidth=2,
             showline=False,
             title=dict(font=dict(size=12, color="#e2e8f0")),
@@ -292,7 +292,7 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
     /* Inputs dentro de crear equipo */
     div[data-testid="stExpander"] div[data-testid="stTextInput"] input,
     div[data-testid="stExpander"] div[data-testid="stSelectbox"] div[data-baseweb="select"] {
-        background-color: #0f172a !important; border: 1px solid #111318 !important; color: #f8fafc !important; font-weight: 600 !important;
+        background-color: #0b0e14 !important; border: 1px solid #111318 !important; color: #f8fafc !important; font-weight: 600 !important;
     }
     </style>
     """
@@ -322,7 +322,7 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
                             img_src = escudo if str(escudo).startswith("http") else f"data:image/jpeg;base64,{escudo}"
                             img_html = f'<img src="{img_src}" style="width:90px; height:90px; object-fit: cover; border-radius:50%; margin-bottom: 15px; box-shadow: 0 6px 12px rgba(0,0,0,0.15); border: 2px solid #e4e4e7;">'
                         else:
-                            img_html = '<div style="display: flex; justify-content: center; align-items: center; height: 90px; margin-bottom: 15px;"><span class="material-symbols-rounded" style="font-size: 50px; color: #3b82f6;">shield</span></div>'
+                            img_html = '<div style="display: flex; justify-content: center; align-items: center; height: 90px; margin-bottom: 15px;"><span class="material-symbols-rounded" style="font-size: 50px; color: #C5A059;">shield</span></div>'
                             
                         nombre = eq_info.get('nombre', 'Equipo')
                         division = eq_info.get('division') or "Sin división"
@@ -420,7 +420,7 @@ if st.session_state.get("equipo_seleccionado", False):
         img_src = escudo if str(escudo).startswith("http") else f"data:image/jpeg;base64,{escudo}"
         img_html = f'<img src="{img_src}" style="width:140px; height:140px; object-fit: cover; border-radius:50%; margin-bottom: 15px; box-shadow: 0 8px 20px rgba(0,0,0,0.15);">'
     else:
-        img_html = '<div style="display: flex; justify-content: center; align-items: center; height: 140px; margin-bottom: 15px;"><span class="material-symbols-rounded" style="font-size: 70px; color: #3b82f6;">shield</span></div>'
+        img_html = '<div style="display: flex; justify-content: center; align-items: center; height: 140px; margin-bottom: 15px;"><span class="material-symbols-rounded" style="font-size: 70px; color: #C5A059;">shield</span></div>'
 
     # ==========================================
     # 🚨 TORRE DE CONTROL (DASHBOARD DIARIO)
@@ -455,8 +455,8 @@ if st.session_state.get("equipo_seleccionado", False):
     html_cal = "<div style='display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; text-align: center; margin-bottom: 20px;'>"
     for i, d in enumerate(dias_semana):
         d_str = str(d)
-        es_hoy = "border: 2px solid #3b82f6;" if d_str == hoy_str else "border: 1px solid #1e293b;"
-        bg_color = "#0f172a" if d_str == hoy_str else "#111318"
+        es_hoy = "border: 2px solid #C5A059;" if d_str == hoy_str else "border: 1px solid #111318;"
+        bg_color = "#0b0e14" if d_str == hoy_str else "#111318"
         
         sesiones_dia = [s for s in st.session_state.sesiones if s["fecha"] == d_str]
         contenido_extra = ""
@@ -605,7 +605,7 @@ if st.session_state.get("equipo_seleccionado", False):
             if limpiar_nombre(p["JUGADOR"]) == limpiar_nombre(jugador_nombre):
                 if p.get("foto"):
                     img_src = p["foto"] if str(p["foto"]).startswith("http") else f"data:image/jpeg;base64,{p['foto']}"
-                    return f"<img src='{img_src}' style='width:20px; height:20px; border-radius:50%; object-fit: cover; margin-right: 6px; border: 1px solid #1e293b;'>"
+                    return f"<img src='{img_src}' style='width:20px; height:20px; border-radius:50%; object-fit: cover; margin-right: 6px; border: 1px solid #111318;'>"
                 break
         return "<span class='material-symbols-rounded' style='font-size: 16px; margin-right: 6px; vertical-align: middle;'>person</span>"
 
@@ -616,7 +616,7 @@ if st.session_state.get("equipo_seleccionado", False):
         orden_niveles = {"rojo": 0, "amarillo": 1, "verde": 2}
         alertas_ordenadas = sorted(alertas, key=lambda x: orden_niveles.get(x.get("lvl", nivel_predeterminado), 3))
         
-        html = "<style>.alerta-scroll::-webkit-scrollbar { width: 4px; } .alerta-scroll::-webkit-scrollbar-track { background: transparent; } .alerta-scroll::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }</style>"
+        html = "<style>.alerta-scroll::-webkit-scrollbar { width: 4px; } .alerta-scroll::-webkit-scrollbar-track { background: transparent; } .alerta-scroll::-webkit-scrollbar-thumb { background: #111318; border-radius: 4px; }</style>"
         html += "<div class='alerta-scroll' style='display: grid; grid-template-columns: 1fr 1fr; gap: 6px; max-height: 140px; overflow-y: auto; padding-right: 4px;'>"
         
         for a in alertas_ordenadas:
@@ -638,7 +638,7 @@ if st.session_state.get("equipo_seleccionado", False):
 <h2 style="color: #f8fafc; font-size: 1.5rem; font-weight: 800; margin: 0 0 10px 0;">{md_text}</h2>
 <div style="color: #f8fafc; font-size: 1.1rem; font-weight: 800; margin-bottom: 2px;"><span class="material-symbols-rounded" style="vertical-align: text-bottom; font-size: 1.2rem; margin-right: 6px;">sports_score</span> {rival_text}</div>
 <div style="color: #94a3b8; font-size: 0.8rem; font-weight: 600; margin-bottom: 12px;">{fecha_partido_text}</div>
-<div style="color: #3b82f6; font-size: 0.8rem; font-weight: 800; margin-top: auto; padding-top: 10px; border-top: 1px solid #1e293b;"><span class="material-symbols-rounded" style="vertical-align: text-bottom; font-size: 1rem; margin-right: 4px;">location_on</span> {ciudad_club} | {clima_str}</div>
+<div style="color: #C5A059; font-size: 0.8rem; font-weight: 800; margin-top: auto; padding-top: 10px; border-top: 1px solid #111318;"><span class="material-symbols-rounded" style="vertical-align: text-bottom; font-size: 1rem; margin-right: 4px;">location_on</span> {ciudad_club} | {clima_str}</div>
 </div>
 """
         st.markdown(html_ctx, unsafe_allow_html=True)
@@ -705,14 +705,14 @@ if st.session_state.get("equipo_seleccionado", False):
                 
             with cg2:
                 fig_c = go.Figure()
-                fig_c.add_trace(go.Bar(x=df_diario['DIA_NOMBRE'], y=df_diario['CARGA'], name="Carga (UA)", marker_color="#3b82f6"))
+                fig_c.add_trace(go.Bar(x=df_diario['DIA_NOMBRE'], y=df_diario['CARGA'], name="Carga (UA)", marker_color="#C5A059"))
                 fig_c.update_layout(title="Carga Interna Acumulada", yaxis_title="UA", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
                 st.plotly_chart(fig_c, use_container_width=True)
                 
             with cg3:
                 fig_ext = go.Figure()
                 if 'DIS' in df_diario.columns:
-                    fig_ext.add_trace(go.Bar(x=df_diario['DIA_NOMBRE'], y=df_diario['DIS'], name="Distancia (km)", marker_color="rgba(59, 130, 246, 0.6)", yaxis="y1"))
+                    fig_ext.add_trace(go.Bar(x=df_diario['DIA_NOMBRE'], y=df_diario['DIS'], name="Distancia (km)", marker_color="rgba(197, 160, 89, 0.6)", yaxis="y1"))
                     fig_ext.add_trace(go.Scatter(x=df_diario['DIA_NOMBRE'], y=df_diario['DIS AI'], name="HSR (m)", mode="lines+markers", line=dict(color="#f59e0b", width=3), yaxis="y2"))
                 fig_ext.update_layout(title="Carga Externa", yaxis=dict(title="km"), yaxis2=dict(title="HSR (m)", overlaying="y", side="right"), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
                 st.plotly_chart(fig_ext, use_container_width=True)
