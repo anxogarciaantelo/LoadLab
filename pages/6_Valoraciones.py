@@ -88,26 +88,26 @@ def calcular_rm_cientifico(pesos, vels, peso_corp):
 
 def tarjeta_kpi(titulo, valor, subtitulo="", tooltip=""):
     tt_html = f" title='{tooltip}'" if tooltip else ""
-    icon = " <span class='material-symbols-rounded' style='vertical-align: middle; font-size: 1.2rem; color: #3b82f6;'>info</span>" if tooltip else ""
+    icon = " <span class='material-symbols-rounded' style='vertical-align: middle; font-size: 1.2rem; color: #C5A059;'>info</span>" if tooltip else ""
     cursor = "help" if tooltip else "default"
     st.markdown(f"""
-    <div{tt_html} style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid #3b82f6; border-radius: 10px; padding: 15px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); height: 100%; display: flex; flex-direction: column; justify-content: center; cursor: {cursor}; margin-bottom: 15px;">
+    <div{tt_html} style="background: #111318; border: 1px solid #1c1f26; border-top: 3px solid #C5A059; border-radius: 10px; padding: 15px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); height: 100%; display: flex; flex-direction: column; justify-content: center; cursor: {cursor}; margin-bottom: 15px;">
         <p style="color: #f8fafc; font-size: 1.05rem; font-weight: 800; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.2; text-align: left;">{titulo}{icon}</p>
         <h2 style="color: #f8fafc; font-size: 1.8rem; font-weight: 800; margin: 0; line-height: 1; text-align: center;">{valor}</h2>
-        {f"<p style='color: #3b82f6; font-size: 0.7rem; font-weight: 600; margin: 8px 0 0 0; text-align: center;'>{subtitulo}</p>" if subtitulo else ""}
+        {f"<p style='color: #C5A059; font-size: 0.7rem; font-weight: 600; margin: 8px 0 0 0; text-align: center;'>{subtitulo}</p>" if subtitulo else ""}
     </div>
     """, unsafe_allow_html=True)
 
 def tarjeta_kpi_doble(titulo, val_d, val_i, lbl_d="Der", lbl_i="Izq", tooltip=""):
     tt_html = f" title='{tooltip}'" if tooltip else ""
-    icon = " <span class='material-symbols-rounded' style='vertical-align: middle; font-size: 1.2rem; color: #3b82f6;'>info</span>" if tooltip else ""
+    icon = " <span class='material-symbols-rounded' style='vertical-align: middle; font-size: 1.2rem; color: #C5A059;'>info</span>" if tooltip else ""
     cursor = "help" if tooltip else "default"
     st.markdown(f"""
-    <div{tt_html} style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid #3b82f6; border-radius: 10px; padding: 15px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); height: 100%; display: flex; flex-direction: column; justify-content: center; cursor: {cursor}; margin-bottom: 15px;">
+    <div{tt_html} style="background: #111318; border: 1px solid #1c1f26; border-top: 3px solid #C5A059; border-radius: 10px; padding: 15px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); height: 100%; display: flex; flex-direction: column; justify-content: center; cursor: {cursor}; margin-bottom: 15px;">
         <p style="color: #f8fafc; font-size: 1.05rem; font-weight: 800; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.2; text-align: left;">{titulo}{icon}</p>
         <div style='display: flex; justify-content: space-evenly; align-items: center;'>
             <div style='text-align: center;'><span style='font-size: 0.75rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;'>{lbl_d}</span><br><span style='font-size: 1.6rem; font-weight: 800; color: #f8fafc;'>{val_d}</span></div>
-            <div style='width: 1px; height: 30px; background-color: #334155;'></div>
+            <div style='width: 1px; height: 30px; background-color: #1c1f26;'></div>
             <div style='text-align: center;'><span style='font-size: 0.75rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;'>{lbl_i}</span><br><span style='font-size: 1.6rem; font-weight: 800; color: #f8fafc;'>{val_i}</span></div>
         </div>
     </div>
@@ -306,11 +306,11 @@ with tab_informes:
 
                 # 4. GRÁFICO LIMPIO (Desde el Origen 0,0)
                 fig_sq = px.scatter(x=kgs_sistema, y=vels, labels={'x': 'Carga del Sistema (kg)', 'y': 'Velocidad (m/s)'}, title="Perfil F-V (Masa del Sistema)")
-                fig_sq.update_traces(marker=dict(size=10, color='#3b82f6'))
+                fig_sq.update_traces(marker=dict(size=10, color='#C5A059'))
                 x_trend_real = np.linspace(0, f0_kg_sistema, 50)
                 fig_sq.add_scatter(x=x_trend_real, y=p(x_trend_real), mode='lines', name='Tendencia Real', line=dict(color='#94a3b8', width=2))
-                fig_sq.update_xaxes(range=[0, f0_kg_sistema * 1.05], zeroline=True, zerolinewidth=1, zerolinecolor='#334155')
-                fig_sq.update_yaxes(range=[0, v0 * 1.05], zeroline=True, zerolinewidth=1, zerolinecolor='#334155')
+                fig_sq.update_xaxes(range=[0, f0_kg_sistema * 1.05], zeroline=True, zerolinewidth=1, zerolinecolor='#1c1f26')
+                fig_sq.update_yaxes(range=[0, v0 * 1.05], zeroline=True, zerolinewidth=1, zerolinecolor='#1c1f26')
                 
                 fig_sq.update_layout(height=350, margin=dict(l=20, r=20, t=40, b=20), legend=dict(yanchor="top", y=0.99, xanchor="right", x=0.99))
                 
@@ -403,7 +403,7 @@ with tab_informes:
                     'Test': [label_ref] * 6 + ['Actual'] * 6
                 })
                 
-                fig_rad = px.line_polar(df_radar, r='Valor', theta='Métrica', color='Test', line_close=True, color_discrete_map={label_ref: '#94a3b8', 'Actual': '#3b82f6'})
+                fig_rad = px.line_polar(df_radar, r='Valor', theta='Métrica', color='Test', line_close=True, color_discrete_map={label_ref: '#94a3b8', 'Actual': '#C5A059'})
                 fig_rad.update_traces(fill='toself', opacity=0.4)
                 fig_rad.update_layout(polar=dict(radialaxis=dict(visible=False, range=[0, 100])), height=350, margin=dict(l=20, r=20, t=30, b=20), legend=dict(yanchor="top", y=-0.1, xanchor="center", x=0.5, orientation="h"))
                 st.plotly_chart(fig_rad, use_container_width=True)
@@ -431,7 +431,7 @@ with tab_informes:
                         if d > i_val:
                             val_t.append(diff); txt_t.append(f"{diff:.1f}%"); col_t.append('#10b981'); pr_t.append(n)
                         elif i_val > d:
-                            val_t.append(-diff); txt_t.append(f"{diff:.1f}%"); col_t.append('#3b82f6'); pr_t.append(n)
+                            val_t.append(-diff); txt_t.append(f"{diff:.1f}%"); col_t.append('#C5A059'); pr_t.append(n)
                         else:
                             val_t.append(0); txt_t.append("0%"); col_t.append('#64748b'); pr_t.append(n)
                             
