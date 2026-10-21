@@ -333,8 +333,8 @@ with tab_jugadores:
         col_d1, col_d2, col_d3, col_d4, col_d5 = st.columns(5)
         
         with col_d1:
-    df_g = df_jugadores[df_jugadores["G"] > 0].sort_values(by="G", ascending=False).head(3)
-    render_tarjeta_top3(":material/sports_soccer: Goles", df_g, "G")
+            df_g = df_jugadores[df_jugadores["G"] > 0].sort_values(by="G", ascending=False).head(3)
+            render_tarjeta_top3(":material/sports_soccer: Goles", df_g, "G")
     
         with col_d2:
             df_a = df_jugadores[df_jugadores["A"] > 0].sort_values(by="A", ascending=False).head(3)
