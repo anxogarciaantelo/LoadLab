@@ -131,7 +131,7 @@ if not st.session_state.autenticado:
                 logo_b64 = base64.b64encode(image_file.read()).decode()
             logo_html = f'<img src="data:image/png;base64,{logo_b64}" style="width: 280px; margin-bottom: 10px;">'
         except FileNotFoundError:
-            logo_html = f'<div style="color: #ef4444; border: 1px solid #ef4444; padding: 10px; border-radius: 5px; margin-bottom: 20px;">⚠️ FALTA EL LOGO: Crea una carpeta llamada "assets" y guarda ahí la imagen como "logo_completo.png"</div>'
+            logo_html = f'<div style="color: #ef4444; border: 1px solid #ef4444; padding: 10px; border-radius: 5px; margin-bottom: 20px;"><span class="material-symbols-rounded" style="vertical-align: text-bottom; font-size: 1.2rem; margin-right: 6px;">warning</span> FALTA EL LOGO: Crea una carpeta llamada "assets" y guarda ahí la imagen como "logo_completo.png"</div>'
 
         html_info = f"""<div style="padding-right: 20px;">
 {logo_html}
@@ -144,7 +144,7 @@ Centraliza y analiza las variables de rendimiento, carga y salud de tus futbolis
 
 <!-- Tarjetas optimizadas para extenderse en horizontal y ocupar menos alto -->
 <div style="background: rgba(197, 160, 89, 0.03); border: 1px solid rgba(197, 160, 89, 0.15); padding: 12px 16px; border-radius: 10px; margin-bottom: 8px; display: flex; align-items: center; gap: 14px; backdrop-filter: blur(5px);">
-<div style="background: rgba(197, 160, 89, 0.1); padding: 8px; border-radius: 8px; color: #C5A059; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; flex-shrink: 0;">📉</div>
+<div style="background: rgba(197, 160, 89, 0.1); padding: 8px; border-radius: 8px; color: #C5A059; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; flex-shrink: 0;"><span class="material-symbols-rounded" style="font-size: 1.5rem;">monitoring</span></div>
 <div>
 <h4 style="margin: 0 0 2px 0; font-size: 0.95rem; color: #E2E8F0; font-weight: 800;">Carga y Demandas (EWMA / ACWR)</h4>
 <p style="margin: 0; font-size: 0.85rem; color: #94a3b8; line-height: 1.3;">Monitoriza el Ratio A/C (Sweet Spot), strain acumulado y densidad competitiva para mitigar riesgo.</p>
@@ -152,7 +152,7 @@ Centraliza y analiza las variables de rendimiento, carga y salud de tus futbolis
 </div>
 
 <div style="background: rgba(197, 160, 89, 0.03); border: 1px solid rgba(197, 160, 89, 0.15); padding: 12px 16px; border-radius: 10px; margin-bottom: 8px; display: flex; align-items: center; gap: 14px; backdrop-filter: blur(5px);">
-<div style="background: rgba(197, 160, 89, 0.1); padding: 8px; border-radius: 8px; color: #C5A059; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; flex-shrink: 0;">🧠</div>
+<div style="background: rgba(197, 160, 89, 0.1); padding: 8px; border-radius: 8px; color: #C5A059; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; flex-shrink: 0;"><span class="material-symbols-rounded" style="font-size: 1.5rem;">psychology</span></div>
 <div>
 <h4 style="margin: 0 0 2px 0; font-size: 0.95rem; color: #E2E8F0; font-weight: 800;">Oráculo Predictivo AI</h4>
 <p style="margin: 0; font-size: 0.85rem; color: #94a3b8; line-height: 1.3;">Algoritmos avanzados (XGBoost) para detectar y anticipar riesgo de lesión inminente en la plantilla.</p>
@@ -160,7 +160,7 @@ Centraliza y analiza las variables de rendimiento, carga y salud de tus futbolis
 </div>
 
 <div style="background: rgba(197, 160, 89, 0.03); border: 1px solid rgba(197, 160, 89, 0.15); padding: 12px 16px; border-radius: 10px; margin-bottom: 8px; display: flex; align-items: center; gap: 14px; backdrop-filter: blur(5px);">
-<div style="background: rgba(197, 160, 89, 0.1); padding: 8px; border-radius: 8px; color: #C5A059; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; flex-shrink: 0;">🏋️‍♂️</div>
+<div style="background: rgba(197, 160, 89, 0.1); padding: 8px; border-radius: 8px; color: #C5A059; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; flex-shrink: 0;"><span class="material-symbols-rounded" style="font-size: 1.5rem;">fitness_center</span></div>
 <div>
 <h4 style="margin: 0 0 2px 0; font-size: 0.95rem; color: #E2E8F0; font-weight: 800;">Rendimiento & Fuerza VBT</h4>
 <p style="margin: 0; font-size: 0.85rem; color: #94a3b8; line-height: 1.3;">Seguimiento neuromuscular, perfiles Fuerza-Velocidad, test de salto (CMJ) y asimetrías.</p>
@@ -168,7 +168,7 @@ Centraliza y analiza las variables de rendimiento, carga y salud de tus futbolis
 </div>
 
 <div style="background: rgba(197, 160, 89, 0.03); border: 1px solid rgba(197, 160, 89, 0.15); padding: 12px 16px; border-radius: 10px; margin-bottom: 8px; display: flex; align-items: center; gap: 14px; backdrop-filter: blur(5px);">
-<div style="background: rgba(197, 160, 89, 0.1); padding: 8px; border-radius: 8px; color: #C5A059; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; flex-shrink: 0;">🚑</div>
+<div style="background: rgba(197, 160, 89, 0.1); padding: 8px; border-radius: 8px; color: #C5A059; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; flex-shrink: 0;"><span class="material-symbols-rounded" style="font-size: 1.5rem;">healing</span></div>
 <div>
 <h4 style="margin: 0 0 2px 0; font-size: 0.95rem; color: #E2E8F0; font-weight: 800;">Enfermería, RTP & Antropometría</h4>
 <p style="margin: 0; font-size: 0.85rem; color: #94a3b8; line-height: 1.3;">Control de bajas, fases de readaptación (Return to Play) y composición corporal de élite.</p>
@@ -212,7 +212,7 @@ Centraliza y analiza las variables de rendimiento, carga y salud de tus futbolis
                 
                 st.markdown("""
                     <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 10px; margin-bottom: 15px; line-height: 1.5; background-color: rgba(15, 23, 42, 0.5); padding: 12px; border-radius: 6px; border-left: 3px solid #C5A059;">
-                        🔒 <strong>Aviso RGPD:</strong> Eres el <strong>Responsable del Tratamiento</strong> de los datos. Usa alias si no tienes consentimiento explícito.
+                        <span class="material-symbols-rounded" style="vertical-align: text-bottom; font-size: 1rem; margin-right: 4px; color: #C5A059;">lock</span> <strong>Aviso RGPD:</strong> Eres el <strong>Responsable del Tratamiento</strong> de los datos. Usa alias si no tienes consentimiento explícito.
                     </div>
                 """, unsafe_allow_html=True)
 
@@ -327,7 +327,7 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
                             img_src = escudo if str(escudo).startswith("http") else f"data:image/jpeg;base64,{escudo}"
                             img_html = f'<img src="{img_src}" style="width:90px; height:90px; object-fit: cover; border-radius:50%; margin-bottom: 15px; box-shadow: 0 6px 12px rgba(0,0,0,0.15); border: 2px solid #e4e4e7;">'
                         else:
-                            img_html = '<div style="font-size: 50px; margin-bottom: 15px;">🛡️</div>'
+                            img_html = '<div style="display: flex; justify-content: center; align-items: center; height: 90px; margin-bottom: 15px;"><span class="material-symbols-rounded" style="font-size: 50px; color: #3b82f6;">shield</span></div>'
                             
                         nombre = eq_info.get('nombre', 'Equipo')
                         division = eq_info.get('division') or "Sin división"
@@ -425,12 +425,12 @@ if st.session_state.get("equipo_seleccionado", False):
         img_src = escudo if str(escudo).startswith("http") else f"data:image/jpeg;base64,{escudo}"
         img_html = f'<img src="{img_src}" style="width:140px; height:140px; object-fit: cover; border-radius:50%; margin-bottom: 15px; box-shadow: 0 8px 20px rgba(0,0,0,0.15);">'
     else:
-        img_html = '<div style="font-size: 70px; margin-bottom: 15px;">🛡️</div>'
+        img_html = '<div style="display: flex; justify-content: center; align-items: center; height: 140px; margin-bottom: 15px;"><span class="material-symbols-rounded" style="font-size: 70px; color: #3b82f6;">shield</span></div>'
 
     # ==========================================
     # 🚨 TORRE DE CONTROL (DASHBOARD DIARIO)
     # ==========================================
-    st.markdown("### 📊 Información Diaria")
+    st.markdown("### :material/analytics: Información Diaria")
 
     hoy_dt = date.today()
     hoy_str = str(hoy_dt)
@@ -503,12 +503,12 @@ if st.session_state.get("equipo_seleccionado", False):
         rival_text = proximo_partido.get('rival', 'Rival Desconocido')
         fecha_partido_text = fecha_p_dt.strftime("%d/%m/%Y")
         
-        if dias_diff == 0: md_text = "🚨 MATCH DAY"
-        elif dias_diff == 1: md_text = "⚡ MD - 1"
-        elif dias_diff == 2: md_text = "🔥 MD - 2"
-        elif dias_diff == 3: md_text = "🏃‍♂️ MD - 3"
-        elif dias_diff == 4: md_text = "🧠 MD - 4"
-        else: md_text = f"📅 MD - {dias_diff}"
+        if dias_diff == 0: md_text = "<span class='material-symbols-rounded' style='vertical-align: bottom; font-size: inherit; margin-right: 6px;'>emergency</span> MATCH DAY"
+        elif dias_diff == 1: md_text = "<span class='material-symbols-rounded' style='vertical-align: bottom; font-size: inherit; margin-right: 6px;'>bolt</span> MD - 1"
+        elif dias_diff == 2: md_text = "<span class='material-symbols-rounded' style='vertical-align: bottom; font-size: inherit; margin-right: 6px;'>local_fire_department</span> MD - 2"
+        elif dias_diff == 3: md_text = "<span class='material-symbols-rounded' style='vertical-align: bottom; font-size: inherit; margin-right: 6px;'>directions_run</span> MD - 3"
+        elif dias_diff == 4: md_text = "<span class='material-symbols-rounded' style='vertical-align: bottom; font-size: inherit; margin-right: 6px;'>psychology</span> MD - 4"
+        else: md_text = f"<span class='material-symbols-rounded' style='vertical-align: bottom; font-size: inherit; margin-right: 6px;'>calendar_month</span> MD - {dias_diff}"
 
     from utils.math_helpers import obtener_clima
     ciudad_club = st.session_state.get("ubicacion_local", "Santiago de Compostela")
@@ -612,11 +612,11 @@ if st.session_state.get("equipo_seleccionado", False):
                     img_src = p["foto"] if str(p["foto"]).startswith("http") else f"data:image/jpeg;base64,{p['foto']}"
                     return f"<img src='{img_src}' style='width:20px; height:20px; border-radius:50%; object-fit: cover; margin-right: 6px; border: 1px solid #334155;'>"
                 break
-        return "<span style='font-size: 16px; margin-right: 6px;'>👤</span>"
+        return "<span class='material-symbols-rounded' style='font-size: 16px; margin-right: 6px; vertical-align: middle;'>person</span>"
 
     def render_alertas_grid(alertas, nivel_predeterminado="verde"):
         if not alertas:
-            return "<div style='color: #10b981; font-weight: 800; font-size: 0.8rem; padding: 10px; text-align: center; margin-top: 20px;'>✅ En parámetros</div>"
+            return "<div style='color: #10b981; font-weight: 800; font-size: 0.8rem; padding: 10px; text-align: center; margin-top: 20px;'><span class='material-symbols-rounded' style='vertical-align: text-bottom; font-size: 1rem; margin-right: 4px;'>check_circle</span> En parámetros</div>"
         
         orden_niveles = {"rojo": 0, "amarillo": 1, "verde": 2}
         alertas_ordenadas = sorted(alertas, key=lambda x: orden_niveles.get(x.get("lvl", nivel_predeterminado), 3))
@@ -641,9 +641,9 @@ if st.session_state.get("equipo_seleccionado", False):
         html_ctx = f"""
 <div style="background: linear-gradient(135deg, #0f172a, #1e293b); border: 1px solid #334155; border-top: 4px solid #3b82f6; border-radius: 8px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); height: 100%; display: flex; flex-direction: column; justify-content: center; text-align: center;">
 <h2 style="color: #f8fafc; font-size: 1.5rem; font-weight: 800; margin: 0 0 10px 0;">{md_text}</h2>
-<div style="color: #f8fafc; font-size: 1.1rem; font-weight: 800; margin-bottom: 2px;">🆚 {rival_text}</div>
+<div style="color: #f8fafc; font-size: 1.1rem; font-weight: 800; margin-bottom: 2px;"><span class="material-symbols-rounded" style="vertical-align: text-bottom; font-size: 1.2rem; margin-right: 6px;">sports_score</span> {rival_text}</div>
 <div style="color: #94a3b8; font-size: 0.8rem; font-weight: 600; margin-bottom: 12px;">{fecha_partido_text}</div>
-<div style="color: #3b82f6; font-size: 0.8rem; font-weight: 800; margin-top: auto; padding-top: 10px; border-top: 1px solid #334155;">📍 {ciudad_club} | {clima_str}</div>
+<div style="color: #3b82f6; font-size: 0.8rem; font-weight: 800; margin-top: auto; padding-top: 10px; border-top: 1px solid #334155;"><span class="material-symbols-rounded" style="vertical-align: text-bottom; font-size: 1rem; margin-right: 4px;">location_on</span> {ciudad_club} | {clima_str}</div>
 </div>
 """
         st.markdown(html_ctx, unsafe_allow_html=True)
@@ -651,7 +651,7 @@ if st.session_state.get("equipo_seleccionado", False):
     with c_read:
         html_read = f"""
 <div style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid #f59e0b; border-radius: 8px; padding: 10px; height: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
-<p style="color: #f8fafc; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin: 0 0 10px 0;">🧠 Readiness & Bienestar</p>
+<p style="color: #f8fafc; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin: 0 0 10px 0;"><span class="material-symbols-rounded" style="vertical-align: text-bottom; font-size: 1rem; margin-right: 4px;">psychology</span> Readiness & Bienestar</p>
 {render_alertas_grid(alertas_readiness)}
 </div>
 """
@@ -660,7 +660,7 @@ if st.session_state.get("equipo_seleccionado", False):
     with c_carga:
         html_carga = f"""
 <div style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid #ef4444; border-radius: 8px; padding: 10px; height: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
-<p style="color: #f8fafc; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin: 0 0 10px 0;">🔥 Riesgo de Carga</p>
+<p style="color: #f8fafc; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin: 0 0 10px 0;"><span class="material-symbols-rounded" style="vertical-align: text-bottom; font-size: 1rem; margin-right: 4px;">local_fire_department</span> Riesgo de Carga</p>
 {render_alertas_grid(alertas_carga)}
 </div>
 """
@@ -669,7 +669,7 @@ if st.session_state.get("equipo_seleccionado", False):
     with c_med:
         html_med = f"""
 <div style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid #8b5cf6; border-radius: 8px; padding: 10px; height: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
-<p style="color: #f8fafc; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin: 0 0 10px 0;">🚑 Enfermería & RTP</p>
+<p style="color: #f8fafc; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin: 0 0 10px 0;"><span class="material-symbols-rounded" style="vertical-align: text-bottom; font-size: 1rem; margin-right: 4px;">healing</span> Enfermería & RTP</p>
 {render_alertas_grid(alertas_medicas)}
 </div>
 """
@@ -705,13 +705,13 @@ if st.session_state.get("equipo_seleccionado", False):
                 fig_w = go.Figure()
                 fig_w.add_trace(go.Bar(x=df_diario['DIA_NOMBRE'], y=df_diario['WELLNESS'], name="Fatiga (Wellness)", marker_color="rgba(239, 68, 68, 0.7)", yaxis="y1"))
                 fig_w.add_trace(go.Scatter(x=df_diario['DIA_NOMBRE'], y=df_diario['TQR'], name="TQR", mode="lines+markers", line=dict(color="#10b981", width=3), yaxis="y2"))
-                fig_w.update_layout(title="🧠 Bienestar", yaxis=dict(title="Puntos Wellness", range=[0, 35]), yaxis2=dict(title="TQR", overlaying="y", side="right", range=[0, 10]), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+                fig_w.update_layout(title="Bienestar", yaxis=dict(title="Puntos Wellness", range=[0, 35]), yaxis2=dict(title="TQR", overlaying="y", side="right", range=[0, 10]), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
                 st.plotly_chart(fig_w, use_container_width=True)
                 
             with cg2:
                 fig_c = go.Figure()
                 fig_c.add_trace(go.Bar(x=df_diario['DIA_NOMBRE'], y=df_diario['CARGA'], name="Carga (UA)", marker_color="#3b82f6"))
-                fig_c.update_layout(title="🔥 Carga Interna Acumulada", yaxis_title="UA", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+                fig_c.update_layout(title="Carga Interna Acumulada", yaxis_title="UA", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
                 st.plotly_chart(fig_c, use_container_width=True)
                 
             with cg3:
@@ -719,7 +719,7 @@ if st.session_state.get("equipo_seleccionado", False):
                 if 'DIS' in df_diario.columns:
                     fig_ext.add_trace(go.Bar(x=df_diario['DIA_NOMBRE'], y=df_diario['DIS'], name="Distancia (km)", marker_color="rgba(59, 130, 246, 0.6)", yaxis="y1"))
                     fig_ext.add_trace(go.Scatter(x=df_diario['DIA_NOMBRE'], y=df_diario['DIS AI'], name="HSR (m)", mode="lines+markers", line=dict(color="#f59e0b", width=3), yaxis="y2"))
-                fig_ext.update_layout(title="🏃‍♂️ Carga Externa", yaxis=dict(title="km"), yaxis2=dict(title="HSR (m)", overlaying="y", side="right"), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+                fig_ext.update_layout(title="Carga Externa", yaxis=dict(title="km"), yaxis2=dict(title="HSR (m)", overlaying="y", side="right"), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
                 st.plotly_chart(fig_ext, use_container_width=True)
         else:
             st.info("Aún no hay datos de sesión procesados para la semana actual.")
@@ -729,7 +729,7 @@ if st.session_state.get("equipo_seleccionado", False):
     # --- BOTÓN DE CONFIGURACIÓN ESTRECHO A LA DERECHA ---
     c_vacio, c_btn = st.columns([6, 1])
     with c_btn:
-        if st.button("⚙️ Configuración", use_container_width=True):
+        if st.button(":material/settings: Configuración", use_container_width=True):
             st.session_state.mostrar_configuracion = not st.session_state.get("mostrar_configuracion", False)
 
     if st.session_state.get("mostrar_configuracion", False):
