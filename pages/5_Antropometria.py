@@ -45,14 +45,14 @@ def render_kpi_perimetro_doble(titulo, val_d, val_i):
         color_asi = "#ef4444" if pct > 5 else ("#f59e0b" if pct > 2 else "#10b981")
     
     html = f"""
-    <div style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid #8b5cf6; padding: 10px 6px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.15); display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
+    <div style="background: #111318; border: 1px solid #1c1f26; border-top: 3px solid #8b5cf6; padding: 10px 6px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.15); display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
         <p style="color: #f8fafc; font-size: 0.75rem; font-weight: 800; margin: 0 0 8px 0; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.1; text-align: left;">{titulo}</p>
         <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding: 0 5px;'>
             <div style='text-align: center;'><span style='font-size: 0.65rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;'>Der</span><br><span style='font-size: 1.15rem; font-weight: 800; color: #f8fafc;'>{d_str}</span></div>
-            <div style='width: 1px; height: 20px; background-color: #334155;'></div>
+            <div style='width: 1px; height: 20px; background-color: #1c1f26;'></div>
             <div style='text-align: center;'><span style='font-size: 0.65rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;'>Izq</span><br><span style='font-size: 1.15rem; font-weight: 800; color: #f8fafc;'>{i_str}</span></div>
         </div>
-        <div style='border-top: 1px solid #334155; padding-top: 4px; text-align: center;'>
+        <div style='border-top: 1px solid #1c1f26; padding-top: 4px; text-align: center;'>
             <span style='font-size: 0.6rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;'>Asimetría: </span>
             <span style='font-size: 0.7rem; color: {color_asi}; font-weight: 800;'>{asi_str}</span>
         </div>
@@ -137,9 +137,9 @@ with tab_antro_res:
             
             st.markdown("<br>", unsafe_allow_html=True)
             p1, p2, p3, p4, p5, p6 = st.columns(6)
-            with p1: render_kpi_elite("Pecho", f"{prom_pecho:.1f} cm" if pd.notna(prom_pecho) else "-", color_borde="#3b82f6")
-            with p2: render_kpi_elite("Cintura", f"{prom_cintura:.1f} cm" if pd.notna(prom_cintura) else "-", color_borde="#3b82f6")
-            with p3: render_kpi_elite("Cadera", f"{prom_cadera:.1f} cm" if pd.notna(prom_cadera) else "-", color_borde="#3b82f6")
+            with p1: render_kpi_elite("Pecho", f"{prom_pecho:.1f} cm" if pd.notna(prom_pecho) else "-", color_borde="#C5A059")
+            with p2: render_kpi_elite("Cintura", f"{prom_cintura:.1f} cm" if pd.notna(prom_cintura) else "-", color_borde="#C5A059")
+            with p3: render_kpi_elite("Cadera", f"{prom_cadera:.1f} cm" if pd.notna(prom_cadera) else "-", color_borde="#C5A059")
             with p4: render_kpi_perimetro_doble("Muslo", prom_muslo_d, prom_muslo_i)
             with p5: render_kpi_perimetro_doble("Pierna", prom_pierna_d, prom_pierna_i)
             with p6: render_kpi_perimetro_doble("Bíceps", prom_biceps_d, prom_biceps_i)
@@ -357,7 +357,7 @@ with tab_antro_jug:
                 
                 def render_recomendacion(titulo, v_min, v_max, unidad, estado_html):
                     return f"""
-                    <div style="background: #1e293b; border: 1px solid #334155; border-left: 4px solid #3b82f6; padding: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.15); height: 100%; display: flex; flex-direction: column; justify-content: center;">
+                    <div style="background: #111318; border: 1px solid #1c1f26; border-left: 4px solid #C5A059; padding: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.15); height: 100%; display: flex; flex-direction: column; justify-content: center;">
                         <span style="color: #94a3b8; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin-bottom: 4px;">{titulo}</span>
                         <span style="color: #f8fafc; font-size: 1.1rem; font-weight: 800;">{v_min:.1f} - {v_max:.1f} {unidad}</span>
                         <div style="margin-top: 4px; font-size: 0.8rem; font-weight: 800;">{estado_html}</div>
@@ -382,9 +382,9 @@ with tab_antro_jug:
                     ultimo_valido[col] = serie_valida.iloc[0][col] if not serie_valida.empty else 0.0
 
                 p1, p2, p3, p4, p5, p6 = st.columns(6)
-                with p1: render_kpi_elite("Pecho", f"{ultimo_valido['Per_Pecho']:.1f} cm" if ultimo_valido['Per_Pecho'] > 0 else "-", color_borde="#3b82f6")
-                with p2: render_kpi_elite("Cintura", f"{ultimo_valido['Per_Cintura']:.1f} cm" if ultimo_valido['Per_Cintura'] > 0 else "-", color_borde="#3b82f6")
-                with p3: render_kpi_elite("Cadera", f"{ultimo_valido['Per_Cadera']:.1f} cm" if ultimo_valido['Per_Cadera'] > 0 else "-", color_borde="#3b82f6")
+                with p1: render_kpi_elite("Pecho", f"{ultimo_valido['Per_Pecho']:.1f} cm" if ultimo_valido['Per_Pecho'] > 0 else "-", color_borde="#C5A059")
+                with p2: render_kpi_elite("Cintura", f"{ultimo_valido['Per_Cintura']:.1f} cm" if ultimo_valido['Per_Cintura'] > 0 else "-", color_borde="#C5A059")
+                with p3: render_kpi_elite("Cadera", f"{ultimo_valido['Per_Cadera']:.1f} cm" if ultimo_valido['Per_Cadera'] > 0 else "-", color_borde="#C5A059")
                 with p4: render_kpi_perimetro_doble("Muslo", ultimo_valido['Per_Muslo_D'], ultimo_valido['Per_Muslo_I'])
                 with p5: render_kpi_perimetro_doble("Pierna", ultimo_valido['Per_Pierna_D'], ultimo_valido['Per_Pierna_I'])
                 with p6: render_kpi_perimetro_doble("Bíceps", ultimo_valido['Per_Biceps_D'], ultimo_valido['Per_Biceps_I'])
