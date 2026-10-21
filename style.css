@@ -83,19 +83,29 @@ html, body, [class*="css"], .stMarkdown p, .stText p, label, .stSelectbox, .stTe
     border-bottom: 2px solid #C5A059 !important;
 }
 
+/* Ocultar la barra superior negra (Header de Streamlit) */
+header[data-testid="stHeader"] { 
+    display: none !important; 
+}
+
+/* Reducir el padding top para compensar la barra eliminada */
+.block-container {
+    padding-top: 2rem !important;
+}
+
 /* Tarjetas y Contenedores */
 div[data-testid="stVerticalBlock"] > div[data-testid="stContainer"],
 div[data-testid="stExpander"] details {
-    background: #16191f !important;
+    background: #111318 !important;
     border: 1px solid rgba(197, 160, 89, 0.12) !important;
     border-radius: 8px !important;
 }
 
-/* Botones principales */
+/* Botones principales (Dorados) */
 button[data-testid="baseButton-secondary"], 
 button[data-testid="baseButton-primary"] {
-    background-color: #C5A059 !important; /* Dorado */
-    color: #111318 !important; /* Texto oscuro para contraste */
+    background-color: #C5A059 !important;
+    color: #111318 !important;
     font-weight: 800 !important;
     border-radius: 6px !important;
     transition: all 0.2s ease-in-out !important;
@@ -108,12 +118,12 @@ button[data-testid="baseButton-primary"]:hover {
 
 /* --- TARJETAS KPI NATIVAS (st.metric) --- */
 div[data-testid="stMetric"] {
-    background: #1e293b !important;
-    border: 1px solid #334155 !important;
-    border-top: 3px solid #3b82f6 !important;
-    padding: 8px 6px !important;
+    background: #111318 !important;
+    border: 1px solid #1e293b !important;
+    border-top: 3px solid #C5A059 !important;
+    padding: 10px 8px !important;
     border-radius: 8px !important;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.15) !important;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -124,7 +134,7 @@ div[data-testid="stMetric"] label p,
 div[data-testid="stMetric"] [data-testid="stMetricLabel"],
 div[data-testid="stMetric"] [data-testid="stMetricLabel"] p {
     font-size: 0.75rem !important;
-    color: #f8fafc !important;
+    color: #94a3b8 !important;
     font-weight: 800 !important;
     text-transform: uppercase !important;
     letter-spacing: 0.5px !important;
@@ -135,7 +145,7 @@ div[data-testid="stMetric"] [data-testid="stMetricLabel"] p {
     display: block !important;
 }
 div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
-    font-size: 1.35rem !important;
+    font-size: 1.45rem !important;
     color: #f8fafc !important;
     font-weight: 800 !important;
     text-align: center !important;
@@ -155,54 +165,50 @@ div[data-testid="stMetric"] div[data-testid="stMetricDelta"] {
     border-collapse: separate;
     border-spacing: 0;
     font-family: 'Plus Jakarta Sans', sans-serif;
-    border-radius: 6px;
+    border-radius: 8px;
     overflow: hidden;
-    background-color: #1e293b;
+    background-color: #111318;
     margin-bottom: 12px;
-    border: 1px solid #334155;
+    border: 1px solid #1e293b;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
 }
-.modern-table thead tr { background-color: #0f172a; }
+.modern-table thead tr { background-color: #0b0e14; }
 .modern-table th {
-    padding: 6px 8px;
+    padding: 8px 8px;
     font-weight: 800;
     font-size: 0.75rem;
-    color: #94a3b8;
+    color: #C5A059;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     text-align: center !important;
-    border-bottom: 2px solid #3b82f6;
+    border-bottom: 1px solid #C5A059;
 }
 .modern-table td {
-    padding: 5px 8px;
+    padding: 6px 8px;
     font-size: 0.85rem;
     color: #f8fafc;
     text-align: center !important;
-    border-bottom: 1px solid #334155;
+    border-bottom: 1px solid #1e293b;
 }
-.modern-table tbody tr:hover td { background-color: #0b1120; }
+.modern-table tbody tr:hover td { background-color: rgba(197, 160, 89, 0.05); }
 
 /* --- OPTIMIZACIÓN DOM: TARJETAS DE PLANTILLA Y CALENDARIO --- */
 .card-elite {
-    background-color: #1e293b;
-    border: 1px solid #334155;
-    border-top: 3px solid #3b82f6;
-    border-radius: 6px;
-    padding: 6px 4px 4px 4px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    background-color: #111318;
+    border: 1px solid #1e293b;
+    border-top: 3px solid #C5A059;
+    border-radius: 8px;
+    padding: 10px 4px 6px 4px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
     text-align: center;
-    margin-bottom: 4px;
+    margin-bottom: 6px;
     transition: transform 0.2s ease;
 }
-.card-elite:hover { transform: scale(1.03); }
+.card-elite:hover { transform: scale(1.03); border-color: #C5A059; }
 .card-elite img {
-    width: 48px; height: 48px; object-fit: cover;
-    border-radius: 50%; border: 2px solid #3b82f6;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2); margin-bottom: 3px;
-}
-.card-elite h4 {
-    color: #f8fafc; font-weight: 800; font-size: 0.8rem;
-    margin: 3px 0 0 0; text-transform: uppercase;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    width: 52px; height: 52px; object-fit: cover;
+    border-radius: 50%; border: 2px solid #C5A059;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.4); margin-bottom: 5px;
 }
 
 /* --- RESPONSIVIDAD MÓVIL A PIE DE CAMPO --- */
