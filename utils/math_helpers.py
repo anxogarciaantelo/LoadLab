@@ -465,39 +465,29 @@ def aplicar_color_sidebar():
     # Modifica la sección de inyección de imagen y nombre en la barra lateral en math_helpers.py
     if st.session_state.get("equipo_seleccionado", False):
         with st.sidebar:
-            # Aquí inyectamos tu logotipo arriba del todo en el lateral de forma ultra premium
-            try:
-                with open("assets/logo.png", "rb") as image_file:
-                    sidebar_logo_b64 = base64.b64encode(image_file.read()).decode()
-                img_src = f"data:image/png;base64,{sidebar_logo_b64}"
-            except FileNotFoundError:
-                img_src = None
-    
+            nombre = st.session_state.get("nombre_equipo", "EQUIPO")
             escudo = st.session_state.get("escudo_equipo")
             
-            # 1. LOGO DE LA APP Y ESCUDO DEL EQUIPO ARRIBA DEL TODO
-            import base64
-            try:
-                with open("assets/logo_completo.png", "rb") as image_file:
-                    app_logo_b64 = base64.b64encode(image_file.read()).decode()
-                app_logo_html = f"<img src='data:image/png;base64,{app_logo_b64}' style='width: 70px; object-fit: contain; margin-bottom: 10px;'>"
-            except FileNotFoundError:
-                app_logo_html = ""
-
-            if img_src:
+            # 1. ESCUDO Y NOMBRE DEL EQUIPO ARRIBA DE TODO
+            if escudo:
+                img_src = escudo if str(escudo).startswith("http") else f"data:image/jpeg;base64,{escudo}"
                 st.markdown(f"""
-                    <div style='text-align: center; margin-bottom: 15px;'>
-                        {app_logo_html}
-                        <h2 style='color: #E2E8F0; margin-top: 0; margin-bottom: 20px; font-size: 1.4rem; letter-spacing: -0.5px;'>
-                            LOAD<span style='color: #C5A059;'>LAB</span>
-                        </h2>
-                        <img src='{img_src}' style='width: 85px; height: 85px; border-radius: 50%; object-fit: cover; border: 2px solid #C5A059; box-shadow: 0 4px 10px rgba(0,0,0,0.3);'>
-                        <h3 style='color: #E2E8F0; margin-top: 10px; margin-bottom: 0; font-size: 1.05rem; text-transform: uppercase; letter-spacing: 0.5px;'>{nombre}</h3>
-                        <hr style='border-color: rgba(197, 160, 89, 0.15); margin-top: 15px; margin-bottom: 10px; border-width: 1px;'>
+                    <div style='text-align: center; margin-bottom: 30px; margin-top: 10px;'>
+                        <img src='{img_src}' style='width: 95px; height: 95px; border-radius: 50%; object-fit: cover; border: 2px solid #C5A059; box-shadow: 0 4px 15px rgba(197, 160, 89, 0.2);'>
+                        <h3 style='color: #E2E8F0; margin-top: 15px; margin-bottom: 0; font-size: 1.15rem; text-transform: uppercase; letter-spacing: 0.5px;'>{nombre}</h3>
+                    </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                    <div style='text-align: center; margin-bottom: 30px; margin-top: 10px;'>
+                        <div style='display: flex; justify-content: center; align-items: center; height: 95px; width: 95px; margin: 0 auto; border-radius: 50%; border: 2px solid #C5A059; background: #111318;'>
+                            <span class='material-symbols-rounded' style='font-size: 45px; color: #C5A059;'>shield</span>
+                        </div>
+                        <h3 style='color: #E2E8F0; margin-top: 15px; margin-bottom: 0; font-size: 1.15rem; text-transform: uppercase; letter-spacing: 0.5px;'>{nombre}</h3>
                     </div>
                 """, unsafe_allow_html=True)
             
-            # --- CSS PARA TIPOGRAFÍA DE ENLACES LATERALES ---
+            # CSS para estilizar los enlaces
             st.markdown("""
             <style>
             [data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"] p, 
@@ -506,10 +496,17 @@ def aplicar_color_sidebar():
                 font-size: 0.95rem !important;
                 letter-spacing: 0.3px !important;
             }
+            [data-testid="stSidebar"] [data-testid="stPageLink-NavLink"] {
+                border-radius: 8px !important;
+                transition: background-color 0.2s ease !important;
+            }
+            [data-testid="stSidebar"] [data-testid="stPageLink-NavLink"]:hover {
+                background-color: rgba(197, 160, 89, 0.1) !important;
+            }
             </style>
             """, unsafe_allow_html=True)
 
-            # 2. ENLACES DE PÁGINAS MANUALES (Control total de la posición central)
+            # 2. ENLACES DE NAVEGACIÓN
             st.markdown("<p style='color: #64748b; font-size: 0.75rem; text-transform: uppercase; font-weight: 800; margin-bottom: 8px; letter-spacing: 0.5px;'>Navegación</p>", unsafe_allow_html=True)
 
             st.page_link("Inicio.py", label="Inicio", icon=":material/home:")
@@ -522,14 +519,21 @@ def aplicar_color_sidebar():
             st.page_link("pages/7_Estadisticas.py", label="Estadísticas", icon=":material/query_stats:")
             st.page_link("pages/8_Predicción_de_lesiones.py", label="Predicción", icon=":material/psychology:")
             
-            # 3. ESPACIADOR FLEXIBLE (Empuja los siguientes elementos abajo del todo)
+            # 3. ESPACIADOR (Empuja los siguientes elementos abajo del todo)
             st.markdown("<div class='spacer-bottom'></div>", unsafe_allow_html=True)
             
-            # 4. LIVE SYNC Y BOTONES ABAJO DEL TODO
-            st.markdown("<hr style='border-color: #1e293b; margin-top: 10px; margin-bottom: 10px; border-width: 1px;'>", unsafe_allow_html=True)
+            # 4. LOGO ICONO Y BOTONES INFERIORES
+            import base64
+            try:
+                with open("assets/logo_icono.jpg", "rb") as image_file:
+                    app_logo_b64 = base64.b64encode(image_file.read()).decode()
+                st.markdown(f"<div style='text-align: center; margin-bottom: 15px;'><img src='data:image/jpeg;base64,{app_logo_b64}' style='width: 38px; object-fit: contain; opacity: 0.9; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.5);'></div>", unsafe_allow_html=True)
+            except:
+                pass
+            
             st.markdown(f"""
-                <div style='display: flex; justify-content: center; margin-bottom: 10px;'>
-                    <div style='background-color: rgba(15, 23, 42, 0.9); border: 1px solid #334155; padding: 4px 10px; border-radius: 10px; font-size: 0.6rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; display: flex; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.3);'>
+                <div style='display: flex; justify-content: center; margin-bottom: 15px;'>
+                    <div style='background-color: #111318; border: 1px solid rgba(197, 160, 89, 0.3); padding: 4px 12px; border-radius: 10px; font-size: 0.65rem; color: #C5A059; font-weight: 800; text-transform: uppercase; display: flex; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.3);'>
                         <span class='live-dot'></span> LIVE SYNC
                     </div>
                 </div>
