@@ -21,9 +21,13 @@ if not st.session_state.get("autenticado", False) or not st.session_state.get("e
 
 aplicar_color_sidebar()
 
-st.subheader("🚑 Lesiones")
-
-tab_les_res, tab_gest_med, tab_les_list, tab_rtp = st.tabs(["📊 Resumen", "🩺 Gestión Médica", "📋 Listado de Lesiones", "🏃‍♂️ Protocolo RTP"])
+st.subheader(":material/healing: Lesiones")
+tab_les_res, tab_gest_med, tab_les_list, tab_rtp = st.tabs([
+    ":material/monitoring: Resumen", 
+    ":material/medical_services: Gestión Médica", 
+    ":material/list_alt: Listado de Lesiones", 
+    ":material/directions_run: Protocolo RTP"
+])
 
 les_data = st.session_state.get("lesiones", [])
 if not les_data:
@@ -45,7 +49,7 @@ else:
         st.markdown("---")
         
         # 2. FILTROS AL FONDO (Desplegables)
-        with st.expander("🔍 Filtros Epidemiológicos", expanded=False):
+        with st.expander(":material/filter_alt: Filtros Epidemiológicos", expanded=False):
             c_f1, c_f2, c_f3 = st.columns(3)
             with c_f1:
                 meses_unicos = ["TODOS"] + list(df_les['Mes'].dropna().unique())
@@ -201,7 +205,7 @@ else:
                     st.warning("El jugador no ha vuelto a estar disponible en ninguna sesión registrada.")
                     dias_baja_input = st.number_input("Días de Baja Totales (Añadir manualmente):", min_value=1, max_value=500, value=7)
                     
-                if st.form_submit_button("✅ Procesar Alta Médica"):
+                if st.form_submit_button(":material/check_circle: Procesar Alta Médica"):
                     # 1. Búsqueda por índice exacto en lugar de bucle
                     real_idx = st.session_state.lesiones.index(les_obj)
                     
@@ -258,7 +262,7 @@ else:
             
             with st.form("form_edit_coment"):
                 nuevo_com = st.text_area("Modificar comentario / mecanismo lesional:", value=les_edit_obj.get("comentarios", ""))
-                if st.form_submit_button("💾 Guardar Cambios"):
+                if st.form_submit_button(":material/save: Guardar Cambios"):
                     real_idx = st.session_state.lesiones.index(les_edit_obj)
                     st.session_state.lesiones[real_idx]["comentarios"] = nuevo_com
                     
@@ -279,7 +283,7 @@ else:
                     les_del_idx = st.selectbox("Selecciona la lesión duplicada o errónea:", range(len(lesiones_todas_del)), format_func=lambda x: nombres_les_borrar[x])
                     st.warning("⚠️ Cuidado: Esta acción borrará el registro médico de la base de datos para siempre.")
                     
-                    if st.form_submit_button("❌ Eliminar Lesión Definitivamente"):
+                    if st.form_submit_button(":material/delete_forever: Eliminar Lesión Definitivamente"):
                         les_a_borrar = lesiones_todas_del[les_del_idx]
                         real_idx_del = st.session_state.lesiones.index(les_a_borrar)
                         del st.session_state.lesiones[real_idx_del]
