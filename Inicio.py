@@ -97,9 +97,9 @@ cookie_manager = stx.CookieManager(key="loadlab_cookies")
 
 # Si venimos de hacer clic en "Cerrar Sesión", borramos las cookies desde la raíz
 if st.session_state.get("borrar_cookies", False):
-    cookie_manager.delete("loadlab_access")
-    cookie_manager.delete("loadlab_refresh")
-    cookie_manager.delete("loadlab_uid")
+    cookie_manager.delete("loadlab_access", key="del_1")
+    cookie_manager.delete("loadlab_refresh", key="del_2")
+    cookie_manager.delete("loadlab_uid", key="del_3")
     st.session_state.borrar_cookies = False
 
 # --- RECUPERACIÓN DE SESIÓN (RECUÉRDAME) ---
@@ -237,13 +237,14 @@ Centraliza y analiza las variables de rendimiento, carga y salud de tus futbolis
                         # Si marcó la casilla, guardamos el token cifrado 30 días en el navegador
                         if recordarme:
                             exp_date = datetime.now() + timedelta(days=30)
-                            cookie_manager.set("loadlab_access", res.session.access_token, expires_at=exp_date)
-                            cookie_manager.set("loadlab_refresh", res.session.refresh_token, expires_at=exp_date)
-                            cookie_manager.set("loadlab_uid", res.user.id, expires_at=exp_date)
+                            cookie_manager.set("loadlab_access", res.session.access_token, expires_at=exp_date, key="set_1")
+                            cookie_manager.set("loadlab_refresh", res.session.refresh_token, expires_at=exp_date, key="set_2")
+                            cookie_manager.set("loadlab_uid", res.user.id, expires_at=exp_date, key="set_3")
                             
+                        st.session_state.autenticado = True
                         st.rerun()
                     except Exception as e:
-                        st.error("Credenciales incorrectas o error de conexión.")
+                        st.error(f"Credenciales incorrectas o error de conexión. Detalle técnico: {e}")
                         
         with tab_reg:
             st.markdown("<h3 style='color: #f8fafc; font-weight: 800; font-size: 1.6rem; margin-bottom: 5px; margin-top: 10px;'>Crear cuenta</h3>", unsafe_allow_html=True)
