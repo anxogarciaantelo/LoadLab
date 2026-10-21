@@ -18,7 +18,7 @@ from database.db_manager import guardar_datos
 
 # --- COMPROBACIÓN DE SEGURIDAD Y SESIÓN ---
 if not st.session_state.get("autenticado", False) or not st.session_state.get("equipo_seleccionado", False):
-    st.warning("⚠️ La sesión ha expirado o no se ha seleccionado un equipo.")
+    st.warning(":material/warning: La sesión ha expirado o no se ha seleccionado un equipo.")
     if st.button("Ir al Login principal"):
         st.session_state.clear()
         st.rerun()
@@ -88,7 +88,7 @@ def calcular_rm_cientifico(pesos, vels, peso_corp):
 
 def tarjeta_kpi(titulo, valor, subtitulo="", tooltip=""):
     tt_html = f" title='{tooltip}'" if tooltip else ""
-    icon = " ℹ️" if tooltip else ""
+    icon = " <span class='material-symbols-rounded' style='vertical-align: middle; font-size: 1.2rem; color: #3b82f6;'>info</span>" if tooltip else ""
     cursor = "help" if tooltip else "default"
     st.markdown(f"""
     <div{tt_html} style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid #3b82f6; border-radius: 10px; padding: 15px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); height: 100%; display: flex; flex-direction: column; justify-content: center; cursor: {cursor}; margin-bottom: 15px;">
@@ -100,7 +100,7 @@ def tarjeta_kpi(titulo, valor, subtitulo="", tooltip=""):
 
 def tarjeta_kpi_doble(titulo, val_d, val_i, lbl_d="Der", lbl_i="Izq", tooltip=""):
     tt_html = f" title='{tooltip}'" if tooltip else ""
-    icon = " ℹ️" if tooltip else ""
+    icon = " <span class='material-symbols-rounded' style='vertical-align: middle; font-size: 1.2rem; color: #3b82f6;'>info</span>" if tooltip else ""
     cursor = "help" if tooltip else "default"
     st.markdown(f"""
     <div{tt_html} style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid #3b82f6; border-radius: 10px; padding: 15px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); height: 100%; display: flex; flex-direction: column; justify-content: center; cursor: {cursor}; margin-bottom: 15px;">
@@ -134,7 +134,7 @@ with tab_informes:
     st.markdown("### 📈 Informes de Valoraciones y Perfil Individual")
     
     if not jugadores or not valoraciones:
-        st.info("No hay datos suficientes para mostrar informes.")
+        st.info(":material/info: No hay datos suficientes para mostrar informes.")
     else:
         cf1, cf2 = st.columns(2)
         
@@ -157,14 +157,14 @@ with tab_informes:
                 st.selectbox("2. Nº Valoración:", options=["-"])
         
         if val_sel_id is None:
-            st.info("👆 Selecciona un deportista y su valoración para desplegar el informe exhaustivo.")
+            st.info(":material/touch_app: Selecciona un deportista y su valoración para desplegar el informe exhaustivo.")
         else:
             v_data = next((v for v in vals_jugador if v['id'] == val_sel_id), None)
             peso_actual = safe_float(v_data.get('peso_corporal', 70.0))
             if peso_actual == 0: peso_actual = 70.0 
 
             st.markdown("---")
-            st.markdown("#### 🤸 Movilidad (Grados)")
+            st.markdown("#### :material/accessibility_new: Movilidad (Grados)")
             cm1, cm2, cm3 = st.columns(3)
             with cm1: tarjeta_kpi_doble("Rot. Ext. Cadera", v_data.get('mov_rot_ext_d', 0), v_data.get('mov_rot_ext_i', 0))
             with cm2: tarjeta_kpi_doble("Rot. Int. Cadera", v_data.get('mov_rot_int_d', 0), v_data.get('mov_rot_int_i', 0))
@@ -180,7 +180,7 @@ with tab_informes:
             c_mov3.info(f"**Asimetría Dorsiflexión:** {badge_asi_detallado(asi_dor, v_data.get('mov_dorsi_d', 0), v_data.get('mov_dorsi_i', 0))}")
 
             st.markdown("---")
-            st.markdown("#### 🦘 Salto y Perfil Vectorial")
+            st.markdown("#### :material/sports_gymnastics: Salto y Perfil Vectorial")
             cs1, cs2, cs3, cs4 = st.columns(4)
             
             sh_bi = safe_float(v_data.get('sh_bi', v_data.get('sj_bi', 0))) # Fallback para registros antiguos
@@ -216,7 +216,7 @@ with tab_informes:
             with ca4: tarjeta_kpi("Ratio Vectores (H/V)", str(ratio_vectores), perfil_vector, tooltip="Dom. Vertical: < 3.5 | Equilibrado: 3.5 - 4.5 | Dom. Horizontal: > 4.5")
 
             st.markdown("---")
-            st.markdown("#### ⚡ Fuerza Máxima Isométrica y Fuerza Relativa")
+            st.markdown("#### :material/bolt: Fuerza Máxima Isométrica y Fuerza Relativa")
             ci1, ci2, ci3 = st.columns(3)
             with ci1: tarjeta_kpi_doble("Extensión (Cuád)", f"{v_data.get('iso_ext_d', 0)} N", f"{v_data.get('iso_ext_i', 0)} N")
             with ci2: tarjeta_kpi_doble("Flexión (Isq)", f"{v_data.get('iso_flx_d', 0)} N", f"{v_data.get('iso_flx_i', 0)} N")
@@ -250,7 +250,7 @@ with tab_informes:
             with cf_rel2: tarjeta_kpi("Isquiosural (D/I)", f"{f_rel_flx_d:.1f} | {f_rel_flx_i:.1f} N/kg", tooltip="Óptimo: > 3.5 N/kg")
 
             st.markdown("---")
-            st.markdown("#### 🏋️‍♂️ Fuerza Máxima (Sentadilla)")
+            st.markdown("#### :material/fitness_center: Fuerza Máxima (Sentadilla)")
             sq_rm = safe_float(v_data.get('rm_sq', v_data.get('rm_sentadilla', 0)))
             f_rel_sq = round(sq_rm / peso_actual, 2) if peso_actual > 0 else 0
             
@@ -320,7 +320,7 @@ with tab_informes:
                 with c_fig2:
                     fiabilidad_sq = "🟢 Excelente" if r2 >= 0.95 else ("🟡 Aceptable" if r2 >= 0.90 else "🔴 Pobre (Falta intención)")
                     st.info(f"**Diagnóstico:** {cuadrante}\n\n**V0:** {round(v0, 2)} m/s | **F0 (Barra):** {round(f0_kg_barra, 1)} kg\n\n**F0 Relativa:** {round(f0_rel_N, 1)} N/kg\n\n**Fiabilidad del test ($R^2$):** {round(r2, 3)} ({fiabilidad_sq})\n\n*{pauta_fv}*")
-            st.markdown("#### 🧮 Estimaciones de Cargas y Ejercicios Complementarios")
+            st.markdown("#### :material/calculate: Estimaciones de Cargas y Ejercicios Complementarios")
             if sq_rm > 0:
                 pm_rm = round(sq_rm * 1.15, 1)
                 ht_rm = round(sq_rm * 1.25, 1)
@@ -346,10 +346,10 @@ with tab_informes:
                 * **Kettlebell Swing (Pesado):** No aplica 1RM. Carga sugerida por nivel de fuerza: **{kettlebell_recomendada}**
                 """)
             else:
-                st.info("Registra un 1RM en Sentadilla para calcular las estimaciones de cargas.")
+                st.info(":material/info: Registra un 1RM en Sentadilla para calcular las estimaciones de cargas.")
                 
             st.markdown("---")
-            st.markdown("#### 🧭 Perfil Evolutivo y Asimetrías")
+            st.markdown("#### :material/explore: Perfil Evolutivo y Asimetrías")
             
             col_rad, col_tor = st.columns(2)
             with col_rad:
@@ -931,13 +931,13 @@ with tab_informes:
 # ==========================================
 with tab_nuevo:
     if not jugadores:
-        st.warning("Primero debes registrar deportistas en la sección de Jugadores.")
+        st.warning(":material/warning: Primero debes registrar deportistas en la sección de Jugadores.")
     else:
-        modo_ingreso = st.radio("Método de registro:", ["📝 Formulario Manual", "📁 Importar desde Excel"], horizontal=True)
+        modo_ingreso = st.radio("Método de registro:", [":material/edit_document: Formulario Manual", ":material/upload_file: Importar desde Excel"], horizontal=True)
         
-        if modo_ingreso == "📝 Formulario Manual":
+        if modo_ingreso == ":material/edit_document: Formulario Manual":
             with st.form("form_nueva_val_detallada"):
-                st.markdown("#### ⚙️ Datos Generales")
+                st.markdown("#### :material/settings: Datos Generales")
                 cg1, cg2, cg3, cg4 = st.columns(4)
                 with cg1: jugador_sel = st.selectbox("Deportista:", options=jugadores)
                 with cg2: fecha_test = st.date_input("Fecha:", value=date.today())
@@ -945,7 +945,7 @@ with tab_nuevo:
                 with cg4: peso = st.number_input("Peso (kg):", min_value=30.0, value=70.0, step=0.5)
                 
                 st.markdown("---")
-                st.markdown("#### 🤸 1. Movilidad (Grados)")
+                st.markdown("#### :material/accessibility_new: 1. Movilidad (Grados)")
                 cf1, cf2, cf3, cf4, cf5, cf6 = st.columns(6)
                 with cf1: mov_re_d = st.number_input("Rot. Ext. Cadera D", 0.0, 150.0, 0.0)
                 with cf2: mov_re_i = st.number_input("Rot. Ext. Cadera I", 0.0, 150.0, 0.0)
@@ -955,7 +955,7 @@ with tab_nuevo:
                 with cf6: mov_dor_i = st.number_input("Dorsiflexión I", 0.0, 100.0, 0.0)
 
                 st.markdown("---")
-                st.markdown("#### 🦘 2. Test de Salto (cm)")
+                st.markdown("#### :material/sports_gymnastics: 2. Test de Salto (cm)")
                 cs1, cs2, cs3, cs4, cs5, cs6 = st.columns(6)
                 with cs1: sh_bi = st.number_input("Salto Horiz. Bi", min_value=0.0, value=0.0, step=1.0)
                 with cs2: cmj_bi = st.number_input("CMJ Bilateral", min_value=0.0, value=0.0, step=0.5)
@@ -965,7 +965,7 @@ with tab_nuevo:
                 with cs6: sh_i = st.number_input("Horiz. I", min_value=0.0, value=0.0, step=1.0)
 
                 st.markdown("---")
-                st.markdown("#### ⚡ 3. Fuerza Máxima Isométrica (N)")
+                st.markdown("#### :material/bolt: 3. Fuerza Máxima Isométrica (N)")
                 ci1, ci2, ci3 = st.columns(3)
                 with ci1:
                     st.markdown("**Extensión (Cuád)**")
@@ -984,7 +984,7 @@ with tab_nuevo:
                     with c_ai: iso_add_i = st.number_input("Izq (Add)", min_value=0.0, value=0.0, step=1.0)
 
                 st.markdown("---")
-                st.markdown("#### 🏋️‍♂️ 4. Perfil Carga-Velocidad y 1RM (Sentadilla)")
+                st.markdown("#### :material/fitness_center: 4. Perfil Carga-Velocidad y 1RM (Sentadilla)")
                 c_sq = st.columns(10)
                 p_sq, v_sq = [], []
                 for s in range(5):
@@ -1008,11 +1008,11 @@ with tab_nuevo:
                     }
                     st.session_state.val_rom.append(nuevo_test)
                     guardar_datos(modulo="configuracion")
-                    st.success("¡Valoración guardada correctamente!")
+                    st.success(":material/check_circle: ¡Valoración guardada correctamente!")
                     st.rerun()
 
         else:
-            st.markdown("#### 📁 Importación Masiva (Excel)")
+            st.markdown("#### :material/folder_zip: Importación Masiva (Excel)")
             st.info("⚠️ El Excel debe tener la Fila 1 de encabezados y a partir de la Fila 2 los datos en **este orden exacto** (33 columnas):\n\nJugador | Fecha | Lesión (Sí/No) | Peso | Rot. Ext D | Rot. Ext I | Rot. Int D | Rot. Int I | Dorsiflexión D | Dorsiflexión I | Salto Horiz. Bi | CMJ Bi | CMJ Uni D | CMJ Uni I | Salto Horiz. D | Salto Horiz. I | Iso Ext D | Iso Ext I | Iso Flx D | Iso Flx I | Iso Add D | Iso Add I | S1(kg) | S1(m/s) | S2(kg) | S2(m/s) | S3(kg) | S3(m/s) | S4(kg) | S4(m/s) | S5(kg) | S5(m/s) | Comentarios")
 
             archivo = st.file_uploader("Sube tu plantilla Excel (.xlsx)", type=["xlsx"])
@@ -1063,19 +1063,19 @@ with tab_nuevo:
                         
                     if registros_exitosos > 0:
                         guardar_datos(modulo="configuracion")
-                        st.success(f"✅ ¡Se han importado {registros_exitosos} valoraciones correctamente!")
+                        st.success(f":material/check_circle: ¡Se han importado {registros_exitosos} valoraciones correctamente!")
                         st.rerun()
                 except Exception as e:
-                    st.error(f"Error general al procesar el Excel. Asegúrate de tener las 33 columnas. Detalle técnico: {e}")
+                    st.error(f":material/cancel: Error general al procesar el Excel. Asegúrate de tener las 33 columnas. Detalle técnico: {e}")
 
 # ==========================================
 # PESTAÑA 3: TABLA DE REGISTROS Y GESTIÓN
 # ==========================================
 with tab_reg:
-    st.markdown("### 📋 Tabla de Registros y Gestión")
+    st.markdown("### :material/list_alt: Tabla de Registros y Gestión")
     
     if not valoraciones:
-        st.info("No hay valoraciones registradas todavía.")
+        st.info(":material/info: No hay valoraciones registradas todavía.")
     else:
         df_vals = pd.DataFrame(valoraciones)
         
@@ -1104,7 +1104,7 @@ with tab_reg:
         mostrar_tabla_moderna(df_mostrar[orden_final])
 
         st.markdown("---")
-        st.markdown("#### ⚙️ Gestión: Modificar o Eliminar Registro")
+        st.markdown("#### :material/settings: Gestión: Modificar o Eliminar Registro")
         opciones_gestion = {row['id']: f"{row['jugador']} - {row['fecha']}" for idx, row in df_filtrado.iterrows()}
         val_seleccionada = st.selectbox("Selecciona una valoración para gestionarla:", [None] + list(opciones_gestion.keys()), format_func=lambda x: opciones_gestion[x] if x else "Seleccionar registro...")
         
@@ -1112,5 +1112,5 @@ with tab_reg:
             if st.button(":material/delete_forever: Eliminar Registro Definitivamente", type="primary"):
                 st.session_state.val_rom = [v for v in st.session_state.val_rom if v['id'] != val_seleccionada]
                 guardar_datos(modulo="configuracion")
-                st.success("¡Registro eliminado correctamente!")
+                st.success(":material/check_circle: ¡Registro eliminado correctamente!")
                 st.rerun()
