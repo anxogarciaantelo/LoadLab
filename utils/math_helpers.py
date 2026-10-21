@@ -543,7 +543,23 @@ def aplicar_color_sidebar():
                 st.session_state.equipo_seleccionado = False
                 st.rerun()
             if st.button(":material/logout: Cerrar Sesión", use_container_width=True, key="btn_cerrar_ses_sb"):
-                st.session_state.clear()
+                # Bandera para evitar que el auto-login actúe inmediatamente tras recargar
+                st.session_state.logout_intent = True 
+                try:
+                    import extra_streamlit_components as stx
+                    @st.cache_resource(experimental_allow_widgets=True)
+                    def get_cm(): return stx.CookieManager()
+                    cm = get_cm()
+                    cm.delete("loadlab_access")
+                    cm.delete("loadlab_refresh")
+                    cm.delete("loadlab_uid")
+                except:
+                    pass
+                
+                # Borramos los permisos en lugar de vaciar toda la memoria de golpe
+                st.session_state.autenticado = False
+                st.session_state.equipo_seleccionado = False
+                st.session_state.usuario_id = None
                 st.rerun()
                 
 def render_estado_vacio(icono, titulo, descripcion, accion_sugerida=None):
