@@ -547,7 +547,7 @@ def aplicar_color_sidebar():
                 st.session_state.logout_intent = True 
                 try:
                     import extra_streamlit_components as stx
-                    @st.cache_resource(experimental_allow_widgets=True)
+                    @st.cache_resource
                     def get_cm(): return stx.CookieManager()
                     cm = get_cm()
                     cm.delete("loadlab_access")
