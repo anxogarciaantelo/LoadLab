@@ -353,7 +353,7 @@ with tab_micro:
             
             dict_micros = {}
             for _, r_m in df_m_desc.iterrows():
-                etiqueta = f":material/inventory_2: Microciclo {r_m['Micro_Num']} | Semana del {r_m['ini']} al {r_m['fin']}"
+                etiqueta = f"Microciclo {r_m['Micro_Num']} | Semana del {r_m['ini']} al {r_m['fin']}"
                 dict_micros[etiqueta] = r_m
             
             st.markdown("### :material/sync: Análisis de Microciclos")
@@ -754,7 +754,7 @@ with tab_ses:
                         
                         st.markdown(f"""
                         <div style='background-color: #1e293b; padding: 8px 12px; border-radius: 6px; border-top: 3px solid #3b82f6; margin-top: 15px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); text-align: center;'>
-                            <h4 style='margin: 0; color: #f8fafc; font-weight: 800; font-size: 0.95rem; text-transform: uppercase;'>:material/inventory_2: Micro {micro_relativo} <span style='font-size: 0.75rem; color: #94a3b8; font-weight: 700;'>({lunes.strftime('%d/%m')} - {domingo.strftime('%d/%m')})</span></h4>
+                            <h4 style='margin: 0; color: #f8fafc; font-weight: 800; font-size: 0.95rem; text-transform: uppercase;'> Micro {micro_relativo} <span style='font-size: 0.75rem; color: #94a3b8; font-weight: 700;'>({lunes.strftime('%d/%m')} - {domingo.strftime('%d/%m')})</span></h4>
                             {html_mini_cal}
                         </div>
                         """, unsafe_allow_html=True)
@@ -814,7 +814,7 @@ with tab_ses:
             with col_title:
                 nom_h = sesion.get("nombre_dinamico", sesion["tipo"])
                 sub_h = sesion.get('rival', 'Rival') if es_partido else sesion.get('descripcion', 'TD')
-                st.markdown(f"<h4 style='margin-top: 5px; color: #f8fafc;'>:material/settings: Gestión: {nom_h} ({sub_h}) | {sesion['fecha']}</h4>", unsafe_allow_html=True)
+                st.markdown(f"<h4 style='margin-top: 5px; color: #f8fafc;'><span class='material-symbols-rounded' style='vertical-align: text-bottom; text-transform: none; font-size: 1.3rem; margin-right: 6px;'>settings</span> Gestión: {nom_h} ({sub_h}) | {sesion['fecha']}</h4>", unsafe_allow_html=True)
 
             st.markdown("---")
             
@@ -1164,11 +1164,11 @@ with tab_ses:
                         col_w, col_i, col_e = st.columns([1, 2, 3])
                         
                         with col_w:
-                            st.markdown("<h5 style='color: #f8fafc; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; margin-top: 0;'>:material/psychology: Bienestar</h5>", unsafe_allow_html=True)
+                            st.markdown("<h5 style='color: #f8fafc; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; margin-top: 0;'>Bienestar</h5>", unsafe_allow_html=True)
                             st.markdown(html_tarjeta_doble("#10b981", f"{tqr_m:.1f}", f"{well_m:.1f}", "TQR", "Wellness", t_tqr, t_well), unsafe_allow_html=True)
                             
                         with col_i:
-                            st.markdown("<h5 style='color: #f8fafc; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; margin-top: 0;'>:material/local_fire_department: Carga & Eficiencia (Medias)</h5>", unsafe_allow_html=True)
+                            st.markdown("<h5 style='color: #f8fafc; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; margin-top: 0;'>Carga & Eficiencia (Medias)</h5>", unsafe_allow_html=True)
                             c_i1, c_i2 = st.columns(2)
                             
                             with c_i1:
@@ -1177,7 +1177,7 @@ with tab_ses:
                                 st.markdown(html_tarjeta_doble("#f59e0b", f"{efi_c_media:.4f}", f"{efi_n_media:.2f}", "Coste Cardio", "Coste Neuro", t_efic, t_efin), unsafe_allow_html=True)
                                 
                         with col_e:
-                            st.markdown("<h5 style='color: #f8fafc; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; margin-top: 0;'>:material/directions_run: Carga Externa & Densidad</h5>", unsafe_allow_html=True)
+                            st.markdown("<h5 style='color: #f8fafc; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; margin-top: 0;'>Carga Externa & Densidad</h5>", unsafe_allow_html=True)
                             
                             # --- CÁLCULO DE REFERENCIAS DE PARTIDO (100%) NORMALIZADO A 90' ---
                             df_historico_partidos = st.session_state.df_master_informes[(st.session_state.df_master_informes['TIPO_SESION'].str.contains("Partido", na=False)) & (st.session_state.df_master_informes['DIS'] > 0)].copy()
