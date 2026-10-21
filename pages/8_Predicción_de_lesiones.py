@@ -8,19 +8,19 @@ try:
     import xgboost as xgb
     from sklearn.preprocessing import StandardScaler
 except ImportError:
-    st.error("⚠️ Faltan librerías. Añade 'xgboost' y 'scikit-learn' a tu archivo requirements.txt.")
+    st.error(":material/cancel: Faltan librerías. Añade 'xgboost' y 'scikit-learn' a tu archivo requirements.txt.")
     st.stop()
 
 from utils.math_helpers import *
 from database.db_manager import *
 
 if not st.session_state.get("autenticado", False) or not st.session_state.get("equipo_seleccionado", False):
-    st.warning("⚠️ La sesión ha expirado o no se ha seleccionado un equipo.")
+    st.warning(":material/warning: La sesión ha expirado o no se ha seleccionado un equipo.")
     st.stop()
 
 aplicar_color_sidebar()
 
-st.title("🧠 Oráculo: Predicción de Riesgo Lesional")
+st.title(":material/psychology: Oráculo: Predicción de Riesgo Lesional")
 st.caption("Sistema Híbrido: Combina algoritmos científicos de prevención deportiva con Machine Learning adaptativo (XGBoost) para tu plantilla.")
 
 # ==========================================
@@ -248,10 +248,10 @@ else:
 # ==========================================
 # 3. DASHBOARD TÁCTICO ÉLITE
 # ==========================================
-st.markdown("### 🧠 Sistema de Alerta Temprana (Prevención de Lesiones)")
+st.markdown("### :material/notifications_active: Sistema de Alerta Temprana (Prevención de Lesiones)")
 
 if df_hoy.empty:
-    st.success("✅ No hay jugadores activos a evaluar o faltan datos recientes.")
+    st.success(":material/check_circle: No hay jugadores activos a evaluar o faltan datos recientes.")
     st.stop()
 
 df_hoy = df_hoy.sort_values(by="Riesgo_%", ascending=False)
@@ -273,7 +273,7 @@ st.markdown("---")
 c_graf, c_alertas = st.columns([2, 1])
 
 with c_graf:
-    st.markdown("#### 🎯 Matriz de Carga (Sweet Spot)")
+    st.markdown("#### :material/track_changes: Matriz de Carga (Sweet Spot)")
     # Gráfico profesional de dispersión cruzando Carga vs A/C
     fig_matrix = px.scatter(
         df_hoy, x='Ratio_AC', y='Carga_Aguda', color='Riesgo_%', 
@@ -297,15 +297,18 @@ with c_graf:
     st.plotly_chart(fig_matrix, use_container_width=True)
 
 with c_alertas:
-    st.markdown("#### 🚨 Alertas Inminentes")
+    st.markdown("#### :material/emergency: Alertas Inminentes")
     if alto_riesgo.empty:
-        st.success("Plantilla fuera de riesgo crítico. Buen trabajo de gestión de cargas.")
+        st.success(":material/check_circle: Plantilla fuera de riesgo crítico. Buen trabajo de gestión de cargas.")
     else:
         for _, row in alto_riesgo.head(3).iterrows():
             st.markdown(f"""
             <div style="background: linear-gradient(145deg, #1e293b, #0f172a); border: 1px solid #334155; border-left: 4px solid #ef4444; padding: 15px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <strong style="color: #f8fafc; font-size: 1.1rem; text-transform: uppercase;">{row['JUGADOR']}</strong>
+                    <div style="display: flex; align-items: center;">
+                        <span class="material-symbols-rounded" style="font-size: 1.2rem; color: #ef4444; margin-right: 8px;">warning</span>
+                        <strong style="color: #f8fafc; font-size: 1.1rem; text-transform: uppercase;">{row['JUGADOR']}</strong>
+                    </div>
                     <span style="background: #ef4444; color: white; padding: 3px 8px; border-radius: 4px; font-weight: 800; font-size: 0.8rem;">{row['Riesgo_%']:.0f}% RIESGO</span>
                 </div>
                 <div style="font-size: 0.85rem; color: #94a3b8; display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
@@ -320,7 +323,7 @@ with c_alertas:
 st.markdown("---")
 
 # --- 3. TABLA DE DATOS INTERACTIVA CON BARRAS DE PROGRESO ---
-st.markdown("#### 📋 Evaluación Completa de la Plantilla")
+st.markdown("#### :material/list_alt: Evaluación Completa de la Plantilla")
 st.caption("Ordenado de mayor a menor riesgo lesional. Haz clic en las cabeceras para reordenar.")
 
 # Preparar DataFrame para visualización
