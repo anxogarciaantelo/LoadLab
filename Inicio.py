@@ -118,7 +118,10 @@ if not st.session_state.get("autenticado", False) and not st.session_state.get("
             st.session_state.autenticado = True
             st.rerun()
         except Exception:
-            pass # Token expirado o inválido, dejamos que cargue el login normal
+            # Si el token ha caducado tras semanas, limpiamos las cookies rotas
+            cookie_manager.delete("loadlab_access", key="del_err1")
+            cookie_manager.delete("loadlab_refresh", key="del_err2")
+            cookie_manager.delete("loadlab_uid", key="del_err3")
 
 # ==========================================
 # 0. CONTROL DE VISIBILIDAD DEL MENÚ LATERAL
@@ -232,17 +235,20 @@ Centraliza y analiza las variables de rendimiento, carga y salud de tus futbolis
                         st.session_state.usuario_id = res.user.id
                         st.session_state.access_token = res.session.access_token
                         st.session_state.refresh_token = res.session.refresh_token
-                        st.session_state.autenticado = True
                         
-                        # Si marcó la casilla, guardamos el token cifrado 30 días en el navegador
                         if recordarme:
                             exp_date = datetime.now() + timedelta(days=30)
                             cookie_manager.set("loadlab_access", res.session.access_token, expires_at=exp_date, key="set_1")
                             cookie_manager.set("loadlab_refresh", res.session.refresh_token, expires_at=exp_date, key="set_2")
                             cookie_manager.set("loadlab_uid", res.user.id, expires_at=exp_date, key="set_3")
                             
-                        st.session_state.autenticado = True
-                        st.rerun()
+                            st.success("✅ Autenticado. Guardando credenciales de forma segura...")
+                            import streamlit.components.v1 as components
+                            components.html("<script>setTimeout(function(){ window.parent.location.reload(); }, 1500);</script>", height=0)
+                        else:
+                            st.session_state.autenticado = True
+                            st.rerun()
+                            
                     except Exception as e:
                         st.error(f"Credenciales incorrectas o error de conexión. Detalle técnico: {e}")
                         
