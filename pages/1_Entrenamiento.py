@@ -88,7 +88,7 @@ with tab_cal:
     html_cal = "<div style='display: grid; grid-template-columns: 60px repeat(7, 1fr); gap: 8px; text-align: center; margin-bottom: 5px; align-items: end;'>"
     html_cal += "<div></div>" # Espacio vacío sobre la columna de microciclos
     for d in dias_semana:
-        html_cal += f"<div style='color: #94a3b8; font-weight: 800; font-size: 0.8rem; text-transform: uppercase; padding-bottom: 6px; border-bottom: 2px solid #334155;'>{d}</div>"
+        html_cal += f"<div style='color: #94a3b8; font-weight: 800; font-size: 0.8rem; text-transform: uppercase; padding-bottom: 6px; border-bottom: 2px solid #1c1f26;'>{d}</div>"
     html_cal += "</div>"
     
     # --- MAPA CRONOLÓGICO DE MICROCICLOS ---
@@ -104,7 +104,7 @@ with tab_cal:
         micro_relativo = mapa_micros_cal.get(num_sem)
         
         # Tarjeta contenedora de la semana completa
-        html_cal += "<div style='background-color: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 10px; margin-bottom: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); display: grid; grid-template-columns: 60px repeat(7, 1fr); gap: 8px;'>"
+        html_cal += "<div style='background-color: #111318; border: 1px solid #1c1f26; border-radius: 12px; padding: 10px; margin-bottom: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); display: grid; grid-template-columns: 60px repeat(7, 1fr); gap: 8px;'>"
         
         # Etiqueta del Microciclo (Píldora azul a la izquierda)
         if micro_relativo is not None:
@@ -118,8 +118,8 @@ with tab_cal:
                 html_cal += "<div style='padding: 9px; background-color: transparent;'></div>"
             else:
                 fecha_str = f"{year}-{month:02d}-{day:02d}"
-                es_hoy = "border: 2px solid #3b82f6;" if fecha_str == hoy_str else "border: 1px solid #1e293b;"
-                bg_color = "#0f172a" if fecha_str == hoy_str else "#0b1120"
+                es_hoy = "border: 2px solid #C5A059;" if fecha_str == hoy_str else "border: 1px solid #111318;"
+                bg_color = "#0b0e14" if fecha_str == hoy_str else "#0b1120"
                 
                 sesiones_dia = [s for s in st.session_state.sesiones if s["fecha"] == fecha_str]
                 contenido_extra = ""
@@ -296,14 +296,14 @@ with tab_temp:
                 cg1, cg2, cg3 = st.columns(3)
                 with cg1:
                     fig_carga = go.Figure()
-                    fig_carga.add_trace(go.Bar(x=df_temporada['Microciclo'], y=df_temporada['Carga'], name="Carga (UA)", marker_color="#3b82f6"))
+                    fig_carga.add_trace(go.Bar(x=df_temporada['Microciclo'], y=df_temporada['Carga'], name="Carga (UA)", marker_color="#C5A059"))
                     media_carga = df_temporada['Carga'].mean()
                     fig_carga.add_hline(y=media_carga, line_dash="dash", line_color="#f59e0b", annotation_text=f"Media Acumulada: {media_carga:.0f} UA")
                     fig_carga.update_layout(title="Carga Interna", yaxis_title="UA", plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
                     st.plotly_chart(fig_carga, use_container_width=True)
                 with cg2:
                     fig_ext = go.Figure()
-                    fig_ext.add_trace(go.Bar(x=df_temporada['Microciclo'], y=df_temporada['DIS'], name="Volumen (km)", marker_color="rgba(59, 130, 246, 0.6)", yaxis="y1"))
+                    fig_ext.add_trace(go.Bar(x=df_temporada['Microciclo'], y=df_temporada['DIS'], name="Volumen (km)", marker_color="rgba(197, 160, 89, 0.6)", yaxis="y1"))
                     fig_ext.add_trace(go.Scatter(x=df_temporada['Microciclo'], y=df_temporada['HSR'], name="HSR (>21km/h)", mode="lines+markers", line=dict(color="#f59e0b", width=3), yaxis="y2"))
                     fig_ext.update_layout(title="Volumen vs HSR", yaxis=dict(title="Distancia (km)"), yaxis2=dict(title="HSR (m)", overlaying="y", side="right"), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
                     st.plotly_chart(fig_ext, use_container_width=True)
@@ -749,11 +749,11 @@ with tab_ses:
                                 color_ind = "transparent"
                                 color_text = "#475569"
                                 
-                            html_mini_cal += f"<div style='background-color: #0f172a; border-radius: 4px; padding: 3px 0; border-bottom: 3px solid {color_ind}; display: flex; flex-direction: column; align-items: center;'><span style='color: #64748b; font-size: 0.55rem; font-weight: 800; line-height: 1;'>{letras_semana[d_offset]}</span><span style='color: {color_text}; font-size: 0.8rem; font-weight: 800; line-height: 1.2;'>{dia_actual.day}</span></div>"
+                            html_mini_cal += f"<div style='background-color: #0b0e14; border-radius: 4px; padding: 3px 0; border-bottom: 3px solid {color_ind}; display: flex; flex-direction: column; align-items: center;'><span style='color: #64748b; font-size: 0.55rem; font-weight: 800; line-height: 1;'>{letras_semana[d_offset]}</span><span style='color: {color_text}; font-size: 0.8rem; font-weight: 800; line-height: 1.2;'>{dia_actual.day}</span></div>"
                         html_mini_cal += "</div>"
                         
                         st.markdown(f"""
-                        <div style='background-color: #1e293b; padding: 8px 12px; border-radius: 6px; border-top: 3px solid #3b82f6; margin-top: 15px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); text-align: center;'>
+                        <div style='background-color: #111318; padding: 8px 12px; border-radius: 6px; border-top: 3px solid #C5A059; margin-top: 15px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); text-align: center;'>
                             <h4 style='margin: 0; color: #f8fafc; font-weight: 800; font-size: 0.95rem; text-transform: uppercase;'> Micro {micro_relativo} <span style='font-size: 0.75rem; color: #94a3b8; font-weight: 700;'>({lunes.strftime('%d/%m')} - {domingo.strftime('%d/%m')})</span></h4>
                             {html_mini_cal}
                         </div>
@@ -784,7 +784,7 @@ with tab_ses:
                             
                             with col_card:
                                 st.markdown(f"""
-                                <div style='background-color: #0f172a; border: 1px solid #334155; border-left: 3px solid {color_borde}; border-radius: 6px; padding: 4px 8px; height: 48px; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.15); margin-bottom: 8px;'>
+                                <div style='background-color: #0b0e14; border: 1px solid #1c1f26; border-left: 3px solid {color_borde}; border-radius: 6px; padding: 4px 8px; height: 48px; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.15); margin-bottom: 8px;'>
                                     <strong style='color: #f8fafc; font-size: 0.9rem; line-height: 1;'>{tipo_str}</strong>
                                     <span style='color: #94a3b8; font-size: 0.7rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px;'>{sub}</span>
                                 </div>
@@ -1118,8 +1118,8 @@ with tab_ses:
                         # Estructuras HTML Forzadas para igualar el CSS de style.css
                         def html_tarjeta_doble(color, val1, val2, lbl1, lbl2, tend1="", tend2=""):
                             return f"""
-                            <div style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid {color}; border-radius: 8px; padding: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.15); display: flex; flex-direction: row; align-items: stretch; margin-bottom: 10px; height: 85px;">
-                                <div style='flex: 1; padding-right: 8px; border-right: 1px solid #334155; display: flex; flex-direction: column;'>
+                            <div style="background: #111318; border: 1px solid #1c1f26; border-top: 3px solid {color}; border-radius: 8px; padding: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.15); display: flex; flex-direction: row; align-items: stretch; margin-bottom: 10px; height: 85px;">
+                                <div style='flex: 1; padding-right: 8px; border-right: 1px solid #1c1f26; display: flex; flex-direction: column;'>
                                     <span style='font-size: 0.85rem; color: #f8fafc; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; line-height: 1.1;'>{lbl1}</span>
                                     <div style='text-align: center; margin-top: auto;'>
                                         <span style='font-size: 1.4rem; font-weight: 800; color: #f8fafc;'>{val1}</span>{tend1}
@@ -1136,7 +1136,7 @@ with tab_ses:
                             
                         def html_tarjeta_simple(color, val, lbl):
                             return f"""
-                            <div style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid {color}; border-radius: 8px; padding: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.15); display: flex; flex-direction: column; margin-bottom: 10px; height: 85px;">
+                            <div style="background: #111318; border: 1px solid #1c1f26; border-top: 3px solid {color}; border-radius: 8px; padding: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.15); display: flex; flex-direction: column; margin-bottom: 10px; height: 85px;">
                                 <span style='font-size: 0.85rem; color: #f8fafc; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; line-height: 1.1;'>{lbl}</span>
                                 <span style='font-size: 1.4rem; font-weight: 800; color: #f8fafc; text-align: center; margin-top: auto;'>{val}</span>
                             </div>
@@ -1144,12 +1144,12 @@ with tab_ses:
 
                         def html_tarjeta_triple(color, val1, val2, val3, lbl1, lbl2, lbl3):
                             return f"""
-                            <div style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid {color}; border-radius: 8px; padding: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.15); display: flex; flex-direction: row; align-items: stretch; margin-bottom: 10px; height: 85px;">
-                                <div style='flex: 1; padding-right: 4px; border-right: 1px solid #334155; display: flex; flex-direction: column;'>
+                            <div style="background: #111318; border: 1px solid #1c1f26; border-top: 3px solid {color}; border-radius: 8px; padding: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.15); display: flex; flex-direction: row; align-items: stretch; margin-bottom: 10px; height: 85px;">
+                                <div style='flex: 1; padding-right: 4px; border-right: 1px solid #1c1f26; display: flex; flex-direction: column;'>
                                     <span style='font-size: 0.75rem; color: #f8fafc; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; line-height: 1.1;'>{lbl1}</span>
                                     <span style='font-size: 1.3rem; font-weight: 800; color: #f8fafc; text-align: center; margin-top: auto;'>{val1}</span>
                                 </div>
-                                <div style='flex: 1; padding-left: 8px; padding-right: 4px; border-right: 1px solid #334155; display: flex; flex-direction: column;'>
+                                <div style='flex: 1; padding-left: 8px; padding-right: 4px; border-right: 1px solid #1c1f26; display: flex; flex-direction: column;'>
                                     <span style='font-size: 0.75rem; color: #f8fafc; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; line-height: 1.1;'>{lbl2}</span>
                                     <span style='font-size: 1.3rem; font-weight: 800; color: #f8fafc; text-align: center; margin-top: auto;'>{val2}</span>
                                 </div>
@@ -1221,7 +1221,7 @@ with tab_ses:
                             densidad_acc = acc_m / min_m if min_m > 0 else 0
                             densidad_dcc = dcc_m / min_m if min_m > 0 else 0
                             
-                            st.markdown(html_tarjeta_triple("#3b82f6", f"{dis_m:.2f} km <span style='font-size:0.6em; color:#94a3b8;'>({pct_dis_eq:.0f}%)</span>", f"{hsr_m:.0f} m <span style='font-size:0.6em; color:#94a3b8;'>({pct_hsr_eq:.0f}%)</span>", f"{acc_m:.0f} | {dcc_m:.0f} <span style='font-size:0.6em; color:#94a3b8;'>({pct_acc_eq:.0f}%)</span>", "Distancia (vs Partido)", "HSR >21 (vs Partido)", "ACC|DCC (vs Partido)"), unsafe_allow_html=True)
+                            st.markdown(html_tarjeta_triple("#C5A059", f"{dis_m:.2f} km <span style='font-size:0.6em; color:#94a3b8;'>({pct_dis_eq:.0f}%)</span>", f"{hsr_m:.0f} m <span style='font-size:0.6em; color:#94a3b8;'>({pct_hsr_eq:.0f}%)</span>", f"{acc_m:.0f} | {dcc_m:.0f} <span style='font-size:0.6em; color:#94a3b8;'>({pct_acc_eq:.0f}%)</span>", "Distancia (vs Partido)", "HSR >21 (vs Partido)", "ACC|DCC (vs Partido)"), unsafe_allow_html=True)
                             st.markdown(html_tarjeta_triple("#0ea5e9", f"{densidad_m:.0f} m", f"{densidad_hsr:.1f} m", f"{densidad_acc:.2f} | {densidad_dcc:.2f}", "m / min", "HSR / min", "ACC | DCC / min"), unsafe_allow_html=True)
                         st.markdown("---")
                         
@@ -1303,7 +1303,7 @@ with tab_ses:
                                 
                                 # Escala de colores estricta adaptada al Sweet Spot Model (0.8 - 1.3)
                                 colorscale = [
-                                    [0.0, "#3b82f6"], [0.44, "#3b82f6"],  # 0.0 a ~0.8 (Azul - Under-loading)
+                                    [0.0, "#C5A059"], [0.44, "#C5A059"],  # 0.0 a ~0.8 (Azul - Under-loading)
                                     [0.44, "#10b981"], [0.72, "#10b981"], # ~0.8 a ~1.3 (Verde - Sweet Spot)
                                     [0.72, "#f59e0b"], [0.83, "#f59e0b"], # ~1.3 a ~1.5 (Amarillo - Danger Zone)
                                     [0.83, "#ef4444"], [1.0, "#ef4444"]   # > 1.5 (Rojo - Riesgo Crítico)
@@ -1424,10 +1424,10 @@ with tab_ses:
                                     bgcolor='rgba(0,0,0,0)', 
                                     radialaxis=dict(
                                         visible=True, range=[0, max(120, p_vol, p_int, p_ten)], 
-                                        gridcolor="#334155", linecolor="#334155", tickfont=dict(color='#94a3b8')
+                                        gridcolor="#1c1f26", linecolor="#1c1f26", tickfont=dict(color='#94a3b8')
                                     ),
                                     angularaxis=dict(
-                                        gridcolor="#334155", linecolor="#334155", tickfont=dict(color='#f8fafc', size=11, weight='bold')
+                                        gridcolor="#1c1f26", linecolor="#1c1f26", tickfont=dict(color='#f8fafc', size=11, weight='bold')
                                     )
                                 ),
                                 showlegend=True, 
