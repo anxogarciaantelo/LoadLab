@@ -92,12 +92,15 @@ if "color_sidebar" not in st.session_state:
     st.session_state.color_sidebar = "#f1f5f9"
 
 # --- GESTOR DE COOKIES ---
-@st.cache_resource
-def get_cookie_manager():
-    import extra_streamlit_components as stx
-    return stx.CookieManager()
+import extra_streamlit_components as stx
+cookie_manager = stx.CookieManager(key="loadlab_cookies")
 
-cookie_manager = get_cookie_manager()
+# Si venimos de hacer clic en "Cerrar Sesión", borramos las cookies desde la raíz
+if st.session_state.get("borrar_cookies", False):
+    cookie_manager.delete("loadlab_access")
+    cookie_manager.delete("loadlab_refresh")
+    cookie_manager.delete("loadlab_uid")
+    st.session_state.borrar_cookies = False
 
 # --- RECUPERACIÓN DE SESIÓN (RECUÉRDAME) ---
 # Si no estamos autenticados y no acabamos de darle al botón de cerrar sesión
