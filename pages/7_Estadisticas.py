@@ -311,13 +311,13 @@ with tab_jugadores:
                     foto_b64 = fotos_plantilla.get(nombre_jugador.strip().lower(), "")
                     if foto_b64:
                         img_src = foto_b64 if str(foto_b64).startswith("http") else f"data:image/jpeg;base64,{foto_b64}"
-                        avatar_html = f'<img src="{img_src}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; margin-right: 10px; border: 1px solid #334155;">'
+                        avatar_html = f'<img src="{img_src}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; margin-right: 10px; border: 1px solid #1c1f26;">'
                     else:
                         avatar_html = '<span class="material-symbols-rounded" style="font-size: 20px; color: #64748b; margin-right: 10px; vertical-align: middle;">person</span>'
 
                     st.markdown(
                         f"""
-                        <div style="background-color: #1e293b; padding: 8px 12px; border-radius: 6px; margin-bottom: 6px; border: 1px solid #334155; border-left: 4px solid #3b82f6; display: flex; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.15);">
+                        <div style="background-color: #111318; padding: 8px 12px; border-radius: 6px; margin-bottom: 6px; border: 1px solid #1c1f26; border-left: 4px solid #C5A059; display: flex; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.15);">
                             {avatar_html}
                             <div style="overflow: hidden; width: 100%;">
                                 <strong style="font-size: 0.85em; color: #94a3b8; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase;">{nombre_jugador}</strong>
