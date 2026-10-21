@@ -194,7 +194,7 @@ else:
         
     i = st.session_state.plantilla.index(jugador)
     
-    if st.button("⬅️ Volver a la Plantilla", key="btn_volver_plantilla"):
+    if st.button(":material/arrow_back: Volver a la Plantilla", key="btn_volver_plantilla"):
         st.session_state.vista_plantilla = "📋 Plantilla"
         st.rerun()
         
