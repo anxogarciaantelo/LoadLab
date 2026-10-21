@@ -13,7 +13,7 @@ from database.db_manager import *
 
 # --- COMPROBACIÓN DE SEGURIDAD Y SESIÓN ---
 if not st.session_state.get("autenticado", False) or not st.session_state.get("equipo_seleccionado", False):
-    st.warning("⚠️ La sesión ha expirado o no se ha seleccionado un equipo. Por favor, vuelve a iniciar sesión.")
+    st.warning(":material/warning: La sesión ha expirado o no se ha seleccionado un equipo. Por favor, vuelve a iniciar sesión.")
     if st.button("Ir al Login principal"):
         st.session_state.clear()
         st.rerun()
@@ -124,7 +124,7 @@ else:
                 
         # 5. DIBUJAR GRÁFICOS EN MEDIO (Usando el contenedor reservado)
         with cont_graficos:
-            st.markdown("#### 📈 Desglose Estadístico")
+            st.markdown("#### :material/insights: Desglose Estadístico")
             if not df_filtrado.empty:
                 cg1, cg2, cg3 = st.columns(3)
                 with cg1:
@@ -167,11 +167,11 @@ else:
                     st.plotly_chart(fig_sup, use_container_width=True, key="les_pie_sup")
 
     with tab_gest_med:
-        st.markdown("#### 🩺 Gestor de Altas Médicas")
+        st.markdown("#### :material/medical_services: Gestor de Altas Médicas")
         lesiones_activas = [l for l in st.session_state.lesiones if l.get("estado") == "Activa"]
         
         if not lesiones_activas:
-            st.success("✅ ¡Toda la plantilla está sana! No hay ninguna lesión activa pendiente de cerrar.")
+            st.success(":material/check_circle: ¡Toda la plantilla está sana! No hay ninguna lesión activa pendiente de cerrar.")
         else:
             nombres_lesiones_activas = [f"{l['id_sesion']} | {l['jugador']} - {l['tipo']} ({l['zona']})" for l in lesiones_activas]
             les_seleccionada_idx = st.selectbox("Selecciona la lesión que deseas dar de alta:", range(len(lesiones_activas)), format_func=lambda x: nombres_lesiones_activas[x])
@@ -199,7 +199,7 @@ else:
                 st.write(f"Actualizando lesión de **{les_obj['jugador']}** (Iniciada el {les_obj['id_sesion']})")
                 
                 if fecha_alta_sugerida:
-                    st.info(f"💡 **Auto-Detección:** {les_obj['jugador']} volvió a estar '{disp_jug}' el **{fecha_alta_sugerida.strftime('%Y-%m-%d')}**.")
+                    st.info(f":material/lightbulb: **Auto-Detección:** {les_obj['jugador']} volvió a estar '{disp_jug}' el **{fecha_alta_sugerida.strftime('%Y-%m-%d')}**.")
                     dias_baja_input = st.number_input("Días de Baja Totales:", min_value=1, max_value=500, value=dias_sugeridos)
                 else:
                     st.warning("El jugador no ha vuelto a estar disponible en ninguna sesión registrada.")
@@ -253,7 +253,7 @@ else:
         col_m1, col_m2 = st.columns(2)
 
         with col_m1:
-            st.markdown("#### 📝 Editar Comentarios")
+            st.markdown("#### :material/edit_note: Editar Comentarios")
             lesiones_todas_ordenadas = sorted(st.session_state.lesiones, key=lambda x: x.get("fecha_registro", "2000-01-01"), reverse=True)
             nombres_les_todas = [f"{l['id_sesion']} | {l['jugador']} ({l['tipo']})" for l in lesiones_todas_ordenadas]
             
@@ -274,14 +274,14 @@ else:
                     st.rerun()
         
         with col_m2:
-            st.markdown("#### 🗑️ Eliminar Registro de Lesión")
+            st.markdown("#### :material/delete: Eliminar Registro de Lesión")
             if st.session_state.lesiones:
                 lesiones_todas_del = sorted(st.session_state.lesiones, key=lambda x: x.get("fecha_registro", "2000-01-01"), reverse=True)
                 nombres_les_borrar = [f"{l['id_sesion']} | {l['jugador']} ({l['tipo']} - {l['zona']})" for l in lesiones_todas_del]
                 
                 with st.form("form_eliminar_lesion"):
                     les_del_idx = st.selectbox("Selecciona la lesión duplicada o errónea:", range(len(lesiones_todas_del)), format_func=lambda x: nombres_les_borrar[x])
-                    st.warning("⚠️ Cuidado: Esta acción borrará el registro médico de la base de datos para siempre.")
+                    st.warning(":material/warning: Cuidado: Esta acción borrará el registro médico de la base de datos para siempre.")
                     
                     if st.form_submit_button(":material/delete_forever: Eliminar Lesión Definitivamente"):
                         les_a_borrar = lesiones_todas_del[les_del_idx]
@@ -298,7 +298,7 @@ else:
                 st.info("No hay lesiones en el historial para eliminar.")
                 
     with tab_rtp:
-        st.markdown("#### 🏃‍♂️ Motor Automatizado de Return To Play (RTP)")
+        st.markdown("#### :material/directions_run: Motor Automatizado de Return To Play (RTP)")
         st.caption("Sistema inteligente de fases. Analiza automáticamente el volumen, la tolerancia a la carga (Ratio A/C ajustado), el dolor post-sesión y la exposición a alta velocidad. Evalúa los criterios de alta competitiva cruzándolos con el historial pre-lesión del jugador.")
 
         # 1. IDENTIFICACIÓN AUTOMÁTICA DE JUGADORES EN READAPTACIÓN (Exclusivo de Entrenamientos hasta HOY)
@@ -324,7 +324,7 @@ else:
                         jugadores_readaptacion.append(j["JUGADOR"])
 
         if not jugadores_readaptacion:
-            st.success("✅ No hay ningún jugador en proceso de readaptación actualmente (basado en la disponibilidad de la última sesión registrada).")
+            st.success(":material/check_circle: No hay ningún jugador en proceso de readaptación actualmente (basado en la disponibilidad de la última sesión registrada).")
         else:
             c_sel_rtp, _ = st.columns([1, 2])
             jug_rtp = c_sel_rtp.selectbox("Selecciona al deportista en proceso RTP:", sorted(jugadores_readaptacion))
@@ -332,7 +332,7 @@ else:
             lesiones_jugador = [l for l in df_les.to_dict('records') if l['jugador'] == jug_rtp]
             
             if not lesiones_jugador:
-                st.warning(f"⚠️ {jug_rtp} está marcado como 'Readaptación', pero no tiene registros de lesiones previas en la base de datos.")
+                st.warning(f":material/warning: {jug_rtp} está marcado como 'Readaptación', pero no tiene registros de lesiones previas en la base de datos.")
             else:
                 l_rtp = sorted(lesiones_jugador, key=lambda x: x['id_sesion'])[-1]
                 fecha_lesion_dt = datetime.strptime(l_rtp['id_sesion'], "%Y-%m-%d").date()
@@ -365,7 +365,7 @@ else:
                 
                 st.markdown(f"**Lesión Evaluada:** {l_rtp['tipo']} en {l_rtp['zona']} ({l_rtp['id_sesion']}) | **Gravedad Base:** {grav_rtp} ({dias_rtp} días)")
                 if es_tend_o_recidiva: 
-                    st.warning("⚠️ **Penalización estructural aplicada:** +1 sesión requerida por fase (Lesión tendinosa o recidiva).")
+                    st.warning(":material/warning: **Penalización estructural aplicada:** +1 sesión requerida por fase (Lesión tendinosa o recidiva).")
 
                 # 3. BASELINE DEL JUGADOR (Vmax histórica, Carga Crónica y Demandas Posicionales)
                 partidos_jug = []
@@ -495,7 +495,7 @@ else:
 
                 # 5. RENDERIZADO VISUAL DE FASES
                 st.markdown("---")
-                st.markdown(f"#### 🧱 Estado de Progresión: **Fase {fase_actual + 1}**")
+                st.markdown(f"#### :material/stairs: Estado de Progresión: **Fase {fase_actual + 1}**")
                 
                 c_p1, c_p2, c_p3, c_p4 = st.columns(4)
                 fases_ui = [
@@ -511,13 +511,13 @@ else:
                     
                     if idx < fase_actual: 
                         bg, border = "#064e3b", "#10b981" # Completado
-                        estado = "✅ COMPLETADO"
+                        estado = "<span class='material-symbols-rounded' style='vertical-align: text-bottom; font-size: 1rem; margin-right: 4px;'>check_circle</span> COMPLETADO"
                     elif idx == fase_actual: 
                         bg, border = "#1e293b", "#3b82f6" # En curso
-                        estado = f"🔄 EN CURSO ({comp_txt}/{req_txt})"
+                        estado = f"<span class='material-symbols-rounded' style='vertical-align: text-bottom; font-size: 1rem; margin-right: 4px;'>sync</span> EN CURSO ({comp_txt}/{req_txt})"
                     else: 
                         bg, border = "#0f172a", "#334155" # Pendiente
-                        estado = f"⏳ PENDIENTE (0/{req_txt})"
+                        estado = f"<span class='material-symbols-rounded' style='vertical-align: text-bottom; font-size: 1rem; margin-right: 4px;'>hourglass_empty</span> PENDIENTE (0/{req_txt})"
                         
                     col.markdown(f"""
                     <div style="background-color: {bg}; border: 1px solid {border}; border-top: 4px solid {border}; padding: 10px; border-radius: 8px; height: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
@@ -528,14 +528,14 @@ else:
                     """, unsafe_allow_html=True)
 
                 if historial_progresion:
-                    with st.expander("🔍 Ver Historial de Sesiones de Readaptación"):
+                    with st.expander(":material/search: Ver Historial de Sesiones de Readaptación"):
                         df_hist = pd.DataFrame(historial_progresion)
                         mostrar_tabla_moderna(df_hist.style.hide(axis="index").map(lambda x: "color: #ef4444;" if "🔴" in str(x) else "color: #10b981;", subset=["Estado"]))
 
                 st.markdown("---")
                 
                 # 6. EVALUACIÓN AUTOMÁTICA DE CRITERIOS DE ALTA COMPETITIVA
-                st.markdown("#### ✅ Criterios de Alta Competitiva (RTP)")
+                st.markdown("#### :material/verified: Criterios de Alta Competitiva (RTP)")
                 
                 hoy_str = str(date.today())
                 _, _, lunes, domingo = obtener_rango_fechas_semana(hoy_str)
@@ -646,12 +646,12 @@ else:
 
                 # --- RENDERIZADO DE LOS CRITERIOS AUTOMÁTICOS ---
                 def render_criterio(cumple, titulo, detalle):
-                    icon = "✅" if cumple else "❌"
+                    icon = "check_circle" if cumple else "cancel"
                     color = "#10b981" if cumple else "#ef4444"
                     bg = "rgba(16, 185, 129, 0.1)" if cumple else "rgba(239, 68, 68, 0.1)"
                     st.markdown(f"""
                     <div style="background-color: {bg}; border-left: 4px solid {color}; padding: 12px; margin-bottom: 8px; border-radius: 6px; display: flex; align-items: center;">
-                        <span style="font-size: 1.2rem; margin-right: 12px;">{icon}</span>
+                        <span class="material-symbols-rounded" style="font-size: 1.5rem; margin-right: 12px; color: {color};">{icon}</span>
                         <div>
                             <strong style="color: #f8fafc; font-size: 0.9rem; display: block;">{titulo}</strong>
                             <span style="color: #94a3b8; font-size: 0.8rem;">{detalle}</span>
@@ -679,7 +679,7 @@ else:
                 st.markdown("---")
                 
                 # 7. EVALUACIÓN MANUAL (TESTS ESPECÍFICOS)
-                st.markdown("#### 🧠 Criterios Médicos y Neuromusculares (Inputs)")
+                st.markdown("#### :material/psychology: Criterios Médicos y Neuromusculares (Inputs)")
                 c_man1, c_man2 = st.columns(2)
                 
                 with c_man1:
@@ -688,9 +688,9 @@ else:
                         st.caption("Puntuación de 0 a 60. El estándar de élite exige superar los 50 puntos (aprox. 8.3/10) para asegurar la ausencia de kinesiofobia.")
                         punt_cuest = st.number_input("Puntuación (sobre 60):", min_value=0, max_value=60, value=0)
                         if punt_cuest >= 50:
-                            st.success(f"✅ Apto ({punt_cuest}/60)")
+                            st.success(f":material/check_circle: Apto ({punt_cuest}/60)")
                         elif punt_cuest > 0:
-                            st.error(f"❌ No Apto ({punt_cuest}/60) - Requiere consolidación psicológica")
+                            st.error(f":material/cancel: No Apto ({punt_cuest}/60) - Requiere consolidación psicológica")
                             
                 with c_man2:
                     with st.container(border=True):
@@ -721,6 +721,6 @@ else:
                             crit_recup = pct_base_d >= 90 and pct_base_i >= 90
                             
                             if crit_lsi and crit_recup:
-                                st.success(f"✅ Apto. LSI: {lsi_act:.1f}% | Recup. Fuerza: {min(pct_base_d, pct_base_i):.1f}%")
+                                st.success(f":material/check_circle: Apto. LSI: {lsi_act:.1f}% | Recup. Fuerza: {min(pct_base_d, pct_base_i):.1f}%")
                             else:
-                                st.error(f"❌ Falla criterio. LSI: {lsi_act:.1f}% | Recup. Fuerza: {min(pct_base_d, pct_base_i):.1f}%")
+                                st.error(f":material/cancel: Falla criterio. LSI: {lsi_act:.1f}% | Recup. Fuerza: {min(pct_base_d, pct_base_i):.1f}%")
