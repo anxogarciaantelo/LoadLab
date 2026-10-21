@@ -13,7 +13,7 @@ from database.db_manager import *
 
 # --- COMPROBACIÓN DE SEGURIDAD Y SESIÓN ---
 if not st.session_state.get("autenticado", False) or not st.session_state.get("equipo_seleccionado", False):
-    st.warning("⚠️ La sesión ha expirado o no se ha seleccionado un equipo. Por favor, vuelve a iniciar sesión.")
+    st.warning(":material/warning: La sesión ha expirado o no se ha seleccionado un equipo. Por favor, vuelve a iniciar sesión.")
     if st.button("Ir al Login principal"):
         st.session_state.clear()
         st.rerun()
@@ -46,7 +46,7 @@ for s in sesiones_crono:
             s["nombre_dinamico"] = f"Ronda {conteo_copa}"
         s["subtitulo_dinamico"] = f"vs {s.get('rival', 'Rival')}"
  
-st.subheader("📅 Entrenamiento")
+st.subheader(":material/calendar_month: Entrenamiento")
 
 tab_cal, tab_temp, tab_micro, tab_ses, tab_add = st.tabs([
     ":material/calendar_view_month: Calendario", 
@@ -71,12 +71,12 @@ with tab_cal:
     
     # Botones de navegación del mes
     c_nav1, c_nav2, c_nav3 = st.columns([1, 3, 1])
-    if c_nav1.button("◀", use_container_width=True):
+    if c_nav1.button(":material/chevron_left:", use_container_width=True):
         st.session_state.cal_offset -= 1
         st.rerun()
     with c_nav2:
         st.markdown(f"<h4 style='text-align: center; color: #f8fafc; margin-top: 0; margin-bottom: 10px; font-size: 1.15rem; text-transform: uppercase; font-weight: 800; letter-spacing: 1px;'>🗓️ {meses_nombres[month]} {year}</h4>", unsafe_allow_html=True)
-    if c_nav3.button("▶", use_container_width=True):
+    if c_nav3.button(":material/chevron_right:", use_container_width=True):
         st.session_state.cal_offset += 1
         st.rerun()
     
@@ -272,7 +272,7 @@ with tab_temp:
                 st.markdown("---")
                 
                 # --- GRÁFICOS SUPERIORES Y MEJORADOS ---
-                st.markdown("#### 🧠 Evolución de Bienestar y Recuperación")
+                st.markdown("#### :material/psychology: Evolución de Bienestar y Recuperación")
                 cg_b1, cg_b2 = st.columns(2)
                 
                 with cg_b1:
@@ -292,7 +292,7 @@ with tab_temp:
                     fig_well.add_hline(y=24, line_dash="dash", line_color="red", annotation_text="Crítico (24)")
                     st.plotly_chart(fig_well, use_container_width=True)
                 
-                st.markdown("#### 🔥 Carga Interna y Externa")
+                st.markdown("#### :material/local_fire_department: Carga Interna y Externa")
                 cg1, cg2, cg3 = st.columns(3)
                 with cg1:
                     fig_carga = go.Figure()
@@ -317,7 +317,7 @@ with tab_temp:
                 st.markdown("---")
                 
                 # --- TABLA INTERACTIVA (FILTRABLE Y ORDENABLE) ---
-                st.markdown("#### 📋 Base de Datos de Microciclos")
+                st.markdown("#### :material/list_alt: Base de Datos de Microciclos")
                 st.caption("Puedes clickar en el nombre de cualquier columna para ordenar los datos de mayor a menor, o usar la lupa para buscar.")
                 
                 df_temporada_show = df_temporada.sort_values("ID", ascending=False).drop(columns=["ID"])
@@ -353,10 +353,10 @@ with tab_micro:
             
             dict_micros = {}
             for _, r_m in df_m_desc.iterrows():
-                etiqueta = f"📦 Microciclo {r_m['Micro_Num']} | Semana del {r_m['ini']} al {r_m['fin']}"
+                etiqueta = f":material/inventory_2: Microciclo {r_m['Micro_Num']} | Semana del {r_m['ini']} al {r_m['fin']}"
                 dict_micros[etiqueta] = r_m
             
-            st.markdown("### 🔄 Análisis de Microciclos")
+            st.markdown("### :material/sync: Análisis de Microciclos")
             
             # Selector y Filtros en la misma línea
             c_sel1, c_sel2 = st.columns([1, 2])
@@ -455,7 +455,7 @@ with tab_micro:
                 st.markdown("---")
                 
                 # --- NUEVOS KPIS DE DISEÑO ÉLITE EN UNA FILA ---
-                st.markdown(f"#### 🎯 Resumen Acumulado del Microciclo")
+                st.markdown(f"#### :material/track_changes: Resumen Acumulado del Microciclo")
                 cols_kpi = st.columns(10)
                 from utils.math_helpers import render_kpi_elite
                 
@@ -471,7 +471,7 @@ with tab_micro:
                 with cols_kpi[9]: render_kpi_elite("DCC", f"{df_diario['DCC'].sum():.0f}" if not df_diario.empty else "0")
 
                 st.markdown("---")
-                st.markdown("#### 📋 Resumen por Día")
+                st.markdown("#### :material/list_alt: Resumen por Día")
                 if not df_diario.empty:
                     estilo_diario = (df_diario.style.hide(axis="index").format(precision=2)
                         .background_gradient(subset=['WELLNESS'], cmap='Reds', vmin=5, vmax=35)
@@ -481,7 +481,7 @@ with tab_micro:
                     mostrar_tabla_moderna(estilo_diario)
 
                 st.markdown("---")
-                st.markdown("#### 🧠 Bienestar")
+                st.markdown("#### :material/psychology: Bienestar")
                 cg_b1, cg_b2 = st.columns(2)
                 with cg_b1:
                     df_tqr_plot = df_diario.set_index('DIA').reindex(["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]).reset_index()
@@ -526,7 +526,7 @@ with tab_micro:
                     st.plotly_chart(fig_well, use_container_width=True, key=f"micro_well_{num_sem}_{idx_real}")
 
                 st.markdown("---")
-                st.markdown("#### 🔥 Carga Interna")
+                st.markdown("#### :material/local_fire_department: Carga Interna")
                 cg_i1, cg_i2, cg_i3 = st.columns(3)
                 with cg_i1:
                     fig_min = px.bar(df_diario, x='DIA', y='MIN', title="Evolución Minutos")
@@ -579,7 +579,7 @@ with tab_micro:
                     st.plotly_chart(fig_carga, use_container_width=True, key=f"micro_carga_{num_sem}_{idx_real}")
 
                 st.markdown("---")
-                st.markdown("#### 🏃‍♂️ Carga Externa (Solo datos GPS > 0m)")
+                st.markdown("#### :material/directions_run: Carga Externa (Solo datos GPS > 0m)")
                 
                 df_diario_plot = df_diario.set_index('DIA').reindex(["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]).reset_index().fillna(0)
                 
@@ -603,7 +603,7 @@ with tab_micro:
                     st.plotly_chart(fig_disai, use_container_width=True, key=f"micro_disai_{num_sem}_{idx_real}")
 
                 st.markdown("---")
-                st.markdown("#### 👤 Resumen Semanal por Jugador")
+                st.markdown("#### :material/person: Resumen Semanal por Jugador")
                 
                 df_jug_sum_int = df_filtrado.groupby('JUGADOR')[['MIN', 'CARGA']].sum().reset_index()
                 df_filtrado_gps = df_filtrado[df_filtrado['DIS'] > 0]
@@ -650,7 +650,7 @@ with tab_micro:
                 pdf_key = f"pdf_listo_{num_sem}_{idx_real}"
 
                 if pdf_key not in st.session_state:
-                    if st.button("⚙️ Generar PDF del Microciclo", key=f"btn_prepara_pdf_{num_sem}_{idx_real}"):
+                    if st.button(":material/settings: Generar PDF del Microciclo", key=f"btn_prepara_pdf_{num_sem}_{idx_real}"):
                         with st.spinner("Procesando gráficos y PDF (esto puede tardar unos segundos)..."):
                             st.session_state[pdf_key] = generar_pdf_microciclo(nombre_etiqueta, df_diario, df_indiv, kpis_micro, diccionario_figuras_micro)
                         st.rerun()
@@ -658,14 +658,14 @@ with tab_micro:
                     col_pdf1, col_pdf2 = st.columns(2)
                     with col_pdf1:
                         st.download_button(
-                            label="📥 Descargar PDF",
+                            label=":material/download: Descargar PDF",
                             data=st.session_state[pdf_key],
                             file_name=f"Microciclo_{num_sem}.pdf",
                             mime="application/pdf",
                             key=f"btn_descarga_pdf_{num_sem}_{idx_real}"
                         )
                     with col_pdf2:
-                        if st.button("🗑️ Descartar PDF", key=f"btn_borrar_pdf_{num_sem}_{idx_real}"):
+                        if st.button(":material/delete: Descartar PDF", key=f"btn_borrar_pdf_ses_{idx_real}", use_container_width=True):
                             del st.session_state[pdf_key]
                             st.rerun()
 
@@ -689,10 +689,10 @@ with tab_ses:
 
     if not st.session_state.sesiones:
         render_estado_vacio(
-            icono="📅", 
+            icono=":material/calendar_month:", 
             titulo="Sin sesiones registradas", 
             descripcion="Aún no has planificado ningún entrenamiento o partido. LoadLab necesita este calendario para mapear la fatiga del equipo.",
-            accion_sugerida="Ve a la pestaña '➕ Añadir Sesión' para generar tu primer evento."
+            accion_sugerida="Ve a la pestaña ':material/add_circle: Añadir Sesión' para generar tu primer evento."
         )
     else:
         if "ses_activa_idx" not in st.session_state:
@@ -754,7 +754,7 @@ with tab_ses:
                         
                         st.markdown(f"""
                         <div style='background-color: #1e293b; padding: 8px 12px; border-radius: 6px; border-top: 3px solid #3b82f6; margin-top: 15px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); text-align: center;'>
-                            <h4 style='margin: 0; color: #f8fafc; font-weight: 800; font-size: 0.95rem; text-transform: uppercase;'>📦 Micro {micro_relativo} <span style='font-size: 0.75rem; color: #94a3b8; font-weight: 700;'>({lunes.strftime('%d/%m')} - {domingo.strftime('%d/%m')})</span></h4>
+                            <h4 style='margin: 0; color: #f8fafc; font-weight: 800; font-size: 0.95rem; text-transform: uppercase;'>:material/inventory_2: Micro {micro_relativo} <span style='font-size: 0.75rem; color: #94a3b8; font-weight: 700;'>({lunes.strftime('%d/%m')} - {domingo.strftime('%d/%m')})</span></h4>
                             {html_mini_cal}
                         </div>
                         """, unsafe_allow_html=True)
@@ -790,12 +790,12 @@ with tab_ses:
                                 </div>
                                 """, unsafe_allow_html=True)
                                 
-                            if c_b1.button("🏥", key=f"bd_{idx_real}", help="Disponibilidad", use_container_width=True): toggle_view(idx_real, "disp"); st.rerun()
-                            if c_b2.button("📊", key=f"bi_{idx_real}", help="Informe", use_container_width=True): toggle_view(idx_real, "inf"); st.rerun()
-                            if c_b3.button("📂", key=f"bc_{idx_real}", help="Cargar Datos", use_container_width=True): toggle_view(idx_real, "datos"); st.rerun()
-                            if c_b4.button("🚑", key=f"bl_{idx_real}", help="Lesión", use_container_width=True): toggle_view(idx_real, "les"); st.rerun()
+                            if c_b1.button(":material/local_hospital:", key=f"bd_{idx_real}", help="Disponibilidad", use_container_width=True): toggle_view(idx_real, "disp"); st.rerun()
+                            if c_b2.button(":material/bar_chart:", key=f"bi_{idx_real}", help="Informe", use_container_width=True): toggle_view(idx_real, "inf"); st.rerun()
+                            if c_b3.button(":material/folder_open:", key=f"bc_{idx_real}", help="Cargar Datos", use_container_width=True): toggle_view(idx_real, "datos"); st.rerun()
+                            if c_b4.button(":material/emergency:", key=f"bl_{idx_real}", help="Lesión", use_container_width=True): toggle_view(idx_real, "les"); st.rerun()
                             if es_partido:
-                                if c_b5.button("⚡", key=f"bs_{idx_real}", help="Stats Partido", use_container_width=True): toggle_view(idx_real, "stats"); st.rerun()
+                                if c_b5.button(":material/bolt:", key=f"bs_{idx_real}", help="Stats Partido", use_container_width=True): toggle_view(idx_real, "stats"); st.rerun()
 
         # =======================================================
         # VISTA 2: PANTALLA COMPLETA PARA HERRAMIENTAS (ROUTER)
@@ -808,13 +808,13 @@ with tab_ses:
             # Barra superior de navegación nativa
             col_back, col_title = st.columns([1, 5])
             with col_back:
-                if st.button("⬅️ Volver", use_container_width=True):
+                if st.button(":material/arrow_back: Volver", use_container_width=True):
                     toggle_view(None, None)
                     st.rerun()
             with col_title:
                 nom_h = sesion.get("nombre_dinamico", sesion["tipo"])
                 sub_h = sesion.get('rival', 'Rival') if es_partido else sesion.get('descripcion', 'TD')
-                st.markdown(f"<h4 style='margin-top: 5px; color: #f8fafc;'>⚙️ Gestión: {nom_h} ({sub_h}) | {sesion['fecha']}</h4>", unsafe_allow_html=True)
+                st.markdown(f"<h4 style='margin-top: 5px; color: #f8fafc;'>:material/settings: Gestión: {nom_h} ({sub_h}) | {sesion['fecha']}</h4>", unsafe_allow_html=True)
 
             st.markdown("---")
             
@@ -849,7 +849,7 @@ with tab_ses:
                     if est in opciones_disp:
                         jugadores_por_estado[est].append(j)
 
-                st.info(f"💡 Por defecto, todos los jugadores de la plantilla que no añadas abajo se marcarán automáticamente como **{default_disp}**.")
+                st.info(f":material/lightbulb: Por defecto, todos los jugadores de la plantilla que no añadas abajo se marcarán automáticamente como **{default_disp}**.")
                 
                 with st.form(key=f"form_disp_{idx_real}"):
                     selecciones = {}
@@ -860,7 +860,7 @@ with tab_ses:
                         with cols_disp[i]:
                             selecciones[est] = st.multiselect(f"{est}", jugs_plantilla, default=jugadores_por_estado[est])
                             
-                    if st.form_submit_button("💾 Guardar Disponibilidad", type="primary", use_container_width=True):
+                    if st.form_submit_button(":material/save: Guardar Disponibilidad", type="primary", use_container_width=True):
                         disp_final = {}
                         for j in jugs_plantilla:
                             asignado = False
@@ -1164,11 +1164,11 @@ with tab_ses:
                         col_w, col_i, col_e = st.columns([1, 2, 3])
                         
                         with col_w:
-                            st.markdown("<h5 style='color: #f8fafc; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; margin-top: 0;'>🧠 Bienestar</h5>", unsafe_allow_html=True)
+                            st.markdown("<h5 style='color: #f8fafc; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; margin-top: 0;'>:material/psychology: Bienestar</h5>", unsafe_allow_html=True)
                             st.markdown(html_tarjeta_doble("#10b981", f"{tqr_m:.1f}", f"{well_m:.1f}", "TQR", "Wellness", t_tqr, t_well), unsafe_allow_html=True)
                             
                         with col_i:
-                            st.markdown("<h5 style='color: #f8fafc; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; margin-top: 0;'>🔥 Carga & Eficiencia (Medias)</h5>", unsafe_allow_html=True)
+                            st.markdown("<h5 style='color: #f8fafc; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; margin-top: 0;'>:material/local_fire_department: Carga & Eficiencia (Medias)</h5>", unsafe_allow_html=True)
                             c_i1, c_i2 = st.columns(2)
                             
                             with c_i1:
@@ -1177,7 +1177,7 @@ with tab_ses:
                                 st.markdown(html_tarjeta_doble("#f59e0b", f"{efi_c_media:.4f}", f"{efi_n_media:.2f}", "Coste Cardio", "Coste Neuro", t_efic, t_efin), unsafe_allow_html=True)
                                 
                         with col_e:
-                            st.markdown("<h5 style='color: #f8fafc; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; margin-top: 0;'>🏃‍♂️ Carga Externa & Densidad</h5>", unsafe_allow_html=True)
+                            st.markdown("<h5 style='color: #f8fafc; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; margin-top: 0;'>:material/directions_run: Carga Externa & Densidad</h5>", unsafe_allow_html=True)
                             
                             # --- CÁLCULO DE REFERENCIAS DE PARTIDO (100%) NORMALIZADO A 90' ---
                             df_historico_partidos = st.session_state.df_master_informes[(st.session_state.df_master_informes['TIPO_SESION'].str.contains("Partido", na=False)) & (st.session_state.df_master_informes['DIS'] > 0)].copy()
@@ -1226,31 +1226,31 @@ with tab_ses:
                         st.markdown("---")
                         
                         # --- 4. ALERTAS DE RIESGO MOVIDAS ARRIBA (EN 3 COLUMNAS) ---
-                        st.markdown("#### ⚠️ Alertas de Rendimiento y Riesgo Lesivo")
+                        st.markdown("#### :material/warning: Alertas de Rendimiento y Riesgo Lesivo")
                         if not alertas_multi and not alertas_rec and not alertas_car:
-                            st.success("✅ Todos los marcadores de fatiga y riesgo del equipo están dentro de los parámetros normales.")
+                            st.success(":material/check_circle: Todos los marcadores de fatiga y riesgo del equipo están dentro de los parámetros normales.")
                         else:
                             c_al_rec, c_al_car, c_al_mul = st.columns(3)
                             with c_al_rec:
-                                st.markdown("##### 🧠 Recuperación")
+                                st.markdown("##### :material/psychology: Recuperación")
                                 if alertas_rec:
                                     for al in alertas_rec: st.warning(al)
-                                else: st.info("✅ Sin alertas.")
+                                else: st.info(":material/check_circle: Sin alertas.")
                             with c_al_car:
-                                st.markdown("##### 🔥 Carga")
+                                st.markdown("##### :material/local_fire_department: Carga")
                                 if alertas_car:
                                     for al in alertas_car: st.warning(al)
-                                else: st.info("✅ Sin alertas.")
+                                else: st.info(":material/check_circle: Sin alertas.")
                             with c_al_mul:
-                                st.markdown("##### 🚨 Riesgo Multifactorial")
+                                st.markdown("##### :material/emergency: Riesgo Multifactorial")
                                 if alertas_multi:
                                     for al in alertas_multi: st.error(al)
-                                else: st.success("✅ Sin alertas críticas.")
+                                else: st.success(":material/check_circle: Sin alertas críticas.")
 
                         st.markdown("---")
 
                         # --- 5. GRÁFICOS DE BIENESTAR ---
-                        st.markdown("#### 🧠 1. Bienestar y Recuperación")
+                        st.markdown("#### :material/psychology: 1. Bienestar y Recuperación")
                         cg1, cg2 = st.columns(2)
                         with cg1:
                             if df_graficos['WELLNESS'].sum() > 0:
@@ -1281,7 +1281,7 @@ with tab_ses:
                         st.markdown("---")
 
                         # --- 6. CARGA INTERNA (GRÁFICOS PRIMERO, TABLA DESPUÉS) ---
-                        st.markdown("#### 🔥 2. Carga Interna")
+                        st.markdown("#### :material/local_fire_department: 2. Carga Interna")
                         
                         cg3, cg4 = st.columns(2)
                         with cg3:
@@ -1320,7 +1320,7 @@ with tab_ses:
                                 fig3.update_layout(title="Riesgo Multidimensional (ACWR)", plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', margin=dict(l=10, r=10, t=40, b=10), yaxis={'autorange': 'reversed'})
                                 st.plotly_chart(fig3, use_container_width=True, key=f"ses_ac_{idx_real}")
                         
-                        with st.expander("📋 Ver Tabla Detallada de Carga Interna"):
+                        with st.expander(":material/list_alt: Ver Tabla Detallada de Carga Interna"):
                             cols_ver_ci = ['JUGADOR', 'POS', 'MIN', 'RPE', 'CARGA', 'RATIO A/C', 'RATIO A/C HSR', 'RATIO A/C ACC']
                             df_tabla_riesgo = df_informe[cols_ver_ci].rename(columns={'RATIO A/C': 'A/C INT', 'RATIO A/C HSR': 'A/C HSR', 'RATIO A/C ACC': 'A/C ACC'})
                             
@@ -1331,7 +1331,7 @@ with tab_ses:
                         st.markdown("---")
 
                         # --- 7. CARGA EXTERNA (GRÁFICOS PRIMERO, TABLA DESPUÉS, CON % VMAX) ---
-                        st.markdown("#### 🏃‍♂️ 3. Carga Externa (GPS)")
+                        st.markdown("#### :material/directions_run: 3. Carga Externa (GPS)")
                         
                         # --- HUELLA DACTILAR DE LA SESIÓN ---
                         if es_partido:
@@ -1381,7 +1381,7 @@ with tab_ses:
                             
                         c_hd1, c_hd2 = st.columns([1, 2.2])
                         with c_hd1:
-                            st.markdown("##### 🧭 Huella Dactilar")
+                            st.markdown("##### :material/fingerprint: Huella Dactilar")
                             st.caption("Identifica de un vistazo la morfología de la carga y el enfoque físico-táctico de la sesión.")
                             tipo_ref = st.radio("Referencia (100%):", ["Orientación (vs Partido)", f"Cumplimiento (vs {ses_md})"], key=f"rad_ref_{idx_real}")
                             
@@ -1397,9 +1397,9 @@ with tab_ses:
                             p_int = (int_actual / i_ref) * 100
                             p_ten = (ten_actual / t_ref) * 100
                             
-                            if p_ten > p_vol and p_ten > p_int: insight = "🔥 **Predominancia de Tensión:** Espacios reducidos y transiciones cortas."
-                            elif p_vol >= p_ten and p_vol >= p_int: insight = "🏃‍♂️ **Predominancia de Volumen:** Sesión extensiva y carga aeróbica."
-                            else: insight = "⚡ **Predominancia de Intensidad:** Alta velocidad y transiciones largas."
+                            if p_ten > p_vol and p_ten > p_int: insight = ":material/local_fire_department: **Predominancia de Tensión:** Espacios reducidos y transiciones cortas."
+                            elif p_vol >= p_ten and p_vol >= p_int: insight = ":material/directions_run: **Predominancia de Volumen:** Sesión extensiva y carga aeróbica."
+                            else: insight = ":material/bolt: **Predominancia de Intensidad:** Alta velocidad y transiciones largas."
                                 
                             st.info(insight)
                             
@@ -1554,7 +1554,7 @@ with tab_ses:
                                 st.plotly_chart(fig_den_m, use_container_width=True, key=f"ses_den_m_{idx_real}")
 
                         # --- TABLA DE CARGA EXTERNA (CON % RELATIVO INDIVIDUAL) ---
-                        with st.expander("📋 Ver Tabla Detallada de Carga Externa"):
+                        with st.expander(":material/list_alt: Ver Tabla Detallada de Carga Externa"):
                             df_tabla_ce = df_informe[df_informe['DIS'] > 0].copy()
                             df_tabla_ce['DIS AI'] = df_tabla_ce.get('DIS AI', df_tabla_ce.get('HID >21', 0))
                             
@@ -1572,15 +1572,15 @@ with tab_ses:
                         st.markdown("---")
                         pdf_key = f"pdf_sesion_listo_{idx_real}"
                         if pdf_key not in st.session_state:
-                            if st.button("⚙️ Generar PDF de la Sesión", key=f"btn_prepara_pdf_ses_{idx_real}", type="primary", use_container_width=True):
+                            if st.button(":material/picture_as_pdf: Generar PDF de la Sesión", key=f"btn_prepara_pdf_ses_{idx_real}", type="primary", use_container_width=True):
                                 with st.spinner("Procesando gráficos y PDF..."):
                                     st.session_state[pdf_key] = generar_pdf_completo(sesion, df_para_medias, df_graficos, alertas_multi, alertas_rec, alertas_car, {"Desglose de Wellness": fig_well, "Calidad de Recuperación (TQR)": fig_tqr, "Carga de Sesión": fig2, "Riesgo de Lesión (Ratio A/C)": fig3, "Huella Dactilar": fig_hd, "Volumen vs Intensidad": fig5, "ACC vs DCC": fig4})
                                 st.rerun()
                         else:
                             col_pdf1, col_pdf2 = st.columns(2)
-                            with col_pdf1: st.download_button("📥 Descargar PDF", data=st.session_state[pdf_key], file_name=f"Sesion_{sesion['fecha']}.pdf", mime="application/pdf", key=f"btn_descarga_pdf_ses_{idx_real}", use_container_width=True)
+                            with col_pdf1: st.download_button(":material/download: Descargar PDF", data=st.session_state[pdf_key], file_name=f"Sesion_{sesion['fecha']}.pdf", mime="application/pdf", key=f"btn_descarga_pdf_ses_{idx_real}", use_container_width=True)
                             with col_pdf2:
-                                if st.button("🗑️ Descartar PDF", key=f"btn_borrar_pdf_ses_{idx_real}", use_container_width=True): del st.session_state[pdf_key]; st.rerun()                                                          
+                                if st.button(":material/delete: Descartar PDF", key=f"btn_borrar_pdf_ses_{idx_real}", use_container_width=True): del st.session_state[pdf_key]; st.rerun()                                                          
                 else:
                     st.warning("El informe de esta sesión aún no ha sido procesado.")
 
@@ -1588,15 +1588,15 @@ with tab_ses:
             # HERRAMIENTA 3: CARGA DE DATOS (FORMULARIO OPTIMIZADO)
             # ---------------------------------------------------------
             elif active_view == "datos":
-                st.markdown(f"#### 📂 CARGA DE DATOS | {sesion['fecha']}")
+                st.markdown(f"#### :material/folder_open: CARGA DE DATOS | {sesion['fecha']}")
                 if f'msg_sync_{idx_real}' in st.session_state:
                     for msg in st.session_state[f'msg_sync_{idx_real}']:
-                        if "✅" in msg: st.success(msg)
-                        elif "⚠️" in msg: st.warning(msg)
-                        elif "❓" in msg: st.info(msg)
+                        if ":material/check_circle:" in msg: st.success(msg)
+                        elif ":material/warning:" in msg: st.warning(msg)
+                        elif ":material/help:" in msg: st.info(msg)
                     del st.session_state[f'msg_sync_{idx_real}']
 
-                t_man, t_exc = st.tabs(["✍️ Edición Manual de Tabla", "📁 Importar desde Excel"])
+                t_man, t_exc = st.tabs([":material/edit_document: Edición Manual de Tabla", ":material/upload_file: Importar desde Excel"])
                 
                 with t_man:
                     st.caption("Modifica la tabla a tu ritmo. Los cálculos internos y el guardado solo se ejecutarán cuando pulses el botón de abajo.")
@@ -1628,9 +1628,9 @@ with tab_ses:
                         
                         col_btn1, col_btn2 = st.columns(2)
                         with col_btn1:
-                            submit_manual = st.form_submit_button("💾 Guardar y Calcular Tabla", type="primary", use_container_width=True)
+                            submit_manual = st.form_submit_button(":material/save: Guardar y Calcular Tabla", type="primary", use_container_width=True)
                         with col_btn2:
-                            del_manual = st.form_submit_button("🗑️ Vaciar Datos de Sesión", use_container_width=True)
+                            del_manual = st.form_submit_button(":material/delete: Vaciar Datos de Sesión", use_container_width=True)
                             
                         if submit_manual:
                             full_records = []
@@ -1716,7 +1716,7 @@ with tab_ses:
                                 reg_item["RATIO A/C"] = d_ewma.get("RATIO A/C", 1.0)
                                 
                             guardar_datos(modulo="sesiones")
-                            st.success("✅ Datos de la sesión borrados correctamente.")
+                            st.success(":material/check_circle: Datos de la sesión borrados correctamente.")
                             st.rerun()
 
                 with t_exc:
@@ -1726,7 +1726,7 @@ with tab_ses:
                     with col_up2: archivo_rpe = st.file_uploader("2. RPE:", type=["xlsx"], key=f"up_r_{idx_real}")
                     with col_up3: archivo_gps = st.file_uploader("3. GPS:", type=["xlsx"], key=f"up_g_{idx_real}")
                     
-                    if st.button("⚙️ Sincronizar Archivos", type="primary", use_container_width=True):
+                    if st.button(":material/settings: Sincronizar Archivos", type="primary", use_container_width=True):
                         try:
                             import difflib
                             df_w_up = pd.read_excel(archivo_well) if archivo_well else pd.DataFrame()
@@ -1892,10 +1892,10 @@ with tab_ses:
                                 st.session_state.sesiones[idx_real]['informe_generado'] = True
                                 guardar_datos(modulo="sesiones")
                                 
-                                msgs = [f"✅ Sincronización completada. Se generó la tabla con los {len(nombres_plantilla)} jugadores de tu plantilla."]
-                                if archivo_well and faltan_w: msgs.append(f"⚠️ **Faltan en Wellness:** {', '.join(faltan_w)}")
-                                if archivo_rpe and faltan_r: msgs.append(f"⚠️ **Faltan en RPE:** {', '.join(faltan_r)}")
-                                if no_encontrados_en_app: msgs.append(f"❓ **Están en Excel pero NO en tu App:** {', '.join(no_encontrados_en_app)}")
+                                msgs = [f":material/check_circle: Sincronización completada. Se generó la tabla con los {len(nombres_plantilla)} jugadores de tu plantilla."]
+                                if archivo_well and faltan_w: msgs.append(f":material/warning: **Faltan en Wellness:** {', '.join(faltan_w)}")
+                                if archivo_rpe and faltan_r: msgs.append(f":material/warning: **Faltan en RPE:** {', '.join(faltan_r)}")
+                                if no_encontrados_en_app: msgs.append(f":material/help: **Están en Excel pero NO en tu App:** {', '.join(no_encontrados_en_app)}")
                                 st.session_state[f'msg_sync_{idx_real}'] = msgs
                                 st.rerun()
                         except Exception as e:
@@ -1905,7 +1905,7 @@ with tab_ses:
             # HERRAMIENTA 4: LESIONES (FORMULARIO COMPRIMIDO)
             # ---------------------------------------------------------
             elif active_view == "les":
-                st.markdown(f"#### 🚑 PARTE MÉDICO | {sesion['fecha']}")
+                st.markdown(f"#### :material/emergency: PARTE MÉDICO | {sesion['fecha']}")
                 if not st.session_state.plantilla:
                     st.warning("No hay jugadores en la plantilla.")
                 else:
@@ -1926,7 +1926,7 @@ with tab_ses:
                         
                         les_comentarios = st.text_input("Comentarios / Mecanismo:")
                         
-                        if st.form_submit_button("💾 Registrar Lesión", type="primary"):
+                        if st.form_submit_button(":material/save: Registrar Lesión", type="primary"):
                             nueva_lesion = {"id_sesion": sesion["fecha"], "tipo_sesion": "Partido" if es_partido else "Entrenamiento", "jugador": les_jugador, "tipo": les_tipo, "zona": les_zona, "lado": les_lado, "lateralidad": les_lat, "contacto": les_contacto, "cesped": les_cesped, "recidiva": les_recidiva, "comentarios": les_comentarios, "dias_baja": None, "estado": "Activa", "fecha_registro": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
                             st.session_state.lesiones.append(nueva_lesion)
                             guardar_datos(modulo="lesiones")
@@ -1937,7 +1937,7 @@ with tab_ses:
             # HERRAMIENTA 5: ESTADÍSTICAS DEL PARTIDO
             # ---------------------------------------------------------
             elif active_view == "stats" and es_partido:
-                st.markdown(f"#### ⚡ ESTADÍSTICAS DE PARTIDO | vs {sesion.get('rival', 'Rival')} ({sesion['fecha']})")
+                st.markdown(f"#### :material/bolt: ESTADÍSTICAS DE PARTIDO | vs {sesion.get('rival', 'Rival')} ({sesion['fecha']})")
                 col_g1, col_g2 = st.columns(2)
                 condicion_actual = sesion.get("condicion", "Casa")
                 nueva_condicion = col_g1.selectbox("Condición:", ["Casa", "Fuera"], index=["Casa", "Fuera"].index(condicion_actual), key=f"cond_{idx_real}")
@@ -1947,7 +1947,7 @@ with tab_ses:
                 sesion["condicion"] = nueva_condicion
                 sesion["goles_favor"] = nuevo_gf
 
-                st.markdown("##### 📋 Rendimiento de Jugadores Convocados")
+                st.markdown("##### :material/list_alt: Rendimiento de Jugadores Convocados")
                 disp_s = sesion.get("disponibilidad", {})
                 disp_clean = {limpiar_nombre(k): v for k, v in disp_s.items()}
                 jugadores_convocados = []
@@ -1963,23 +1963,23 @@ with tab_ses:
                 for inv in invitados_guardados:
                     jugadores_convocados.append({"JUGADOR": inv["JUGADOR"], "POS": inv["POS"], "Rol": inv["Rol"], "Minutos": inv["Minutos"], "Goles": inv["Goles"], "Goles Encajados": inv["Goles Encajados"], "Asistencias": inv["Asistencias"], "Amarillas": inv["Amarillas"], "Rojas": inv["Rojas"]})
 
-                with st.expander("➕ Añadir jugador del filial / juvenil / invitado"):
+                with st.expander(":material/add_circle: Añadir jugador del filial / juvenil / invitado"):
                     c_inv1, c_inv2, c_inv3, c_inv4 = st.columns([2, 1, 1, 1])
                     nombre_invitado = c_inv1.text_input("Nombre del Jugador Invitado:", key=f"nombre_inv_{idx_real}")
                     pos_invitado = c_inv2.selectbox("Posición:", ["POR", "DEF", "MED", "ATA"], key=f"pos_inv_{idx_real}")
                     rol_invitado = c_inv3.selectbox("Rol:", ["Suplente", "Titular"], key=f"rol_inv_{idx_real}")
                     min_invitado = c_inv4.number_input("Minutos:", min_value=0, max_value=120, value=45, key=f"min_inv_{idx_real}")
-                    if st.button("➕ Incluir en la tabla del partido", key=f"btn_add_inv_{idx_real}"):
+                    if st.button(":material/add_circle: Incluir en la tabla del partido", key=f"btn_add_inv_{idx_real}"):
                         if nombre_invitado.strip():
                             if "estadisticas_invitados" not in sesion: sesion["estadisticas_invitados"] = []
                             sesion["estadisticas_invitados"].append({"JUGADOR": nombre_invitado.strip() + " (Cantera)", "POS": pos_invitado, "Rol": rol_invitado, "Minutos": min_invitado, "Goles": 0, "Goles Encajados": 0, "Asistencias": 0, "Amarillas": 0, "Rojas": 0})
                             guardar_datos(modulo="sesiones")
-                            st.success(f"✅ {nombre_invitado} añadido al partido.")
+                            st.success(f":material/check_circle: {nombre_invitado} añadido al partido.")
                             st.rerun()
                         else: st.warning("Escribe un nombre válido.")
 
                 if not jugadores_convocados:
-                    st.warning("⚠️ No hay jugadores convocados. Configura la disponibilidad o añade un jugador invitado arriba.")
+                    st.warning(":material/warning: No hay jugadores convocados. Configura la disponibilidad o añade un jugador invitado arriba.")
                 else:
                     df_stats_base = pd.DataFrame(jugadores_convocados)
                     cols_orden_stats = ["JUGADOR", "POS", "Rol", "Minutos", "Goles", "Goles Encajados", "Asistencias", "Amarillas", "Rojas"]
@@ -1988,7 +1988,7 @@ with tab_ses:
                     
                     with st.form(f"form_stats_{idx_real}"):
                         edited_stats = st.data_editor(df_stats_base[cols_orden_stats], use_container_width=True, hide_index=True, disabled=["JUGADOR", "POS", "Rol"])
-                        if st.form_submit_button("💾 Guardar Estadísticas de Partido", type="primary"):
+                        if st.form_submit_button(":material/save: Guardar Estadísticas de Partido", type="primary"):
                             stats_dict, invitados_actualizados, goles_contra_totales = {}, [], 0
                             nombres_plantilla_oficial = [p["JUGADOR"] for p in st.session_state.plantilla]
                             for _, r in edited_stats.iterrows():
@@ -2008,28 +2008,28 @@ with tab_ses:
                                 sesion["datos_informe"] = aplicar_imputacion_gps_global(sesion["datos_informe"], sesion, st.session_state.plantilla)
 
                             guardar_datos(modulo="sesiones")
-                            st.success(f"✅ ¡Estadísticas guardadas y datos GPS re-imputados con éxito! (Goles en contra totales: {goles_contra_totales})")
+                            st.success(f":material/check_circle: ¡Estadísticas guardadas y datos GPS re-imputados con éxito! (Goles en contra totales: {goles_contra_totales})")
                             st.rerun()
 with tab_add:
-    st.markdown("### ➕ Planificación de Sesiones")
+    st.markdown("### :material/add_circle: Planificación de Sesiones")
     st.caption("Selecciona la fecha e introduce los datos del evento para registrarlo en el calendario.")
     
     col_add1, col_add2, col_add3 = st.columns([1, 2, 1])
     
     with col_add2:
         with st.container(border=True):
-            st.markdown("#### 📅 1. Fecha del Evento")
+            st.markdown("#### :material/calendar_month: 1. Fecha del Evento")
             dia_clicado = st.date_input("Selecciona una fecha:", date.today())
             fecha_formateada = dia_clicado.strftime("%d-%m-%Y")
             
             sesiones_en_fecha = [s for s in st.session_state.sesiones if s["fecha"] == str(dia_clicado)]
             if sesiones_en_fecha: 
-                st.info(f"ℹ️ Ya hay {len(sesiones_en_fecha)} evento(s) el {fecha_formateada}.")
+                st.info(f":material/info: Ya hay {len(sesiones_en_fecha)} evento(s) el {fecha_formateada}.")
             else:
-                st.success(f"✅ Día libre el {fecha_formateada}. Listo para programar.")
+                st.success(f":material/check_circle: Día libre el {fecha_formateada}. Listo para programar.")
                 
         with st.container(border=True):
-            st.markdown("#### ⚙️ 2. Detalles de la Sesión")
+            st.markdown("#### :material/settings: 2. Detalles de la Sesión")
             tipo_nuevo = st.selectbox("Tipo de Evento:", ["Entrenamiento", "Partido Oficial", "Partido Amistoso"])
             
             desc_nuevo = ""
@@ -2051,10 +2051,10 @@ with tab_add:
                 if condicion_nuevo == "Fuera":
                     rivales_db = st.session_state.get("rivales_guardados", {})
                     if rival_nuevo and rival_nuevo not in rivales_db:
-                        st.info("ℹ️ Rival no guardado en la BBDD.")
+                        st.info(":material/info: Rival no guardado en la BBDD.")
                         ciudad_manual_nuevo = st.text_input("Ciudad (Necesario para clima autom.):")
                 
-            if st.button("💾 Guardar Sesión", use_container_width=True, type="primary"):
+            if st.button(":material/save: Guardar Sesión", use_container_width=True, type="primary"):
                 ciudad_objetivo = st.session_state.get("ubicacion_local", "")
                 
                 if tipo_nuevo != "Entrenamiento" and condicion_nuevo == "Fuera":
