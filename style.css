@@ -119,7 +119,7 @@ button[data-testid="baseButton-primary"]:hover {
 /* --- TARJETAS KPI NATIVAS (st.metric) --- */
 div[data-testid="stMetric"] {
     background: #111318 !important;
-    border: 1px solid #1e293b !important;
+    border: 1px solid #111318 !important;
     border-top: 3px solid #C5A059 !important;
     padding: 10px 8px !important;
     border-radius: 8px !important;
@@ -169,7 +169,7 @@ div[data-testid="stMetric"] div[data-testid="stMetricDelta"] {
     overflow: hidden;
     background-color: #111318;
     margin-bottom: 12px;
-    border: 1px solid #1e293b;
+    border: 1px solid #111318;
     box-shadow: 0 4px 6px rgba(0,0,0,0.2);
 }
 .modern-table thead tr { background-color: #0b0e14; }
@@ -188,14 +188,14 @@ div[data-testid="stMetric"] div[data-testid="stMetricDelta"] {
     font-size: 0.85rem;
     color: #f8fafc;
     text-align: center !important;
-    border-bottom: 1px solid #1e293b;
+    border-bottom: 1px solid #111318;
 }
 .modern-table tbody tr:hover td { background-color: rgba(197, 160, 89, 0.05); }
 
 /* --- OPTIMIZACIÓN DOM: TARJETAS DE PLANTILLA Y CALENDARIO --- */
 .card-elite {
     background-color: #111318;
-    border: 1px solid #1e293b;
+    border: 1px solid #111318;
     border-top: 3px solid #C5A059;
     border-radius: 8px;
     padding: 10px 4px 6px 4px;
