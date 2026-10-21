@@ -37,23 +37,23 @@ pio.templates["loadlab_elite_dark"] = go.layout.Template(
             bgcolor="rgba(15, 23, 42, 0.95)",
             font_size=12,
             font_family="Plus Jakarta Sans, sans-serif",
-            bordercolor="#334155"
+            bordercolor="#1e293b"
         ),
         xaxis=dict(
-            gridcolor="#1e293b",
+            gridcolor="#111318",
             gridwidth=1,
             griddash="dot",
-            zerolinecolor="#334155",
+            zerolinecolor="#1e293b",
             zerolinewidth=2,
             showline=False,
             title=dict(font=dict(size=12, color="#e2e8f0")),
             tickfont=dict(size=10, color="#94a3b8")
         ),
         yaxis=dict(
-            gridcolor="#1e293b",
+            gridcolor="#111318",
             gridwidth=1,
             griddash="dot",
-            zerolinecolor="#334155",
+            zerolinecolor="#1e293b",
             zerolinewidth=2,
             showline=False,
             title=dict(font=dict(size=12, color="#e2e8f0")),
@@ -292,7 +292,7 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
     /* Inputs dentro de crear equipo */
     div[data-testid="stExpander"] div[data-testid="stTextInput"] input,
     div[data-testid="stExpander"] div[data-testid="stSelectbox"] div[data-baseweb="select"] {
-        background-color: #0f172a !important; border: 1px solid #1e293b !important; color: #f8fafc !important; font-weight: 600 !important;
+        background-color: #0f172a !important; border: 1px solid #111318 !important; color: #f8fafc !important; font-weight: 600 !important;
     }
     </style>
     """
@@ -455,8 +455,8 @@ if st.session_state.get("equipo_seleccionado", False):
     html_cal = "<div style='display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; text-align: center; margin-bottom: 20px;'>"
     for i, d in enumerate(dias_semana):
         d_str = str(d)
-        es_hoy = "border: 2px solid #3b82f6;" if d_str == hoy_str else "border: 1px solid #334155;"
-        bg_color = "#0f172a" if d_str == hoy_str else "#1e293b"
+        es_hoy = "border: 2px solid #3b82f6;" if d_str == hoy_str else "border: 1px solid #1e293b;"
+        bg_color = "#0f172a" if d_str == hoy_str else "#111318"
         
         sesiones_dia = [s for s in st.session_state.sesiones if s["fecha"] == d_str]
         contenido_extra = ""
@@ -605,7 +605,7 @@ if st.session_state.get("equipo_seleccionado", False):
             if limpiar_nombre(p["JUGADOR"]) == limpiar_nombre(jugador_nombre):
                 if p.get("foto"):
                     img_src = p["foto"] if str(p["foto"]).startswith("http") else f"data:image/jpeg;base64,{p['foto']}"
-                    return f"<img src='{img_src}' style='width:20px; height:20px; border-radius:50%; object-fit: cover; margin-right: 6px; border: 1px solid #334155;'>"
+                    return f"<img src='{img_src}' style='width:20px; height:20px; border-radius:50%; object-fit: cover; margin-right: 6px; border: 1px solid #1e293b;'>"
                 break
         return "<span class='material-symbols-rounded' style='font-size: 16px; margin-right: 6px; vertical-align: middle;'>person</span>"
 
@@ -616,7 +616,7 @@ if st.session_state.get("equipo_seleccionado", False):
         orden_niveles = {"rojo": 0, "amarillo": 1, "verde": 2}
         alertas_ordenadas = sorted(alertas, key=lambda x: orden_niveles.get(x.get("lvl", nivel_predeterminado), 3))
         
-        html = "<style>.alerta-scroll::-webkit-scrollbar { width: 4px; } .alerta-scroll::-webkit-scrollbar-track { background: transparent; } .alerta-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }</style>"
+        html = "<style>.alerta-scroll::-webkit-scrollbar { width: 4px; } .alerta-scroll::-webkit-scrollbar-track { background: transparent; } .alerta-scroll::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }</style>"
         html += "<div class='alerta-scroll' style='display: grid; grid-template-columns: 1fr 1fr; gap: 6px; max-height: 140px; overflow-y: auto; padding-right: 4px;'>"
         
         for a in alertas_ordenadas:
@@ -638,14 +638,14 @@ if st.session_state.get("equipo_seleccionado", False):
 <h2 style="color: #f8fafc; font-size: 1.5rem; font-weight: 800; margin: 0 0 10px 0;">{md_text}</h2>
 <div style="color: #f8fafc; font-size: 1.1rem; font-weight: 800; margin-bottom: 2px;"><span class="material-symbols-rounded" style="vertical-align: text-bottom; font-size: 1.2rem; margin-right: 6px;">sports_score</span> {rival_text}</div>
 <div style="color: #94a3b8; font-size: 0.8rem; font-weight: 600; margin-bottom: 12px;">{fecha_partido_text}</div>
-<div style="color: #3b82f6; font-size: 0.8rem; font-weight: 800; margin-top: auto; padding-top: 10px; border-top: 1px solid #334155;"><span class="material-symbols-rounded" style="vertical-align: text-bottom; font-size: 1rem; margin-right: 4px;">location_on</span> {ciudad_club} | {clima_str}</div>
+<div style="color: #3b82f6; font-size: 0.8rem; font-weight: 800; margin-top: auto; padding-top: 10px; border-top: 1px solid #1e293b;"><span class="material-symbols-rounded" style="vertical-align: text-bottom; font-size: 1rem; margin-right: 4px;">location_on</span> {ciudad_club} | {clima_str}</div>
 </div>
 """
         st.markdown(html_ctx, unsafe_allow_html=True)
 
     with c_read:
         html_read = f"""
-<div style="background: #111318; border: 1px solid #1e293b; border-top: 3px solid #f59e0b; border-radius: 8px; padding: 10px; height: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
+<div style="background: #111318; border: 1px solid #111318; border-top: 3px solid #f59e0b; border-radius: 8px; padding: 10px; height: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
 <p style="color: #f8fafc; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin: 0 0 10px 0;"><span class="material-symbols-rounded" style="vertical-align: text-bottom; font-size: 1rem; margin-right: 4px;">psychology</span> Readiness & Bienestar</p>
 {render_alertas_grid(alertas_readiness)}
 </div>
@@ -654,7 +654,7 @@ if st.session_state.get("equipo_seleccionado", False):
 
     with c_carga:
         html_carga = f"""
-<div style="background: #111318; border: 1px solid #1e293b; border-top: 3px solid #ef4444; border-radius: 8px; padding: 10px; height: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
+<div style="background: #111318; border: 1px solid #111318; border-top: 3px solid #ef4444; border-radius: 8px; padding: 10px; height: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
 <p style="color: #f8fafc; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin: 0 0 10px 0;"><span class="material-symbols-rounded" style="vertical-align: text-bottom; font-size: 1rem; margin-right: 4px;">local_fire_department</span> Riesgo de Carga</p>
 {render_alertas_grid(alertas_carga)}
 </div>
@@ -663,7 +663,7 @@ if st.session_state.get("equipo_seleccionado", False):
 
     with c_med:
         html_med = f"""
-<div style="background: #111318; border: 1px solid #1e293b; border-top: 3px solid #8b5cf6; border-radius: 8px; padding: 10px; height: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
+<div style="background: #111318; border: 1px solid #111318; border-top: 3px solid #8b5cf6; border-radius: 8px; padding: 10px; height: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
 <p style="color: #f8fafc; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin: 0 0 10px 0;"><span class="material-symbols-rounded" style="vertical-align: text-bottom; font-size: 1rem; margin-right: 4px;">healing</span> Enfermería & RTP</p>
 {render_alertas_grid(alertas_medicas)}
 </div>
