@@ -240,63 +240,59 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
     css_fondo_equipos = """
     <style>
     .stApp {
-        background-color: #0b1120 !important;
+        background-color: #0b0e14 !important;
         background-image: 
-            radial-gradient(circle at 15% 50%, rgba(59, 130, 246, 0.08), transparent 25%),
-            radial-gradient(circle at 85% 30%, rgba(16, 185, 129, 0.05), transparent 25%);
-        animation: bgShift 15s ease-in-out infinite alternate;
+            radial-gradient(circle at 15% 50%, rgba(197, 160, 89, 0.08), transparent 30%), 
+            radial-gradient(circle at 85% 30%, rgba(226, 232, 240, 0.05), transparent 25%) !important;
     }
     .stApp::before {
-        content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-        background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-        background-size: 40px 40px; pointer-events: none; z-index: 0;
+        content: ""; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        background-image: linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+        background-size: 50px 50px; pointer-events: none; z-index: 0;
     }
-    @keyframes bgShift { 0% { background-position: 0% 0%; } 100% { background-position: 100% 100%; } }
-    header[data-testid="stHeader"] { background-color: transparent !important; }
+    .stApp::after {
+        content: ""; position: fixed; top: -50%; left: -50%; width: 200%; height: 200%;
+        background-image: radial-gradient(1.5px 1.5px at 20px 30px, #C5A059, rgba(0,0,0,0)), radial-gradient(1.5px 1.5px at 40px 70px, #E2E8F0, rgba(0,0,0,0)), radial-gradient(2px 2px at 90px 40px, #C5A059, rgba(0,0,0,0));
+        background-size: 250px 250px; animation: particleDrift 70s linear infinite; pointer-events: none; z-index: 0; opacity: 0.35;
+    }
+    header[data-testid="stHeader"] { display: none !important; }
     
     /* Botones de acceder a los equipos */
     div[data-testid="column"] button {
-        background-color: #3b82f6 !important;
+        background-color: #C5A059 !important;
         border: none !important;
-        color: #ffffff !important;
+        color: #111318 !important;
         font-weight: 800 !important;
         border-radius: 8px !important;
         padding: 12px !important;
         text-transform: uppercase;
         letter-spacing: 1px;
         transition: all 0.3s ease !important;
-        box-shadow: 0 4px 10px rgba(59, 130, 246, 0.4) !important;
+        box-shadow: 0 4px 10px rgba(197, 160, 89, 0.3) !important;
     }
     div[data-testid="column"] button:hover {
-        background-color: #2563eb !important;
+        background-color: #D6B26E !important;
         transform: translateY(-2px);
-        box-shadow: 0 6px 15px rgba(59, 130, 246, 0.6) !important;
+        box-shadow: 0 6px 15px rgba(197, 160, 89, 0.5) !important;
     }
     
     /* Fondo cristal para el desplegable de Crear Equipo */
     div[data-testid="stExpander"] details {
-        background-color: rgba(30, 41, 59, 0.95) !important;
+        background-color: rgba(17, 19, 24, 0.95) !important;
         border-radius: 12px !important;
-        border: 1px solid #334155 !important;
-        border-top: 4px solid #3b82f6 !important;
-        backdrop-filter: blur(10px);
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8) !important;
+        border: 1px solid rgba(197, 160, 89, 0.2) !important;
+        border-top: 4px solid #C5A059 !important;
+        backdrop-filter: blur(12px);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8) !important;
     }
     div[data-testid="stExpander"] summary p {
-        color: #f8fafc !important;
-        font-weight: 800 !important;
-        text-transform: uppercase;
-        letter-spacing: 1px;
+        color: #f8fafc !important; font-weight: 800 !important; text-transform: uppercase; letter-spacing: 1px;
     }
     
     /* Inputs dentro de crear equipo */
     div[data-testid="stExpander"] div[data-testid="stTextInput"] input,
     div[data-testid="stExpander"] div[data-testid="stSelectbox"] div[data-baseweb="select"] {
-        background-color: #f4f4f5 !important;
-        border: 1px solid #d4d4d8 !important;
-        border-radius: 6px !important;
-        color: #0a0a0a !important;
-        font-weight: 600 !important;
+        background-color: #0f172a !important; border: 1px solid #1e293b !important; color: #f8fafc !important; font-weight: 600 !important;
     }
     </style>
     """
@@ -304,8 +300,7 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
 
     # Un poco de espacio superior y título rediseñado
     st.markdown("<br><br><br><br><br>", unsafe_allow_html=True)
-    st.markdown("<h2 style='text-align: center; color: #ffffff; font-weight: 800; margin-bottom: 40px; font-size: 2.5rem; letter-spacing: -1px; text-shadow: 0px 4px 15px rgba(0,0,0,0.8);'>SELECCIONA TU <span style='color: #3b82f6;'>EQUIPO</span></h2>", unsafe_allow_html=True)
-    
+    st.markdown("<h2 style='text-align: center; color: #ffffff; font-weight: 800; margin-bottom: 40px; font-size: 2.5rem; letter-spacing: -1px; text-shadow: 0px 4px 15px rgba(0,0,0,0.8);'>SELECCIONA TU <span style='color: #C5A059;'>EQUIPO</span></h2>", unsafe_allow_html=True)    
     # Consulta a Supabase
     res_equipos = supabase.table("equipo_usuarios").select("equipo_id, equipos(nombre, categoria, division, escudo_base64)").eq("usuario_id", st.session_state.usuario_id).execute()
     
@@ -334,7 +329,7 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
                         categoria = eq_info.get('categoria') or ""
                         
                         tarjeta_html = f"""
-                        <div style="background-color: rgba(30, 41, 59, 0.85); padding: 30px 20px 20px 20px; border-radius: 12px; border: 1px solid #334155; border-top: 4px solid #3b82f6; box-shadow: 0 20px 40px rgba(0,0,0,0.6); text-align: center; margin-bottom: 15px; backdrop-filter: blur(10px);">
+                        <div style="background-color: rgba(17, 19, 24, 0.85); padding: 30px 20px 20px 20px; border-radius: 12px; border: 1px solid rgba(197, 160, 89, 0.15); border-top: 4px solid #C5A059; box-shadow: 0 20px 40px rgba(0,0,0,0.6); text-align: center; margin-bottom: 15px; backdrop-filter: blur(10px);">
                             {img_html}
                             <h3 style="color: #f8fafc; font-weight: 800; margin-bottom: 5px; font-size: 1.3rem; text-transform: uppercase; letter-spacing: -0.5px;">{nombre}</h3>
                             <p style="color: #94a3b8; font-size: 0.85rem; font-weight: 700; margin-top: 0px; text-transform: uppercase; letter-spacing: 0.5px;">{categoria} | {division}</p>
@@ -639,7 +634,7 @@ if st.session_state.get("equipo_seleccionado", False):
 
     with c_ctx:
         html_ctx = f"""
-<div style="background: linear-gradient(135deg, #0f172a, #1e293b); border: 1px solid #334155; border-top: 4px solid #3b82f6; border-radius: 8px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); height: 100%; display: flex; flex-direction: column; justify-content: center; text-align: center;">
+<div style="background: linear-gradient(135deg, #111318, #16191f); border: 1px solid rgba(197, 160, 89, 0.15); border-top: 4px solid #C5A059; border-radius: 8px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.4); height: 100%; display: flex; flex-direction: column; justify-content: center; text-align: center;">
 <h2 style="color: #f8fafc; font-size: 1.5rem; font-weight: 800; margin: 0 0 10px 0;">{md_text}</h2>
 <div style="color: #f8fafc; font-size: 1.1rem; font-weight: 800; margin-bottom: 2px;"><span class="material-symbols-rounded" style="vertical-align: text-bottom; font-size: 1.2rem; margin-right: 6px;">sports_score</span> {rival_text}</div>
 <div style="color: #94a3b8; font-size: 0.8rem; font-weight: 600; margin-bottom: 12px;">{fecha_partido_text}</div>
@@ -650,7 +645,7 @@ if st.session_state.get("equipo_seleccionado", False):
 
     with c_read:
         html_read = f"""
-<div style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid #f59e0b; border-radius: 8px; padding: 10px; height: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
+<div style="background: #111318; border: 1px solid #1e293b; border-top: 3px solid #f59e0b; border-radius: 8px; padding: 10px; height: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
 <p style="color: #f8fafc; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin: 0 0 10px 0;"><span class="material-symbols-rounded" style="vertical-align: text-bottom; font-size: 1rem; margin-right: 4px;">psychology</span> Readiness & Bienestar</p>
 {render_alertas_grid(alertas_readiness)}
 </div>
@@ -659,7 +654,7 @@ if st.session_state.get("equipo_seleccionado", False):
 
     with c_carga:
         html_carga = f"""
-<div style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid #ef4444; border-radius: 8px; padding: 10px; height: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
+<div style="background: #111318; border: 1px solid #1e293b; border-top: 3px solid #ef4444; border-radius: 8px; padding: 10px; height: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
 <p style="color: #f8fafc; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin: 0 0 10px 0;"><span class="material-symbols-rounded" style="vertical-align: text-bottom; font-size: 1rem; margin-right: 4px;">local_fire_department</span> Riesgo de Carga</p>
 {render_alertas_grid(alertas_carga)}
 </div>
@@ -668,7 +663,7 @@ if st.session_state.get("equipo_seleccionado", False):
 
     with c_med:
         html_med = f"""
-<div style="background: #1e293b; border: 1px solid #334155; border-top: 3px solid #8b5cf6; border-radius: 8px; padding: 10px; height: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
+<div style="background: #111318; border: 1px solid #1e293b; border-top: 3px solid #8b5cf6; border-radius: 8px; padding: 10px; height: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
 <p style="color: #f8fafc; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin: 0 0 10px 0;"><span class="material-symbols-rounded" style="vertical-align: text-bottom; font-size: 1rem; margin-right: 4px;">healing</span> Enfermería & RTP</p>
 {render_alertas_grid(alertas_medicas)}
 </div>
