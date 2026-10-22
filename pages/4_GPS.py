@@ -435,6 +435,7 @@ else:
                 .background_gradient(subset=['Nº SPR'], cmap='Reds', text_color_threshold=0.6)
                 .background_gradient(subset=['ACC'], cmap='Greens', text_color_threshold=0.6)
                 .background_gradient(subset=['DCC'], cmap='Purples', text_color_threshold=0.6)
+                .background_gradient(subset=['DCC:ACC'], cmap='Oranges', text_color_threshold=0.6)
                 .background_gradient(subset=['VMAX', '% VMAX'], cmap='RdPu', text_color_threshold=0.6)
                 .map(lambda x: "color: #ef4444; font-weight: 900;" if isinstance(x, (int, float)) and x > 1.3 else "", subset=['DCC:ACC'])
                 .set_table_attributes('class="modern-dark-table"')
