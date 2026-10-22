@@ -963,21 +963,36 @@ with tab_ses:
                             jug = row['JUGADOR']
                             alertas_jugadores[jug] = {'recuperacion': [], 'carga': [], 'total': 0}
                             tqr, well = safe_float(row.get('TQR')), safe_float(row.get('WELLNESS'))
+                            w_dolor, w_fatiga = safe_float(row.get('W_Dolor')), safe_float(row.get('W_Fatiga'))
                             
                             if tqr > 0:
                                 if tqr <= 3: alertas_jugadores[jug]['recuperacion'].append(f"🔴 Recuperación Crítica ({tqr:.1f})"); alertas_jugadores[jug]['total'] += 1
                                 elif tqr == 4: alertas_jugadores[jug]['recuperacion'].append(f"🟡 Recuperación Moderada ({tqr:.1f})"); alertas_jugadores[jug]['total'] += 1
+                                
                             if well > 0:
-                                st_j = dict_zscore.get(jug, {'media': 0, 'std': 1.0})
+                                st_j = dict_zscore.get(jug, {'media': 0, 'std': 1.0, 'dolor_media': 0, 'dolor_std': 0.5, 'fatiga_media': 0, 'fatiga_std': 0.5})
+                                
+                                # 1. Alerta Global de Wellness
                                 if st_j['media'] > 0:
                                     z_score = (well - st_j['media']) / st_j['std']
                                     if z_score >= 1.5: 
-                                        alertas_jugadores[jug]['recuperacion'].append(f"🔴 Fatiga Anormal (Z-Score: +{z_score:.1f})"); alertas_jugadores[jug]['total'] += 1
+                                        alertas_jugadores[jug]['recuperacion'].append(f"🔴 Fatiga Sistémica (Z: +{z_score:.1f})"); alertas_jugadores[jug]['total'] += 1
                                     elif 1.0 <= z_score < 1.5: 
-                                        alertas_jugadores[jug]['recuperacion'].append(f"🟡 Alerta Fatiga (Z-Score: +{z_score:.1f})"); alertas_jugadores[jug]['total'] += 1
+                                        alertas_jugadores[jug]['recuperacion'].append(f"🟡 Alerta Fatiga (Z: +{z_score:.1f})"); alertas_jugadores[jug]['total'] += 1
                                 else:
                                     if well >= 24: alertas_jugadores[jug]['recuperacion'].append(f"🔴 Wellness Crítico ({well:.1f})"); alertas_jugadores[jug]['total'] += 1
                                     elif 18 <= well <= 23: alertas_jugadores[jug]['recuperacion'].append(f"🟡 Wellness Moderado ({well:.1f})"); alertas_jugadores[jug]['total'] += 1
+                                    
+                                # 2. Alertas Locales Específicas (Daño Muscular y Fatiga Periférica)
+                                if w_dolor > 0 and st_j['dolor_media'] > 0:
+                                    z_dolor = (w_dolor - st_j['dolor_media']) / st_j['dolor_std']
+                                    if z_dolor >= 1.5:
+                                        alertas_jugadores[jug]['recuperacion'].append(f"🔴 Daño Muscular (Dolor Z: +{z_dolor:.1f})"); alertas_jugadores[jug]['total'] += 1
+                                        
+                                if w_fatiga > 0 and st_j['fatiga_media'] > 0:
+                                    z_fatiga = (w_fatiga - st_j['fatiga_media']) / st_j['fatiga_std']
+                                    if z_fatiga >= 1.5:
+                                        alertas_jugadores[jug]['recuperacion'].append(f"🔴 Fatiga Periférica (Fatiga Z: +{z_fatiga:.1f})"); alertas_jugadores[jug]['total'] += 1
 
                             ratio_ac = safe_float(row.get('RATIO A/C', 1.0))
                             carga_aguda = safe_float(row.get('EWMA AGUDA', 0.0))
@@ -994,14 +1009,14 @@ with tab_ses:
                             efi_neuro = safe_float(row.get('RPE', 0)) / mec_total if mec_total > 0 else 0
                             
                             # --- CÁLCULO DE EFICIENCIA (ENTRENAMIENTO VS PARTIDO) ---
-                            # Agrupamos todos los entrenamientos. La validación cruzada filtra el sesgo del tipo de tarea.
-                            sesion_contexto = "Entrenamiento" if not es_partido else "Partido"
+                            # Aislamos estrictamente por el mismo MD (espacio/tarea) para comparar peras con peras
+                            sesion_contexto = sesion.get('descripcion', 'TD') if not es_partido else "Partido"
                             
                             # Extraemos el histórico limpio excluyendo la sesión de hoy
                             df_hist_jug_md = df_master_hist[(df_master_hist['JUGADOR'] == jug) & (df_master_hist['FECHA'] < sesion["fecha"])].copy()
                             
                             if not es_partido:
-                                df_hist_jug_md = df_hist_jug_md[df_hist_jug_md['TIPO_SESION'] == "Entrenamiento"]
+                                df_hist_jug_md = df_hist_jug_md[(df_hist_jug_md['TIPO_SESION'] == "Entrenamiento") & (df_hist_jug_md['MD'] == sesion_contexto)]
                             else:
                                 df_hist_jug_md = df_hist_jug_md[df_hist_jug_md['TIPO_SESION'].str.contains("Partido", na=False)]
                                 
@@ -1009,31 +1024,36 @@ with tab_ses:
                                 df_hist_jug_md['m_min_h'] = np.where(df_hist_jug_md['MIN'] > 0, (df_hist_jug_md['DIS'] * 1000) / df_hist_jug_md['MIN'], 0)
                                 df_hist_jug_md['mec_h'] = df_hist_jug_md['ACC'] + df_hist_jug_md['DCC'] + df_hist_jug_md['Nº SPR']
                                 
-                                df_c_val = df_hist_jug_md[(df_hist_jug_md['m_min_h'] > 0) & (df_hist_jug_md['RPE'] > 0)]
-                                df_n_val = df_hist_jug_md[(df_hist_jug_md['mec_h'] > 0) & (df_hist_jug_md['RPE'] > 0)]
+                                df_c_val = df_hist_jug_md[(df_hist_jug_md['m_min_h'] > 0) & (df_hist_jug_md['RPE'] > 0)].copy()
+                                df_n_val = df_hist_jug_md[(df_hist_jug_md['mec_h'] > 0) & (df_hist_jug_md['RPE'] > 0)].copy()
                                 
-                                media_c = (df_c_val['RPE'] / df_c_val['m_min_h']).mean() if not df_c_val.empty else 0
-                                media_n = (df_n_val['RPE'] / df_n_val['mec_h']).mean() if not df_n_val.empty else 0
+                                df_c_val['EFI_C'] = df_c_val['RPE'] / df_c_val['m_min_h']
+                                df_n_val['EFI_N'] = df_n_val['RPE'] / df_n_val['mec_h']
+
+                                media_c = df_c_val['EFI_C'].mean() if not df_c_val.empty else 0
+                                std_c = df_c_val['EFI_C'].std(ddof=0) if not df_c_val.empty else 0
+                                std_c = std_c if std_c > 0 else (media_c * 0.1)
+
+                                media_n = df_n_val['EFI_N'].mean() if not df_n_val.empty else 0
+                                std_n = df_n_val['EFI_N'].std(ddof=0) if not df_n_val.empty else 0
+                                std_n = std_n if std_n > 0 else (media_n * 0.1)
                                 
-                                # --- VALIDACIÓN CRUZADA DE EFICIENCIA (FILTRO DE FALSOS POSITIVOS) ---
-                                cardio_mal = (media_c > 0 and efi_cardio > (media_c * 1.20))
-                                neuro_mal = (media_n > 0 and efi_neuro > (media_n * 1.20))
+                                z_cardio = (efi_cardio - media_c) / std_c if media_c > 0 else 0
+                                z_neuro = (efi_neuro - media_n) / std_n if media_n > 0 else 0
+
+                                # --- VALIDACIÓN CRUZADA DE EFICIENCIA (Z-SCORE INTRA-SUJETO) ---
+                                cardio_mal = (z_cardio >= 1.5)
+                                neuro_mal = (z_neuro >= 1.5)
                                 
-                                neuro_bien = (media_n > 0 and efi_neuro <= (media_n * 1.20))
-                                cardio_bien = (media_c > 0 and efi_cardio <= (media_c * 1.20))
+                                neuro_bien = (z_neuro < 1.5)
+                                cardio_bien = (z_cardio < 1.5)
 
                                 if cardio_mal and neuro_mal:
-                                    emp_c = ((efi_cardio - media_c) / media_c) * 100
-                                    emp_n = ((efi_neuro - media_n) / media_n) * 100
-                                    alertas_jugadores[jug]['carga'].append(f"🔴 Fatiga Integral: Aumento Coste Cardio (+{emp_c:.0f}%) y Neuro (+{emp_n:.0f}%) vs {sesion_contexto}"); alertas_jugadores[jug]['total'] += 1
-                                    
+                                    alertas_jugadores[jug]['carga'].append(f"🔴 Fatiga Integral: Coste Cardio (Z: +{z_cardio:.1f}) y Neuro (Z: +{z_neuro:.1f}) anormal vs {sesion_contexto}"); alertas_jugadores[jug]['total'] += 1
                                 elif cardio_mal and not neuro_bien: 
-                                    emp_c = ((efi_cardio - media_c) / media_c) * 100
-                                    alertas_jugadores[jug]['carga'].append(f"🟡 Alerta Coste Cardio: +{emp_c:.0f}% vs {sesion_contexto}"); alertas_jugadores[jug]['total'] += 1
-                                    
+                                    alertas_jugadores[jug]['carga'].append(f"🟡 Alerta Coste Cardio: (Z: +{z_cardio:.1f}) vs {sesion_contexto}"); alertas_jugadores[jug]['total'] += 1
                                 elif neuro_mal and not cardio_bien: 
-                                    emp_n = ((efi_neuro - media_n) / media_n) * 100
-                                    alertas_jugadores[jug]['carga'].append(f"🟡 Alerta Coste Neuro: +{emp_n:.0f}% vs {sesion_contexto}"); alertas_jugadores[jug]['total'] += 1
+                                    alertas_jugadores[jug]['carga'].append(f"🟡 Alerta Coste Neuro: (Z: +{z_neuro:.1f}) vs {sesion_contexto}"); alertas_jugadores[jug]['total'] += 1
                                 
                             monot, strain = calcular_monotonia_7d(st.session_state.sesiones, jug, sesion['fecha'], devolver_strain=True)
                             monot_hsr, strain_hsr = calcular_monotonia_7d(st.session_state.sesiones, jug, sesion['fecha'], metrica="DIS AI", devolver_strain=True)
