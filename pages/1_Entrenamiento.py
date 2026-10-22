@@ -1911,9 +1911,9 @@ with tab_ses:
                                                             <div style="background: #1c1f26; height: 6px; border-radius: 3px; overflow: hidden; margin-bottom: 4px;">
                                                                 <div style="background: #ef4444; width: {p_mec}%; height: 100%;"></div>
                                                             </div>
+                                                            <div style="font-size: 0.7rem; color: #64748b; font-weight: 600;">Densidad actual: {(c['Hoy_MEC']/c['MIN_Hoy']) if c.get('MIN_Hoy',0)>0 else 0:.1f} n/m (Obj: {c['Den_Obj_MEC']:.1f})</div>
                                                         </div>
                                                     </div>
-                                                </div>
                                                 """, unsafe_allow_html=True)
                                     if jugadores_cumplidos:
                                         st.success(f"✅ **Carga semanal cumplida:** {', '.join(jugadores_cumplidos)} ya han igualado o superado el objetivo de su posición durante la semana (no requieren compensación extra).")
