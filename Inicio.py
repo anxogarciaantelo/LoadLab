@@ -21,7 +21,7 @@ from database.db_manager import *
 from views.team_settings import render_panel_principal
 
 # Configuración inicial de la página
-st.set_page_config(page_title="LoadLab", page_icon="assets/logo_icono.png", layout="wide")
+st.set_page_config(page_title="LoadLab", page_icon="assets/logo_icono.png", layout="wide", initial_sidebar_state="expanded")
 
 import plotly.io as pio
 import plotly.graph_objects as go
@@ -124,22 +124,9 @@ if not st.session_state.get("autenticado", False) and not st.session_state.get("
             cookie_manager.delete("loadlab_uid", key="del_err3")
 
 # ==========================================
-# 0. CONTROL DE VISIBILIDAD DEL MENÚ LATERAL
+# 0. CARGA DE CSS GLOBAL
 # ==========================================
 st.markdown(cargar_css_global(), unsafe_allow_html=True)
-if not st.session_state.get("equipo_seleccionado", False):
-    st.markdown("""
-        <style>
-            /* Ocultar el contenedor de la barra lateral */
-            [data-testid="stSidebar"] {
-                display: none !important;
-            }
-            /* Ocultar el botón/flecha superior izquierda que despliega la barra */
-            [data-testid="collapsedControl"] {
-                display: none !important;
-            }
-        </style>
-    """, unsafe_allow_html=True)
 
 # ==========================================
 # 1. PANTALLA DE LOGIN / REGISTRO (DISEÑO SPLIT ÉLITE)
