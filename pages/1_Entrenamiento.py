@@ -1855,7 +1855,10 @@ with tab_ses:
                                                 
                                                 min_comp_v = (c['Hoy_DIS'] / (c['Den_Obj_DIS']/1000)) if c['Den_Obj_DIS'] > 0 else 0
                                                 min_comp_i = (c['Hoy_HSR'] / c['Den_Obj_HSR']) if c['Den_Obj_HSR'] > 0 else 0
-                                                min_comp_real = (min_comp_v + min_comp_i) / 2
+                                                min_comp_m = (c['Hoy_MEC'] / c['Den_Obj_MEC']) if c.get('Den_Obj_MEC', 0) > 0 else 0
+                                                
+                                                # Integración a 3 vías: Volumen (DIS) + Metabólico (HSR) + Neuromuscular (MEC)
+                                                min_comp_real = (min_comp_v + min_comp_i + min_comp_m) / 3
 
                                                 st.markdown(f"""
                                                 <div style="background: #111318; border: 1px solid #1c1f26; border-left: 4px solid #C5A059; padding: 12px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
