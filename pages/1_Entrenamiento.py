@@ -956,16 +956,18 @@ with tab_ses:
                     df_informe['RATIO A/C HSR'] = df_informe['JUGADOR'].map(lambda j: dic_ewma.get(j, {}).get('RATIO A/C HSR', 1.0))
                     df_informe['RATIO A/C ACC'] = df_informe['JUGADOR'].map(lambda j: dic_ewma.get(j, {}).get('RATIO A/C ACC', 1.0))
 
-                    col_filt1, col_filt2 = st.columns(2)
+                    col_filt1, col_filt2 = st.columns([1, 2])
                     with col_filt1:
-                        filtro_pos = st.radio("Posición:", ["TODOS", "POR", "DEF", "MED", "ATA"], horizontal=True, key=f"rp_{idx_real}")
-                        if filtro_pos != "TODOS": df_informe = df_informe[df_informe["POS"] == filtro_pos]
-                    if es_partido:
-                        with col_filt2:
-                            filtro_rol = st.radio("Rol:", ["TODOS", "Titular", "Suplente"], horizontal=True, key=f"rr_{idx_real}")
-                            if filtro_rol != "TODOS": df_informe = df_informe[df_informe["ESTADO"] == filtro_rol]
+                        filtro_pos = st.multiselect("Posición:", ["POR", "DEF", "MED", "ATA"], default=["POR", "DEF", "MED", "ATA"], key=f"rp_{idx_real}")
+                        if filtro_pos: df_informe = df_informe[df_informe["POS"].isin(filtro_pos)]
+                    with col_filt2:
+                        opcs_est = ["Titular", "Suplente", "No convocado", "Lesionado", "Enfermo", "Selección", "No disponible"] if es_partido else ["Disponible", "Recuperación Post-Partido", "Readaptación", "Lesionado", "Enfermo", "Falta", "Selección", "No disponible"]
+                        def_est = ["Titular", "Suplente"] if es_partido else ["Disponible", "Recuperación Post-Partido"]
+                        def_est = [e for e in def_est if e in opcs_est]
+                        filtro_est = st.multiselect("Disponibilidad:", opcs_est, default=def_est, key=f"re_{idx_real}")
+                        if filtro_est: df_informe = df_informe[df_informe["ESTADO"].isin(filtro_est)]
 
-                    estados_validos_medias = ["Disponible", "Titular", "Suplente"]
+                    estados_validos_medias = ["Disponible", "Titular", "Suplente", "Recuperación Post-Partido", "Readaptación"]
                     df_para_medias = df_informe[(df_informe['ESTADO'].isin(estados_validos_medias)) & (df_informe['POS'] != "POR")].copy()
                     df_para_medias['TQR'] = df_para_medias['TQR'].replace(0, np.nan)
                     df_para_medias['WELLNESS'] = df_para_medias['WELLNESS'].replace(0, np.nan)
@@ -1176,99 +1178,68 @@ with tab_ses:
                         t_efic = calc_tend_html(efi_c_media, hist_efi_c, inverso=True) # Más coste = Peor
                         t_efin = calc_tend_html(efi_n_media, hist_efi_n, inverso=True)
 
-                        # Estructuras HTML Forzadas para igualar el CSS de style.css
-                        def html_tarjeta_doble(color, val1, val2, lbl1, lbl2, tend1="", tend2=""):
-                            return f"""
-                            <div style="background: #111318; border: 1px solid #1c1f26; border-top: 3px solid {color}; border-radius: 8px; padding: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.15); display: flex; flex-direction: row; align-items: stretch; margin-bottom: 10px; height: 85px;">
-                                <div style='flex: 1; padding-right: 8px; border-right: 1px solid #1c1f26; display: flex; flex-direction: column;'>
-                                    <span style='font-size: 0.85rem; color: #f8fafc; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; line-height: 1.1;'>{lbl1}</span>
-                                    <div style='text-align: center; margin-top: auto;'>
-                                        <span style='font-size: 1.4rem; font-weight: 800; color: #f8fafc;'>{val1}</span>{tend1}
-                                    </div>
-                                </div>
-                                <div style='flex: 1; padding-left: 8px; display: flex; flex-direction: column;'>
-                                    <span style='font-size: 0.85rem; color: #f8fafc; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; line-height: 1.1;'>{lbl2}</span>
-                                    <div style='text-align: center; margin-top: auto;'>
-                                        <span style='font-size: 1.4rem; font-weight: 800; color: #f8fafc;'>{val2}</span>{tend2}
-                                    </div>
-                                </div>
-                            </div>
-                            """
-                            
-                        def html_tarjeta_simple(color, val, lbl):
-                            return f"""
-                            <div style="background: #111318; border: 1px solid #1c1f26; border-top: 3px solid {color}; border-radius: 8px; padding: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.15); display: flex; flex-direction: column; margin-bottom: 10px; height: 85px;">
-                                <span style='font-size: 0.85rem; color: #f8fafc; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; line-height: 1.1;'>{lbl}</span>
-                                <span style='font-size: 1.4rem; font-weight: 800; color: #f8fafc; text-align: center; margin-top: auto;'>{val}</span>
-                            </div>
-                            """
+                        # --- ÍNDICE DE READINESS Y DISEÑO DE TARJETAS ---
+                        readiness_m = 0
+                        if well_m > 0 and tqr_m > 0:
+                            readiness_m = ((tqr_m / 10) * 50) + (((35 - well_m) / 30) * 50)
 
-                        def html_tarjeta_triple(color, val1, val2, val3, lbl1, lbl2, lbl3):
+                        def html_card_vertical(color, val_top, lbl_top, val_mid, lbl_mid, val_bot, lbl_bot):
                             return f"""
-                            <div style="background: #111318; border: 1px solid #1c1f26; border-top: 3px solid {color}; border-radius: 8px; padding: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.15); display: flex; flex-direction: row; align-items: stretch; margin-bottom: 10px; height: 85px;">
-                                <div style='flex: 1; padding-right: 4px; border-right: 1px solid #1c1f26; display: flex; flex-direction: column;'>
-                                    <span style='font-size: 0.75rem; color: #f8fafc; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; line-height: 1.1;'>{lbl1}</span>
-                                    <span style='font-size: 1.3rem; font-weight: 800; color: #f8fafc; text-align: center; margin-top: auto;'>{val1}</span>
+                            <div style="background: #111318; border: 1px solid #1c1f26; border-top: 3px solid {color}; border-radius: 8px; padding: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); display: flex; flex-direction: column; height: 100%;">
+                                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; border-bottom: 1px solid #1c1f26; padding-bottom: 8px;">
+                                    <div style="text-align: left;">
+                                        <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;">{lbl_top.split('|')[0]}</span><br>
+                                        <span style="font-size: 1.4rem; font-weight: 800; color: #f8fafc;">{val_top}</span>
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;">{lbl_top.split('|')[1]}</span><br>
+                                        <span style="font-size: 1.4rem; font-weight: 800; color: #f8fafc;">{val_mid}</span>
+                                    </div>
                                 </div>
-                                <div style='flex: 1; padding-left: 8px; padding-right: 4px; border-right: 1px solid #1c1f26; display: flex; flex-direction: column;'>
-                                    <span style='font-size: 0.75rem; color: #f8fafc; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; line-height: 1.1;'>{lbl2}</span>
-                                    <span style='font-size: 1.3rem; font-weight: 800; color: #f8fafc; text-align: center; margin-top: auto;'>{val2}</span>
-                                </div>
-                                <div style='flex: 1; padding-left: 8px; display: flex; flex-direction: column;'>
-                                    <span style='font-size: 0.75rem; color: #f8fafc; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; line-height: 1.1;'>{lbl3}</span>
-                                    <span style='font-size: 1.3rem; font-weight: 800; color: #f8fafc; text-align: center; margin-top: auto;'>{val3}</span>
+                                <div style="text-align: center; margin-top: auto;">
+                                    <span style="font-size: 0.8rem; color: #f8fafc; font-weight: 800; text-transform: uppercase;">{lbl_bot}</span><br>
+                                    <span style="font-size: 1.6rem; font-weight: 900; color: {color};">{val_bot}</span>
                                 </div>
                             </div>
                             """
 
-                        # Dividimos el espacio horizontal en proporciones 1:2:3 (6 tarjetas en total)
-                        col_w, col_i, col_e = st.columns([1, 2, 3])
+                        def html_readiness(valor):
+                            color = "#10b981" if valor >= 75 else ("#f59e0b" if valor >= 60 else "#ef4444")
+                            return f"""
+                            <div style="background: #111318; border: 1px solid #1c1f26; border-top: 3px solid {color}; border-radius: 8px; padding: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: space-between; height: 100%;">
+                                <div>
+                                    <span style="font-size: 0.85rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;">Índice de Readiness</span><br>
+                                    <span style="font-size: 0.75rem; color: #64748b;">(TQR + Wellness Invertido)</span>
+                                </div>
+                                <div style="text-align: right;">
+                                    <span style="font-size: 2.2rem; font-weight: 900; color: {color};">{valor:.0f}</span><span style="font-size: 1rem; color: #94a3b8; font-weight: 800;"> / 100</span>
+                                </div>
+                            </div>
+                            """
+
+                        col_w, col_i, col_e = st.columns([1.2, 1.2, 3])
                         
                         with col_w:
-                            st.markdown("<h5 style='color: #f8fafc; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; margin-top: 0;'>Bienestar</h5>", unsafe_allow_html=True)
-                            st.markdown(html_tarjeta_doble("#10b981", f"{tqr_m:.1f}", f"{well_m:.1f}", "TQR", "Wellness", t_tqr, t_well), unsafe_allow_html=True)
+                            st.markdown("<h5 style='color: #f8fafc; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; margin-top: 0;'>Recuperación</h5>", unsafe_allow_html=True)
+                            st.markdown(html_readiness(readiness_m), unsafe_allow_html=True)
                             
                         with col_i:
-                            st.markdown("<h5 style='color: #f8fafc; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; margin-top: 0;'>Carga & Eficiencia (Medias)</h5>", unsafe_allow_html=True)
-                            c_i1, c_i2 = st.columns(2)
-                            
-                            with c_i1:
-                                st.markdown(html_tarjeta_doble("#f59e0b", f"{carga_m:.0f}", f"{rpe_m:.1f}", "Carga (UA)", "RPE", t_carga, t_rpe), unsafe_allow_html=True)
-                            with c_i2:
-                                st.markdown(html_tarjeta_doble("#f59e0b", f"{efi_c_media:.4f}", f"{efi_n_media:.2f}", "Coste Cardio", "Coste Neuro", t_efic, t_efin), unsafe_allow_html=True)
+                            st.markdown("<h5 style='color: #f8fafc; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; margin-top: 0;'>Carga & Eficiencia</h5>", unsafe_allow_html=True)
+                            st.markdown(html_card_vertical("#f59e0b", f"{min_m:.0f}'", "Minutos | RPE", f"{rpe_m:.1f}", "RPE", f"{carga_m:.0f}", "Carga (UA)"), unsafe_allow_html=True)
                                 
                         with col_e:
-                            st.markdown("<h5 style='color: #f8fafc; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; margin-top: 0;'>Carga Externa & Densidad</h5>", unsafe_allow_html=True)
+                            st.markdown("<h5 style='color: #f8fafc; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; margin-top: 0;'>Carga Externa & Eficiencia</h5>", unsafe_allow_html=True)
                             
-                            # --- CÁLCULO DE REFERENCIAS DE PARTIDO (100%) NORMALIZADO A 90' ---
                             df_historico_partidos = st.session_state.df_master_informes[(st.session_state.df_master_informes['TIPO_SESION'].str.contains("Partido", na=False)) & (st.session_state.df_master_informes['DIS'] > 0)].copy()
-                            
                             if not df_historico_partidos.empty:
-                                # Priorizamos los minutos de GPS reales si existen
                                 df_historico_partidos['MIN_REAL'] = np.where(df_historico_partidos.get('MIN_GPS', df_historico_partidos['MIN']) > 0, df_historico_partidos.get('MIN_GPS', df_historico_partidos['MIN']), df_historico_partidos['MIN'])
-                                
-                                # 1. Media del Equipo Normalizada a 90'
                                 min_totales_eq = df_historico_partidos['MIN_REAL'].sum()
-                                if min_totales_eq > 0:
-                                    dis_100_eq = (df_historico_partidos['DIS'].sum() / min_totales_eq) * 90
-                                    hsr_100_eq = (df_historico_partidos['DIS AI'].sum() / min_totales_eq) * 90
-                                    acc_100_eq = (df_historico_partidos['ACC'].sum() / min_totales_eq) * 90
-                                    dcc_100_eq = (df_historico_partidos['DCC'].sum() / min_totales_eq) * 90
-                                else:
-                                    dis_100_eq, hsr_100_eq, acc_100_eq, dcc_100_eq = 10.0, 600.0, 40.0, 40.0
-                                
-                                # 2. Medias Individuales Normalizadas a 90'
+                                dis_100_eq = (df_historico_partidos['DIS'].sum() / min_totales_eq) * 90 if min_totales_eq > 0 else 10.0
+                                hsr_100_eq = (df_historico_partidos['DIS AI'].sum() / min_totales_eq) * 90 if min_totales_eq > 0 else 600.0
+                                acc_100_eq = (df_historico_partidos['ACC'].sum() / min_totales_eq) * 90 if min_totales_eq > 0 else 40.0
+                                dcc_100_eq = (df_historico_partidos['DCC'].sum() / min_totales_eq) * 90 if min_totales_eq > 0 else 40.0
                                 df_sum_indiv = df_historico_partidos.groupby('JUGADOR')[['DIS', 'DIS AI', 'ACC', 'DCC', 'MIN_REAL']].sum()
-                                medias_indiv_partido = {}
-                                for j_nom, j_row in df_sum_indiv.iterrows():
-                                    m_jug = j_row['MIN_REAL']
-                                    if m_jug > 0:
-                                        medias_indiv_partido[j_nom] = {
-                                            'DIS': (j_row['DIS'] / m_jug) * 90,
-                                            'DIS AI': (j_row['DIS AI'] / m_jug) * 90,
-                                            'ACC': (j_row['ACC'] / m_jug) * 90,
-                                            'DCC': (j_row['DCC'] / m_jug) * 90
-                                        }
+                                medias_indiv_partido = {j_nom: {'DIS': (j_row['DIS']/j_row['MIN_REAL'])*90, 'DIS AI': (j_row['DIS AI']/j_row['MIN_REAL'])*90, 'ACC': (j_row['ACC']/j_row['MIN_REAL'])*90, 'DCC': (j_row['DCC']/j_row['MIN_REAL'])*90} for j_nom, j_row in df_sum_indiv.iterrows() if j_row['MIN_REAL'] > 0}
                             else:
                                 dis_100_eq, hsr_100_eq, acc_100_eq, dcc_100_eq = 10.0, 600.0, 40.0, 40.0
                                 medias_indiv_partido = {}
@@ -1277,13 +1248,20 @@ with tab_ses:
                             pct_hsr_eq = (hsr_m / hsr_100_eq) * 100 if hsr_100_eq > 0 else 0
                             pct_acc_eq = (acc_m / acc_100_eq) * 100 if acc_100_eq > 0 else 0
                             
-                            densidad_m = (dis_m * 1000) / min_m if min_m > 0 else 0
-                            densidad_hsr = hsr_m / min_m if min_m > 0 else 0
-                            densidad_acc = acc_m / min_m if min_m > 0 else 0
-                            densidad_dcc = dcc_m / min_m if min_m > 0 else 0
+                            def html_kpi_ext(color, val1, val2, val3, lbl1, lbl2, lbl3):
+                                return f"""
+                                <div style="background: #111318; border: 1px solid #1c1f26; border-top: 3px solid {color}; border-radius: 8px; padding: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); display: flex; justify-content: space-around; height: 100%;">
+                                    <div style='text-align: center;'><span style='font-size: 0.75rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;'>{lbl1}</span><br><span style='font-size: 1.4rem; font-weight: 800; color: #f8fafc;'>{val1}</span></div>
+                                    <div style='width: 1px; background: #1c1f26; margin: 0 10px;'></div>
+                                    <div style='text-align: center;'><span style='font-size: 0.75rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;'>{lbl2}</span><br><span style='font-size: 1.4rem; font-weight: 800; color: #f8fafc;'>{val2}</span></div>
+                                    <div style='width: 1px; background: #1c1f26; margin: 0 10px;'></div>
+                                    <div style='text-align: center;'><span style='font-size: 0.75rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;'>{lbl3}</span><br><span style='font-size: 1.4rem; font-weight: 800; color: #f8fafc;'>{val3}</span></div>
+                                </div>
+                                """
                             
-                            st.markdown(html_tarjeta_triple("#C5A059", f"{dis_m:.2f} km <span style='font-size:0.6em; color:#94a3b8;'>({pct_dis_eq:.0f}%)</span>", f"{hsr_m:.0f} m <span style='font-size:0.6em; color:#94a3b8;'>({pct_hsr_eq:.0f}%)</span>", f"{acc_m:.0f} | {dcc_m:.0f} <span style='font-size:0.6em; color:#94a3b8;'>({pct_acc_eq:.0f}%)</span>", "Distancia (vs Partido)", "HSR >21 (vs Partido)", "ACC|DCC (vs Partido)"), unsafe_allow_html=True)
-                            st.markdown(html_tarjeta_triple("#0ea5e9", f"{densidad_m:.0f} m", f"{densidad_hsr:.1f} m", f"{densidad_acc:.2f} | {densidad_dcc:.2f}", "m / min", "HSR / min", "ACC | DCC / min"), unsafe_allow_html=True)
+                            c_ex1, c_ex2 = st.columns(2)
+                            with c_ex1: st.markdown(html_kpi_ext("#C5A059", f"{dis_m:.2f} <span style='font-size:0.6em; color:#94a3b8;'>({pct_dis_eq:.0f}%)</span>", f"{hsr_m:.0f} <span style='font-size:0.6em; color:#94a3b8;'>({pct_hsr_eq:.0f}%)</span>", f"{acc_m:.0f} | {dcc_m:.0f}", "Volumen (km)", "HSR (>21)", "ACC|DCC (>3)"), unsafe_allow_html=True)
+                            with c_ex2: st.markdown(html_kpi_ext("#0ea5e9", f"{pct_acc_eq:.0f}%", f"{efi_c_media:.2f}", f"{efi_n_media:.2f}", "Carga Mec. vs Partido", "Coste Cardio", "Coste Neuro"), unsafe_allow_html=True)
                         st.markdown("---")
                         
                         # --- 4. ALERTAS DE RIESGO MOVIDAS ARRIBA (EN 3 COLUMNAS) ---
@@ -1321,7 +1299,7 @@ with tab_ses:
                                 fig_well = go.Figure()
                                 for i, factor in enumerate(list(nombres_limpios.values())):
                                     fig_well.add_trace(go.Bar(x=df_well['JUGADOR'], y=df_well[factor], name=factor, marker_color=px.colors.qualitative.Set2[i]))
-                                fig_well.update_layout(title="<b>Desglose de Wellness</b>", barmode='stack', yaxis_title="Puntos", legend_title_text="Factores", yaxis_range=[0, 35], plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', margin=dict(t=40, b=120, l=40, r=40), hovermode="x unified")
+                                fig_well.update_layout(title="<b>Desglose de Wellness</b>", barmode='stack', yaxis_title="Puntos", legend=dict(orientation="h", yanchor="bottom", y=-0.3, xanchor="center", x=0.5, title=""), yaxis_range=[0, 35], plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', margin=dict(t=40, b=60, l=40, r=40), hovermode="x unified")
                                 
                                 umbrales_z = []
                                 for jug_bar in df_well['JUGADOR']:
@@ -1374,19 +1352,27 @@ with tab_ses:
                                     z=z_data, x=x_labels, y=y_labels,
                                     colorscale=colorscale, zmin=0.0, zmax=1.8,
                                     text=np.round(z_data, 2), texttemplate="%{text}",
-                                    textfont={"color": "white", "weight": "bold"},
-                                    hoverongaps=False, showscale=False
+                                    textfont={"color": "white", "weight": "bold", "size": 12},
+                                    hoverongaps=False, showscale=False,
+                                    xgap=2, ygap=2
                                 ))
                                 
-                                fig3.update_layout(title="Riesgo Multidimensional (ACWR)", plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', margin=dict(l=10, r=10, t=40, b=10), yaxis={'autorange': 'reversed'})
+                                fig3.update_layout(
+                                    title="Riesgo Multidimensional (ACWR)", 
+                                    plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', 
+                                    margin=dict(l=10, r=10, t=40, b=10), 
+                                    yaxis={'autorange': 'reversed', 'tickfont': {'size': 11}},
+                                    xaxis={'tickfont': {'size': 11}}
+                                )
                                 st.plotly_chart(fig3, use_container_width=True, key=f"ses_ac_{idx_real}")
                         
                         with st.expander(":material/list_alt: Ver Tabla Detallada de Carga Interna"):
-                            cols_ver_ci = ['JUGADOR', 'POS', 'MIN', 'RPE', 'CARGA', 'RATIO A/C', 'RATIO A/C HSR', 'RATIO A/C ACC']
+                            cols_ver_ci = ['JUGADOR', 'ESTADO', 'MIN', 'RPE', 'CARGA', 'EWMA AGUDA', 'EWMA CRÓNICA', 'RATIO A/C', 'RATIO A/C HSR', 'RATIO A/C ACC']
                             df_tabla_riesgo = df_informe[cols_ver_ci].rename(columns={'RATIO A/C': 'A/C INT', 'RATIO A/C HSR': 'A/C HSR', 'RATIO A/C ACC': 'A/C ACC'})
                             
-                            estilo_ci = (df_tabla_riesgo.style.hide(axis="index").format(precision=2)
-                                         .map(lambda x: f"background-color: {color_ratio_ac(x)}; color: black;" if isinstance(x, (int, float)) else "", subset=['A/C INT', 'A/C HSR', 'A/C ACC']))
+                            estilo_ci = (df_tabla_riesgo.style.hide(axis="index")
+                                         .format({"MIN": "{:.0f}'", "RPE": "{:.0f}", "CARGA": "{:.0f}", "EWMA AGUDA": "{:.0f}", "EWMA CRÓNICA": "{:.0f}", "A/C INT": "{:.2f}", "A/C HSR": "{:.2f}", "A/C ACC": "{:.2f}"})
+                                         .map(lambda x: f"background-color: {color_ratio_ac(x)}; color: black; font-weight: bold;" if isinstance(x, (int, float)) else "", subset=['A/C INT', 'A/C HSR', 'A/C ACC']))
                             mostrar_tabla_moderna(estilo_ci)
                         
                         st.markdown("---")
@@ -1594,7 +1580,7 @@ with tab_ses:
                                 fig4.update_layout(yaxis=dict(scaleanchor="x", scaleratio=1), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
                                 st.plotly_chart(fig4, use_container_width=True, key=f"ses_a_{idx_real}")
 
-                        # --- GRÁFICOS DE DENSIDAD (NORMALIZADOS POR MINUTOS) ---
+                        # --- GRÁFICOS DE DENSIDAD CRUZADA (Volumen vs Intensidad) ---
                         df_den = df_graficos[df_graficos['DIS'] > 0].copy()
                         if not df_den.empty:
                             df_den['DIS AI'] = df_den.get('DIS AI', df_den.get('HID >21', 0))
@@ -1604,13 +1590,17 @@ with tab_ses:
                             
                             cg7, cg8 = st.columns(2)
                             with cg7:
-                                fig_den_v = px.scatter(df_den, x='MIN', y='m/min', color='POS', size='HSR/min', hover_name='JUGADOR', text='JUGADOR', title="Densidad Volumen (m/min) vs Minutos", color_discrete_map={"POR": "gray", "DEF": "#00b4d8", "MED": "#28a745", "ATA": "#ff4b4b"})
+                                fig_den_v = px.scatter(df_den, x='m/min', y='HSR/min', color='POS', size='VMAX', hover_name='JUGADOR', text='JUGADOR', title="Densidad: Volumen vs Intensidad (Burbuja = VMax)", color_discrete_map={"POR": "gray", "DEF": "#00b4d8", "MED": "#28a745", "ATA": "#ff4b4b"})
                                 fig_den_v.update_traces(textposition='top center', marker=dict(opacity=0.8, line=dict(width=1, color='DarkSlateGrey')))
+                                fig_den_v.update_xaxes(autorange=True)
+                                fig_den_v.update_yaxes(autorange=True)
                                 fig_den_v.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
                                 st.plotly_chart(fig_den_v, use_container_width=True, key=f"ses_den_v_{idx_real}")
                             with cg8:
-                                fig_den_m = px.scatter(df_den, x='MIN', y='Mec/min', color='POS', hover_name='JUGADOR', text='JUGADOR', title="Densidad Mecánica (ACC+DCC/min) vs Minutos", color_discrete_map={"POR": "gray", "DEF": "#00b4d8", "MED": "#28a745", "ATA": "#ff4b4b"})
+                                fig_den_m = px.scatter(df_den, x='m/min', y='Mec/min', color='POS', hover_name='JUGADOR', text='JUGADOR', title="Densidad: Volumen vs Tensión Mecánica", color_discrete_map={"POR": "gray", "DEF": "#00b4d8", "MED": "#28a745", "ATA": "#ff4b4b"})
                                 fig_den_m.update_traces(textposition='top center', marker=dict(size=12, opacity=0.8, line=dict(width=1, color='DarkSlateGrey')))
+                                fig_den_m.update_xaxes(autorange=True)
+                                fig_den_m.update_yaxes(autorange=True)
                                 fig_den_m.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
                                 st.plotly_chart(fig_den_m, use_container_width=True, key=f"ses_den_m_{idx_real}")
 
@@ -1628,8 +1618,10 @@ with tab_ses:
                             df_tabla_ce['% ACC (Part)'] = df_tabla_ce.apply(lambda r: calc_pct_match(r, 'ACC'), axis=1)
                             df_tabla_ce['DCC:ACC'] = np.where(df_tabla_ce['ACC'] > 0, df_tabla_ce['DCC'] / df_tabla_ce['ACC'], 0)
                             
-                            cols_ver_ce = ['JUGADOR', 'POS', 'ESTADO', 'DIS', '% DIS (Part)', 'DIS AI', '% HSR (Part)', 'ACC', 'DCC', 'DCC:ACC', 'VMAX', '% VMAX']
-                            mostrar_tabla_moderna(df_tabla_ce[cols_ver_ce].style.hide(axis="index").format(precision=1).format({"DCC:ACC": "{:.2f}"}).map(lambda x: "color: #ef4444; font-weight: bold;" if isinstance(x, (int, float)) and x > 1.3 else "", subset=['DCC:ACC']))
+                            cols_ver_ce = ['JUGADOR', 'DIS', '% DIS (Part)', 'DIS AI', '% HSR (Part)', 'ACC', 'DCC', 'DCC:ACC', 'VMAX', '% VMAX']
+                            mostrar_tabla_moderna(df_tabla_ce[cols_ver_ce].style.hide(axis="index")
+                                                  .format({"DIS": "{:.2f}", "% DIS (Part)": "{:.2f}%", "DIS AI": "{:.0f}", "% HSR (Part)": "{:.2f}%", "ACC": "{:.0f}", "DCC": "{:.0f}", "DCC:ACC": "{:.2f}", "VMAX": "{:.2f}", "% VMAX": "{:.2f}%"})
+                                                  .map(lambda x: "color: #ef4444; font-weight: bold;" if isinstance(x, (int, float)) and x > 1.3 else "", subset=['DCC:ACC']))
                         
                         # --- MÓDULO DE CARGA COMPENSATORIA (MD+1 / MD+2) ---
                         es_compensatoria = not es_partido and sesion.get('descripcion') in ['MD+1', 'MD+2']
