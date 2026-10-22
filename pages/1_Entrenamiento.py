@@ -1746,70 +1746,156 @@ with tab_ses:
                         es_compensatoria = not es_partido and sesion.get('descripcion') in ['MD+1', 'MD+2']
                         
                         if es_partido or es_compensatoria:
-                            st.markdown("#### :material/battery_charging_full: Carga Compensatoria Recomendada")
-                            st.caption("Déficit de estímulo de los suplentes respecto a la media física de los titulares del último partido.")
+                            st.markdown(f"#### :material/battery_charging_full: Carga Compensatoria {'(Seguimiento en Vivo)' if es_compensatoria else '(Recomendada 60 min)'}")
+                            st.caption("Ajustado por posición específica (Titulares) y carga semanal acumulada en microciclo.")
+                            
+                            df_hist = st.session_state.df_master_informes.copy()
                             
                             if es_partido:
-                                df_titulares = df_informe[(df_informe['ESTADO'] == 'Titular') & (df_informe['DIS'] > 0)]
-                                df_suplentes = df_informe[(df_informe['ESTADO'].isin(['Suplente', 'No convocado'])) & (df_informe['DIS'] >= 0)]
+                                fecha_partido = sesion['fecha']
                             else:
-                                # Buscar retrospectivamente el último partido para extraer el status real de la convocatoria
-                                df_hist_partidos = st.session_state.df_master_informes[
-                                    (st.session_state.df_master_informes['TIPO_SESION'].str.contains("Partido", na=False)) &
-                                    (st.session_state.df_master_informes['FECHA'] <= sesion['fecha'])
-                                ]
-                                if not df_hist_partidos.empty:
-                                    ult_fecha_partido = df_hist_partidos['FECHA'].max()
-                                    df_ult_partido = df_hist_partidos[df_hist_partidos['FECHA'] == ult_fecha_partido]
-                                    df_titulares = df_ult_partido[(df_ult_partido['ESTADO'] == 'Titular') & (df_ult_partido['DIS'] > 0)]
-                                    df_suplentes = df_ult_partido[(df_ult_partido['ESTADO'].isin(['Suplente', 'No convocado'])) & (df_ult_partido['DIS'] >= 0)]
-                                else:
-                                    df_titulares, df_suplentes = pd.DataFrame(), pd.DataFrame()
-                            
-                            if not df_titulares.empty and not df_suplentes.empty:
-                                media_tit_dis = df_titulares['DIS'].mean()
-                                media_tit_hsr = df_titulares['DIS AI'].mean()
-                                media_tit_spr = df_titulares['Nº SPR'].mean()
-                                media_tit_mec = df_titulares['ACC'].mean() + df_titulares['DCC'].mean()
+                                df_hist_partidos = df_hist[(df_hist['TIPO_SESION'].str.contains("Partido", na=False)) & (df_hist['FECHA'] < sesion['fecha'])]
+                                fecha_partido = df_hist_partidos['FECHA'].max() if not df_hist_partidos.empty else None
                                 
-                                comp_data = []
-                                for _, sup in df_suplentes.iterrows():
-                                    def_dis = max(0, media_tit_dis - sup.get('DIS', 0))
-                                    def_hsr = max(0, media_tit_hsr - sup.get('DIS AI', 0))
-                                    def_spr = max(0, media_tit_spr - sup.get('Nº SPR', 0))
-                                    def_mec = max(0, media_tit_mec - (sup.get('ACC', 0) + sup.get('DCC', 0)))
+                            if fecha_partido:
+                                _, _, lunes_partido, _ = obtener_rango_fechas_semana(fecha_partido)
+                                lunes_str = lunes_partido.strftime("%Y-%m-%d")
+                                
+                                df_partido_data = df_hist[df_hist['FECHA'] == fecha_partido].copy()
+                                df_sem_data = df_hist[(df_hist['FECHA'] >= lunes_str) & (df_hist['FECHA'] < fecha_partido) & (df_hist['TIPO_SESION'] == 'Entrenamiento')].copy()
+                                
+                                if not df_partido_data.empty:
+                                    df_partido_data['MIN_REAL'] = np.where(df_partido_data.get('MIN_GPS', df_partido_data['MIN']) > 0, df_partido_data.get('MIN_GPS', df_partido_data['MIN']), df_partido_data['MIN'])
                                     
-                                    if def_dis > 0:
-                                        comp_data.append({
-                                            "JUGADOR": sup['JUGADOR'],
-                                            "Déficit Volumen (km)": def_dis,
-                                            "Déficit HSR (>21 km/h)": def_hsr,
-                                            "Déficit Sprints (>24)": def_spr,
-                                            "Déficit Tensión (ACC+DCC)": def_mec
-                                        })
+                                    titulares_partido = df_partido_data[df_partido_data['ESTADO'] == 'Titular']
+                                    suplentes_partido = df_partido_data[df_partido_data['ESTADO'].isin(['Suplente', 'No convocado'])]
+                                    
+                                    metricas_carga = ['DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC']
+                                    dict_pos_esp = {limpiar_nombre(p["JUGADOR"]): p.get("pos_1", p.get("POS", "DEF")) for p in st.session_state.plantilla}
+                                    
+                                    titulares_densidad = {}
+                                    titulares_entreno = {}
+                                    
+                                    # 1. Extraer densidades y cargas previas de Titulares por posición
+                                    for _, t in titulares_partido.iterrows():
+                                        jug, m_real = t['JUGADOR'], t['MIN_REAL']
+                                        pos_e = dict_pos_esp.get(limpiar_nombre(jug), 'DEF')
                                         
-                                if comp_data:
-                                    df_comp = pd.DataFrame(comp_data)
-                                    mostrar_tabla_moderna(df_comp.style.hide(axis="index").format(precision=1))
-                                else:
-                                    st.success("Todos los suplentes igualaron la carga media de los titulares.")
-                            elif es_compensatoria:
-                                st.info("No hay registros de un partido previo para calcular el déficit compensatorio.")
-                        
-                        st.markdown("---")
-                        pdf_key = f"pdf_sesion_listo_{idx_real}"
-                        if pdf_key not in st.session_state:
-                            if st.button(":material/picture_as_pdf: Generar PDF de la Sesión", key=f"btn_prepara_pdf_ses_{idx_real}", type="primary", use_container_width=True):
-                                with st.spinner("Procesando gráficos y PDF..."):
-                                    st.session_state[pdf_key] = generar_pdf_completo(sesion, df_para_medias, df_graficos, alertas_multi, alertas_rec, alertas_car, {"Desglose de Wellness": fig_well, "Calidad de Recuperación (TQR)": fig_tqr, "Carga de Sesión": fig2, "Riesgo de Lesión (Ratio A/C)": fig3, "Huella Dactilar": fig_hd, "Volumen vs Intensidad": fig5, "ACC vs DCC": fig4})
-                                st.rerun()
-                        else:
-                            col_pdf1, col_pdf2 = st.columns(2)
-                            with col_pdf1: st.download_button(":material/download: Descargar PDF", data=st.session_state[pdf_key], file_name=f"Sesion_{sesion['fecha']}.pdf", mime="application/pdf", key=f"btn_descarga_pdf_ses_{idx_real}", use_container_width=True)
-                            with col_pdf2:
-                                if st.button(":material/delete: Descartar PDF", key=f"btn_borrar_pdf_ses_{idx_real}", use_container_width=True): del st.session_state[pdf_key]; st.rerun()                                                          
-                else:
-                    st.warning("El informe de esta sesión aún no ha sido procesado.")
+                                        if pos_e not in titulares_densidad: titulares_densidad[pos_e] = {m: [] for m in metricas_carga}
+                                        if pos_e not in titulares_entreno: titulares_entreno[pos_e] = {m: [] for m in metricas_carga}
+                                        
+                                        if m_real > 0:
+                                            for m in metricas_carga: titulares_densidad[pos_e][m].append(t.get(m, 0) / m_real)
+                                            
+                                        df_j_ent = df_sem_data[df_sem_data['JUGADOR'] == jug]
+                                        for m in metricas_carga: titulares_entreno[pos_e][m].append(df_j_ent[m].sum() if not df_j_ent.empty else 0)
+                                            
+                                    for pos_e in titulares_densidad:
+                                        for m in metricas_carga:
+                                            titulares_densidad[pos_e][m] = np.mean(titulares_densidad[pos_e][m]) if titulares_densidad[pos_e][m] else 0.0
+                                            titulares_entreno[pos_e][m] = np.mean(titulares_entreno[pos_e][m]) if titulares_entreno[pos_e][m] else 0.0
+                                            
+                                    fallback_densidad = {m: np.mean([v[m] for v in titulares_densidad.values()]) if titulares_densidad else 0 for m in metricas_carga}
+                                    fallback_entreno = {m: np.mean([v[m] for v in titulares_entreno.values()]) if titulares_entreno else 0 for m in metricas_carga}
+                                    
+                                    # 2. Calcular déficit de los suplentes
+                                    comp_data = []
+                                    for _, sup in suplentes_partido.iterrows():
+                                        jug = sup['JUGADOR']
+                                        pos_e = dict_pos_esp.get(limpiar_nombre(jug), 'DEF')
+                                        
+                                        densidad_obj = titulares_densidad.get(pos_e, fallback_densidad)
+                                        entreno_obj = titulares_entreno.get(pos_e, fallback_entreno)
+                                        
+                                        df_sup_ent = df_sem_data[df_sem_data['JUGADOR'] == jug]
+                                        
+                                        deficit = {}
+                                        for m in metricas_carga:
+                                            target_60m = densidad_obj[m] * 60
+                                            total_target = entreno_obj[m] + target_60m
+                                            total_actual = (df_sup_ent[m].sum() if not df_sup_ent.empty else 0) + sup.get(m, 0)
+                                            deficit[m] = max(0, total_target - total_actual)
+                                            
+                                        if deficit['DIS'] > 0 or deficit['DIS AI'] > 0:
+                                            if es_compensatoria:
+                                                d_hoy = next((d for d in sesion['datos_informe'] if limpiar_nombre(d['JUGADOR']) == limpiar_nombre(jug)), {})
+                                                if not d_hoy: continue # Si el suplente no entrenó en MD+1, lo saltamos
+                                                
+                                                m_hoy = safe_float(d_hoy.get('MIN_GPS', d_hoy.get('MIN', 0)))
+                                                comp_data.append({
+                                                    "JUGADOR": jug, "POS": pos_e,
+                                                    "Obj_DIS": deficit['DIS'], "Hoy_DIS": safe_float(d_hoy.get('DIS', 0)),
+                                                    "Obj_HSR": deficit['DIS AI'], "Hoy_HSR": safe_float(d_hoy.get('DIS AI', d_hoy.get('HID >21', 0))),
+                                                    "Obj_SPR": deficit['Nº SPR'], "Hoy_SPR": safe_float(d_hoy.get('Nº SPR', d_hoy.get('SPR >24', 0))),
+                                                    "Obj_MEC": deficit['ACC'] + deficit['DCC'], "Hoy_MEC": safe_float(d_hoy.get('ACC', 0)) + safe_float(d_hoy.get('DCC', 0)),
+                                                    "MIN_Hoy": m_hoy,
+                                                    "Den_Obj_DIS": densidad_obj['DIS'] * 1000, "Den_Hoy_DIS": (safe_float(d_hoy.get('DIS', 0))*1000)/m_hoy if m_hoy>0 else 0,
+                                                    "Den_Obj_HSR": densidad_obj['DIS AI'], "Den_Hoy_HSR": safe_float(d_hoy.get('DIS AI', 0))/m_hoy if m_hoy>0 else 0
+                                                })
+                                            else:
+                                                comp_data.append({
+                                                    "JUGADOR": jug, "POS": pos_e,
+                                                    "Déficit Volumen (km)": deficit['DIS'], "Déficit HSR (>21 km/h)": deficit['DIS AI'],
+                                                    "Déficit Sprints (>24)": deficit['Nº SPR'], "Déficit Tensión (ACC+DCC)": deficit['ACC'] + deficit['DCC']
+                                                })
+
+                                    if comp_data:
+                                        if es_partido:
+                                            df_comp = pd.DataFrame(comp_data)
+                                            mostrar_tabla_moderna(df_comp.style.hide(axis="index").format(precision=1))
+                                        else:
+                                            for c in comp_data:
+                                                p_dis = min(100, (c['Hoy_DIS'] / c['Obj_DIS']) * 100) if c['Obj_DIS'] > 0 else 100
+                                                p_hsr = min(100, (c['Hoy_HSR'] / c['Obj_HSR']) * 100) if c['Obj_HSR'] > 0 else 100
+                                                p_mec = min(100, (c['Hoy_MEC'] / c['Obj_MEC']) * 100) if c['Obj_MEC'] > 0 else 100
+                                                
+                                                min_comp_v = (c['Hoy_DIS'] / (c['Den_Obj_DIS']/1000)) if c['Den_Obj_DIS'] > 0 else 0
+                                                min_comp_i = (c['Hoy_HSR'] / c['Den_Obj_HSR']) if c['Den_Obj_HSR'] > 0 else 0
+                                                min_comp_real = (min_comp_v + min_comp_i) / 2
+
+                                                st.markdown(f"""
+                                                <div style="background: #111318; border: 1px solid #1c1f26; border-left: 4px solid #C5A059; padding: 12px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
+                                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                                        <strong style="color: #f8fafc; font-size: 1.1rem;">{c['JUGADOR']} <span style="font-size: 0.8rem; color: #94a3b8;">({c['POS']})</span></strong>
+                                                        <span style="color: #10b981; font-weight: 800; font-size: 0.9rem;">Eq. Partido: ~{min_comp_real:.0f} min</span>
+                                                    </div>
+                                                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
+                                                        <div>
+                                                            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px; font-weight: 800;">
+                                                                <span>VOLUMEN ({c['Hoy_DIS']:.1f} / {c['Obj_DIS']:.1f} km)</span>
+                                                                <span style="color: #0ea5e9;">{p_dis:.0f}%</span>
+                                                            </div>
+                                                            <div style="background: #1c1f26; height: 6px; border-radius: 3px; overflow: hidden; margin-bottom: 4px;">
+                                                                <div style="background: #0ea5e9; width: {p_dis}%; height: 100%;"></div>
+                                                            </div>
+                                                            <div style="font-size: 0.7rem; color: #64748b; font-weight: 600;">Densidad actual: {c['Den_Hoy_DIS']:.0f} m/m (Obj: {c['Den_Obj_DIS']:.0f})</div>
+                                                        </div>
+                                                        <div>
+                                                            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px; font-weight: 800;">
+                                                                <span>HSR ({c['Hoy_HSR']:.0f} / {c['Obj_HSR']:.0f} m)</span>
+                                                                <span style="color: #f59e0b;">{p_hsr:.0f}%</span>
+                                                            </div>
+                                                            <div style="background: #1c1f26; height: 6px; border-radius: 3px; overflow: hidden; margin-bottom: 4px;">
+                                                                <div style="background: #f59e0b; width: {p_hsr}%; height: 100%;"></div>
+                                                            </div>
+                                                            <div style="font-size: 0.7rem; color: #64748b; font-weight: 600;">Densidad actual: {c['Den_Hoy_HSR']:.1f} m/m (Obj: {c['Den_Obj_HSR']:.1f})</div>
+                                                        </div>
+                                                        <div>
+                                                            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px; font-weight: 800;">
+                                                                <span>TENSIÓN ({c['Hoy_MEC']:.0f} / {c['Obj_MEC']:.0f} acc)</span>
+                                                                <span style="color: #ef4444;">{p_mec:.0f}%</span>
+                                                            </div>
+                                                            <div style="background: #1c1f26; height: 6px; border-radius: 3px; overflow: hidden; margin-bottom: 4px;">
+                                                                <div style="background: #ef4444; width: {p_mec}%; height: 100%;"></div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                """, unsafe_allow_html=True)
+                                    else:
+                                        st.success("Todos los suplentes igualaron la carga media de su posición.")
+                            else:
+                                st.info("No hay registros de un partido previo o titulares para calcular el déficit.")
 
             # ---------------------------------------------------------
             # HERRAMIENTA 3: CARGA DE DATOS (FORMULARIO OPTIMIZADO)
