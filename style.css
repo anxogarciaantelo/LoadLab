@@ -83,11 +83,11 @@ html, body, [class*="css"], .stMarkdown p, .stText p, label, .stSelectbox, .stTe
     border-bottom: 2px solid #C5A059 !important;
 }
 
-/* Hacer la barra superior transparente pero mantener el botón del menú lateral */
+/* Hacer la barra superior transparente sin matar la flecha lateral */
 header[data-testid="stHeader"] { 
     background: transparent !important; 
 }
-/* Ocultar solo el menú de opciones derecho de Streamlit (los tres puntos y 'Deploy') */
+/* Ocultar solo el menú de opciones nativo derecho */
 [data-testid="stToolbar"] {
     display: none !important;
 }
