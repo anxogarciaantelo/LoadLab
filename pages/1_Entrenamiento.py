@@ -1818,10 +1818,14 @@ with tab_ses:
                                             
                                         if deficit['DIS'] > 0 or deficit['DIS AI'] > 0:
                                             if es_compensatoria:
+                                                disp_hoy_dict = {limpiar_nombre(k): v for k, v in sesion.get('disponibilidad', {}).items()}
+                                                estado_hoy = disp_hoy_dict.get(limpiar_nombre(jug), "Disponible")
+                                                if estado_hoy not in ["Disponible", "Recuperación Post-Partido", "Titular", "Suplente"]:
+                                                    continue # Si está lesionado, enfermo o ausente, no se le exige compensar
+                                                    
                                                 d_hoy = next((d for d in sesion['datos_informe'] if limpiar_nombre(d['JUGADOR']) == limpiar_nombre(jug)), {})
-                                                if not d_hoy: continue # Si el suplente no entrenó en MD+1, lo saltamos
-                                                
                                                 m_hoy = safe_float(d_hoy.get('MIN_GPS', d_hoy.get('MIN', 0)))
+                                                if not d_hoy or m_hoy == 0: continue # Si el suplente no entrenó en MD+1, lo saltamos
                                                 comp_data.append({
                                                     "JUGADOR": jug, "POS": pos_e,
                                                     "Obj_DIS": deficit['DIS'], "Hoy_DIS": safe_float(d_hoy.get('DIS', 0)),
