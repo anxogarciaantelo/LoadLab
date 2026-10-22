@@ -83,9 +83,13 @@ html, body, [class*="css"], .stMarkdown p, .stText p, label, .stSelectbox, .stTe
     border-bottom: 2px solid #C5A059 !important;
 }
 
-/* Ocultar la barra superior negra (Header de Streamlit) */
+/* Hacer la barra superior transparente pero mantener el botón del menú lateral */
 header[data-testid="stHeader"] { 
-    display: none !important; 
+    background: transparent !important; 
+}
+/* Ocultar solo el menú de opciones derecho de Streamlit (los tres puntos y 'Deploy') */
+[data-testid="stToolbar"] {
+    display: none !important;
 }
 
 /* Reducir el padding top para compensar la barra eliminada */
