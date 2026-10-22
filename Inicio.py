@@ -549,19 +549,10 @@ if st.session_state.get("equipo_seleccionado", False):
     clima_str = f"{clima_hoy['temp']}°C | {clima_hoy['estado']}" if clima_hoy else "Desconocido"
 
     # 2.2 Motor de Alertas
-    bajas_medicas = []
-    readaptacion = []
     alertas_readiness = []
     alertas_carga = []
-
-    for l in st.session_state.lesiones:
-        if l.get("estado") == "Activa":
-            dias_lesionado = (hoy_dt - datetime.strptime(l["id_sesion"], "%Y-%m-%d").date()).days
-            bajas_medicas.append({"jug": l["jugador"], "txt": f"{l['tipo']} ({dias_lesionado}d)"})
-        elif l.get("estado") == "Recuperado" and l.get("dias_baja"):
-            fecha_alta = datetime.strptime(l["id_sesion"], "%Y-%m-%d").date() + timedelta(days=int(l["dias_baja"]))
-            if 0 <= (hoy_dt - fecha_alta).days <= 7:
-                readaptacion.append({"jug": l["jugador"], "txt": "Alta reciente (RTP)"})
+    bajas_medicas = []
+    readaptacion = []
 
     df_master = st.session_state.get("df_master_informes", pd.DataFrame())
     dict_zscore = calcular_zscore_wellness(df_master, hoy_str)
@@ -570,6 +561,20 @@ if st.session_state.get("equipo_seleccionado", False):
     # 1. Extraer última sesión válida de CADA JUGADOR para evaluar Readiness y Eficiencia
     ultimas_sesiones = {}
     sesiones_con_datos = [s for s in st.session_state.sesiones if s.get("informe_generado") and s["fecha"] <= hoy_str]
+    
+    # --- NUEVA LÓGICA DE ENFERMERÍA ---
+    # Busca el estado exacto en la última sesión registrada con datos en la aplicación
+    if sesiones_con_datos:
+        ult_sesion = sorted(sesiones_con_datos, key=lambda x: x["fecha"])[-1]
+        disp_ult = {limpiar_nombre(k): v for k, v in ult_sesion.get("disponibilidad", {}).items()}
+        for p in st.session_state.plantilla:
+            jug_nom = p["JUGADOR"]
+            estado = disp_ult.get(limpiar_nombre(jug_nom), "Disponible")
+            if estado == "Lesionado":
+                bajas_medicas.append({"jug": jug_nom, "txt": "Lesionado"})
+            elif estado == "Readaptación":
+                readaptacion.append({"jug": jug_nom, "txt": "Readaptación (RTP)"})
+
     for s in sesiones_con_datos:
         for d in s.get("datos_informe", []):
             ultimas_sesiones[limpiar_nombre(d["JUGADOR"])] = {"fecha": s["fecha"], "datos": d}
@@ -660,7 +665,7 @@ if st.session_state.get("equipo_seleccionado", False):
                     z_cardio = (efi_cardio - st_efi['cardio_mean']) / st_efi['cardio_std']
                     z_neuro = (efi_neuro - st_efi['neuro_mean']) / st_efi['neuro_std']
                     
-                    if z_cardio >= 1.5 and z_neuro >= 1.5: alertas_carga.append({"jug": jug, "txt": f"Fatiga Integral (Coste Cardio Z:+{z_cardio:.1f}, Neuro Z:+{z_neuro:.1f})", "lvl": "rojo"})
+                    if z_cardio >= 1.5 and z_neuro >= 1.5: alertas_carga.append({"jug": jug, "txt": f"Fatiga Integral (Cardio Z:+{z_cardio:.1f}, Neuro Z:+{z_neuro:.1f})", "lvl": "rojo"})
                     elif z_cardio >= 1.5: alertas_carga.append({"jug": jug, "txt": f"Coste Cardio Z:+{z_cardio:.1f}", "lvl": "amarillo"})
                     elif z_neuro >= 1.5: alertas_carga.append({"jug": jug, "txt": f"Coste Neuro Z:+{z_neuro:.1f}", "lvl": "amarillo"})
 
@@ -701,26 +706,26 @@ if st.session_state.get("equipo_seleccionado", False):
         
     alertas_readiness = dedup_alertas(alertas_readiness)
     alertas_carga = dedup_alertas(alertas_carga)
-    alertas_medicas = [{"jug": b["jug"], "txt": b["txt"], "lvl": "rojo"} for b in bajas_medicas] + [{"jug": r["jug"], "txt": r["txt"], "lvl": "verde"} for r in readaptacion]
+    alertas_medicas = [{"jug": b["jug"], "txt": b["txt"], "lvl": "rojo"} for b in bajas_medicas] + [{"jug": r["jug"], "txt": r["txt"], "lvl": "amarillo"} for r in readaptacion]
 
     def get_avatar_html(jugador_nombre):
         for p in st.session_state.get("plantilla", []):
             if limpiar_nombre(p["JUGADOR"]) == limpiar_nombre(jugador_nombre):
                 if p.get("foto"):
                     img_src = p["foto"] if str(p["foto"]).startswith("http") else f"data:image/jpeg;base64,{p['foto']}"
-                    return f"<img src='{img_src}' style='width:20px; height:20px; border-radius:50%; object-fit: cover; margin-right: 6px; border: 1px solid #111318;'>"
+                    return f"<img src='{img_src}' style='width:24px; height:24px; border-radius:50%; object-fit: cover; margin-right: 8px; border: 1px solid #111318;'>"
                 break
-        return "<span class='material-symbols-rounded' style='font-size: 16px; margin-right: 6px; vertical-align: middle;'>person</span>"
+        return "<span class='material-symbols-rounded' style='font-size: 20px; margin-right: 8px; vertical-align: middle;'>person</span>"
 
     def render_alertas_grid(alertas, nivel_predeterminado="verde"):
         if not alertas:
-            return "<div style='color: #10b981; font-weight: 800; font-size: 0.8rem; padding: 10px; text-align: center; margin-top: 20px;'><span class='material-symbols-rounded' style='vertical-align: text-bottom; font-size: 1rem; margin-right: 4px;'>check_circle</span> En parámetros</div>"
+            return "<div style='color: #10b981; font-weight: 800; font-size: 0.95rem; padding: 20px 10px; text-align: center; margin-top: 10px;'><span class='material-symbols-rounded' style='vertical-align: text-bottom; font-size: 1.4rem; margin-right: 6px;'>check_circle</span> Sin alertas activas</div>"
         
         orden_niveles = {"rojo": 0, "amarillo": 1, "verde": 2}
         alertas_ordenadas = sorted(alertas, key=lambda x: orden_niveles.get(x.get("lvl", nivel_predeterminado), 3))
         
-        html = "<style>.alerta-scroll::-webkit-scrollbar { width: 4px; } .alerta-scroll::-webkit-scrollbar-track { background: transparent; } .alerta-scroll::-webkit-scrollbar-thumb { background: #111318; border-radius: 4px; }</style>"
-        html += "<div class='alerta-scroll' style='display: grid; grid-template-columns: 1fr 1fr; gap: 6px; max-height: 140px; overflow-y: auto; padding-right: 4px;'>"
+        # Eliminamos el scroll para que las tarjetas ocupen su tamaño natural completo
+        html = "<div style='display: flex; flex-direction: column; gap: 8px; padding-bottom: 10px;'>"
         
         for a in alertas_ordenadas:
             nivel = a.get("lvl", nivel_predeterminado)
@@ -728,12 +733,13 @@ if st.session_state.get("equipo_seleccionado", False):
             bg = "rgba(239, 68, 68, 0.1)" if nivel == "rojo" else ("rgba(245, 158, 11, 0.1)" if nivel == "amarillo" else "rgba(16, 185, 129, 0.1)")
             avatar = get_avatar_html(a["jug"])
             
-            html += f"<div style='background: {bg}; border: 1px solid {color}40; border-left: 3px solid {color}; padding: 6px; border-radius: 6px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);'><div style='display: flex; align-items: center; margin-bottom: 3px;'>{avatar}<span style='color: #f8fafc; font-size: 0.75rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;' title='{a['jug']}'>{a['jug']}</span></div><span style='color: {color}; font-size: 0.7rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;' title='{a['txt']}'>{a['txt']}</span></div>"
+            html += f"<div style='background: {bg}; border: 1px solid {color}40; border-left: 4px solid {color}; padding: 12px 14px; border-radius: 8px; display: flex; flex-direction: column; box-shadow: 0 2px 6px rgba(0,0,0,0.15);'><div style='display: flex; align-items: center; margin-bottom: 6px;'>{avatar}<span style='color: #f8fafc; font-size: 0.95rem; font-weight: 800;'>{a['jug']}</span></div><span style='color: {color}; font-size: 0.85rem; font-weight: 800; line-height: 1.3;'>{a['txt']}</span></div>"
             
         html += "</div>"
         return html
 
-    c_ctx, c_read, c_carga, c_med = st.columns([1.2, 1.5, 1.5, 1.5])
+    # Modificamos las proporciones: Menos contexto (0.9), mucho más espacio a las alertas (1.7)
+    c_ctx, c_read, c_carga, c_med = st.columns([0.9, 1.7, 1.7, 1.7])
 
     with c_ctx:
         html_ctx = f"""
@@ -783,13 +789,19 @@ if st.session_state.get("equipo_seleccionado", False):
             df_sem['TQR'] = df_sem['TQR'].replace(0, np.nan)
             df_sem['WELLNESS'] = df_sem['WELLNESS'].replace(0, np.nan)
             
-            df_diario_int = df_sem.groupby('FECHA')[['WELLNESS', 'TQR', 'CARGA']].mean().reset_index()
+            # Agrupación interna ampliada
+            cols_int = ['WELLNESS', 'TQR', 'CARGA']
+            for factor in ['W_Fatiga', 'W_Sueño', 'W_Dolor', 'W_Estres', 'W_Humor']:
+                if factor in df_sem.columns: cols_int.append(factor)
+                
+            df_diario_int = df_sem.groupby('FECHA')[cols_int].mean().reset_index()
             
+            # Agrupación externa ampliada
             df_sem_gps = df_sem[df_sem['DIS'] > 0]
             if not df_sem_gps.empty:
-                df_diario_ext = df_sem_gps.groupby('FECHA')[['DIS', 'DIS AI']].mean().reset_index()
+                df_diario_ext = df_sem_gps.groupby('FECHA')[['DIS', 'DIS AI', 'ACC', 'DCC']].mean().reset_index()
             else:
-                df_diario_ext = pd.DataFrame(columns=['FECHA', 'DIS', 'DIS AI'])
+                df_diario_ext = pd.DataFrame(columns=['FECHA', 'DIS', 'DIS AI', 'ACC', 'DCC'])
                 
             df_diario = pd.merge(df_diario_int, df_diario_ext, on='FECHA', how='left').fillna(0)
             
@@ -801,9 +813,19 @@ if st.session_state.get("equipo_seleccionado", False):
             
             with cg1:
                 fig_w = go.Figure()
-                fig_w.add_trace(go.Bar(x=df_diario['DIA_NOMBRE'], y=df_diario['WELLNESS'], name="Fatiga (Wellness)", marker_color="rgba(239, 68, 68, 0.7)", yaxis="y1"))
-                fig_w.add_trace(go.Scatter(x=df_diario['DIA_NOMBRE'], y=df_diario['TQR'], name="TQR", mode="lines+markers", line=dict(color="#10b981", width=3), yaxis="y2"))
-                fig_w.update_layout(title="Bienestar", yaxis=dict(title="Puntos Wellness", range=[0, 35]), yaxis2=dict(title="TQR", overlaying="y", side="right", range=[0, 10]), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+                
+                # Barras apiladas para factores de Wellness
+                colores_w = px.colors.qualitative.Set2
+                factores = ['W_Fatiga', 'W_Sueño', 'W_Dolor', 'W_Estres', 'W_Humor']
+                nombres_w = ['Fatiga', 'Sueño', 'Dolor', 'Estrés', 'Humor']
+                for i, factor in enumerate(factores):
+                    if factor in df_diario.columns:
+                        fig_w.add_trace(go.Bar(x=df_diario['DIA_NOMBRE'], y=df_diario[factor], name=nombres_w[i], marker_color=colores_w[i], yaxis="y1"))
+                
+                # Línea Dorada de TQR
+                fig_w.add_trace(go.Scatter(x=df_diario['DIA_NOMBRE'], y=df_diario['TQR'], name="TQR", mode="lines+markers", line=dict(color="#C5A059", width=3), yaxis="y2"))
+                
+                fig_w.update_layout(title="Bienestar", barmode='stack', yaxis=dict(title="Puntos Wellness", range=[0, 35]), yaxis2=dict(title="TQR", overlaying="y", side="right", range=[0, 10]), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
                 st.plotly_chart(fig_w, use_container_width=True)
                 
             with cg2:
@@ -815,9 +837,17 @@ if st.session_state.get("equipo_seleccionado", False):
             with cg3:
                 fig_ext = go.Figure()
                 if 'DIS' in df_diario.columns:
-                    fig_ext.add_trace(go.Bar(x=df_diario['DIA_NOMBRE'], y=df_diario['DIS'], name="Distancia (km)", marker_color="rgba(197, 160, 89, 0.6)", yaxis="y1"))
-                    fig_ext.add_trace(go.Scatter(x=df_diario['DIA_NOMBRE'], y=df_diario['DIS AI'], name="HSR (m)", mode="lines+markers", line=dict(color="#f59e0b", width=3), yaxis="y2"))
-                fig_ext.update_layout(title="Carga Externa", yaxis=dict(title="km"), yaxis2=dict(title="HSR (m)", overlaying="y", side="right"), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+                    # Barra dorada sólida al 100% de opacidad
+                    fig_ext.add_trace(go.Bar(x=df_diario['DIA_NOMBRE'], y=df_diario['DIS'], name="Distancia (km)", marker_color="#C5A059", opacity=1.0, yaxis="y1"))
+                    
+                    # Suma de tensión mecánica (ACC + DCC) en color verde de la app
+                    df_diario['TENSION'] = df_diario['ACC'] + df_diario['DCC']
+                    fig_ext.add_trace(go.Scatter(x=df_diario['DIA_NOMBRE'], y=df_diario['TENSION'], name="Tensión (ACC+DCC)", mode="lines+markers", line=dict(color="#10b981", width=3, dash="dot"), yaxis="y2"))
+                    
+                    # Línea plateada (e2e8f0) para HSR
+                    fig_ext.add_trace(go.Scatter(x=df_diario['DIA_NOMBRE'], y=df_diario['DIS AI'], name="HSR (m)", mode="lines+markers", line=dict(color="#e2e8f0", width=3), yaxis="y2"))
+                    
+                fig_ext.update_layout(title="Carga Externa", yaxis=dict(title="km"), yaxis2=dict(title="HSR / Tensión", overlaying="y", side="right"), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
                 st.plotly_chart(fig_ext, use_container_width=True)
         else:
             st.info("Aún no hay datos de sesión procesados para la semana actual.")
