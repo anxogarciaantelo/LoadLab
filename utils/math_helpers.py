@@ -106,9 +106,9 @@ def calcular_ewma_historico(_sesiones, fecha_objetivo):
             if primer_idx:
                 df_pivot.loc[:primer_idx - pd.Timedelta(days=1), col] = np.nan
 
-        # Cálculo vectorizado C y A
+        # Cálculo vectorizado C y A (Uncoupled EWMA)
         aguda = df_pivot.ewm(span=7, adjust=False).mean()
-        cronica = df_pivot.ewm(span=28, adjust=False).mean()
+        cronica = df_pivot.shift(7).ewm(span=21, adjust=False).mean()
         
         try:
             aguda_hoy = aguda.loc[fecha_fin]
