@@ -328,7 +328,8 @@ def set_login_background():
         100% { transform: translateY(-250px) translateX(-250px); }
     }
 
-    header[data-testid="stHeader"] { display: none !important; }
+    header[data-testid="stHeader"] { background: transparent !important; }
+    [data-testid="stToolbar"] { display: none !important; }
     [data-testid="InputInstructions"] { display: none !important; }
     
     /* --- TARJETA DE LOGIN OSCURA --- */
