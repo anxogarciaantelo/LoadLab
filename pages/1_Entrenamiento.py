@@ -1379,6 +1379,36 @@ with tab_ses:
 
                         # --- 5. GRÁFICOS DE BIENESTAR ---
                         st.markdown("#### :material/psychology: 1. Bienestar y Recuperación")
+                        
+                        # --- GRÁFICO PANORÁMICO DE READINESS INDIVIDUAL ---
+                        if 'TQR' in df_graficos.columns and 'WELLNESS' in df_graficos.columns:
+                            df_graficos['READINESS'] = np.where(
+                                (df_graficos['TQR'] > 0) & (df_graficos['WELLNESS'] > 0),
+                                ((df_graficos['TQR'] / 10) * 50) + (((35 - df_graficos['WELLNESS']) / 30) * 50),
+                                0
+                            )
+                            if df_graficos['READINESS'].sum() > 0:
+                                df_rd = df_graficos[df_graficos['READINESS'] > 0].sort_values('READINESS', ascending=False)
+                                fig_rd = px.bar(
+                                    df_rd, x='JUGADOR', y='READINESS', color='READINESS', 
+                                    color_continuous_scale="RdYlGn", range_color=[0, 100], 
+                                    title="<b>Índice de Readiness Individual</b> (TQR + Wellness)",
+                                    text='READINESS'
+                                )
+                                fig_rd.update_traces(
+                                    texttemplate='%{text:.0f}', textposition='outside', 
+                                    marker_line_color='#1c1f26', marker_line_width=1
+                                )
+                                fig_rd.update_layout(
+                                    height=250, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', 
+                                    margin=dict(t=40, b=20, l=40, r=40), coloraxis_showscale=False,
+                                    xaxis_title="", yaxis_title="Puntos (0-100)",
+                                    yaxis_range=[0, 115] # Espacio adicional para el texto superior
+                                )
+                                fig_rd.add_hline(y=75, line_dash="dot", line_color="#10b981", annotation_text="Óptimo (>75)", annotation_position="bottom right")
+                                fig_rd.add_hline(y=60, line_dash="dash", line_color="#ef4444", annotation_text="Riesgo (<60)", annotation_position="top right")
+                                st.plotly_chart(fig_rd, use_container_width=True, key=f"ses_rd_{idx_real}")
+
                         cg1, cg2 = st.columns(2)
                         with cg1:
                             if df_graficos['WELLNESS'].sum() > 0:
