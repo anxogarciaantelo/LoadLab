@@ -1945,63 +1945,8 @@ with tab_ses:
                                     if jugadores_cumplidos:
                                         st.success(f"✅ **Carga semanal cumplida:** {', '.join(jugadores_cumplidos)} ya han igualado o superado el objetivo de su posición durante la semana (no requieren compensación extra).")
 
-                                    # --- INICIO BLOQUE DEBUG AMPLIADO ---
-                                    with st.expander("🐛 MODO DEBUG: Auditoría del Motor de Carga Compensatoria", expanded=True):
-                                        st.markdown("### 1. Contexto Temporal Evaluado")
-                                        st.write(f"**Partido Base:** {fecha_partido}")
-                                        st.write(f"**Semana de Evaluación:** Desde {lunes_str} hasta {fecha_partido}")
-                                        st.write(f"**Sesiones computadas (Se excluyen MD+1 y MD+2):** {', '.join(df_sem_data['MD'].unique()) if not df_sem_data.empty else 'Ninguna'}")
-                                        
-                                        st.markdown("### 2. Desglose Diario Exacto (¿De dónde sale el Target Semanal?)")
-                                        st.caption("Esta tabla te muestra la media que el algoritmo ha calculado para cada sesión y posición (excluyendo a los que hicieron 0 km). Si sumas los valores de la posición 'Central', te dará EXACTAMENTE el Target Semanal.")
-                                        if not debug_diario_dis.empty:
-                                            # Mostrar solo las posiciones que te interesan para no saturar
-                                            st.dataframe(debug_diario_dis.sort_values(by=['POS_ESP', 'FECHA']).style.format({"DIS": "{:.3f} km"}))
-                                        else:
-                                            st.write("Sin datos diarios.")
-                                            
-                                        st.markdown("### 3. Referencias Calculadas por Posición (Targets Finales)")
-                                        c_dbg1, c_dbg2 = st.columns(2)
-                                        with c_dbg1:
-                                            st.markdown("**A. Densidad Titulares en Partido (m o acc / min)**")
-                                            st.json(titulares_densidad)
-                                        with c_dbg2:
-                                            st.markdown("**B. Carga Semanal Media del Grupo (Target Entreno)**")
-                                            st.json(titulares_entreno)
-                                            
-                                        st.markdown("### 4. Desglose Matemático por Suplente (Ejemplo con Volumen - DIS)")
-                                        debug_table = []
-                                        for _, sup in suplentes_partido.iterrows():
-                                            jug_dbg = sup['JUGADOR']
-                                            pos_dbg = dict_pos_esp.get(limpiar_nombre(jug_dbg), 'DEF')
-                                            
-                                            den_obj = titulares_densidad.get(pos_dbg, fallback_densidad)
-                                            ent_obj = titulares_entreno.get(pos_dbg, fallback_entreno)
-                                            
-                                            df_sup_ent_dbg = df_sem_data[df_sem_data['JUGADOR'] == jug_dbg]
-                                            vol_sem_real = df_sup_ent_dbg['DIS'].sum() if not df_sup_ent_dbg.empty else 0
-                                            vol_part_real = sup.get('DIS', 0)
-                                            
-                                            target_60m_vol = den_obj['DIS'] * 60
-                                            target_total_vol = ent_obj['DIS'] + target_60m_vol
-                                            total_actual_vol = vol_sem_real + vol_part_real
-                                            deficit_vol = target_total_vol - total_actual_vol
-                                            
-                                            debug_table.append({
-                                                "Jugador": jug_dbg,
-                                                "Pos": pos_dbg,
-                                                "1. Target Entreno Semanal": round(ent_obj['DIS'], 3),
-                                                "2. Target 60' Partido": round(target_60m_vol, 3),
-                                                "3. SUMA TARGET TOTAL": round(target_total_vol, 3),
-                                                "4. Hizo en Semana": round(vol_sem_real, 3),
-                                                "5. Hizo en Partido": round(vol_part_real, 3),
-                                                "6. SUMA REALIZADO": round(total_actual_vol, 3),
-                                                "7. DÉFICIT MATEMÁTICO": round(deficit_vol, 3)
-                                            })
-                                        
-                                        st.dataframe(pd.DataFrame(debug_table).style.map(lambda x: "color: #ef4444; font-weight: bold;" if isinstance(x, (int, float)) and x > 0 else "color: #10b981; font-weight: bold;", subset=["7. DÉFICIT MATEMÁTICO"]))
-                                        st.caption("Fórmula: Target Total (Suma de Medias Diarias + Densidad Titular * 60) MENOS Suma Realizada (Sus entrenos + Sus minutos de partido).")
-                                    # --- FIN BLOQUE DEBUG ---
+                                    if jugadores_cumplidos:
+                                        st.success(f"✅ **Carga semanal cumplida:** {', '.join(jugadores_cumplidos)} ya han igualado o superado el objetivo de su posición durante la semana (no requieren compensación extra).")
                             else:
                                 st.info("No hay registros de un partido previo o titulares para calcular el déficit.")
 
