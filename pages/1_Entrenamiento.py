@@ -1005,57 +1005,54 @@ with tab_ses:
                         for _, row in activos.iterrows():
                             jug = row['JUGADOR']
                             alertas_jugadores[jug] = {'recuperacion': [], 'carga': [], 'total': 0}
+                            
                             tqr, well = safe_float(row.get('TQR')), safe_float(row.get('WELLNESS'))
                             w_dolor, w_fatiga = safe_float(row.get('W_Dolor')), safe_float(row.get('W_Fatiga'))
                             
-                            if tqr > 0:
-                                if tqr <= 3: alertas_jugadores[jug]['recuperacion'].append(f"🔴 Recuperación Crítica ({tqr:.1f})"); alertas_jugadores[jug]['total'] += 1
-                                elif tqr == 4: alertas_jugadores[jug]['recuperacion'].append(f"🟡 Recuperación Moderada ({tqr:.1f})"); alertas_jugadores[jug]['total'] += 1
-                                
-                            if well > 0:
-                                st_j = dict_zscore.get(jug, {'media': 0, 'std': 1.0, 'dolor_media': 0, 'dolor_std': 0.5, 'fatiga_media': 0, 'fatiga_std': 0.5})
-                                
-                                # 1. Alerta Global de Wellness
-                                if st_j['media'] > 0:
-                                    z_score = (well - st_j['media']) / st_j['std']
-                                    if z_score >= 1.5: 
-                                        alertas_jugadores[jug]['recuperacion'].append(f"🔴 Fatiga Sistémica (Z: +{z_score:.1f})"); alertas_jugadores[jug]['total'] += 1
-                                    elif 1.0 <= z_score < 1.5: 
-                                        alertas_jugadores[jug]['recuperacion'].append(f"🟡 Alerta Fatiga (Z: +{z_score:.1f})"); alertas_jugadores[jug]['total'] += 1
-                                else:
-                                    if well >= 24: alertas_jugadores[jug]['recuperacion'].append(f"🔴 Wellness Crítico ({well:.1f})"); alertas_jugadores[jug]['total'] += 1
-                                    elif 18 <= well <= 23: alertas_jugadores[jug]['recuperacion'].append(f"🟡 Wellness Moderado ({well:.1f})"); alertas_jugadores[jug]['total'] += 1
-                                    
-                                # 2. Alertas Locales Específicas (Daño Muscular y Fatiga Periférica)
-                                if w_dolor > 0 and st_j['dolor_media'] > 0:
-                                    z_dolor = (w_dolor - st_j['dolor_media']) / st_j['dolor_std']
-                                    if z_dolor >= 1.5:
-                                        alertas_jugadores[jug]['recuperacion'].append(f"🔴 Daño Muscular (Dolor Z: +{z_dolor:.1f})"); alertas_jugadores[jug]['total'] += 1
-                                        
-                                if w_fatiga > 0 and st_j['fatiga_media'] > 0:
-                                    z_fatiga = (w_fatiga - st_j['fatiga_media']) / st_j['fatiga_std']
-                                    if z_fatiga >= 1.5:
-                                        alertas_jugadores[jug]['recuperacion'].append(f"🔴 Fatiga Periférica (Fatiga Z: +{z_fatiga:.1f})"); alertas_jugadores[jug]['total'] += 1
+                            st_j = dict_zscore.get(jug, {'media': 0, 'std': 1.0, 'dolor_media': 0, 'dolor_std': 0.5, 'fatiga_media': 0, 'fatiga_std': 0.5})
+                            z_well = (well - st_j['media']) / st_j['std'] if st_j['std'] > 0 else 0
+                            z_dolor = (w_dolor - st_j['dolor_media']) / st_j['dolor_std'] if st_j['dolor_std'] > 0 else 0
+                            z_fatiga = (w_fatiga - st_j['fatiga_media']) / st_j['fatiga_std'] if st_j['fatiga_std'] > 0 else 0
 
+                            # --- 1. ALERTAS DE READINESS CRUZADAS (Filtrado de Falsos Positivos) ---
+                            
+                            # A) Riesgo Estructural Directo (Daño Muscular aislado)
+                            if w_dolor > 0 and z_dolor >= 1.5:
+                                alertas_jugadores[jug]['recuperacion'].append(f"🔴 **Daño Muscular Tisular:** Dolor Anormal (Z: +{z_dolor:.1f}). Alto riesgo de rotura. Evitar frenadas (DCC) y sprints."); alertas_jugadores[jug]['total'] += 1
+                            elif w_dolor > 0 and z_dolor >= 1.0:
+                                alertas_jugadores[jug]['recuperacion'].append(f"🟡 **Sobrecarga Tisular:** Dolor elevado (Z: +{z_dolor:.1f}). Calentamiento exhaustivo necesario."); alertas_jugadores[jug]['total'] += 1
+                                
+                            # B) Fatiga Sistémica Integrada (Cruza TQR con Percepción Wellness)
+                            if tqr > 0 and well > 0:
+                                if tqr <= 3 and z_well >= 1.0:
+                                    alertas_jugadores[jug]['recuperacion'].append(f"🔴 **Fatiga Sistémica Integrada:** TQR Crítico ({tqr:.0f}/10) + Wellness Anormal (Z: +{z_well:.1f}). SNC deprimido. Reducir volumen de sesión 50%."); alertas_jugadores[jug]['total'] += 1
+                                elif tqr <= 4 and z_fatiga >= 1.5:
+                                    alertas_jugadores[jug]['recuperacion'].append(f"🔴 **Agotamiento Periférico:** Baja recuperación ({tqr:.0f}/10) + Alta Fatiga Muscular (Z: +{z_fatiga:.1f}). Limitar volumen total."); alertas_jugadores[jug]['total'] += 1
+                                elif (tqr <= 4 and z_well < 1.0) or (tqr > 4 and z_well >= 1.5):
+                                    alertas_jugadores[jug]['recuperacion'].append(f"🟡 **Readiness Desajustado:** Discordancia entre TQR y Wellness. Monitorizar lenguaje corporal inicial."); alertas_jugadores[jug]['total'] += 1
+
+                            # --- 2. ALERTAS DE CARGA Y RIESGO MECÁNICO ---
+                            
                             ratio_ac = safe_float(row.get('RATIO A/C', 1.0))
                             carga_aguda = safe_float(row.get('EWMA AGUDA', 0.0))
                             ratio_hsr = safe_float(row.get('RATIO A/C HSR', 1.0))
                             ratio_acc = safe_float(row.get('RATIO A/C ACC', 1.0))
-                            carga_sesion = safe_float(row.get('CARGA', 0.0))
-                            dis_sesion = safe_float(row.get('DIS', 0.0))
                             
-                            min_sesion = safe_float(row.get('MIN', 0.0))
-                            m_min = (dis_sesion * 1000) / min_sesion if min_sesion > 0 else 0
-                            mec_total = safe_float(row.get('ACC', 0)) + safe_float(row.get('DCC', 0)) + safe_float(row.get('Nº SPR', 0))
-                            
-                            efi_cardio = safe_float(row.get('RPE', 0)) / m_min if m_min > 0 else 0
-                            efi_neuro = safe_float(row.get('RPE', 0)) / mec_total if mec_total > 0 else 0
-                            
-                            # --- CÁLCULO DE EFICIENCIA (ENTRENAMIENTO VS PARTIDO) ---
-                            # Aislamos estrictamente por el mismo MD (espacio/tarea) para comparar peras con peras
+                            # A) Carga Interna (Protegida por volumen mínimo para no saltar tras vacaciones)
+                            if carga_aguda > 1500:
+                                if ratio_ac >= 1.5:
+                                    alertas_jugadores[jug]['carga'].append(f"🔴 **Spike de Carga (A/C >1.5):** Acumulación aguda crítica ({carga_aguda:.0f} UA). Reducir minutos de juego próximos 3 días."); alertas_jugadores[jug]['total'] += 1
+                                elif ratio_ac <= 0.8:
+                                    alertas_jugadores[jug]['carga'].append(f"🟡 **Desentrenamiento (A/C <0.8):** Carga crónica bajando. Riesgo si se expone súbitamente a partido completo."); alertas_jugadores[jug]['total'] += 1
+                                    
+                            # B) Carga Externa (Tejido conectivo y muscular)
+                            if ratio_hsr >= 1.5:
+                                alertas_jugadores[jug]['carga'].append(f"🔴 **Spike de HSR (>21 km/h):** A/C Mecánico {ratio_hsr:.2f}. Riesgo crítico en isquiosural. Restringir transiciones largas."); alertas_jugadores[jug]['total'] += 1
+                            if ratio_acc >= 1.5:
+                                alertas_jugadores[jug]['carga'].append(f"🔴 **Spike de Tensión (ACC):** A/C Excéntrico {ratio_acc:.2f}. Riesgo articular/rotuliano. Evitar espacios reducidos (SSG)."); alertas_jugadores[jug]['total'] += 1
+
+                            # --- CÁLCULO DE EFICIENCIA (AISLADO POR MD) ---
                             sesion_contexto = sesion.get('descripcion', 'TD') if not es_partido else "Partido"
-                            
-                            # Extraemos el histórico limpio excluyendo la sesión de hoy
                             df_hist_jug_md = df_master_hist[(df_master_hist['JUGADOR'] == jug) & (df_master_hist['FECHA'] < sesion["fecha"])].copy()
                             
                             if not es_partido:
@@ -1063,15 +1060,27 @@ with tab_ses:
                             else:
                                 df_hist_jug_md = df_hist_jug_md[df_hist_jug_md['TIPO_SESION'].str.contains("Partido", na=False)]
                                 
-                            if not df_hist_jug_md.empty:
+                            efi_cardio, efi_neuro = 0, 0
+                            min_sesion = safe_float(row.get('MIN', 0.0))
+                            dis_sesion = safe_float(row.get('DIS', 0.0))
+                            rpe_sesion = safe_float(row.get('RPE', 0.0))
+                            
+                            if min_sesion > 0 and dis_sesion > 0:
+                                m_min_actual = (dis_sesion * 1000) / min_sesion
+                                mec_total_actual = safe_float(row.get('ACC', 0)) + safe_float(row.get('DCC', 0)) + safe_float(row.get('Nº SPR', 0))
+                                
+                                if m_min_actual > 0: efi_cardio = rpe_sesion / m_min_actual
+                                if mec_total_actual > 0: efi_neuro = rpe_sesion / mec_total_actual
+                                
+                            if not df_hist_jug_md.empty and (efi_cardio > 0 or efi_neuro > 0):
                                 df_hist_jug_md['m_min_h'] = np.where(df_hist_jug_md['MIN'] > 0, (df_hist_jug_md['DIS'] * 1000) / df_hist_jug_md['MIN'], 0)
                                 df_hist_jug_md['mec_h'] = df_hist_jug_md['ACC'] + df_hist_jug_md['DCC'] + df_hist_jug_md['Nº SPR']
                                 
                                 df_c_val = df_hist_jug_md[(df_hist_jug_md['m_min_h'] > 0) & (df_hist_jug_md['RPE'] > 0)].copy()
                                 df_n_val = df_hist_jug_md[(df_hist_jug_md['mec_h'] > 0) & (df_hist_jug_md['RPE'] > 0)].copy()
                                 
-                                df_c_val['EFI_C'] = df_c_val['RPE'] / df_c_val['m_min_h']
-                                df_n_val['EFI_N'] = df_n_val['RPE'] / df_n_val['mec_h']
+                                if not df_c_val.empty: df_c_val['EFI_C'] = df_c_val['RPE'] / df_c_val['m_min_h']
+                                if not df_n_val.empty: df_n_val['EFI_N'] = df_n_val['RPE'] / df_n_val['mec_h']
 
                                 media_c = df_c_val['EFI_C'].mean() if not df_c_val.empty else 0
                                 std_c = df_c_val['EFI_C'].std(ddof=0) if not df_c_val.empty else 0
@@ -1081,31 +1090,27 @@ with tab_ses:
                                 std_n = df_n_val['EFI_N'].std(ddof=0) if not df_n_val.empty else 0
                                 std_n = std_n if std_n > 0 else (media_n * 0.1)
                                 
-                                z_cardio = (efi_cardio - media_c) / std_c if media_c > 0 else 0
-                                z_neuro = (efi_neuro - media_n) / std_n if media_n > 0 else 0
+                                z_cardio = (efi_cardio - media_c) / std_c if media_c > 0 and std_c > 0 else 0
+                                z_neuro = (efi_neuro - media_n) / std_n if media_n > 0 and std_n > 0 else 0
 
-                                # --- VALIDACIÓN CRUZADA DE EFICIENCIA (Z-SCORE INTRA-SUJETO) ---
-                                cardio_mal = (z_cardio >= 1.5)
-                                neuro_mal = (z_neuro >= 1.5)
-                                
-                                neuro_bien = (z_neuro < 1.5)
-                                cardio_bien = (z_cardio < 1.5)
+                                cardio_mal, neuro_mal = (z_cardio >= 1.5), (z_neuro >= 1.5)
+                                cardio_bien, neuro_bien = (z_cardio < 1.5), (z_neuro < 1.5)
 
                                 if cardio_mal and neuro_mal:
-                                    alertas_jugadores[jug]['carga'].append(f"🔴 Fatiga Integral: Coste Cardio (Z: +{z_cardio:.1f}) y Neuro (Z: +{z_neuro:.1f}) anormal vs {sesion_contexto}"); alertas_jugadores[jug]['total'] += 1
+                                    alertas_jugadores[jug]['carga'].append(f"🔴 **Fatiga Integral (Eficiencia):** Coste metabólico (Z: +{z_cardio:.1f}) y neuromuscular (Z: +{z_neuro:.1f}) muy anormales vs {sesion_contexto}. Jugador vaciado."); alertas_jugadores[jug]['total'] += 1
                                 elif cardio_mal and not neuro_bien: 
-                                    alertas_jugadores[jug]['carga'].append(f"🟡 Alerta Coste Cardio: (Z: +{z_cardio:.1f}) vs {sesion_contexto}"); alertas_jugadores[jug]['total'] += 1
+                                    alertas_jugadores[jug]['carga'].append(f"🟡 **Alerta Metabólica:** Coste cardiovascular alto (Z: +{z_cardio:.1f}) vs {sesion_contexto}. Indicio de fatiga residual en campo abierto."); alertas_jugadores[jug]['total'] += 1
                                 elif neuro_mal and not cardio_bien: 
-                                    alertas_jugadores[jug]['carga'].append(f"🟡 Alerta Coste Neuro: (Z: +{z_neuro:.1f}) vs {sesion_contexto}"); alertas_jugadores[jug]['total'] += 1
+                                    alertas_jugadores[jug]['carga'].append(f"🟡 **Alerta Neuromuscular:** Coste mecánico elevado (Z: +{z_neuro:.1f}) vs {sesion_contexto}. Falla recuperación muscular para esfuerzos cortos."); alertas_jugadores[jug]['total'] += 1
                                 
+                            # --- 3. MONOTONÍA Y BURNOUT PREVENTIVO ---
                             monot, strain = calcular_monotonia_7d(st.session_state.sesiones, jug, sesion['fecha'], devolver_strain=True)
-                            monot_hsr, strain_hsr = calcular_monotonia_7d(st.session_state.sesiones, jug, sesion['fecha'], metrica="DIS AI", devolver_strain=True)
-                            
                             if monot > 2.0 and strain > 4000:
-                                alertas_jugadores[jug]['carga'].append(f"🟡 Fatiga Interna Acumulada (Strain {strain:.0f})"); alertas_jugadores[jug]['total'] += 1
-                            # ESTE ES EL FINAL DEL BLOQUE ANTERIOR:
+                                alertas_jugadores[jug]['carga'].append(f"🔴 **Riesgo Burnout (Strain):** Monotonía sin picos ({monot:.1f}) y sobrecarga ({strain:.0f} UA). Requiere día Off-Feet absoluto."); alertas_jugadores[jug]['total'] += 1
+                            
+                            monot_hsr, strain_hsr = calcular_monotonia_7d(st.session_state.sesiones, jug, sesion['fecha'], metrica="DIS AI", devolver_strain=True)
                             if monot_hsr > 2.0 and strain_hsr > 1500:
-                                alertas_jugadores[jug]['carga'].append(f"🔴 Monotonía Mecánica HSR (Strain {strain_hsr:.0f}) - Riesgo Tendinoso"); alertas_jugadores[jug]['total'] += 1
+                                alertas_jugadores[jug]['carga'].append(f"🔴 **Sobrecarga Mecánica Continua:** Monotonía en HSR ({monot_hsr:.1f}). Alto riesgo de tendinopatía insercional."); alertas_jugadores[jug]['total'] += 1
                                 
                         # --- AÑADE ESTO JUSTO AQUÍ (Alineado con el for _, row in activos.iterrows():) ---
                         alertas_multi, alertas_rec, alertas_car = [], [], []
