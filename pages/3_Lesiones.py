@@ -384,13 +384,16 @@ else:
                             j_n = limpiar_nombre(d["JUGADOR"])
                             v_actual = safe_float(d.get("VMAX", d.get("V_Max", 0)))
                             m_actual = safe_float(d.get("MIN", 0))
-                            dis_actual = safe_float(d.get("DIS", 0)) # CLAVE: Filtrar registros sin GPS
+                            dis_actual = safe_float(d.get("DIS", 0))
+                            es_virtual = d.get("GPS_VIRTUAL", False)
                             
                             # Datos propios del jugador lesionado
                             if j_n == limpiar_nombre(jug_rtp):
-                                if v_actual > vmax_hist: vmax_hist = v_actual
+                                # EXCLUSIÓN: La VMAX histórica debe ser puramente real (no virtual)
+                                if not es_virtual and v_actual > vmax_hist: 
+                                    vmax_hist = v_actual
                                 
-                                # Solo sumamos si realmente llevó GPS en el partido (DIS > 0)
+                                # Para las demandas del partido, sí se permiten datos virtuales (tácticos)
                                 if es_partido and m_actual > 0 and dis_actual > 0:
                                     partidos_jug.append({
                                         "DIS_pm": dis_actual / m_actual,
@@ -405,8 +408,10 @@ else:
                                 pos_esp_comp = comp_datos.get("pos_1", comp_datos.get("POS", "")) if comp_datos else ""
                                 
                                 if pos_esp_comp == pos_esp_rtp:
-                                    if v_actual > vmax_posicion: vmax_posicion = v_actual
-                                    # Solo sumamos si el compañero realmente llevó GPS en el partido (DIS > 0)
+                                    # EXCLUSIÓN: La VMAX de la posición debe ser puramente real
+                                    if not es_virtual and v_actual > vmax_posicion: 
+                                        vmax_posicion = v_actual
+                                    
                                     if es_partido and m_actual > 0 and dis_actual > 0:
                                         partidos_posicion.append({
                                             "DIS_pm": dis_actual / m_actual,
