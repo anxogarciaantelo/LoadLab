@@ -1250,7 +1250,7 @@ with tab_ses:
                                 <div style="display: flex; justify-content: center; align-items: center; margin: 8px 0;">
                                     <svg viewBox="0 0 36 36" style="width: 65px; height: 65px;">
                                       <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#1c1f26" stroke-width="3" />
-                                      <path stroke="{color}" stroke-dasharray="{valor}, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke-width="3" stroke-linecap="round" />
+                                      <path stroke="{color}" stroke-dasharray="{valor:.0f}, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke-width="3" stroke-linecap="round" />
                                       <text x="18" y="22.5" fill="{color}" font-size="12" font-weight="900" text-anchor="middle">{valor:.0f}</text>
                                     </svg>
                                 </div>
