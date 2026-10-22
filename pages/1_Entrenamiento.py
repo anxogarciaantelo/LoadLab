@@ -1784,31 +1784,43 @@ with tab_ses:
                                     titulares_densidad = {}
                                     titulares_entreno = {}
                                     
-                                    # 1. Extraer densidades de partido de los Titulares por posición
+                                    # 1. Extraer densidades de partido de los Titulares por posición (Ignorando 0s)
                                     for _, t in titulares_partido.iterrows():
                                         jug, m_real = t['JUGADOR'], t['MIN_REAL']
                                         pos_e = dict_pos_esp.get(limpiar_nombre(jug), 'DEF')
                                         if pos_e not in titulares_densidad: titulares_densidad[pos_e] = {m: [] for m in metricas_carga}
                                         if m_real > 0:
-                                            for m in metricas_carga: titulares_densidad[pos_e][m].append(t.get(m, 0) / m_real)
+                                            for m in metricas_carga: 
+                                                if t.get(m, 0) > 0: # Solo si registró datos reales
+                                                    titulares_densidad[pos_e][m].append(t.get(m, 0) / m_real)
                                             
-                                    # Extraer carga semanal media por posición de todos los Disponibles/Activos
+                                    # Extraer "Semana Teórica Perfecta": Suma de las medias diarias por posición
                                     df_sem_valido = df_sem_data[df_sem_data['ESTADO'].isin(["Disponible", "Titular", "Suplente", "Recuperación Post-Partido", "Readaptación"])]
-                                    sum_sem_jug = df_sem_valido.groupby('JUGADOR')[metricas_carga].sum().reset_index()
-                                    for _, r in sum_sem_jug.iterrows():
-                                        pos_e = dict_pos_esp.get(limpiar_nombre(r['JUGADOR']), 'DEF')
-                                        if pos_e not in titulares_entreno: titulares_entreno[pos_e] = {m: [] for m in metricas_carga}
-                                        for m in metricas_carga: titulares_entreno[pos_e][m].append(r[m])
+                                    
+                                    for pos in dict_pos_esp.values():
+                                        if pos not in titulares_entreno: titulares_entreno[pos] = {m: 0.0 for m in metricas_carga}
+                                        
+                                    for m in metricas_carga:
+                                        # Filtramos solo a los que realmente acumularon carga ese día para no hundir la media
+                                        df_metrica_valida = df_sem_valido[df_sem_valido[m] > 0].copy()
+                                        if not df_metrica_valida.empty:
+                                            df_metrica_valida['POS_ESP'] = df_metrica_valida['JUGADOR'].apply(lambda x: dict_pos_esp.get(limpiar_nombre(x), 'DEF'))
+                                            # Media diaria de los que entrenaron
+                                            medias_diarias = df_metrica_valida.groupby(['FECHA', 'POS_ESP'])[m].mean().reset_index()
+                                            # Suma de las medias diarias para construir la semana completa
+                                            suma_semanal_teorica = medias_diarias.groupby('POS_ESP')[m].sum().to_dict()
+                                            
+                                            for p_esp, val in suma_semanal_teorica.items():
+                                                if p_esp not in titulares_entreno: titulares_entreno[p_esp] = {mx: 0.0 for mx in metricas_carga}
+                                                titulares_entreno[p_esp][m] = val
                                             
                                     for pos_e in titulares_densidad:
                                         for m in metricas_carga:
-                                            titulares_densidad[pos_e][m] = np.mean(titulares_densidad[pos_e][m]) if titulares_densidad[pos_e][m] else 0.0
-                                    for pos_e in titulares_entreno:
-                                        for m in metricas_carga:
-                                            titulares_entreno[pos_e][m] = np.mean(titulares_entreno[pos_e][m]) if titulares_entreno[pos_e][m] else 0.0
+                                            vals_den = titulares_densidad[pos_e][m]
+                                            titulares_densidad[pos_e][m] = np.mean(vals_den) if vals_den else 0.0
                                             
-                                    fallback_densidad = {m: np.mean([v[m] for v in titulares_densidad.values()]) if titulares_densidad else 0 for m in metricas_carga}
-                                    fallback_entreno = {m: np.mean([v[m] for v in titulares_entreno.values()]) if titulares_entreno else 0 for m in metricas_carga}
+                                    fallback_densidad = {m: np.mean([titulares_densidad[p][m] for p in titulares_densidad if titulares_densidad[p][m] > 0]) if any(titulares_densidad[p][m] > 0 for p in titulares_densidad) else 0 for m in metricas_carga}
+                                    fallback_entreno = {m: np.mean([titulares_entreno[p][m] for p in titulares_entreno if titulares_entreno[p][m] > 0]) if any(titulares_entreno[p][m] > 0 for p in titulares_entreno) else 0 for m in metricas_carga}
                                     
                                     # 2. Calcular déficit de los suplentes
                                     comp_data = []
