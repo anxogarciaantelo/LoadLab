@@ -552,13 +552,7 @@ def aplicar_color_sidebar():
                 st.session_state.equipo_seleccionado = False
                 st.session_state.usuario_id = None
                 st.rerun()
-                
-                # Borramos los permisos en lugar de vaciar toda la memoria de golpe
-                st.session_state.autenticado = False
-                st.session_state.equipo_seleccionado = False
-                st.session_state.usuario_id = None
-                st.rerun()
-                
+                               
 def render_estado_vacio(icono, titulo, descripcion, accion_sugerida=None):
     """Renderiza una tarjeta moderna Dark Mode para pantallas sin datos (Onboarding)"""
     html_accion = f'<p style="color: #C5A059; font-weight: 800; font-size: 0.85rem; margin-top: 20px; text-transform: uppercase; letter-spacing: 0.05em;">↳ {accion_sugerida}</p>' if accion_sugerida else ''
