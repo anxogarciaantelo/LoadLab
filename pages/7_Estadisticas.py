@@ -382,31 +382,6 @@ with tab_jugadores:
         )
         st.plotly_chart(fig_mins, use_container_width=True)
 
-        # ==========================================
-        # 🗺️ MAPA DE DISTRIBUCIÓN DE MINUTOS POR LÍNEA (Ordenado POR, DEF, MED, ATA)
-        # ==========================================
-        st.markdown("#### :material/pie_chart: Distribución de Minutos por Demarcación")
-        
-        # Filtrar las posiciones que realmente existan y ordenarlas según POR, DEF, MED, ATA...
-        posiciones_existentes = [p for p in orden_posiciones if p in df_jugadores["POS"].values]
-        
-        if len(posiciones_existentes) > 0:
-            cols_pos = st.columns(min(len(posiciones_existentes), 5))
-            for i, pos_val in enumerate(posiciones_existentes):
-                df_subset = df_jugadores[df_jugadores["POS"] == pos_val]
-                with cols_pos[i]:
-                    fig_circle = px.pie(
-                        df_subset,
-                        names="JUGADOR",
-                        values="MIN",
-                        title=f"Línea: {pos_val}",
-                        hole=0.4
-                    )
-                    fig_circle.update_layout(height=280, margin=dict(l=10, r=10, t=30, b=10), showlegend=False)
-                    st.plotly_chart(fig_circle, use_container_width=True)
-        else:
-            st.info("Registra minutos en los partidos para ver la distribución.")
-
         st.markdown("---")
         c_f1, c_f2 = st.columns(2)
         filtro_pos = c_f1.selectbox("Filtro Rápido (Posición):", ["TODOS", "POR", "DEF", "MED", "ATA", "CANTERA"])
