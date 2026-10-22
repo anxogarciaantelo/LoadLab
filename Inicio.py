@@ -606,10 +606,20 @@ if st.session_state.get("equipo_seleccionado", False):
     ewma_hoy = calcular_ewma_historico(st.session_state.sesiones, hoy_str)
     df_master = st.session_state.get("df_master_informes", pd.DataFrame())
     hsr_dict = {}
+    vmax_hist_dict = {}
+    ult_sprint_dict = {}
+    
     if not df_master.empty and 'DIS AI' in df_master.columns:
         df_7d = df_master[(df_master['FECHA'] <= hoy_str) & (df_master['FECHA'] > str(hoy_dt - timedelta(days=7)))]
         if not df_7d.empty:
             hsr_dict = df_7d.groupby('JUGADOR')['DIS AI'].sum().to_dict()
+            
+        # Vacuna de Velocidad: Última exposición a >= 90% Vmax
+        if 'VMAX' in df_master.columns:
+            vmax_hist_dict = df_master.groupby('JUGADOR')['VMAX'].max().to_dict()
+            df_master['es_pico'] = df_master.apply(lambda r: r['VMAX'] >= (vmax_hist_dict.get(r['JUGADOR'], 0) * 0.9) if vmax_hist_dict.get(r['JUGADOR'], 0) > 25.0 else False, axis=1)
+            df_picos = df_master[df_master['es_pico'] & (df_master['FECHA'] <= hoy_str)]
+            ult_sprint_dict = df_picos.groupby('JUGADOR')['FECHA'].max().to_dict()
 
     for jug, vals in ewma_hoy.items():
         if jug in [b["jug"] for b in bajas_medicas]: continue
@@ -634,6 +644,18 @@ if st.session_state.get("equipo_seleccionado", False):
         # Riesgo Mecánico Periférico (Articular/Cadera)
         if ratio_acc >= 1.5:
              alertas_carga.append({"jug": jug, "txt": f"A/C ACC: {ratio_acc:.2f}", "lvl": "rojo"})
+
+        # Vacuna de Velocidad (Malone et al. 2017)
+        if vmax_hist_dict.get(jug, 0) > 25.0:
+            ult_fecha_str = ult_sprint_dict.get(jug)
+            if ult_fecha_str:
+                dias_sin_sprint = (hoy_dt - datetime.strptime(ult_fecha_str, "%Y-%m-%d").date()).days
+                if dias_sin_sprint >= 10:
+                    alertas_carga.append({"jug": jug, "txt": f"Sin >90% VMax: {dias_sin_sprint}d", "lvl": "rojo"})
+                elif dias_sin_sprint >= 8:
+                    alertas_carga.append({"jug": jug, "txt": f"Sin >90% VMax: {dias_sin_sprint}d", "lvl": "amarillo"})
+            else:
+                alertas_carga.append({"jug": jug, "txt": f"Falta estímulo VMax", "lvl": "amarillo"})
 
     def dedup_alertas(lista):
         vistos = {}
