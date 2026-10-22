@@ -1889,7 +1889,8 @@ with tab_ses:
                                                     "Den_Obj_DIS": densidad_obj['DIS'] * 1000, "Den_Hoy_DIS": (safe_float(d_hoy.get('DIS', 0))*1000)/m_hoy if m_hoy>0 else 0,
                                                     "Den_Obj_HSR": densidad_obj['DIS AI'], "Den_Hoy_HSR": safe_float(d_hoy.get('DIS AI', 0))/m_hoy if m_hoy>0 else 0,
                                                     "Den_Obj_MEC": densidad_obj['ACC'] + densidad_obj['DCC'],
-                                                    "Min_Obj_Real": min_obj_real
+                                                    "Min_Obj_Real": min_obj_real,
+                                                    "Target_Base": minutos_objetivo_partido
                                                 })
                                             else:
                                                 comp_data.append({
@@ -1921,7 +1922,7 @@ with tab_ses:
                                                 <div style="background: #111318; border: 1px solid #1c1f26; border-left: 4px solid #C5A059; padding: 12px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
                                                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                                                         <strong style="color: #f8fafc; font-size: 1.1rem;">{c['JUGADOR']} <span style="font-size: 0.8rem; color: #94a3b8;">({c['POS']})</span></strong>
-                                                        <span style="color: #10b981; font-weight: 800; font-size: 0.9rem;">Eq. Partido: ~{min_comp_real:.0f} / {c['Min_Obj_Real']:.0f} min { ' (Target 90\')' if minutos_objetivo_partido == 90 else '' }</span>
+                                                       <span style="color: #10b981; font-weight: 800; font-size: 0.9rem;">Eq. Partido: ~{min_comp_real:.0f} / {c['Min_Obj_Real']:.0f} min { " (⚠️ Target 90')" if c.get("Target_Base", 60) == 90 else "" }</span>
                                                     </div>
                                                     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
                                                         <div>
