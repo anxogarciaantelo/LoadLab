@@ -1776,23 +1776,27 @@ with tab_ses:
                                     titulares_densidad = {}
                                     titulares_entreno = {}
                                     
-                                    # 1. Extraer densidades y cargas previas de Titulares por posición
+                                    # 1. Extraer densidades de partido de los Titulares por posición
                                     for _, t in titulares_partido.iterrows():
                                         jug, m_real = t['JUGADOR'], t['MIN_REAL']
                                         pos_e = dict_pos_esp.get(limpiar_nombre(jug), 'DEF')
-                                        
                                         if pos_e not in titulares_densidad: titulares_densidad[pos_e] = {m: [] for m in metricas_carga}
-                                        if pos_e not in titulares_entreno: titulares_entreno[pos_e] = {m: [] for m in metricas_carga}
-                                        
                                         if m_real > 0:
                                             for m in metricas_carga: titulares_densidad[pos_e][m].append(t.get(m, 0) / m_real)
                                             
-                                        df_j_ent = df_sem_data[df_sem_data['JUGADOR'] == jug]
-                                        for m in metricas_carga: titulares_entreno[pos_e][m].append(df_j_ent[m].sum() if not df_j_ent.empty else 0)
+                                    # Extraer carga semanal media por posición de todos los Disponibles/Activos
+                                    df_sem_valido = df_sem_data[df_sem_data['ESTADO'].isin(["Disponible", "Titular", "Suplente", "Recuperación Post-Partido", "Readaptación"])]
+                                    sum_sem_jug = df_sem_valido.groupby('JUGADOR')[metricas_carga].sum().reset_index()
+                                    for _, r in sum_sem_jug.iterrows():
+                                        pos_e = dict_pos_esp.get(limpiar_nombre(r['JUGADOR']), 'DEF')
+                                        if pos_e not in titulares_entreno: titulares_entreno[pos_e] = {m: [] for m in metricas_carga}
+                                        for m in metricas_carga: titulares_entreno[pos_e][m].append(r[m])
                                             
                                     for pos_e in titulares_densidad:
                                         for m in metricas_carga:
                                             titulares_densidad[pos_e][m] = np.mean(titulares_densidad[pos_e][m]) if titulares_densidad[pos_e][m] else 0.0
+                                    for pos_e in titulares_entreno:
+                                        for m in metricas_carga:
                                             titulares_entreno[pos_e][m] = np.mean(titulares_entreno[pos_e][m]) if titulares_entreno[pos_e][m] else 0.0
                                             
                                     fallback_densidad = {m: np.mean([v[m] for v in titulares_densidad.values()]) if titulares_densidad else 0 for m in metricas_carga}
@@ -1800,6 +1804,7 @@ with tab_ses:
                                     
                                     # 2. Calcular déficit de los suplentes
                                     comp_data = []
+                                    jugadores_cumplidos = []
                                     for _, sup in suplentes_partido.iterrows():
                                         jug = sup['JUGADOR']
                                         pos_e = dict_pos_esp.get(limpiar_nombre(jug), 'DEF')
@@ -1826,6 +1831,13 @@ with tab_ses:
                                                 d_hoy = next((d for d in sesion['datos_informe'] if limpiar_nombre(d['JUGADOR']) == limpiar_nombre(jug)), {})
                                                 m_hoy = safe_float(d_hoy.get('MIN_GPS', d_hoy.get('MIN', 0)))
                                                 if not d_hoy or m_hoy == 0: continue # Si el suplente no entrenó en MD+1, lo saltamos
+                                                
+                                                # Cálculo del objetivo de minutos a compensar
+                                                min_obj_v = deficit['DIS'] / densidad_obj['DIS'] if densidad_obj['DIS'] > 0 else 0
+                                                min_obj_i = deficit['DIS AI'] / densidad_obj['DIS AI'] if densidad_obj['DIS AI'] > 0 else 0
+                                                min_obj_m = (deficit['ACC'] + deficit['DCC']) / (densidad_obj['ACC'] + densidad_obj['DCC']) if (densidad_obj['ACC'] + densidad_obj['DCC']) > 0 else 0
+                                                min_obj_real = (min_obj_v + min_obj_i + min_obj_m) / 3
+
                                                 comp_data.append({
                                                     "JUGADOR": jug, "POS": pos_e,
                                                     "Obj_DIS": deficit['DIS'], "Hoy_DIS": safe_float(d_hoy.get('DIS', 0)),
@@ -1834,7 +1846,9 @@ with tab_ses:
                                                     "Obj_MEC": deficit['ACC'] + deficit['DCC'], "Hoy_MEC": safe_float(d_hoy.get('ACC', 0)) + safe_float(d_hoy.get('DCC', 0)),
                                                     "MIN_Hoy": m_hoy,
                                                     "Den_Obj_DIS": densidad_obj['DIS'] * 1000, "Den_Hoy_DIS": (safe_float(d_hoy.get('DIS', 0))*1000)/m_hoy if m_hoy>0 else 0,
-                                                    "Den_Obj_HSR": densidad_obj['DIS AI'], "Den_Hoy_HSR": safe_float(d_hoy.get('DIS AI', 0))/m_hoy if m_hoy>0 else 0
+                                                    "Den_Obj_HSR": densidad_obj['DIS AI'], "Den_Hoy_HSR": safe_float(d_hoy.get('DIS AI', 0))/m_hoy if m_hoy>0 else 0,
+                                                    "Den_Obj_MEC": densidad_obj['ACC'] + densidad_obj['DCC'],
+                                                    "Min_Obj_Real": min_obj_real
                                                 })
                                             else:
                                                 comp_data.append({
@@ -1842,6 +1856,8 @@ with tab_ses:
                                                     "Déficit Volumen (km)": deficit['DIS'], "Déficit HSR (>21 km/h)": deficit['DIS AI'],
                                                     "Déficit Sprints (>24)": deficit['Nº SPR'], "Déficit Tensión (ACC+DCC)": deficit['ACC'] + deficit['DCC']
                                                 })
+                                        else:
+                                            jugadores_cumplidos.append(jug)
 
                                     if comp_data:
                                         if es_partido:
@@ -1864,7 +1880,7 @@ with tab_ses:
                                                 <div style="background: #111318; border: 1px solid #1c1f26; border-left: 4px solid #C5A059; padding: 12px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
                                                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                                                         <strong style="color: #f8fafc; font-size: 1.1rem;">{c['JUGADOR']} <span style="font-size: 0.8rem; color: #94a3b8;">({c['POS']})</span></strong>
-                                                        <span style="color: #10b981; font-weight: 800; font-size: 0.9rem;">Eq. Partido: ~{min_comp_real:.0f} min</span>
+                                                        <span style="color: #10b981; font-weight: 800; font-size: 0.9rem;">Eq. Partido: ~{min_comp_real:.0f} / {c['Min_Obj_Real']:.0f} min</span>
                                                     </div>
                                                     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
                                                         <div>
@@ -1899,8 +1915,8 @@ with tab_ses:
                                                     </div>
                                                 </div>
                                                 """, unsafe_allow_html=True)
-                                    else:
-                                        st.success("Todos los suplentes igualaron la carga media de su posición.")
+                                    if jugadores_cumplidos:
+                                        st.success(f"✅ **Carga semanal cumplida:** {', '.join(jugadores_cumplidos)} ya han igualado o superado el objetivo de su posición durante la semana (no requieren compensación extra).")
                             else:
                                 st.info("No hay registros de un partido previo o titulares para calcular el déficit.")
 
