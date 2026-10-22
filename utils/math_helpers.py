@@ -414,58 +414,61 @@ def aplicar_color_sidebar():
     css_dinamico = """
     <style>
         /* --- RESCATE DEFINITIVO DE LA FLECHA DEL MENÚ --- */
-        /* Al usar 'html body' ganamos la máxima prioridad CSS sobre el resto de archivos */
-        html body header[data-testid="stHeader"] {
+        /* 1. Hacemos que el header exista pero sea totalmente transparente */
+        header[data-testid="stHeader"] {
             display: block !important;
+            background-color: transparent !important;
             background: transparent !important;
-            height: 0px !important; /* Evita que empuje la interfaz hacia abajo */
         }
-        html body [data-testid="collapsedControl"] {
-            display: flex !important;
-            visibility: visible !important;
-            z-index: 999999 !important;
-            color: #C5A059 !important;
-            background-color: rgba(11, 14, 20, 0.8) !important;
-            border-radius: 50% !important;
-            margin: 10px 0 0 10px !important;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.5) !important;
-            transition: all 0.3s ease !important;
-        }
-        html body [data-testid="collapsedControl"]:hover {
-            background-color: #C5A059 !important;
-            color: #111318 !important;
-        }
-        /* Ocultamos opciones nativas innecesarias de Streamlit (Deploy, GitHub) */
-        html body [data-testid="stToolbar"], 
-        html body .stAppDeployButton {
+        /* 2. Ocultamos el menú de opciones derecho de Streamlit (Deploy, GitHub) */
+        [data-testid="stToolbar"] {
             display: none !important;
         }
+        /* 3. Estilizamos y forzamos la aparición del botón de la flecha */
+        [data-testid="collapsedControl"] {
+            display: flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            z-index: 999999 !important;
+            background-color: rgba(11, 14, 20, 0.85) !important;
+            border-radius: 50% !important;
+            padding: 2px !important;
+            margin-top: 10px !important;
+            margin-left: 10px !important;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5) !important;
+            border: 1px solid rgba(197, 160, 89, 0.2) !important;
+            transition: all 0.3s ease !important;
+        }
+        [data-testid="collapsedControl"] svg {
+            color: #C5A059 !important;
+            fill: #C5A059 !important;
+        }
+        [data-testid="collapsedControl"]:hover {
+            background-color: #C5A059 !important;
+            transform: scale(1.1) !important;
+        }
+        [data-testid="collapsedControl"]:hover svg {
+            color: #111318 !important;
+            fill: #111318 !important;
+        }
 
-        /* 1. Ajustes del contenedor del menú lateral para tu navegación custom */
+        /* --- 4. Resto del diseño del sidebar --- */
         [data-testid="stSidebar"] {
             background-color: #0b0e14 !important;
             border-right: 1px solid #111318 !important;
         }
-        
-        /* 2. Ajustamos la altura restando los márgenes nativos para evitar el scroll */
         [data-testid="stSidebarUserContent"] {
             height: calc(100vh - 6rem) !important;
             padding-bottom: 0 !important;
         }
-        
-        /* 3. Convertimos el bloque interno invisible de Streamlit en un contenedor Flexbox */
         [data-testid="stSidebarUserContent"] > div {
             display: flex !important;
             flex-direction: column !important;
             height: 100% !important;
         }
-        
-        /* 4. Magia CSS: Identificamos el espaciador y le obligamos a empujar todo hacia abajo */
         div.element-container:has(.spacer-bottom) {
             margin-top: auto !important;
         }
-        
-        /* Animación del Punto Verde (Live Pulse) */
         @keyframes pulse-green {
             0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
             70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
@@ -475,7 +478,6 @@ def aplicar_color_sidebar():
             height: 8px; width: 8px; background-color: #10b981; border-radius: 50%;
             display: inline-block; animation: pulse-green 2s infinite; margin-right: 6px;
         }
-        
         [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3,
         [data-testid="stSidebar"] label, [data-testid="stSidebar"] p, [data-testid="stSidebar"] span {
             color: #f8fafc !important; 
@@ -488,7 +490,7 @@ def aplicar_color_sidebar():
     # 1. Inyectar CSS dinámico del sidebar
     st.markdown(css_dinamico, unsafe_allow_html=True)
     
-    # 2. Inyectar CSS global desde la memoria caché (Sustituye al try/except)
+    # 2. Inyectar CSS global
     st.markdown(cargar_css_global(), unsafe_allow_html=True)
 
     # Modifica la sección de inyección de imagen y nombre en la barra lateral en math_helpers.py
