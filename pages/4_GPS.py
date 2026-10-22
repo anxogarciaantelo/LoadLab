@@ -180,12 +180,18 @@ else:
             if target_tipo == "Entrenamiento" and target_md != "TODOS":
                 res = res[res['MD'] == target_md]
 
+        # --- NUEVA LÓGICA: Filtrar por disponibilidad salvo si es jugador concreto ---
         if target_nivel == "Por jugador":
-            if target_jug != "TODOS": res = res[res['JUGADOR'] == target_jug]
-        elif target_nivel == "Por posición general":
-            res = res[res['POS'] == target_pos]
-        elif target_nivel == "Por posición específica":
-            res = res[res['POS_ESP'] == target_pos_esp]
+            if target_jug != "TODOS": 
+                res = res[res['JUGADOR'] == target_jug]
+        else:
+            # Excluimos a los no disponibles para que no hundan la media del grupo
+            res = res[res['ESTADO'].isin(["Disponible", "Titular", "Suplente"])]
+            
+            if target_nivel == "Por posición general":
+                res = res[res['POS'] == target_pos]
+            elif target_nivel == "Por posición específica":
+                res = res[res['POS_ESP'] == target_pos_esp]
 
         return res
 
@@ -269,7 +275,8 @@ else:
                 jugadores_misma_pos = [p['JUGADOR'] for p in st.session_state.plantilla if p.get('pos_1') == pos_exacta]
                 
                 df_radar_target = df_perfil
-                df_radar_ref = df_gps[df_gps['JUGADOR'].isin(jugadores_misma_pos)].copy()
+                # Filtramos la referencia de su posición para que sea real (Solo Disponibles)
+                df_radar_ref = df_gps[(df_gps['JUGADOR'].isin(jugadores_misma_pos)) & (df_gps['ESTADO'].isin(["Disponible", "Titular", "Suplente"]))].copy()
                 if f_tipo != "Todas":
                     df_radar_ref = df_radar_ref[df_radar_ref['TIPO'] == f_tipo]
                 
@@ -281,7 +288,8 @@ else:
                     mostrar_radar = False
                 else:
                     df_radar_target = df_perfil
-                    df_base = df_gps.copy()
+                    # Filtramos la base para que la referencia excluya a los no disponibles
+                    df_base = df_gps[df_gps['ESTADO'].isin(["Disponible", "Titular", "Suplente"])].copy()
                     if f_tipo != "Todas":
                         df_base = df_base[df_base['TIPO'] == f_tipo]
                         
@@ -296,7 +304,8 @@ else:
 
             elif f_tiempo == "Promedio de microciclo":
                 df_radar_target = df_perfil
-                df_base_nivel = df_gps.copy()
+                # Filtramos la base de referencia
+                df_base_nivel = df_gps[df_gps['ESTADO'].isin(["Disponible", "Titular", "Suplente"])].copy()
                 if f_tipo != "Todas":
                     df_base_nivel = df_base_nivel[df_base_nivel['TIPO'] == f_tipo]
                     
@@ -321,12 +330,13 @@ else:
                     md_sesion_sel = df_sesion_sel.iloc[0]['MD']
                     tipo_sesion_sel = df_sesion_sel.iloc[0]['TIPO']
                     
-                    df_base_nivel = df_gps.copy()
+                    # Filtramos la base de referencia
+                    df_base_nivel = df_gps[df_gps['ESTADO'].isin(["Disponible", "Titular", "Suplente"])].copy()
+                    
                     if tipo_sesion_sel == "Entrenamiento":
                         df_base_nivel = df_base_nivel[(df_base_nivel['TIPO'] == "Entrenamiento") & (df_base_nivel['MD'] == md_sesion_sel)]
                         criterio_str = f"{md_sesion_sel}"
                     else:
-                        # La referencia será exactamente el mismo tipo de partido que estás analizando
                         df_base_nivel = df_base_nivel[df_base_nivel['TIPO'] == tipo_sesion_sel]
                         criterio_str = f"{tipo_sesion_sel}s"
 
