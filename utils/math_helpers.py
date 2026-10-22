@@ -820,10 +820,33 @@ def aplicar_imputacion_gps_global(registros, sesion_actual, plantilla_global):
                     reg["Z3"] = seguro(ratios.get("Z3", 0))
                     reg["Z4"] = seguro(ratios.get("Z4", 0))
                     reg["Z5"] = seguro(ratios.get("Z5", 0))
-                    reg["Z6"] = seguro(ratios.get("Z6", 0))
+                reg["Z6"] = seguro(ratios.get("Z6", 0))
 
                 reg["VMAX"] = seguro(ratios.get("VMAX", 0))
                 reg["V_Max"] = reg["VMAX"]
                 reg["GPS_VIRTUAL"] = True
+            elif es_virtual_previo:
+                # --- REVERSIÓN DE SEGURIDAD (BUGFIX DATOS FANTASMA) ---
+                # Si el jugador ya no es elegible (ej. lo cambias a Lesionado)
+                # pero antes se le había imputado data, DEBEMOS BORRARLA.
+                reg["MIN_GPS"] = min_jug
+                reg["DIS"] = 0.0
+                reg["DIS AI"] = 0.0
+                reg["HID >21"] = 0.0
+                reg["Nº SPR"] = 0.0
+                reg["SPR >24"] = 0.0
+                reg["ACC"] = 0.0
+                reg["ACC >3"] = 0.0
+                reg["DCC"] = 0.0
+                reg["DCC >3"] = 0.0
+                reg["Z1"] = 0.0
+                reg["Z2"] = 0.0
+                reg["Z3"] = 0.0
+                reg["Z4"] = 0.0
+                reg["Z5"] = 0.0
+                reg["Z6"] = 0.0
+                reg["VMAX"] = 0.0
+                reg["V_Max"] = 0.0
+                reg["GPS_VIRTUAL"] = False
                 
     return registros
