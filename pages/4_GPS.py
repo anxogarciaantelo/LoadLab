@@ -430,7 +430,12 @@ else:
             estilo_gps = (df_tabla[cols_tabla].style
                 .hide(axis="index")
                 .format({"MIN_GPS": "{:.0f}'", "DIS": "{:.2f}", "m/min": "{:.1f}", "DIS AI": "{:.0f}", "Nº SPR": "{:.1f}", "ACC": "{:.0f}", "DCC": "{:.0f}", "DCC:ACC": "{:.2f}", "VMAX": "{:.1f}", "% VMAX": "{:.1f}"})
-                .background_gradient(subset=['DIS', 'm/min', 'DIS AI', 'Nº SPR', 'ACC', 'DCC', 'VMAX', '% VMAX'], cmap='Blues', text_color_threshold=0.6)
+                .background_gradient(subset=['DIS', 'm/min'], cmap='Blues', text_color_threshold=0.6)
+                .background_gradient(subset=['DIS AI'], cmap='YlOrBr', text_color_threshold=0.6)
+                .background_gradient(subset=['Nº SPR'], cmap='Reds', text_color_threshold=0.6)
+                .background_gradient(subset=['ACC'], cmap='Greens', text_color_threshold=0.6)
+                .background_gradient(subset=['DCC'], cmap='Purples', text_color_threshold=0.6)
+                .background_gradient(subset=['VMAX', '% VMAX'], cmap='RdPu', text_color_threshold=0.6)
                 .map(lambda x: "color: #ef4444; font-weight: 900;" if isinstance(x, (int, float)) and x > 1.3 else "", subset=['DCC:ACC'])
                 .set_table_attributes('class="modern-dark-table"')
             )
@@ -539,17 +544,27 @@ else:
             st.markdown("---")
 
             # 3. MOSTRAR TABLA COMPARATIVA
-            st.markdown("#### :material/table_chart: Tabla Analítica")
+            st.markdown("#### :material/table_chart: Análisis Analítico Avanzado")
+            st.caption("Analiza las diferencias porcentuales entre perfiles. Los datos absolutos y relativos se formatean a 2 decimales exactos para garantizar precisión.")
             modo_comp = st.radio("¿Qué tipo de métricas quieres comparar en la tabla?", ["Absolutas (Totales)", "Relativas (Por Minuto)"], horizontal=True)
             
-            df_A['DCC:ACC'] = np.where(df_A['ACC'] > 0, df_A['DCC'] / df_A['ACC'], 0)
-            df_B['DCC:ACC'] = np.where(df_B['ACC'] > 0, df_B['DCC'] / df_B['ACC'], 0)
-            if usar_C: df_C['DCC:ACC'] = np.where(df_C['ACC'] > 0, df_C['DCC'] / df_C['ACC'], 0)
+            # Asegurar cálculos de densidades en los dataframes de comparación
+            for df_x in [df_A, df_B] + ([df_C] if usar_C else []):
+                if not df_x.empty:
+                    min_ef_x = np.where(df_x['MIN_GPS'] > 0, df_x['MIN_GPS'], df_x['MIN'])
+                    df_x['DIS/min'] = np.where(min_ef_x > 0, (df_x['DIS'] * 1000) / min_ef_x, 0)
+                    df_x['DIS AI/min'] = np.where(min_ef_x > 0, df_x['DIS AI'] / min_ef_x, 0)
+                    df_x['SPR/min'] = np.where(min_ef_x > 0, df_x['Nº SPR'] / min_ef_x, 0)
+                    df_x['ACC/min'] = np.where(min_ef_x > 0, df_x['ACC'] / min_ef_x, 0)
+                    df_x['DCC/min'] = np.where(min_ef_x > 0, df_x['DCC'] / min_ef_x, 0)
+                    df_x['DCC:ACC'] = np.where(df_x['ACC'] > 0, df_x['DCC'] / df_x['ACC'], 0)
             
             if modo_comp == "Absolutas (Totales)":
                 metrics_to_compare = ['MIN', 'DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC', 'DCC:ACC', 'VMAX', '% VMAX']
+                nombres_met = {'MIN': 'Minutos', 'DIS': 'Volumen (km)', 'DIS AI': 'HSR (>21) (m)', 'Nº SPR': 'Sprints (>24)', 'ACC': 'Aceleraciones', 'DCC': 'Deceleraciones', 'DCC:ACC': 'Ratio DCC:ACC', 'VMAX': 'V. Máxima (km/h)', '% VMAX': '% V. Máx'}
             else:
-                metrics_to_compare = ['DIS/min', 'DIS AI/min', 'ACC/min', 'DCC/min', 'DCC:ACC']
+                metrics_to_compare = ['DIS/min', 'DIS AI/min', 'SPR/min', 'ACC/min', 'DCC/min', 'DCC:ACC']
+                nombres_met = {'DIS/min': 'Densidad Vol. (m/min)', 'DIS AI/min': 'Densidad HSR (m/min)', 'SPR/min': 'Sprints / min', 'ACC/min': 'ACC / min', 'DCC/min': 'DCC / min', 'DCC:ACC': 'Ratio DCC:ACC'}
 
             mean_t_A = df_A[metrics_to_compare].mean()
             mean_t_B = df_B[metrics_to_compare].mean()
@@ -561,20 +576,47 @@ else:
                 valB = mean_t_B[m] if not pd.isna(mean_t_B[m]) else 0
                 valC = mean_t_C[m] if usar_C and not pd.isna(mean_t_C[m]) else 0
 
-                diff_str_B = f"{(((valB - valA) / valA) * 100):+.1f}%" if valA > 0 else "N/A"
-                diff_str_C = f"{(((valC - valA) / valA) * 100):+.1f}%" if usar_C and valA > 0 else "N/A"
-                    
+                dif_pct_B = ((valB - valA) / valA * 100) if valA > 0 else 0
+                dif_pct_C = ((valC - valA) / valA * 100) if usar_C and valA > 0 else 0
+                
+                def format_trend(pct):
+                    if pct > 2: return f"▲ +{pct:.2f}%"
+                    elif pct < -2: return f"▼ {pct:.2f}%"
+                    else: return f"▬ {pct:+.2f}%"
+
+                # Truncamos los títulos para que no deformen la tabla
+                lbl_A_short = (lbl_A[:30] + '..') if len(lbl_A) > 30 else lbl_A
+                lbl_B_short = (lbl_B[:30] + '..') if len(lbl_B) > 30 else lbl_B
+                
                 fila = {
-                    "Métrica": m.replace("/min", " (m/min)" if "DIS" in m else " / min"),
-                    f"A: {lbl_A}": round(valA, 2),
-                    f"B: {lbl_B}": round(valB, 2),
-                    "Dif. B vs A": diff_str_B
+                    "MÉTRICA": nombres_met.get(m, m),
+                    f"A: {lbl_A_short}": valA,
+                    f"B: {lbl_B_short}": valB,
+                    "EVOLUCIÓN (B vs A)": format_trend(dif_pct_B)
                 }
                 if usar_C:
-                    fila[f"C: {lbl_C}"] = round(valC, 2)
-                    fila["Dif. C vs A"] = diff_str_C
+                    lbl_C_short = (lbl_C[:30] + '..') if len(lbl_C) > 30 else lbl_C
+                    fila[f"C: {lbl_C_short}"] = valC
+                    fila["EVOLUCIÓN (C vs A)"] = format_trend(dif_pct_C)
                     
                 comp_data.append(fila)
                 
-            columnas_estilo = ["Dif. B vs A", "Dif. C vs A"] if usar_C else ["Dif. B vs A"]
-            mostrar_tabla_moderna(pd.DataFrame(comp_data).style.hide(axis="index").map(lambda x: "color: #28a745" if "+" in str(x) else ("color: #ff4b4b" if "-" in str(x) else ""), subset=columnas_estilo))
+            df_comp_final = pd.DataFrame(comp_data)
+            
+            columnas_estilo = ["EVOLUCIÓN (B vs A)", "EVOLUCIÓN (C vs A)"] if usar_C else ["EVOLUCIÓN (B vs A)"]
+            
+            fmt_dict = {}
+            for col in df_comp_final.columns:
+                if col.startswith("A:") or col.startswith("B:") or col.startswith("C:"):
+                    fmt_dict[col] = "{:.2f}"
+            
+            estilo_comp = (df_comp_final.style
+                .hide(axis="index")
+                .format(fmt_dict)
+                .map(lambda x: "color: #10b981; font-weight: 800;" if "▲" in str(x) else ("color: #ef4444; font-weight: 800;" if "▼" in str(x) else "color: #94a3b8; font-weight: 800;"), subset=columnas_estilo)
+                .set_table_attributes('class="modern-dark-table"')
+            )
+            
+            css_dark_table = "<style>.modern-dark-table { width: 100%; border-collapse: collapse; font-family: sans-serif; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4); background-color: #111318; color: #f8fafc; margin-bottom: 20px; } .modern-dark-table thead tr { background-color: #0b0e14; color: #C5A059; } .modern-dark-table th { padding: 12px 15px; font-weight: 800; text-transform: uppercase; font-size: 0.8rem; text-align: center !important; border-bottom: 2px solid #1c1f26; } .modern-dark-table td { padding: 10px 15px; text-align: center !important; border-bottom: 1px solid #1c1f26; font-weight: 700; font-size: 0.95rem; } .modern-dark-table tbody tr:hover td { filter: brightness(1.2); } </style>"
+            
+            st.markdown(css_dark_table + estilo_comp.to_html(), unsafe_allow_html=True)
