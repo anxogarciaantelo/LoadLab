@@ -413,46 +413,64 @@ def aplicar_color_sidebar():
     """Inyecta el color dinámico, la tipografía, el CSS global, el escudo y los botones de sesión en orden estricto."""
     css_dinamico = """
     <style>
-        /* --- RESCATE DEFINITIVO DE LA FLECHA DEL MENÚ --- */
-        /* 1. Hacemos que el header exista pero sea totalmente transparente */
-        header[data-testid="stHeader"] {
+        /* =========================================================
+           OPERACIÓN RESCATE: BLINDAJE ABSOLUTO DE LA FLECHA
+           ========================================================= */
+        /* 1. Resucitamos el header padre, pero lo hacemos fantasma (intocable) */
+        html body div[class^="stApp"] header[data-testid="stHeader"] {
             display: block !important;
-            background-color: transparent !important;
+            visibility: visible !important;
             background: transparent !important;
+            z-index: 999990 !important;
+            pointer-events: none !important; /* No bloquea los clics en la app */
         }
-        /* 2. Ocultamos el menú de opciones derecho de Streamlit (Deploy, GitHub) */
-        [data-testid="stToolbar"] {
-            display: none !important;
-        }
-        /* 3. Estilizamos y forzamos la aparición del botón de la flecha */
-        [data-testid="collapsedControl"] {
+        
+        /* 2. Forzamos la aparición de la flecha con prioridad máxima y la hacemos clickable */
+        html body div[class^="stApp"] header[data-testid="stHeader"] [data-testid="collapsedControl"] {
             display: flex !important;
             visibility: visible !important;
             opacity: 1 !important;
+            pointer-events: auto !important; /* Reactivamos el clic solo para la flecha */
             z-index: 999999 !important;
-            background-color: rgba(11, 14, 20, 0.85) !important;
+            background-color: #0b0e14 !important;
+            color: #C5A059 !important;
+            border: 1px solid rgba(197, 160, 89, 0.5) !important;
             border-radius: 50% !important;
-            padding: 2px !important;
-            margin-top: 10px !important;
-            margin-left: 10px !important;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5) !important;
-            border: 1px solid rgba(197, 160, 89, 0.2) !important;
+            margin-top: 15px !important;
+            margin-left: 15px !important;
+            padding: 4px !important;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.8), 0 0 10px rgba(197, 160, 89, 0.3) !important;
             transition: all 0.3s ease !important;
         }
-        [data-testid="collapsedControl"] svg {
-            color: #C5A059 !important;
+        
+        html body div[class^="stApp"] header[data-testid="stHeader"] [data-testid="collapsedControl"] svg {
             fill: #C5A059 !important;
+            color: #C5A059 !important;
         }
-        [data-testid="collapsedControl"]:hover {
+
+        html body div[class^="stApp"] header[data-testid="stHeader"] [data-testid="collapsedControl"]:hover {
             background-color: #C5A059 !important;
             transform: scale(1.1) !important;
         }
-        [data-testid="collapsedControl"]:hover svg {
-            color: #111318 !important;
-            fill: #111318 !important;
+        
+        html body div[class^="stApp"] header[data-testid="stHeader"] [data-testid="collapsedControl"]:hover svg {
+            fill: #0b0e14 !important;
+            color: #0b0e14 !important;
         }
 
-        /* --- 4. Resto del diseño del sidebar --- */
+        /* 3. Ocultamos el menú nativo derecho (tres puntos) */
+        html body div[class^="stApp"] header[data-testid="stHeader"] [data-testid="stToolbar"] {
+            display: none !important;
+        }
+
+        /* 4. Garantizamos que el contenedor del menú siempre pueda abrirse */
+        html body div[class^="stApp"] [data-testid="stSidebar"] {
+            display: block !important;
+        }
+
+        /* =========================================================
+           RESTO DEL DISEÑO DEL SIDEBAR
+           ========================================================= */
         [data-testid="stSidebar"] {
             background-color: #0b0e14 !important;
             border-right: 1px solid #111318 !important;
