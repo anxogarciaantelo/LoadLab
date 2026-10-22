@@ -1828,6 +1828,9 @@ with tab_ses:
                                     fallback_densidad = {m: np.mean([titulares_densidad[p][m] for p in titulares_densidad if titulares_densidad[p][m] > 0]) if any(titulares_densidad[p][m] > 0 for p in titulares_densidad) else 0 for m in metricas_carga}
                                     fallback_entreno = {m: np.mean([titulares_entreno[p][m] for p in titulares_entreno if titulares_entreno[p][m] > 0]) if any(titulares_entreno[p][m] > 0 for p in titulares_entreno) else 0 for m in metricas_carga}
                                     
+                                    # Histórico para desentrenamiento (últimos 3 partidos jugados por el equipo)
+                                    fechas_ultimos_3_partidos = df_hist[df_hist['TIPO_SESION'].str.contains("Partido") & (df_hist['FECHA'] <= fecha_partido)]['FECHA'].drop_duplicates().sort_values(ascending=False).head(3).tolist()
+                                    
                                     # 2. Calcular déficit de los suplentes
                                     comp_data = []
                                     jugadores_cumplidos = []
@@ -1838,12 +1841,25 @@ with tab_ses:
                                         densidad_obj = titulares_densidad.get(pos_e, fallback_densidad)
                                         entreno_obj = titulares_entreno.get(pos_e, fallback_entreno)
                                         
+                                        # EVALUACIÓN DE DESENTRENAMIENTO (Target 60' o 90')
+                                        minutos_objetivo_partido = 60
+                                        if len(fechas_ultimos_3_partidos) == 3:
+                                            lleva_3_bajos = True
+                                            for f_p in fechas_ultimos_3_partidos:
+                                                df_p_jug = df_hist[(df_hist['FECHA'] == f_p) & (df_hist['JUGADOR'] == jug)]
+                                                min_p = safe_float(df_p_jug['MIN_GPS'].max() if not df_p_jug.empty and df_p_jug['MIN_GPS'].max() > 0 else (df_p_jug['MIN'].max() if not df_p_jug.empty else 0))
+                                                if min_p >= 45.0:
+                                                    lleva_3_bajos = False
+                                                    break
+                                            if lleva_3_bajos:
+                                                minutos_objetivo_partido = 90
+
                                         df_sup_ent = df_sem_data[df_sem_data['JUGADOR'] == jug]
                                         
                                         deficit = {}
                                         for m in metricas_carga:
-                                            target_60m = densidad_obj[m] * 60
-                                            total_target = entreno_obj[m] + target_60m
+                                            target_partido = densidad_obj[m] * minutos_objetivo_partido
+                                            total_target = entreno_obj[m] + target_partido
                                             total_actual = (df_sup_ent[m].sum() if not df_sup_ent.empty else 0) + sup.get(m, 0)
                                             deficit[m] = max(0, total_target - total_actual)
                                             
@@ -1852,13 +1868,12 @@ with tab_ses:
                                                 disp_hoy_dict = {limpiar_nombre(k): v for k, v in sesion.get('disponibilidad', {}).items()}
                                                 estado_hoy = disp_hoy_dict.get(limpiar_nombre(jug), "Disponible")
                                                 if estado_hoy not in ["Disponible", "Recuperación Post-Partido", "Titular", "Suplente"]:
-                                                    continue # Si está lesionado, enfermo o ausente, no se le exige compensar
+                                                    continue 
                                                     
                                                 d_hoy = next((d for d in sesion['datos_informe'] if limpiar_nombre(d['JUGADOR']) == limpiar_nombre(jug)), {})
                                                 m_hoy = safe_float(d_hoy.get('MIN_GPS', d_hoy.get('MIN', 0)))
-                                                if not d_hoy or m_hoy == 0: continue # Si el suplente no entrenó en MD+1, lo saltamos
+                                                if not d_hoy or m_hoy == 0: continue 
                                                 
-                                                # Cálculo del objetivo de minutos a compensar
                                                 min_obj_v = deficit['DIS'] / densidad_obj['DIS'] if densidad_obj['DIS'] > 0 else 0
                                                 min_obj_i = deficit['DIS AI'] / densidad_obj['DIS AI'] if densidad_obj['DIS AI'] > 0 else 0
                                                 min_obj_m = (deficit['ACC'] + deficit['DCC']) / (densidad_obj['ACC'] + densidad_obj['DCC']) if (densidad_obj['ACC'] + densidad_obj['DCC']) > 0 else 0
@@ -1906,7 +1921,7 @@ with tab_ses:
                                                 <div style="background: #111318; border: 1px solid #1c1f26; border-left: 4px solid #C5A059; padding: 12px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
                                                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                                                         <strong style="color: #f8fafc; font-size: 1.1rem;">{c['JUGADOR']} <span style="font-size: 0.8rem; color: #94a3b8;">({c['POS']})</span></strong>
-                                                        <span style="color: #10b981; font-weight: 800; font-size: 0.9rem;">Eq. Partido: ~{min_comp_real:.0f} / {c['Min_Obj_Real']:.0f} min</span>
+                                                        <span style="color: #10b981; font-weight: 800; font-size: 0.9rem;">Eq. Partido: ~{min_comp_real:.0f} / {c['Min_Obj_Real']:.0f} min { ' (Target 90\')' if minutos_objetivo_partido == 90 else '' }</span>
                                                     </div>
                                                     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
                                                         <div>
