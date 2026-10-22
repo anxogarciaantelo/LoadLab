@@ -1795,7 +1795,8 @@ with tab_ses:
                                                     titulares_densidad[pos_e][m].append(t.get(m, 0) / m_real)
                                             
                                     # Extraer "Semana Teórica Perfecta": Suma de las medias diarias por posición
-                                    df_sem_valido = df_sem_data[df_sem_data['ESTADO'].isin(["Disponible", "Titular", "Suplente", "Recuperación Post-Partido", "Readaptación"])]
+                                    # EXCLUSIÓN CLÍNICA: Eliminamos "Readaptación" porque sus tareas parciales hunden el Target de exigencia del grupo sano.
+                                    df_sem_valido = df_sem_data[df_sem_data['ESTADO'].isin(["Disponible", "Titular", "Suplente", "Recuperación Post-Partido"])]
                                     
                                     for pos in dict_pos_esp.values():
                                         if pos not in titulares_entreno: titulares_entreno[pos] = {m: 0.0 for m in metricas_carga}
