@@ -1178,90 +1178,174 @@ with tab_ses:
                         t_efic = calc_tend_html(efi_c_media, hist_efi_c, inverso=True) # Más coste = Peor
                         t_efin = calc_tend_html(efi_n_media, hist_efi_n, inverso=True)
 
-                        # --- ÍNDICE DE READINESS Y DISEÑO DE TARJETAS ---
+                        # --- CÁLCULO DE REFERENCIAS HISTÓRICAS (MD) PARA TENDENCIAS ---
+                        ses_md_tend = sesion.get('descripcion', 'TD') if not es_partido else "Partido"
+                        df_hist_tend = st.session_state.df_master_informes[st.session_state.df_master_informes['FECHA'] < sesion["fecha"]].copy()
+                        
+                        if not es_partido:
+                            df_hist_tend = df_hist_tend[(df_hist_tend['TIPO_SESION'] == "Entrenamiento") & (df_hist_tend['MD'] == ses_md_tend)]
+                        else:
+                            df_hist_tend = df_hist_tend[df_hist_tend['TIPO_SESION'].str.contains("Partido", na=False)]
+                            
+                        if 'filtro_est' in locals() and filtro_est:
+                            df_hist_tend = df_hist_tend[df_hist_tend['ESTADO'].isin(filtro_est)]
+                            
+                        hist_tqr_m = df_hist_tend['TQR'].replace(0, np.nan).mean() if not df_hist_tend.empty else 0
+                        hist_well_m = df_hist_tend['WELLNESS'].replace(0, np.nan).mean() if not df_hist_tend.empty else 0
+                        hist_rpe_m = df_hist_tend['RPE'].replace(0, np.nan).mean() if not df_hist_tend.empty else 0
+                        hist_carga_m = df_hist_tend['CARGA'].replace(0, np.nan).mean() if not df_hist_tend.empty else 0
+                        
+                        hist_readiness_m = 0
+                        if hist_well_m > 0 and hist_tqr_m > 0:
+                            hist_readiness_m = ((hist_tqr_m / 10) * 50) + (((35 - hist_well_m) / 30) * 50)
+                            
+                        hist_efi_c, hist_efi_n = 0, 0
+                        if not df_hist_tend.empty:
+                            df_hist_tend['m_min_h'] = np.where(df_hist_tend['MIN'] > 0, (df_hist_tend['DIS'] * 1000) / df_hist_tend['MIN'], 0)
+                            df_hist_tend['mec_h'] = df_hist_tend['ACC'] + df_hist_tend['DCC'] + df_hist_tend['Nº SPR']
+                            
+                            df_c_val = df_hist_tend[(df_hist_tend['m_min_h'] > 0) & (df_hist_tend['RPE'] > 0)]
+                            df_n_val = df_hist_tend[(df_hist_tend['mec_h'] > 0) & (df_hist_tend['RPE'] > 0)]
+                            
+                            hist_efi_c = (df_c_val['RPE'] / df_c_val['m_min_h']).mean() if not df_c_val.empty else 0
+                            hist_efi_n = (df_n_val['RPE'] / df_n_val['mec_h']).mean() if not df_n_val.empty else 0
+
+                        # --- CÁLCULO ACTUAL DE EFICIENCIAS Y READINESS ---
+                        efi_c_media = rpe_m / ((dis_m * 1000) / min_m) if min_m > 0 and dis_m > 0 else 0
+                        efi_n_media = rpe_m / (acc_m + dcc_m + spr_m) if (acc_m + dcc_m + spr_m) > 0 else 0
+                        
                         readiness_m = 0
                         if well_m > 0 and tqr_m > 0:
                             readiness_m = ((tqr_m / 10) * 50) + (((35 - well_m) / 30) * 50)
 
-                        def html_card_vertical(color, val_top, lbl_top, val_mid, lbl_mid, val_bot, lbl_bot):
-                            return f"""
-                            <div style="background: #111318; border: 1px solid #1c1f26; border-top: 3px solid {color}; border-radius: 8px; padding: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); display: flex; flex-direction: column; height: 100%;">
-                                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; border-bottom: 1px solid #1c1f26; padding-bottom: 8px;">
-                                    <div style="text-align: left;">
-                                        <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;">{lbl_top.split('|')[0]}</span><br>
-                                        <span style="font-size: 1.4rem; font-weight: 800; color: #f8fafc;">{val_top}</span>
-                                    </div>
-                                    <div style="text-align: right;">
-                                        <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;">{lbl_top.split('|')[1]}</span><br>
-                                        <span style="font-size: 1.4rem; font-weight: 800; color: #f8fafc;">{val_mid}</span>
-                                    </div>
-                                </div>
-                                <div style="text-align: center; margin-top: auto;">
-                                    <span style="font-size: 0.8rem; color: #f8fafc; font-weight: 800; text-transform: uppercase;">{lbl_bot}</span><br>
-                                    <span style="font-size: 1.6rem; font-weight: 900; color: {color};">{val_bot}</span>
-                                </div>
-                            </div>
-                            """
+                        # --- FUNCIÓN TENDENCIA HTML ---
+                        def calc_tend_html(actual, historico, inverso=False):
+                            if pd.isna(historico) or historico == 0: return "<span style='color: #94a3b8; font-size: 0.65rem;'>▬ N/A</span>"
+                            diff = ((actual - historico) / historico) * 100
+                            if abs(diff) < 2: return "<span style='color: #94a3b8; font-size: 0.65rem;'>▬ 0%</span>"
+                            if diff > 0:
+                                color = "#ef4444" if inverso else "#10b981"
+                                return f"<span style='color: {color}; font-size: 0.65rem;'>▲ {abs(diff):.0f}%</span>"
+                            else:
+                                color = "#10b981" if inverso else "#ef4444"
+                                return f"<span style='color: {color}; font-size: 0.65rem;'>▼ {abs(diff):.0f}%</span>"
 
-                        def html_readiness(valor):
+                        t_readiness = calc_tend_html(readiness_m, hist_readiness_m, inverso=False)
+                        t_carga = calc_tend_html(carga_m, hist_carga_m, inverso=True)
+                        t_rpe = calc_tend_html(rpe_m, hist_rpe_m, inverso=True)
+                        t_efic = calc_tend_html(efi_c_media, hist_efi_c, inverso=True)
+                        t_efin = calc_tend_html(efi_n_media, hist_efi_n, inverso=True)
+
+                        # --- ESTRUCTURAS HTML DE TARJETAS ---
+                        def html_card_readiness(valor, tendencia_html):
                             color = "#10b981" if valor >= 75 else ("#f59e0b" if valor >= 60 else "#ef4444")
                             return f"""
-                            <div style="background: #111318; border: 1px solid #1c1f26; border-top: 3px solid {color}; border-radius: 8px; padding: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: space-between; height: 100%;">
-                                <div>
-                                    <span style="font-size: 0.85rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;">Índice de Readiness</span><br>
-                                    <span style="font-size: 0.75rem; color: #64748b;">(TQR + Wellness Invertido)</span>
+                            <div style="background: #111318; border: 1px solid #1c1f26; border-top: 3px solid {color}; border-radius: 8px; padding: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); display: flex; flex-direction: column; justify-content: center; height: 100%; min-height: 110px;">
+                                <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; text-align: center; margin-bottom: 2px;">Readiness</span>
+                                <div style="display: flex; justify-content: center; align-items: center; margin: 4px 0;">
+                                    <svg viewBox="0 0 36 36" style="width: 50px; height: 50px;">
+                                      <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#1c1f26" stroke-width="4" />
+                                      <path stroke="{color}" stroke-dasharray="{valor}, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke-width="4" stroke-linecap="round" />
+                                      <text x="18" y="22" fill="{color}" font-size="11" font-weight="900" text-anchor="middle">{valor:.0f}</text>
+                                    </svg>
                                 </div>
-                                <div style="text-align: right;">
-                                    <span style="font-size: 2.2rem; font-weight: 900; color: {color};">{valor:.0f}</span><span style="font-size: 1rem; color: #94a3b8; font-weight: 800;"> / 100</span>
+                                <div style="text-align: center;">{tendencia_html}</div>
+                            </div>
+                            """
+
+                        def html_card_basic(color, title, v1, l1, t1, v2, l2, t2):
+                            return f"""
+                            <div style="background: #111318; border: 1px solid #1c1f26; border-top: 3px solid {color}; border-radius: 8px; padding: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); display: flex; flex-direction: column; justify-content: center; height: 100%; min-height: 110px;">
+                                <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; text-align: center; margin-bottom: 8px;">{title}</span>
+                                <div style="display: flex; justify-content: space-around; align-items: center; flex: 1;">
+                                    <div style="text-align: center;">
+                                        <span style="font-size: 1.3rem; font-weight: 900; color: #f8fafc;">{v1}</span><br>
+                                        <span style="font-size: 0.65rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;">{l1}</span><br>
+                                        {t1}
+                                    </div>
+                                    <div style="width: 1px; height: 30px; background: #1c1f26;"></div>
+                                    <div style="text-align: center;">
+                                        <span style="font-size: 1.3rem; font-weight: 900; color: #f8fafc;">{v2}</span><br>
+                                        <span style="font-size: 0.65rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;">{l2}</span><br>
+                                        {t2}
+                                    </div>
                                 </div>
                             </div>
                             """
 
-                        col_w, col_i, col_e = st.columns([1.2, 1.2, 3])
-                        
-                        with col_w:
-                            st.markdown("<h5 style='color: #f8fafc; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; margin-top: 0;'>Recuperación</h5>", unsafe_allow_html=True)
-                            st.markdown(html_readiness(readiness_m), unsafe_allow_html=True)
-                            
-                        with col_i:
-                            st.markdown("<h5 style='color: #f8fafc; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; margin-top: 0;'>Carga & Eficiencia</h5>", unsafe_allow_html=True)
-                            st.markdown(html_card_vertical("#f59e0b", f"{min_m:.0f}'", "Minutos | RPE", f"{rpe_m:.1f}", "RPE", f"{carga_m:.0f}", "Carga (UA)"), unsafe_allow_html=True)
-                                
-                        with col_e:
-                            st.markdown("<h5 style='color: #f8fafc; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; margin-top: 0;'>Carga Externa & Eficiencia</h5>", unsafe_allow_html=True)
-                            
-                            df_historico_partidos = st.session_state.df_master_informes[(st.session_state.df_master_informes['TIPO_SESION'].str.contains("Partido", na=False)) & (st.session_state.df_master_informes['DIS'] > 0)].copy()
-                            if not df_historico_partidos.empty:
-                                df_historico_partidos['MIN_REAL'] = np.where(df_historico_partidos.get('MIN_GPS', df_historico_partidos['MIN']) > 0, df_historico_partidos.get('MIN_GPS', df_historico_partidos['MIN']), df_historico_partidos['MIN'])
-                                min_totales_eq = df_historico_partidos['MIN_REAL'].sum()
-                                dis_100_eq = (df_historico_partidos['DIS'].sum() / min_totales_eq) * 90 if min_totales_eq > 0 else 10.0
-                                hsr_100_eq = (df_historico_partidos['DIS AI'].sum() / min_totales_eq) * 90 if min_totales_eq > 0 else 600.0
-                                acc_100_eq = (df_historico_partidos['ACC'].sum() / min_totales_eq) * 90 if min_totales_eq > 0 else 40.0
-                                dcc_100_eq = (df_historico_partidos['DCC'].sum() / min_totales_eq) * 90 if min_totales_eq > 0 else 40.0
-                                df_sum_indiv = df_historico_partidos.groupby('JUGADOR')[['DIS', 'DIS AI', 'ACC', 'DCC', 'MIN_REAL']].sum()
-                                medias_indiv_partido = {j_nom: {'DIS': (j_row['DIS']/j_row['MIN_REAL'])*90, 'DIS AI': (j_row['DIS AI']/j_row['MIN_REAL'])*90, 'ACC': (j_row['ACC']/j_row['MIN_REAL'])*90, 'DCC': (j_row['DCC']/j_row['MIN_REAL'])*90} for j_nom, j_row in df_sum_indiv.iterrows() if j_row['MIN_REAL'] > 0}
-                            else:
-                                dis_100_eq, hsr_100_eq, acc_100_eq, dcc_100_eq = 10.0, 600.0, 40.0, 40.0
-                                medias_indiv_partido = {}
-
-                            pct_dis_eq = (dis_m / dis_100_eq) * 100 if dis_100_eq > 0 else 0
-                            pct_hsr_eq = (hsr_m / hsr_100_eq) * 100 if hsr_100_eq > 0 else 0
-                            pct_acc_eq = (acc_m / acc_100_eq) * 100 if acc_100_eq > 0 else 0
-                            
-                            def html_kpi_ext(color, val1, val2, val3, lbl1, lbl2, lbl3):
-                                return f"""
-                                <div style="background: #111318; border: 1px solid #1c1f26; border-top: 3px solid {color}; border-radius: 8px; padding: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); display: flex; justify-content: space-around; height: 100%;">
-                                    <div style='text-align: center;'><span style='font-size: 0.75rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;'>{lbl1}</span><br><span style='font-size: 1.4rem; font-weight: 800; color: #f8fafc;'>{val1}</span></div>
-                                    <div style='width: 1px; background: #1c1f26; margin: 0 10px;'></div>
-                                    <div style='text-align: center;'><span style='font-size: 0.75rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;'>{lbl2}</span><br><span style='font-size: 1.4rem; font-weight: 800; color: #f8fafc;'>{val2}</span></div>
-                                    <div style='width: 1px; background: #1c1f26; margin: 0 10px;'></div>
-                                    <div style='text-align: center;'><span style='font-size: 0.75rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;'>{lbl3}</span><br><span style='font-size: 1.4rem; font-weight: 800; color: #f8fafc;'>{val3}</span></div>
+                        def html_card_triple(color, title, v1, l1, p1, v2, l2, p2, v3, l3, p3):
+                            return f"""
+                            <div style="background: #111318; border: 1px solid #1c1f26; border-top: 3px solid {color}; border-radius: 8px; padding: 8px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); display: flex; flex-direction: column; justify-content: center; margin-bottom: 8px;">
+                                <span style="font-size: 0.7rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; margin-bottom: 4px;">{title}</span>
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div style='flex: 1; text-align: left;'>
+                                        <span style='font-size: 1.15rem; font-weight: 800; color: #f8fafc;'>{v1} <span style='font-size:0.6em; color:#94a3b8;'>({p1:.0f}%)</span></span><br>
+                                        <span style='font-size: 0.65rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;'>{l1}</span>
+                                    </div>
+                                    <div style='width: 1px; height: 25px; background: #1c1f26; margin: 0 8px;'></div>
+                                    <div style='flex: 1; text-align: center;'>
+                                        <span style='font-size: 1.15rem; font-weight: 800; color: #f8fafc;'>{v2} <span style='font-size:0.6em; color:#94a3b8;'>({p2:.0f}%)</span></span><br>
+                                        <span style='font-size: 0.65rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;'>{l2}</span>
+                                    </div>
+                                    <div style='width: 1px; height: 25px; background: #1c1f26; margin: 0 8px;'></div>
+                                    <div style='flex: 1; text-align: right;'>
+                                        <span style='font-size: 1.15rem; font-weight: 800; color: #f8fafc;'>{v3} <span style='font-size:0.6em; color:#94a3b8;'>({p3:.0f}%)</span></span><br>
+                                        <span style='font-size: 0.65rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;'>{l3}</span>
+                                    </div>
                                 </div>
-                                """
+                            </div>
+                            """
+
+                        # --- REFERENCIAS 100% PARTIDO (VOLUMEN Y DENSIDAD) ---
+                        df_historico_partidos = st.session_state.df_master_informes[(st.session_state.df_master_informes['TIPO_SESION'].str.contains("Partido", na=False)) & (st.session_state.df_master_informes['DIS'] > 0)].copy()
+                        if not df_historico_partidos.empty:
+                            df_historico_partidos['MIN_REAL'] = np.where(df_historico_partidos.get('MIN_GPS', df_historico_partidos['MIN']) > 0, df_historico_partidos.get('MIN_GPS', df_historico_partidos['MIN']), df_historico_partidos['MIN'])
+                            min_totales_eq = df_historico_partidos['MIN_REAL'].sum()
                             
-                            c_ex1, c_ex2 = st.columns(2)
-                            with c_ex1: st.markdown(html_kpi_ext("#C5A059", f"{dis_m:.2f} <span style='font-size:0.6em; color:#94a3b8;'>({pct_dis_eq:.0f}%)</span>", f"{hsr_m:.0f} <span style='font-size:0.6em; color:#94a3b8;'>({pct_hsr_eq:.0f}%)</span>", f"{acc_m:.0f} | {dcc_m:.0f}", "Volumen (km)", "HSR (>21)", "ACC|DCC (>3)"), unsafe_allow_html=True)
-                            with c_ex2: st.markdown(html_kpi_ext("#0ea5e9", f"{pct_acc_eq:.0f}%", f"{efi_c_media:.2f}", f"{efi_n_media:.2f}", "Carga Mec. vs Partido", "Coste Cardio", "Coste Neuro"), unsafe_allow_html=True)
+                            dis_100_eq = (df_historico_partidos['DIS'].sum() / min_totales_eq) * 90 if min_totales_eq > 0 else 10.0
+                            hsr_100_eq = (df_historico_partidos['DIS AI'].sum() / min_totales_eq) * 90 if min_totales_eq > 0 else 600.0
+                            acc_100_eq = (df_historico_partidos['ACC'].sum() / min_totales_eq) * 90 if min_totales_eq > 0 else 40.0
+                            dcc_100_eq = (df_historico_partidos['DCC'].sum() / min_totales_eq) * 90 if min_totales_eq > 0 else 40.0
+                            
+                            df_sum_indiv = df_historico_partidos.groupby('JUGADOR')[['DIS', 'DIS AI', 'ACC', 'DCC', 'MIN_REAL']].sum()
+                            medias_indiv_partido = {j_nom: {'DIS': (j_row['DIS']/j_row['MIN_REAL'])*90, 'DIS AI': (j_row['DIS AI']/j_row['MIN_REAL'])*90, 'ACC': (j_row['ACC']/j_row['MIN_REAL'])*90, 'DCC': (j_row['DCC']/j_row['MIN_REAL'])*90} for j_nom, j_row in df_sum_indiv.iterrows() if j_row['MIN_REAL'] > 0}
+                        else:
+                            dis_100_eq, hsr_100_eq, acc_100_eq, dcc_100_eq = 10.0, 600.0, 40.0, 40.0
+                            medias_indiv_partido = {}
+
+                        # Volúmenes
+                        pct_dis_eq = (dis_m / dis_100_eq) * 100 if dis_100_eq > 0 else 0
+                        pct_hsr_eq = (hsr_m / hsr_100_eq) * 100 if hsr_100_eq > 0 else 0
+                        pct_acc_eq = ((acc_m + dcc_m) / (acc_100_eq + dcc_100_eq)) * 100 if (acc_100_eq + dcc_100_eq) > 0 else 0
+                        
+                        # Densidades (m/min o acc/min)
+                        den_dis_100 = (dis_100_eq * 1000) / 90
+                        den_hsr_100 = hsr_100_eq / 90
+                        den_mec_100 = (acc_100_eq + dcc_100_eq) / 90
+                        
+                        den_dis_act = (dis_m * 1000) / min_m if min_m > 0 else 0
+                        den_hsr_act = hsr_m / min_m if min_m > 0 else 0
+                        den_mec_act = (acc_m + dcc_m) / min_m if min_m > 0 else 0
+                        
+                        pct_den_dis = (den_dis_act / den_dis_100) * 100 if den_dis_100 > 0 else 0
+                        pct_den_hsr = (den_hsr_act / den_hsr_100) * 100 if den_hsr_100 > 0 else 0
+                        pct_den_mec = (den_mec_act / den_mec_100) * 100 if den_mec_100 > 0 else 0
+
+                        # --- RENDERIZADO GRID ---
+                        col_r, col_c, col_co, col_e = st.columns([0.8, 1.2, 1.2, 2.5])
+                        
+                        with col_r:
+                            st.markdown(html_card_readiness(readiness_m, t_readiness), unsafe_allow_html=True)
+                            
+                        with col_c:
+                            st.markdown(html_card_basic("#f59e0b", "Carga Interna", f"{carga_m:.0f}", "Carga (UA)", t_carga, f"{rpe_m:.1f}", "RPE Medio", t_rpe), unsafe_allow_html=True)
+                                
+                        with col_co:
+                            st.markdown(html_card_basic("#8b5cf6", "Eficiencia", f"{efi_c_media:.2f}", "Coste Cardio", t_efic, f"{efi_n_media:.2f}", "Coste Neuro", t_efin), unsafe_allow_html=True)
+                            
+                        with col_e:
+                            st.markdown(html_card_triple("#C5A059", "Carga Externa: Volúmenes", f"{dis_m:.2f}k", "Distancia", pct_dis_eq, f"{hsr_m:.0f}m", "HSR (>21)", pct_hsr_eq, f"{(acc_m + dcc_m):.0f}", "ACC+DCC", pct_acc_eq), unsafe_allow_html=True)
+                            st.markdown(html_card_triple("#0ea5e9", "Carga Externa: Densidades", f"{den_dis_act:.0f}", "m / min", pct_den_dis, f"{den_hsr_act:.1f}", "HSR / min", pct_den_hsr, f"{den_mec_act:.1f}", "MEC / min", pct_den_mec), unsafe_allow_html=True)
                         st.markdown("---")
                         
                         # --- 4. ALERTAS DE RIESGO MOVIDAS ARRIBA (EN 3 COLUMNAS) ---
