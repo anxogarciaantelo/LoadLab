@@ -1758,11 +1758,19 @@ with tab_ses:
                                 fecha_partido = df_hist_partidos['FECHA'].max() if not df_hist_partidos.empty else None
                                 
                             if fecha_partido:
-                                _, _, lunes_partido, _ = obtener_rango_fechas_semana(fecha_partido)
-                                lunes_str = lunes_partido.strftime("%Y-%m-%d")
-                                
-                                df_partido_data = df_hist[df_hist['FECHA'] == fecha_partido].copy()
-                                df_sem_data = df_hist[(df_hist['FECHA'] >= lunes_str) & (df_hist['FECHA'] < fecha_partido) & (df_hist['TIPO_SESION'] == 'Entrenamiento')].copy()
+                                    _, _, lunes_partido, _ = obtener_rango_fechas_semana(fecha_partido)
+                                    lunes_str = lunes_partido.strftime("%Y-%m-%d")
+                                    
+                                    df_partido_data = df_hist[df_hist['FECHA'] == fecha_partido].copy()
+                                    
+                                    # EXCLUSIÓN CIENTÍFICA: Eliminamos MD+1 y MD+2 del cómputo semanal 
+                                    # porque pertenecen fisiológicamente a la compensación del partido anterior.
+                                    df_sem_data = df_hist[
+                                        (df_hist['FECHA'] >= lunes_str) & 
+                                        (df_hist['FECHA'] < fecha_partido) & 
+                                        (df_hist['TIPO_SESION'] == 'Entrenamiento') &
+                                        (~df_hist['MD'].isin(['MD+1', 'MD+2']))
+                                    ].copy()
                                 
                                 if not df_partido_data.empty:
                                     df_partido_data['MIN_REAL'] = np.where(df_partido_data.get('MIN_GPS', df_partido_data['MIN']) > 0, df_partido_data.get('MIN_GPS', df_partido_data['MIN']), df_partido_data['MIN'])
