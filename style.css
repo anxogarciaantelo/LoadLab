@@ -83,12 +83,12 @@ html, body, [class*="css"], .stMarkdown p, .stText p, label, .stSelectbox, .stTe
     border-bottom: 2px solid #C5A059 !important;
 }
 
-/* Hacer la barra superior transparente sin matar la flecha lateral */
+/* Hacer el header transparente pero sin destruirlo, para que viva la flecha */
 header[data-testid="stHeader"] { 
-    background: transparent !important; 
+    background: transparent !important;
 }
-/* Ocultar solo el menú de opciones nativo derecho */
-[data-testid="stToolbar"] {
+/* Ocultar solo el menú de opciones derecho de Streamlit (los 3 puntos y Deploy) */
+[data-testid="stToolbar"], .stAppDeployButton {
     display: none !important;
 }
 
