@@ -1018,18 +1018,18 @@ with tab_ses:
                             
                             # A) Riesgo Estructural Directo (Daño Muscular aislado)
                             if w_dolor > 0 and z_dolor >= 1.5:
-                                alertas_jugadores[jug]['recuperacion'].append(f"🔴 **Daño Muscular Tisular:** Dolor Anormal (Z: +{z_dolor:.1f}). Alto riesgo de rotura. Evitar frenadas (DCC) y sprints."); alertas_jugadores[jug]['total'] += 1
+                                alertas_jugadores[jug]['recuperacion'].append(f"🔴 **Daño Muscular:** Dolor Anormal (Z: +{z_dolor:.1f})"); alertas_jugadores[jug]['total'] += 1
                             elif w_dolor > 0 and z_dolor >= 1.0:
-                                alertas_jugadores[jug]['recuperacion'].append(f"🟡 **Sobrecarga Tisular:** Dolor elevado (Z: +{z_dolor:.1f}). Calentamiento exhaustivo necesario."); alertas_jugadores[jug]['total'] += 1
+                                alertas_jugadores[jug]['recuperacion'].append(f"🟡 **Sobrecarga Tisular:** Dolor elevado (Z: +{z_dolor:.1f})"); alertas_jugadores[jug]['total'] += 1
                                 
                             # B) Fatiga Sistémica Integrada (Cruza TQR con Percepción Wellness)
                             if tqr > 0 and well > 0:
                                 if tqr <= 3 and z_well >= 1.0:
-                                    alertas_jugadores[jug]['recuperacion'].append(f"🔴 **Fatiga Sistémica Integrada:** TQR Crítico ({tqr:.0f}/10) + Wellness Anormal (Z: +{z_well:.1f}). SNC deprimido. Reducir volumen de sesión 50%."); alertas_jugadores[jug]['total'] += 1
+                                    alertas_jugadores[jug]['recuperacion'].append(f"🔴 **Fatiga Sistémica:** TQR {tqr:.0f}/10 y Wellness Z: +{z_well:.1f}"); alertas_jugadores[jug]['total'] += 1
                                 elif tqr <= 4 and z_fatiga >= 1.5:
-                                    alertas_jugadores[jug]['recuperacion'].append(f"🔴 **Agotamiento Periférico:** Baja recuperación ({tqr:.0f}/10) + Alta Fatiga Muscular (Z: +{z_fatiga:.1f}). Limitar volumen total."); alertas_jugadores[jug]['total'] += 1
+                                    alertas_jugadores[jug]['recuperacion'].append(f"🔴 **Fatiga Muscular:** TQR {tqr:.0f}/10 y Fatiga Z: +{z_fatiga:.1f}"); alertas_jugadores[jug]['total'] += 1
                                 elif (tqr <= 4 and z_well < 1.0) or (tqr > 4 and z_well >= 1.5):
-                                    alertas_jugadores[jug]['recuperacion'].append(f"🟡 **Readiness Desajustado:** Discordancia entre TQR y Wellness. Monitorizar lenguaje corporal inicial."); alertas_jugadores[jug]['total'] += 1
+                                    alertas_jugadores[jug]['recuperacion'].append(f"🟡 **Readiness Desajustado:** Discordancia TQR/Wellness"); alertas_jugadores[jug]['total'] += 1
 
                             # --- 2. ALERTAS DE CARGA Y RIESGO MECÁNICO ---
                             
@@ -1041,15 +1041,15 @@ with tab_ses:
                             # A) Carga Interna (Protegida por volumen mínimo para no saltar tras vacaciones)
                             if carga_aguda > 1500:
                                 if ratio_ac >= 1.5:
-                                    alertas_jugadores[jug]['carga'].append(f"🔴 **Spike de Carga (A/C >1.5):** Acumulación aguda crítica ({carga_aguda:.0f} UA). Reducir minutos de juego próximos 3 días."); alertas_jugadores[jug]['total'] += 1
+                                    alertas_jugadores[jug]['carga'].append(f"🔴 **Spike Carga:** A/C {ratio_ac:.2f} ({carga_aguda:.0f} UA)"); alertas_jugadores[jug]['total'] += 1
                                 elif ratio_ac <= 0.8:
-                                    alertas_jugadores[jug]['carga'].append(f"🟡 **Desentrenamiento (A/C <0.8):** Carga crónica bajando. Riesgo si se expone súbitamente a partido completo."); alertas_jugadores[jug]['total'] += 1
+                                    alertas_jugadores[jug]['carga'].append(f"🟡 **Desentrenamiento:** A/C {ratio_ac:.2f}"); alertas_jugadores[jug]['total'] += 1
                                     
                             # B) Carga Externa (Tejido conectivo y muscular)
                             if ratio_hsr >= 1.5:
-                                alertas_jugadores[jug]['carga'].append(f"🔴 **Spike de HSR (>21 km/h):** A/C Mecánico {ratio_hsr:.2f}. Riesgo crítico en isquiosural. Restringir transiciones largas."); alertas_jugadores[jug]['total'] += 1
+                                alertas_jugadores[jug]['carga'].append(f"🔴 **Spike HSR:** A/C {ratio_hsr:.2f}"); alertas_jugadores[jug]['total'] += 1
                             if ratio_acc >= 1.5:
-                                alertas_jugadores[jug]['carga'].append(f"🔴 **Spike de Tensión (ACC):** A/C Excéntrico {ratio_acc:.2f}. Riesgo articular/rotuliano. Evitar espacios reducidos (SSG)."); alertas_jugadores[jug]['total'] += 1
+                                alertas_jugadores[jug]['carga'].append(f"🔴 **Spike Tensión (ACC):** A/C {ratio_acc:.2f}"); alertas_jugadores[jug]['total'] += 1
 
                             # --- CÁLCULO DE EFICIENCIA (AISLADO POR MD) ---
                             sesion_contexto = sesion.get('descripcion', 'TD') if not es_partido else "Partido"
@@ -1097,20 +1097,20 @@ with tab_ses:
                                 cardio_bien, neuro_bien = (z_cardio < 1.5), (z_neuro < 1.5)
 
                                 if cardio_mal and neuro_mal:
-                                    alertas_jugadores[jug]['carga'].append(f"🔴 **Fatiga Integral (Eficiencia):** Coste metabólico (Z: +{z_cardio:.1f}) y neuromuscular (Z: +{z_neuro:.1f}) muy anormales vs {sesion_contexto}. Jugador vaciado."); alertas_jugadores[jug]['total'] += 1
+                                    alertas_jugadores[jug]['carga'].append(f"🔴 **Fatiga Integral:** Coste Cardio Z:+{z_cardio:.1f} y Neuro Z:+{z_neuro:.1f}"); alertas_jugadores[jug]['total'] += 1
                                 elif cardio_mal and not neuro_bien: 
-                                    alertas_jugadores[jug]['carga'].append(f"🟡 **Alerta Metabólica:** Coste cardiovascular alto (Z: +{z_cardio:.1f}) vs {sesion_contexto}. Indicio de fatiga residual en campo abierto."); alertas_jugadores[jug]['total'] += 1
+                                    alertas_jugadores[jug]['carga'].append(f"🟡 **Coste Metabólico Elevado:** Z:+{z_cardio:.1f}"); alertas_jugadores[jug]['total'] += 1
                                 elif neuro_mal and not cardio_bien: 
-                                    alertas_jugadores[jug]['carga'].append(f"🟡 **Alerta Neuromuscular:** Coste mecánico elevado (Z: +{z_neuro:.1f}) vs {sesion_contexto}. Falla recuperación muscular para esfuerzos cortos."); alertas_jugadores[jug]['total'] += 1
+                                    alertas_jugadores[jug]['carga'].append(f"🟡 **Coste Neuromuscular Elevado:** Z:+{z_neuro:.1f}"); alertas_jugadores[jug]['total'] += 1
                                 
                             # --- 3. MONOTONÍA Y BURNOUT PREVENTIVO ---
                             monot, strain = calcular_monotonia_7d(st.session_state.sesiones, jug, sesion['fecha'], devolver_strain=True)
                             if monot > 2.0 and strain > 4000:
-                                alertas_jugadores[jug]['carga'].append(f"🔴 **Riesgo Burnout (Strain):** Monotonía sin picos ({monot:.1f}) y sobrecarga ({strain:.0f} UA). Requiere día Off-Feet absoluto."); alertas_jugadores[jug]['total'] += 1
+                                alertas_jugadores[jug]['carga'].append(f"🔴 **Riesgo Burnout:** Monotonía {monot:.1f} (Strain: {strain:.0f} UA)"); alertas_jugadores[jug]['total'] += 1
                             
                             monot_hsr, strain_hsr = calcular_monotonia_7d(st.session_state.sesiones, jug, sesion['fecha'], metrica="DIS AI", devolver_strain=True)
                             if monot_hsr > 2.0 and strain_hsr > 1500:
-                                alertas_jugadores[jug]['carga'].append(f"🔴 **Sobrecarga Mecánica Continua:** Monotonía en HSR ({monot_hsr:.1f}). Alto riesgo de tendinopatía insercional."); alertas_jugadores[jug]['total'] += 1
+                                alertas_jugadores[jug]['carga'].append(f"🔴 **Sobrecarga Mecánica:** Monotonía HSR {monot_hsr:.1f}"); alertas_jugadores[jug]['total'] += 1
                                 
                         # --- AÑADE ESTO JUSTO AQUÍ (Alineado con el for _, row in activos.iterrows():) ---
                         alertas_multi, alertas_rec, alertas_car = [], [], []
@@ -1225,15 +1225,15 @@ with tab_ses:
 
                         # --- FUNCIÓN TENDENCIA HTML ---
                         def calc_tend_html(actual, historico, inverso=False):
-                            if pd.isna(historico) or historico == 0: return "<span style='color: #94a3b8; font-size: 0.65rem;'>▬ N/A</span>"
+                            if pd.isna(historico) or historico == 0: return "<span style='color: #94a3b8; font-size: 0.85rem;'>▬ N/A</span>"
                             diff = ((actual - historico) / historico) * 100
-                            if abs(diff) < 2: return "<span style='color: #94a3b8; font-size: 0.65rem;'>▬ 0%</span>"
+                            if abs(diff) < 2: return "<span style='color: #94a3b8; font-size: 0.85rem;'>▬ 0%</span>"
                             if diff > 0:
                                 color = "#ef4444" if inverso else "#10b981"
-                                return f"<span style='color: {color}; font-size: 0.65rem;'>▲ {abs(diff):.0f}%</span>"
+                                return f"<span style='color: {color}; font-size: 0.85rem;'>▲ {abs(diff):.0f}%</span>"
                             else:
                                 color = "#10b981" if inverso else "#ef4444"
-                                return f"<span style='color: {color}; font-size: 0.65rem;'>▼ {abs(diff):.0f}%</span>"
+                                return f"<span style='color: {color}; font-size: 0.85rem;'>▼ {abs(diff):.0f}%</span>"
 
                         t_readiness = calc_tend_html(readiness_m, hist_readiness_m, inverso=False)
                         t_carga = calc_tend_html(carga_m, hist_carga_m, inverso=True)
@@ -1246,12 +1246,12 @@ with tab_ses:
                             color = "#10b981" if valor >= 75 else ("#f59e0b" if valor >= 60 else "#ef4444")
                             return f"""
                             <div style="background: #111318; border: 1px solid #1c1f26; border-top: 3px solid {color}; border-radius: 8px; padding: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); display: flex; flex-direction: column; justify-content: center; height: 100%; min-height: 110px;">
-                                <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; text-align: center; margin-bottom: 2px;">Readiness</span>
-                                <div style="display: flex; justify-content: center; align-items: center; margin: 4px 0;">
-                                    <svg viewBox="0 0 36 36" style="width: 50px; height: 50px;">
-                                      <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#1c1f26" stroke-width="4" />
-                                      <path stroke="{color}" stroke-dasharray="{valor}, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke-width="4" stroke-linecap="round" />
-                                      <text x="18" y="22" fill="{color}" font-size="11" font-weight="900" text-anchor="middle">{valor:.0f}</text>
+                                <span style="font-size: 0.9rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; text-align: center; margin-bottom: 2px;">Readiness</span>
+                                <div style="display: flex; justify-content: center; align-items: center; margin: 8px 0;">
+                                    <svg viewBox="0 0 36 36" style="width: 65px; height: 65px;">
+                                      <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#1c1f26" stroke-width="3" />
+                                      <path stroke="{color}" stroke-dasharray="{valor}, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke-width="3" stroke-linecap="round" />
+                                      <text x="18" y="22.5" fill="{color}" font-size="12" font-weight="900" text-anchor="middle">{valor:.0f}</text>
                                     </svg>
                                 </div>
                                 <div style="text-align: center;">{tendencia_html}</div>
@@ -1261,18 +1261,18 @@ with tab_ses:
                         def html_card_basic(color, title, v1, l1, t1, v2, l2, t2):
                             return f"""
                             <div style="background: #111318; border: 1px solid #1c1f26; border-top: 3px solid {color}; border-radius: 8px; padding: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); display: flex; flex-direction: column; justify-content: center; height: 100%; min-height: 110px;">
-                                <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; text-align: center; margin-bottom: 8px;">{title}</span>
+                                <span style="font-size: 0.9rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; text-align: center; margin-bottom: 10px;">{title}</span>
                                 <div style="display: flex; justify-content: space-around; align-items: center; flex: 1;">
                                     <div style="text-align: center;">
-                                        <span style="font-size: 1.3rem; font-weight: 900; color: #f8fafc;">{v1}</span><br>
-                                        <span style="font-size: 0.65rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;">{l1}</span><br>
-                                        {t1}
+                                        <span style="font-size: 1.6rem; font-weight: 900; color: #f8fafc;">{v1}</span><br>
+                                        <span style="font-size: 0.8rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;">{l1}</span><br>
+                                        <div style="margin-top: 4px;">{t1}</div>
                                     </div>
-                                    <div style="width: 1px; height: 30px; background: #1c1f26;"></div>
+                                    <div style="width: 1px; height: 40px; background: #1c1f26;"></div>
                                     <div style="text-align: center;">
-                                        <span style="font-size: 1.3rem; font-weight: 900; color: #f8fafc;">{v2}</span><br>
-                                        <span style="font-size: 0.65rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;">{l2}</span><br>
-                                        {t2}
+                                        <span style="font-size: 1.6rem; font-weight: 900; color: #f8fafc;">{v2}</span><br>
+                                        <span style="font-size: 0.8rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;">{l2}</span><br>
+                                        <div style="margin-top: 4px;">{t2}</div>
                                     </div>
                                 </div>
                             </div>
@@ -1280,22 +1280,22 @@ with tab_ses:
 
                         def html_card_triple(color, title, v1, l1, p1, v2, l2, p2, v3, l3, p3):
                             return f"""
-                            <div style="background: #111318; border: 1px solid #1c1f26; border-top: 3px solid {color}; border-radius: 8px; padding: 8px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); display: flex; flex-direction: column; justify-content: center; margin-bottom: 8px;">
-                                <span style="font-size: 0.7rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; margin-bottom: 4px;">{title}</span>
+                            <div style="background: #111318; border: 1px solid #1c1f26; border-top: 3px solid {color}; border-radius: 8px; padding: 10px 14px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); display: flex; flex-direction: column; justify-content: center; margin-bottom: 8px; min-height: 85px;">
+                                <span style="font-size: 0.85rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; margin-bottom: 6px;">{title}</span>
                                 <div style="display: flex; justify-content: space-between; align-items: center;">
                                     <div style='flex: 1; text-align: left;'>
-                                        <span style='font-size: 1.15rem; font-weight: 800; color: #f8fafc;'>{v1} <span style='font-size:0.6em; color:#94a3b8;'>({p1:.0f}%)</span></span><br>
-                                        <span style='font-size: 0.65rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;'>{l1}</span>
+                                        <span style='font-size: 1.4rem; font-weight: 800; color: #f8fafc;'>{v1} <span style='font-size:0.75em; color:#94a3b8;'>({p1:.0f}%)</span></span><br>
+                                        <span style='font-size: 0.8rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;'>{l1}</span>
                                     </div>
-                                    <div style='width: 1px; height: 25px; background: #1c1f26; margin: 0 8px;'></div>
+                                    <div style='width: 1px; height: 35px; background: #1c1f26; margin: 0 10px;'></div>
                                     <div style='flex: 1; text-align: center;'>
-                                        <span style='font-size: 1.15rem; font-weight: 800; color: #f8fafc;'>{v2} <span style='font-size:0.6em; color:#94a3b8;'>({p2:.0f}%)</span></span><br>
-                                        <span style='font-size: 0.65rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;'>{l2}</span>
+                                        <span style='font-size: 1.4rem; font-weight: 800; color: #f8fafc;'>{v2} <span style='font-size:0.75em; color:#94a3b8;'>({p2:.0f}%)</span></span><br>
+                                        <span style='font-size: 0.8rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;'>{l2}</span>
                                     </div>
-                                    <div style='width: 1px; height: 25px; background: #1c1f26; margin: 0 8px;'></div>
+                                    <div style='width: 1px; height: 35px; background: #1c1f26; margin: 0 10px;'></div>
                                     <div style='flex: 1; text-align: right;'>
-                                        <span style='font-size: 1.15rem; font-weight: 800; color: #f8fafc;'>{v3} <span style='font-size:0.6em; color:#94a3b8;'>({p3:.0f}%)</span></span><br>
-                                        <span style='font-size: 0.65rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;'>{l3}</span>
+                                        <span style='font-size: 1.4rem; font-weight: 800; color: #f8fafc;'>{v3} <span style='font-size:0.75em; color:#94a3b8;'>({p3:.0f}%)</span></span><br>
+                                        <span style='font-size: 0.8rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;'>{l3}</span>
                                     </div>
                                 </div>
                             </div>
