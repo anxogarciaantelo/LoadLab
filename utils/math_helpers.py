@@ -402,9 +402,9 @@ def obtener_clima(ciudad, fecha_str):
 
 @st.cache_data(ttl=3600, show_spinner=False)
 def cargar_css_global():
-    """Cachea la lectura del archivo CSS para evitar carga de I/O en cada recarga de página"""
+    """Lee el archivo CSS en tiempo real (Caché eliminada para evitar bloqueos visuales)"""
     try:
-        with open("style.css", "r") as f:
+        with open("style.css", "r", encoding="utf-8") as f:
             return f"<style>{f.read()}</style>"
     except Exception:
         return ""
