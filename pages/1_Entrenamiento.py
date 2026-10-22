@@ -611,20 +611,61 @@ with tab_micro:
                 
                 df_jug_sum = pd.merge(df_jug_sum_int, df_jug_sum_ext, on='JUGADOR', how='left').fillna(0)
                 
+                # --- MÚLTIPLOS DE PARTIDO Y RATIO DCC/ACC ---
+                df_historico_partidos = st.session_state.df_master_informes[(st.session_state.df_master_informes['TIPO_SESION'].str.contains("Partido", na=False)) & (st.session_state.df_master_informes['DIS'] > 0)].copy()
+                medias_indiv_partido = {}
+                if not df_historico_partidos.empty:
+                    df_historico_partidos['MIN_REAL'] = np.where(df_historico_partidos.get('MIN_GPS', df_historico_partidos['MIN']) > 0, df_historico_partidos.get('MIN_GPS', df_historico_partidos['MIN']), df_historico_partidos['MIN'])
+                    df_sum_indiv = df_historico_partidos.groupby('JUGADOR')[['DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC', 'MIN_REAL']].sum()
+                    for j_nom, j_row in df_sum_indiv.iterrows():
+                        m_jug = j_row['MIN_REAL']
+                        if m_jug > 0:
+                            medias_indiv_partido[j_nom] = {
+                                'DIS': (j_row['DIS'] / m_jug) * 90,
+                                'HSR': (j_row['DIS AI'] / m_jug) * 90,
+                                'MEC': ((j_row['ACC'] + j_row['DCC']) / m_jug) * 90
+                            }
+
+                def calc_xmatch(row, metrica_val, metrica_key):
+                    ref = medias_indiv_partido.get(row['JUGADOR'], {}).get(metrica_key, 0)
+                    return (metrica_val / ref) if ref > 0 else 0
+
+                df_jug_sum['xPartido DIS'] = df_jug_sum.apply(lambda r: calc_xmatch(r, r['DIS'], 'DIS'), axis=1)
+                df_jug_sum['xPartido HSR'] = df_jug_sum.apply(lambda r: calc_xmatch(r, r['DIS AI'], 'HSR'), axis=1)
+                df_jug_sum['xPartido MEC'] = df_jug_sum.apply(lambda r: calc_xmatch(r, r['ACC'] + r['DCC'], 'MEC'), axis=1)
+                df_jug_sum['DCC:ACC'] = np.where(df_jug_sum['ACC'] > 0, df_jug_sum['DCC'] / df_jug_sum['ACC'], 0)
+
+                # --- VACUNA DE VELOCIDAD ---
+                df_master_vac = st.session_state.df_master_informes
+                vmax_hist_dict = df_master_vac.groupby('JUGADOR')['VMAX'].max().to_dict() if 'VMAX' in df_master_vac.columns else {}
+                
+                def dias_sin_vmax(jug):
+                    if vmax_hist_dict.get(jug, 0) > 25.0:
+                        df_picos = df_master_vac[(df_master_vac['JUGADOR'] == jug) & (df_master_vac['FECHA'] <= df_filtrado['FECHA'].max()) & (df_master_vac['VMAX'] >= vmax_hist_dict[jug] * 0.9)]
+                        if not df_picos.empty:
+                            ult_fecha = pd.to_datetime(df_picos['FECHA'].max()).date()
+                            fecha_micro = pd.to_datetime(df_filtrado['FECHA'].max()).date()
+                            return (fecha_micro - ult_fecha).days
+                    return 0
+                
+                df_jug_sum['Días >90% VMax'] = df_jug_sum['JUGADOR'].apply(dias_sin_vmax)
+                
                 df_no_ceros = df_filtrado.replace({'TQR': 0, 'WELLNESS': 0, 'RPE': 0}, np.nan)
                 df_jug_mean = df_no_ceros.groupby('JUGADOR')[['TQR', 'WELLNESS', 'RPE']].mean().reset_index().fillna(0)
                 df_indiv = df_jug_sum.merge(df_jug_mean, on='JUGADOR')
                 
                 df_info_extra = df_filtrado[['JUGADOR', 'POS', 'ROL']].drop_duplicates()
                 df_indiv = df_indiv.merge(df_info_extra, on='JUGADOR')
-                cols_ordenadas = ['JUGADOR', 'POS', 'ROL', 'MIN', 'TQR', 'WELLNESS', 'RPE', 'CARGA', 'DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC']
+                cols_ordenadas = ['JUGADOR', 'POS', 'ROL', 'MIN', 'WELLNESS', 'RPE', 'DIS', 'xPartido DIS', 'DIS AI', 'xPartido HSR', 'DCC:ACC', 'xPartido MEC', 'Días >90% VMax']
                 df_indiv = df_indiv[cols_ordenadas]
                 
                 estilo_indiv = (df_indiv.style.format(precision=1)
+                    .format({"xPartido DIS": "{:.1f}x", "xPartido HSR": "{:.1f}x", "xPartido MEC": "{:.1f}x", "DCC:ACC": "{:.2f}"})
                     .background_gradient(subset=['WELLNESS'], cmap='Reds', vmin=5, vmax=35)
-                    .background_gradient(subset=['TQR'], cmap='RdYlGn', vmin=1, vmax=10)
                     .background_gradient(subset=['RPE'], cmap='Reds', vmin=1, vmax=10)
-                    .background_gradient(subset=['MIN', 'CARGA', 'DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC'], cmap='Blues'))
+                    .background_gradient(subset=['MIN', 'DIS', 'DIS AI'], cmap='Blues')
+                    .map(lambda x: "color: #ef4444; font-weight: bold;" if isinstance(x, (int, float)) and x > 1.3 else "", subset=['DCC:ACC'])
+                    .map(lambda x: "background-color: #ef4444; color: white; font-weight: bold;" if isinstance(x, (int, float)) and x > 8 else "", subset=['Días >90% VMax']))
                 
                 st.dataframe(estilo_indiv, use_container_width=True, hide_index=True)
                 
@@ -1585,9 +1626,46 @@ with tab_ses:
                             df_tabla_ce['% DIS (Part)'] = df_tabla_ce.apply(lambda r: calc_pct_match(r, 'DIS'), axis=1)
                             df_tabla_ce['% HSR (Part)'] = df_tabla_ce.apply(lambda r: calc_pct_match(r, 'DIS AI'), axis=1)
                             df_tabla_ce['% ACC (Part)'] = df_tabla_ce.apply(lambda r: calc_pct_match(r, 'ACC'), axis=1)
+                            df_tabla_ce['DCC:ACC'] = np.where(df_tabla_ce['ACC'] > 0, df_tabla_ce['DCC'] / df_tabla_ce['ACC'], 0)
                             
-                            cols_ver_ce = ['JUGADOR', 'POS', 'ESTADO', 'DIS', '% DIS (Part)', 'DIS AI', '% HSR (Part)', 'ACC', '% ACC (Part)', 'DCC', 'VMAX', '% VMAX']
-                            mostrar_tabla_moderna(df_tabla_ce[cols_ver_ce].style.hide(axis="index").format(precision=1))
+                            cols_ver_ce = ['JUGADOR', 'POS', 'ESTADO', 'DIS', '% DIS (Part)', 'DIS AI', '% HSR (Part)', 'ACC', 'DCC', 'DCC:ACC', 'VMAX', '% VMAX']
+                            mostrar_tabla_moderna(df_tabla_ce[cols_ver_ce].style.hide(axis="index").format(precision=1).format({"DCC:ACC": "{:.2f}"}).map(lambda x: "color: #ef4444; font-weight: bold;" if isinstance(x, (int, float)) and x > 1.3 else "", subset=['DCC:ACC']))
+                        
+                        # --- MÓDULO DE CARGA COMPENSATORIA (MD+1) ---
+                        if es_partido:
+                            st.markdown("#### :material/battery_charging_full: Carga Compensatoria Recomendada (MD+1)")
+                            st.caption("Déficit de estímulo de los suplentes respecto a la media física de los titulares (Para programar la sesión compensatoria de mañana).")
+                            
+                            df_titulares = df_informe[(df_informe['ESTADO'] == 'Titular') & (df_informe['DIS'] > 0)]
+                            df_suplentes = df_informe[(df_informe['ESTADO'].isin(['Suplente', 'No convocado'])) & (df_informe['DIS'] >= 0)]
+                            
+                            if not df_titulares.empty and not df_suplentes.empty:
+                                media_tit_dis = df_titulares['DIS'].mean()
+                                media_tit_hsr = df_titulares['DIS AI'].mean()
+                                media_tit_spr = df_titulares['Nº SPR'].mean()
+                                media_tit_mec = df_titulares['ACC'].mean() + df_titulares['DCC'].mean()
+                                
+                                comp_data = []
+                                for _, sup in df_suplentes.iterrows():
+                                    def_dis = max(0, media_tit_dis - sup.get('DIS', 0))
+                                    def_hsr = max(0, media_tit_hsr - sup.get('DIS AI', 0))
+                                    def_spr = max(0, media_tit_spr - sup.get('Nº SPR', 0))
+                                    def_mec = max(0, media_tit_mec - (sup.get('ACC', 0) + sup.get('DCC', 0)))
+                                    
+                                    if def_dis > 0:
+                                        comp_data.append({
+                                            "JUGADOR": sup['JUGADOR'],
+                                            "Déficit Volumen (km)": def_dis,
+                                            "Déficit HSR (>21 km/h)": def_hsr,
+                                            "Déficit Sprints (>24)": def_spr,
+                                            "Déficit Tensión (ACC+DCC)": def_mec
+                                        })
+                                        
+                                if comp_data:
+                                    df_comp = pd.DataFrame(comp_data)
+                                    mostrar_tabla_moderna(df_comp.style.hide(axis="index").format(precision=1))
+                                else:
+                                    st.success("Todos los suplentes igualaron la carga media de los titulares.")
                         
                         st.markdown("---")
                         pdf_key = f"pdf_sesion_listo_{idx_real}"
