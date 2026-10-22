@@ -425,35 +425,40 @@ def aplicar_color_sidebar():
             pointer-events: none !important; /* No bloquea los clics en la app */
         }
         
-        /* 2. Forzamos la aparición de la flecha con prioridad máxima y la hacemos clickable */
-        html body div[class^="stApp"] header[data-testid="stHeader"] [data-testid="collapsedControl"] {
+        /* 2. Forzamos la aparición de la flecha desvinculándola del header */
+        [data-testid="collapsedControl"], 
+        [data-testid="stSidebarCollapsedControl"] {
             display: flex !important;
             visibility: visible !important;
             opacity: 1 !important;
-            pointer-events: auto !important; /* Reactivamos el clic solo para la flecha */
+            pointer-events: auto !important;
             z-index: 999999 !important;
+            position: fixed !important;
+            top: 15px !important;
+            left: 15px !important;
             background-color: #0b0e14 !important;
             color: #C5A059 !important;
             border: 1px solid rgba(197, 160, 89, 0.5) !important;
             border-radius: 50% !important;
-            margin-top: 15px !important;
-            margin-left: 15px !important;
             padding: 4px !important;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.8), 0 0 10px rgba(197, 160, 89, 0.3) !important;
             transition: all 0.3s ease !important;
         }
         
-        html body div[class^="stApp"] header[data-testid="stHeader"] [data-testid="collapsedControl"] svg {
+        [data-testid="collapsedControl"] svg,
+        [data-testid="stSidebarCollapsedControl"] svg {
             fill: #C5A059 !important;
             color: #C5A059 !important;
         }
-
-        html body div[class^="stApp"] header[data-testid="stHeader"] [data-testid="collapsedControl"]:hover {
+        
+        [data-testid="collapsedControl"]:hover,
+        [data-testid="stSidebarCollapsedControl"]:hover {
             background-color: #C5A059 !important;
             transform: scale(1.1) !important;
         }
         
-        html body div[class^="stApp"] header[data-testid="stHeader"] [data-testid="collapsedControl"]:hover svg {
+        [data-testid="collapsedControl"]:hover svg,
+        [data-testid="stSidebarCollapsedControl"]:hover svg {
             fill: #0b0e14 !important;
             color: #0b0e14 !important;
         }
