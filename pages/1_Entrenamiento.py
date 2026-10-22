@@ -1836,7 +1836,12 @@ with tab_ses:
                                     jugadores_cumplidos = []
                                     for _, sup in suplentes_partido.iterrows():
                                         jug = sup['JUGADOR']
-                                        pos_e = dict_pos_esp.get(limpiar_nombre(jug), 'DEF')
+                                        pos_g = sup.get('POS', 'DEF')
+                                        pos_e = dict_pos_esp.get(limpiar_nombre(jug), pos_g)
+                                        
+                                        # EXCLUSIÓN ESTRICTA DE PORTEROS
+                                        if pos_g == 'POR' or pos_e == 'Portero':
+                                            continue
                                         
                                         densidad_obj = titulares_densidad.get(pos_e, fallback_densidad)
                                         entreno_obj = titulares_entreno.get(pos_e, fallback_entreno)
@@ -1899,7 +1904,8 @@ with tab_ses:
                                                     "Déficit Sprints (>24)": deficit['Nº SPR'], "Déficit Tensión (ACC+DCC)": deficit['ACC'] + deficit['DCC']
                                                 })
                                         else:
-                                            jugadores_cumplidos.append(jug)
+                                            if jug not in jugadores_cumplidos:
+                                                jugadores_cumplidos.append(jug)
 
                                     if comp_data:
                                         if es_partido:
@@ -1915,14 +1921,18 @@ with tab_ses:
                                                 min_comp_i = (c['Hoy_HSR'] / c['Den_Obj_HSR']) if c['Den_Obj_HSR'] > 0 else 0
                                                 min_comp_m = (c['Hoy_MEC'] / c['Den_Obj_MEC']) if c.get('Den_Obj_MEC', 0) > 0 else 0
                                                 
-                                                # Integración a 3 vías: Volumen (DIS) + Metabólico (HSR) + Neuromuscular (MEC)
                                                 min_comp_real = (min_comp_v + min_comp_i + min_comp_m) / 3
+                                                
+                                                # Material Icon en lugar de emoji para el Target 90'
+                                                target_90_html = ""
+                                                if c.get("Target_Base", 60) == 90:
+                                                    target_90_html = "<span style='color: #f59e0b; margin-left: 5px;' title='Target 90 minutos por desentrenamiento'><span class='material-symbols-rounded' style='vertical-align: text-bottom; font-size: 1.1rem;'>warning</span> Target 90'</span>"
 
                                                 st.markdown(f"""
                                                 <div style="background: #111318; border: 1px solid #1c1f26; border-left: 4px solid #C5A059; padding: 12px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
                                                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                                                         <strong style="color: #f8fafc; font-size: 1.1rem;">{c['JUGADOR']} <span style="font-size: 0.8rem; color: #94a3b8;">({c['POS']})</span></strong>
-                                                       <span style="color: #10b981; font-weight: 800; font-size: 0.9rem;">Eq. Partido: ~{min_comp_real:.0f} / {c['Min_Obj_Real']:.0f} min { " (⚠️ Target 90')" if c.get("Target_Base", 60) == 90 else "" }</span>
+                                                        <span style="color: #10b981; font-weight: 800; font-size: 0.9rem;">Eq. Partido: ~{min_comp_real:.0f} / {c['Min_Obj_Real']:.0f} min {target_90_html}</span>
                                                     </div>
                                                     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
                                                         <div>
@@ -1958,9 +1968,8 @@ with tab_ses:
                                                     </div>
                                                 </div>
                                                 """, unsafe_allow_html=True)
-                                    if jugadores_cumplidos:
-                                        st.success(f"✅ **Carga semanal cumplida:** {', '.join(jugadores_cumplidos)} ya han igualado o superado el objetivo de su posición durante la semana (no requieren compensación extra).")
-
+                                                
+                                    # ALINEACIÓN CORRECTA: FUERA DEL BUCLE "for c in comp_data", y SIN REPETICIONES
                                     if jugadores_cumplidos:
                                         st.success(f"✅ **Carga semanal cumplida:** {', '.join(jugadores_cumplidos)} ya han igualado o superado el objetivo de su posición durante la semana (no requieren compensación extra).")
                             else:
