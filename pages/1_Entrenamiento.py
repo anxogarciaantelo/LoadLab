@@ -979,7 +979,10 @@ with tab_ses:
 
                     if not df_informe.empty:
                         # --- 1. CÁLCULO DE % V. MÁX HISTÓRICA ---
-                        df_master_hist = st.session_state.df_master_informes[st.session_state.df_master_informes['FECHA'] <= sesion["fecha"]]
+                        df_master_hist = st.session_state.df_master_informes[st.session_state.df_master_informes['FECHA'] <= sesion["fecha"]].copy()
+                        if 'GPS_VIRTUAL' in df_master_hist.columns:
+                            df_master_hist = df_master_hist[df_master_hist['GPS_VIRTUAL'] != True]
+                            
                         vmax_historica = df_master_hist.groupby('JUGADOR')['VMAX'].max().to_dict()
                         df_informe['VMAX_HIST'] = df_informe['JUGADOR'].map(lambda j: vmax_historica.get(j, 0.0))
                         df_informe['% VMAX'] = np.where(df_informe['VMAX_HIST'] > 0, (df_informe['VMAX'] / df_informe['VMAX_HIST']) * 100, 0.0)
