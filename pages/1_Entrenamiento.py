@@ -1631,13 +1631,29 @@ with tab_ses:
                             cols_ver_ce = ['JUGADOR', 'POS', 'ESTADO', 'DIS', '% DIS (Part)', 'DIS AI', '% HSR (Part)', 'ACC', 'DCC', 'DCC:ACC', 'VMAX', '% VMAX']
                             mostrar_tabla_moderna(df_tabla_ce[cols_ver_ce].style.hide(axis="index").format(precision=1).format({"DCC:ACC": "{:.2f}"}).map(lambda x: "color: #ef4444; font-weight: bold;" if isinstance(x, (int, float)) and x > 1.3 else "", subset=['DCC:ACC']))
                         
-                        # --- MÓDULO DE CARGA COMPENSATORIA (MD+1) ---
-                        if es_partido:
-                            st.markdown("#### :material/battery_charging_full: Carga Compensatoria Recomendada (MD+1)")
-                            st.caption("Déficit de estímulo de los suplentes respecto a la media física de los titulares (Para programar la sesión compensatoria de mañana).")
+                        # --- MÓDULO DE CARGA COMPENSATORIA (MD+1 / MD+2) ---
+                        es_compensatoria = not es_partido and sesion.get('descripcion') in ['MD+1', 'MD+2']
+                        
+                        if es_partido or es_compensatoria:
+                            st.markdown("#### :material/battery_charging_full: Carga Compensatoria Recomendada")
+                            st.caption("Déficit de estímulo de los suplentes respecto a la media física de los titulares del último partido.")
                             
-                            df_titulares = df_informe[(df_informe['ESTADO'] == 'Titular') & (df_informe['DIS'] > 0)]
-                            df_suplentes = df_informe[(df_informe['ESTADO'].isin(['Suplente', 'No convocado'])) & (df_informe['DIS'] >= 0)]
+                            if es_partido:
+                                df_titulares = df_informe[(df_informe['ESTADO'] == 'Titular') & (df_informe['DIS'] > 0)]
+                                df_suplentes = df_informe[(df_informe['ESTADO'].isin(['Suplente', 'No convocado'])) & (df_informe['DIS'] >= 0)]
+                            else:
+                                # Buscar retrospectivamente el último partido para extraer el status real de la convocatoria
+                                df_hist_partidos = st.session_state.df_master_informes[
+                                    (st.session_state.df_master_informes['TIPO_SESION'].str.contains("Partido", na=False)) &
+                                    (st.session_state.df_master_informes['FECHA'] <= sesion['fecha'])
+                                ]
+                                if not df_hist_partidos.empty:
+                                    ult_fecha_partido = df_hist_partidos['FECHA'].max()
+                                    df_ult_partido = df_hist_partidos[df_hist_partidos['FECHA'] == ult_fecha_partido]
+                                    df_titulares = df_ult_partido[(df_ult_partido['ESTADO'] == 'Titular') & (df_ult_partido['DIS'] > 0)]
+                                    df_suplentes = df_ult_partido[(df_ult_partido['ESTADO'].isin(['Suplente', 'No convocado'])) & (df_ult_partido['DIS'] >= 0)]
+                                else:
+                                    df_titulares, df_suplentes = pd.DataFrame(), pd.DataFrame()
                             
                             if not df_titulares.empty and not df_suplentes.empty:
                                 media_tit_dis = df_titulares['DIS'].mean()
@@ -1666,6 +1682,8 @@ with tab_ses:
                                     mostrar_tabla_moderna(df_comp.style.hide(axis="index").format(precision=1))
                                 else:
                                     st.success("Todos los suplentes igualaron la carga media de los titulares.")
+                            elif es_compensatoria:
+                                st.info("No hay registros de un partido previo para calcular el déficit compensatorio.")
                         
                         st.markdown("---")
                         pdf_key = f"pdf_sesion_listo_{idx_real}"
