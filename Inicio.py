@@ -602,12 +602,25 @@ if st.session_state.get("equipo_seleccionado", False):
         if not df_7d.empty:
             hsr_dict = df_7d.groupby('JUGADOR')['DIS AI'].sum().to_dict()
             
-        # Vacuna de Velocidad: Última exposición a >= 90% Vmax
+        # Vacuna de Velocidad: Última exposición a >= 90% Vmax (SOLO GPS REAL)
         if 'VMAX' in df_master.columns:
-            vmax_hist_dict = df_master.groupby('JUGADOR')['VMAX'].max().to_dict()
-            df_master['es_pico'] = df_master.apply(lambda r: r['VMAX'] >= (vmax_hist_dict.get(r['JUGADOR'], 0) * 0.9) if vmax_hist_dict.get(r['JUGADOR'], 0) > 25.0 else False, axis=1)
-            df_picos = df_master[df_master['es_pico'] & (df_master['FECHA'] <= hoy_str)]
-            ult_sprint_dict = df_picos.groupby('JUGADOR')['FECHA'].max().to_dict()
+            # Excluimos los datos imputados virtualmente para que la VMAX sea 100% real
+            df_real_gps = df_master[df_master.get('GPS_VIRTUAL', False) != True].copy()
+            if not df_real_gps.empty:
+                vmax_hist_dict = df_real_gps.groupby('JUGADOR')['VMAX'].max().to_dict()
+                df_real_gps['es_pico'] = df_real_gps.apply(lambda r: r['VMAX'] >= (vmax_hist_dict.get(r['JUGADOR'], 0) * 0.9) if vmax_hist_dict.get(r['JUGADOR'], 0) > 25.0 else False, axis=1)
+                df_picos = df_real_gps[df_real_gps['es_pico'] & (df_real_gps['FECHA'] <= hoy_str)]
+                ult_sprint_dict = df_picos.groupby('JUGADOR')['FECHA'].max().to_dict()
+
+    # --- RESET DE LESIONES PARA EL CONTADOR VMAX ---
+    # Extraemos la fecha de la ÚLTIMA alta médica de cada jugador para resetear la cuenta
+    altas_medicas_dict = {}
+    for l in st.session_state.lesiones:
+        if l.get("estado") == "Recuperado" and l.get("dias_baja"):
+            fecha_alta = datetime.strptime(l["id_sesion"], "%Y-%m-%d").date() + timedelta(days=int(l["dias_baja"]))
+            jug_alta = l["jugador"]
+            if jug_alta not in altas_medicas_dict or fecha_alta > altas_medicas_dict[jug_alta]:
+                altas_medicas_dict[jug_alta] = fecha_alta
 
     for jug, vals in ewma_hoy.items():
         if jug in [b["jug"] for b in bajas_medicas]: continue
@@ -636,8 +649,16 @@ if st.session_state.get("equipo_seleccionado", False):
         # Vacuna de Velocidad (Malone et al. 2017)
         if vmax_hist_dict.get(jug, 0) > 25.0:
             ult_fecha_str = ult_sprint_dict.get(jug)
-            if ult_fecha_str:
-                dias_sin_sprint = (hoy_dt - datetime.strptime(ult_fecha_str, "%Y-%m-%d").date()).days
+            fecha_base_conteo = datetime.strptime(ult_fecha_str, "%Y-%m-%d").date() if ult_fecha_str else None
+            
+            # Ajuste de calendario: Si el jugador estuvo lesionado, el contador empieza el día del alta
+            alta_dt = altas_medicas_dict.get(jug)
+            if alta_dt:
+                if not fecha_base_conteo or alta_dt > fecha_base_conteo:
+                    fecha_base_conteo = alta_dt
+                    
+            if fecha_base_conteo:
+                dias_sin_sprint = (hoy_dt - fecha_base_conteo).days
                 if dias_sin_sprint >= 10:
                     alertas_carga.append({"jug": jug, "txt": f"Sin >90% VMax: {dias_sin_sprint}d", "lvl": "rojo"})
                 elif dias_sin_sprint >= 8:
