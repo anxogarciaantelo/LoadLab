@@ -256,3 +256,7 @@ div[data-testid="stExpander"] details {
 div[data-testid="stExpander"] details[open] summary ~ * {
     animation: fadeInSlide 0.3s ease-out forwards;
 }
+/* Ocultar el botón de colapsar dentro del menú lateral */
+[data-testid="stSidebarCollapseButton"] {
+    display: none !important;
+}
