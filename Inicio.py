@@ -565,34 +565,39 @@ if st.session_state.get("equipo_seleccionado", False):
 
     df_master = st.session_state.get("df_master_informes", pd.DataFrame())
     dict_zscore = calcular_zscore_wellness(df_master, hoy_str)
+    dict_zscore_efi = calcular_zscores_eficiencia(df_master, hoy_str)
     
+    # 1. Extraer última sesión válida de CADA JUGADOR para evaluar Readiness y Eficiencia
+    ultimas_sesiones = {}
     sesiones_con_datos = [s for s in st.session_state.sesiones if s.get("informe_generado") and s["fecha"] <= hoy_str]
-    if sesiones_con_datos:
-        ult_sesion = sorted(sesiones_con_datos, key=lambda x: x["fecha"])[-1]
-        for d in ult_sesion.get("datos_informe", []):
-            jug = d["JUGADOR"]
-            if jug in [b["jug"] for b in bajas_medicas]: continue
-            tqr = safe_float(d.get("TQR", 0))
-            well = safe_float(d.get("WELLNESS", 0))
-            
-            if 0 < tqr <= 3: alertas_readiness.append({"jug": jug, "txt": f"TQR {tqr:.0f}", "lvl": "rojo"})
-            elif tqr == 4: alertas_readiness.append({"jug": jug, "txt": f"TQR {tqr:.0f}", "lvl": "amarillo"})
-            
-            if well > 0:
-                st_j = dict_zscore.get(jug, {'media': 0, 'std': 1.0})
-                if st_j['media'] > 0:
-                    z_score = (well - st_j['media']) / st_j['std']
-                    if z_score >= 1.5: 
-                        alertas_readiness.append({"jug": jug, "txt": f"Fatiga Anormal (Z: +{z_score:.1f})", "lvl": "rojo"})
-                    elif 1.0 <= z_score < 1.5: 
-                        alertas_readiness.append({"jug": jug, "txt": f"Alerta Fatiga (Z: +{z_score:.1f})", "lvl": "amarillo"})
-                else:
-                    # Fallback de seguridad para jugadores sin histórico previo
-                    if well >= 24: alertas_readiness.append({"jug": jug, "txt": f"Fatiga {well:.0f}", "lvl": "rojo"})
-                    elif 18 <= well < 24: alertas_readiness.append({"jug": jug, "txt": f"Fatiga {well:.0f}", "lvl": "amarillo"})
+    for s in sesiones_con_datos:
+        for d in s.get("datos_informe", []):
+            ultimas_sesiones[limpiar_nombre(d["JUGADOR"])] = {"fecha": s["fecha"], "datos": d}
 
+    for jug_limpio, info_ult in ultimas_sesiones.items():
+        jug = info_ult["datos"]["JUGADOR"]
+        if jug in [b["jug"] for b in bajas_medicas]: continue
+        
+        d = info_ult["datos"]
+        tqr, well = safe_float(d.get("TQR", 0)), safe_float(d.get("WELLNESS", 0))
+        w_dolor, w_fatiga = safe_float(d.get('W_Dolor', 0)), safe_float(d.get('W_Fatiga', 0))
+        
+        # --- A. ALERTAS DE READINESS Y DAÑO TISULAR ---
+        st_j = dict_zscore.get(jug, {'media': 0, 'std': 1.0, 'dolor_media': 0, 'dolor_std': 0.5, 'fatiga_media': 0, 'fatiga_std': 0.5})
+        z_well = (well - st_j['media']) / st_j['std'] if st_j['std'] > 0 else 0
+        z_dolor = (w_dolor - st_j['dolor_media']) / st_j['dolor_std'] if st_j['dolor_std'] > 0 else 0
+        z_fatiga = (w_fatiga - st_j['fatiga_media']) / st_j['fatiga_std'] if st_j['fatiga_std'] > 0 else 0
+
+        if w_dolor > 0 and z_dolor >= 1.5: alertas_readiness.append({"jug": jug, "txt": f"Daño Muscular (Z: +{z_dolor:.1f})", "lvl": "rojo"})
+        elif w_dolor > 0 and z_dolor >= 1.0: alertas_readiness.append({"jug": jug, "txt": f"Sobrecarga Tisular (Z: +{z_dolor:.1f})", "lvl": "amarillo"})
+        
+        if tqr > 0 and well > 0:
+            if tqr <= 3 and z_well >= 1.0: alertas_readiness.append({"jug": jug, "txt": f"Fatiga Sistémica (Z: +{z_well:.1f})", "lvl": "rojo"})
+            elif tqr <= 4 and z_fatiga >= 1.5: alertas_readiness.append({"jug": jug, "txt": f"Fatiga Muscular (Z: +{z_fatiga:.1f})", "lvl": "rojo"})
+            elif (tqr <= 4 and z_well < 1.0) or (tqr > 4 and z_well >= 1.5): alertas_readiness.append({"jug": jug, "txt": "Discordancia TQR/Wellness", "lvl": "amarillo"})
+
+    # --- B. ALERTAS DE CARGA Y EFICIENCIA METABÓLICA ---
     ewma_hoy = calcular_ewma_historico(st.session_state.sesiones, hoy_str)
-    df_master = st.session_state.get("df_master_informes", pd.DataFrame())
     hsr_dict = {}
     vmax_hist_dict = {}
     ult_sprint_dict = {}
@@ -604,7 +609,6 @@ if st.session_state.get("equipo_seleccionado", False):
             
         # Vacuna de Velocidad: Última exposición a >= 90% Vmax (SOLO GPS REAL)
         if 'VMAX' in df_master.columns:
-            # Excluimos los datos imputados virtualmente para que la VMAX sea 100% real
             df_real_gps = df_master[df_master.get('GPS_VIRTUAL', False) != True].copy()
             if not df_real_gps.empty:
                 vmax_hist_dict = df_real_gps.groupby('JUGADOR')['VMAX'].max().to_dict()
@@ -612,8 +616,6 @@ if st.session_state.get("equipo_seleccionado", False):
                 df_picos = df_real_gps[df_real_gps['es_pico'] & (df_real_gps['FECHA'] <= hoy_str)]
                 ult_sprint_dict = df_picos.groupby('JUGADOR')['FECHA'].max().to_dict()
 
-    # --- RESET DE LESIONES PARA EL CONTADOR VMAX ---
-    # Extraemos la fecha de la ÚLTIMA alta médica de cada jugador para resetear la cuenta
     altas_medicas_dict = {}
     for l in st.session_state.lesiones:
         if l.get("estado") == "Recuperado" and l.get("dias_baja"):
@@ -625,33 +627,53 @@ if st.session_state.get("equipo_seleccionado", False):
     for jug, vals in ewma_hoy.items():
         if jug in [b["jug"] for b in bajas_medicas]: continue
         
-        ratio_int = vals.get("RATIO A/C", 0)
+        ratio_int = vals.get("RATIO A/C", 1.0)
         aguda_int = vals.get("EWMA AGUDA", 0)
-        ratio_hsr = vals.get("RATIO A/C HSR", 0)
-        aguda_hsr = vals.get("EWMA AGUDA HSR", 0)
-        ratio_acc = vals.get("RATIO A/C ACC", 0)
+        ratio_hsr = vals.get("RATIO A/C HSR", 1.0)
+        ratio_acc = vals.get("RATIO A/C ACC", 1.0)
         
-        # Riesgo Interno
-        if aguda_int > 800:
-            if ratio_int >= 1.5: alertas_carga.append({"jug": jug, "txt": f"A/C Carga: {ratio_int:.2f}", "lvl": "rojo"})
-            elif 1.35 <= ratio_int < 1.5: alertas_carga.append({"jug": jug, "txt": f"A/C Carga: {ratio_int:.2f}", "lvl": "amarillo"})
-            elif ratio_int < 0.8: alertas_carga.append({"jug": jug, "txt": f"A/C Carga: {ratio_int:.2f}", "lvl": "amarillo"})
+        # 1. Picos de Carga y Desentrenamiento
+        if aguda_int > 1500:
+            if ratio_int >= 1.5: alertas_carga.append({"jug": jug, "txt": f"Spike Carga: {ratio_int:.2f}", "lvl": "rojo"})
+            elif ratio_int <= 0.8: alertas_carga.append({"jug": jug, "txt": f"Desentrenamiento: A/C {ratio_int:.2f}", "lvl": "amarillo"})
             
-        # Riesgo Mecánico Tisular (Isquiosural)
-        if aguda_hsr > 400:
-            if ratio_hsr >= 1.5: alertas_carga.append({"jug": jug, "txt": f"A/C HSR: {ratio_hsr:.2f}", "lvl": "rojo"})
-            elif 1.35 <= ratio_hsr < 1.5: alertas_carga.append({"jug": jug, "txt": f"A/C HSR: {ratio_hsr:.2f}", "lvl": "amarillo"})
-            
-        # Riesgo Mecánico Periférico (Articular/Cadera)
-        if ratio_acc >= 1.5:
-             alertas_carga.append({"jug": jug, "txt": f"A/C ACC: {ratio_acc:.2f}", "lvl": "rojo"})
+        if ratio_hsr >= 1.5: alertas_carga.append({"jug": jug, "txt": f"Spike HSR: {ratio_hsr:.2f}", "lvl": "rojo"})
+        if ratio_acc >= 1.5: alertas_carga.append({"jug": jug, "txt": f"Spike Tensión: {ratio_acc:.2f}", "lvl": "rojo"})
 
-        # Vacuna de Velocidad (Malone et al. 2017)
+        # 2. Eficiencia Metabólica y Neuromuscular (Cruzado con la última sesión)
+        jug_l = limpiar_nombre(jug)
+        if jug_l in ultimas_sesiones:
+            d_ult = ultimas_sesiones[jug_l]["datos"]
+            min_ses = safe_float(d_ult.get('MIN', 0))
+            dis_ses = safe_float(d_ult.get('DIS', 0))
+            rpe_ses = safe_float(d_ult.get('RPE', 0))
+            
+            if min_ses > 0 and dis_ses > 0 and rpe_ses > 0:
+                m_min_actual = (dis_ses * 1000) / min_ses
+                mec_actual = safe_float(d_ult.get('ACC', 0)) + safe_float(d_ult.get('DCC', 0)) + safe_float(d_ult.get('Nº SPR', 0))
+                
+                efi_cardio = rpe_ses / m_min_actual if m_min_actual > 0 else 0
+                efi_neuro = rpe_ses / mec_actual if mec_actual > 0 else 0
+                
+                st_efi = dict_zscore_efi.get(jug, {'cardio_mean': 0, 'cardio_std': 0.05, 'neuro_mean': 0, 'neuro_std': 0.05})
+                if st_efi['cardio_mean'] > 0 and st_efi['neuro_mean'] > 0:
+                    z_cardio = (efi_cardio - st_efi['cardio_mean']) / st_efi['cardio_std']
+                    z_neuro = (efi_neuro - st_efi['neuro_mean']) / st_efi['neuro_std']
+                    
+                    if z_cardio >= 1.5 and z_neuro >= 1.5: alertas_carga.append({"jug": jug, "txt": f"Fatiga Integral (Coste Cardio Z:+{z_cardio:.1f}, Neuro Z:+{z_neuro:.1f})", "lvl": "rojo"})
+                    elif z_cardio >= 1.5: alertas_carga.append({"jug": jug, "txt": f"Coste Cardio Z:+{z_cardio:.1f}", "lvl": "amarillo"})
+                    elif z_neuro >= 1.5: alertas_carga.append({"jug": jug, "txt": f"Coste Neuro Z:+{z_neuro:.1f}", "lvl": "amarillo"})
+
+        # 3. Riesgo de Burnout (Monotonía y Strain 7 días)
+        monot, strain = calcular_monotonia_7d(st.session_state.sesiones, jug, hoy_str, devolver_strain=True)
+        if monot > 2.0 and strain > 4000:
+            alertas_carga.append({"jug": jug, "txt": f"Riesgo Burnout (Monotonía {monot:.1f})", "lvl": "rojo"})
+
+        # 4. Vacuna de Velocidad
         if vmax_hist_dict.get(jug, 0) > 25.0:
             ult_fecha_str = ult_sprint_dict.get(jug)
             fecha_base_conteo = datetime.strptime(ult_fecha_str, "%Y-%m-%d").date() if ult_fecha_str else None
             
-            # Ajuste de calendario: Si el jugador estuvo lesionado, el contador empieza el día del alta
             alta_dt = altas_medicas_dict.get(jug)
             if alta_dt:
                 if not fecha_base_conteo or alta_dt > fecha_base_conteo:
