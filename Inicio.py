@@ -305,7 +305,8 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
         background-image: radial-gradient(1.5px 1.5px at 20px 30px, #C5A059, rgba(0,0,0,0)), radial-gradient(1.5px 1.5px at 40px 70px, #E2E8F0, rgba(0,0,0,0)), radial-gradient(2px 2px at 90px 40px, #C5A059, rgba(0,0,0,0));
         background-size: 250px 250px; animation: particleDrift 70s linear infinite; pointer-events: none; z-index: 0; opacity: 0.35;
     }
-    header[data-testid="stHeader"] { display: none !important; }
+    header[data-testid="stHeader"] { background: transparent !important; }
+    [data-testid="stToolbar"] { display: none !important; }
     
     /* Botones de acceder a los equipos */
     div[data-testid="column"] button {
