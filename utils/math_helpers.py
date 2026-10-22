@@ -412,6 +412,34 @@ def aplicar_color_sidebar():
     """Inyecta el color dinámico, la tipografía, el CSS global, el escudo y los botones de sesión en orden estricto."""
     css_dinamico = """
     <style>
+        /* --- RESCATE DEFINITIVO DE LA FLECHA DEL MENÚ --- */
+        /* Al usar 'html body' ganamos la máxima prioridad CSS sobre el resto de archivos */
+        html body header[data-testid="stHeader"] {
+            display: block !important;
+            background: transparent !important;
+            height: 0px !important; /* Evita que empuje la interfaz hacia abajo */
+        }
+        html body [data-testid="collapsedControl"] {
+            display: flex !important;
+            visibility: visible !important;
+            z-index: 999999 !important;
+            color: #C5A059 !important;
+            background-color: rgba(11, 14, 20, 0.8) !important;
+            border-radius: 50% !important;
+            margin: 10px 0 0 10px !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.5) !important;
+            transition: all 0.3s ease !important;
+        }
+        html body [data-testid="collapsedControl"]:hover {
+            background-color: #C5A059 !important;
+            color: #111318 !important;
+        }
+        /* Ocultamos opciones nativas innecesarias de Streamlit (Deploy, GitHub) */
+        html body [data-testid="stToolbar"], 
+        html body .stAppDeployButton {
+            display: none !important;
+        }
+
         /* 1. Ajustes del contenedor del menú lateral para tu navegación custom */
         [data-testid="stSidebar"] {
             background-color: #0b0e14 !important;
