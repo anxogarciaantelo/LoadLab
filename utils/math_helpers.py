@@ -623,25 +623,49 @@ def render_kpi_elite(titulo, valor, subtitulo="", icono="", color_borde="#C5A059
     st.markdown(html, unsafe_allow_html=True)
 def calcular_zscore_wellness(df_master, fecha_objetivo):
     """
-    Calcula la media y desviación estándar histórica intra-sujeto para el Wellness.
+    Calcula la media y desviación estándar histórica intra-sujeto para Wellness, Dolor y Fatiga.
+    Utiliza una ventana móvil de 28 días según literatura científica de élite.
     Excluye la fecha objetivo para evitar que el valor actual contamine su propio baseline.
     """
+    import pandas as pd
+    import numpy as np
+
     if df_master.empty or 'WELLNESS' not in df_master.columns:
         return {}
         
-    df_hist = df_master[df_master['FECHA'] < fecha_objetivo].copy()
+    fecha_obj = pd.to_datetime(fecha_objetivo)
+    fecha_inicio = fecha_obj - pd.Timedelta(days=28)
+    
+    df_hist = df_master[(pd.to_datetime(df_master['FECHA']) >= fecha_inicio) & (pd.to_datetime(df_master['FECHA']) < fecha_obj)].copy()
     if df_hist.empty:
         return {}
         
-    df_hist['WELLNESS'] = df_hist['WELLNESS'].replace(0, np.nan)
-    stats = df_hist.groupby('JUGADOR')['WELLNESS'].agg(['mean', 'std']).fillna(0)
+    for col in ['WELLNESS', 'W_Dolor', 'W_Fatiga']:
+        if col in df_hist.columns:
+            df_hist[col] = df_hist[col].replace(0, np.nan)
+        else:
+            df_hist[col] = np.nan
+            
+    stats_well = df_hist.groupby('JUGADOR')['WELLNESS'].agg(['mean', 'std']).fillna(0)
+    stats_dolor = df_hist.groupby('JUGADOR')['W_Dolor'].agg(['mean', 'std']).fillna(0)
+    stats_fatiga = df_hist.groupby('JUGADOR')['W_Fatiga'].agg(['mean', 'std']).fillna(0)
     
     res = {}
-    for jug, row in stats.iterrows():
-        media = row['mean']
-        # Se establece una desviación mínima de 1.0 para evitar división por cero en varianzas nulas
-        std = row['std'] if row['std'] > 0 else 1.0 
-        res[jug] = {'media': media, 'std': std}
+    for jug in df_hist['JUGADOR'].unique():
+        m_w = stats_well.loc[jug, 'mean'] if jug in stats_well.index else 0
+        s_w = stats_well.loc[jug, 'std'] if jug in stats_well.index and stats_well.loc[jug, 'std'] > 0 else 1.0
+        
+        m_d = stats_dolor.loc[jug, 'mean'] if jug in stats_dolor.index else 0
+        s_d = stats_dolor.loc[jug, 'std'] if jug in stats_dolor.index and stats_dolor.loc[jug, 'std'] > 0 else 0.5
+        
+        m_f = stats_fatiga.loc[jug, 'mean'] if jug in stats_fatiga.index else 0
+        s_f = stats_fatiga.loc[jug, 'std'] if jug in stats_fatiga.index and stats_fatiga.loc[jug, 'std'] > 0 else 0.5
+        
+        res[jug] = {
+            'media': m_w, 'std': s_w,
+            'dolor_media': m_d, 'dolor_std': s_d,
+            'fatiga_media': m_f, 'fatiga_std': s_f
+        }
         
     return res
 def calcular_zscores_eficiencia(df_master, fecha_objetivo):
