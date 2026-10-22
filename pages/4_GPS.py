@@ -531,7 +531,7 @@ else:
             if modo_comp == "Absolutas (Totales)":
                 metrics_to_compare = ['MIN', 'DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC', 'DCC:ACC', 'VMAX', '% VMAX']
             else:
-                metrics_to_compare = ['DIS/min', 'DIS AI/min', 'ACC/min', 'DCC/min']
+                metrics_to_compare = ['DIS/min', 'DIS AI/min', 'ACC/min', 'DCC/min', 'DCC:ACC']
 
             mean_t_A = df_A[metrics_to_compare].mean()
             mean_t_B = df_B[metrics_to_compare].mean()
