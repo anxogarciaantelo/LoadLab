@@ -167,6 +167,11 @@ else:
     lista_mds = ["TODOS", "MD-6", "MD-5", "MD-4", "MD-3", "MD-2", "MD-1", "MD+1", "MD+2", "TD"]
 
     def aplicar_filtros_gps(df, target_tipo="Todas", target_md="TODOS", target_nivel="Equipo completo", target_jug="TODOS", target_pos="DEF", target_tiempo="Promedio total", target_sel_micro="TODOS", target_sel_sesion="TODOS", target_pos_esp="Central"):
+        # --- ESCUDO ANTI-DATOS VIRTUALES ---
+        # Aniquila cualquier registro imputado antes de evaluar al jugador
+        if 'GPS_VIRTUAL' in df.columns:
+            df = df[df['GPS_VIRTUAL'] != True]
+            
         res = df.copy()
         
         if target_tiempo == "Promedio de microciclo" and target_sel_micro != "TODOS":
@@ -175,12 +180,11 @@ else:
             res = res[res['Nombre_Sesion'] == target_sel_sesion]
             
         if target_tipo != "Todas":
-            # Ahora busca la coincidencia exacta de la categoría elegida
             res = res[res['TIPO'] == target_tipo]
             if target_tipo == "Entrenamiento" and target_md != "TODOS":
                 res = res[res['MD'] == target_md]
 
-        # --- NUEVA LÓGICA: Filtrar por disponibilidad salvo si es jugador concreto ---
+        # --- Filtrar por disponibilidad salvo si es jugador concreto ---
         if target_nivel == "Por jugador":
             if target_jug != "TODOS": 
                 res = res[res['JUGADOR'] == target_jug]
