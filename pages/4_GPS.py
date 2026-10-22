@@ -403,14 +403,17 @@ else:
                 'Nº SPR': 'mean', 'ACC': 'mean', 'DCC': 'mean', 'VMAX': 'max', '% VMAX': 'max'
             }).reset_index()
             
-            css_dark_table = "<style>.modern-dark-table { width: 100%; border-collapse: collapse; font-family: sans-serif; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4); background-color: #111318; color: #f8fafc; margin-bottom: 20px; } .modern-dark-table thead tr { background-color: #0b0e14; color: #C5A059; } .modern-dark-table th { padding: 12px 15px; font-weight: 800; text-transform: uppercase; font-size: 0.8rem; text-align: center !important; border-bottom: 2px solid #1c1f26; } .modern-dark-table td { padding: 10px 15px; text-align: center !important; border-bottom: 1px solid #1c1f26; font-weight: 700; font-size: 0.95rem; } .modern-dark-table tbody tr:hover td { filter: brightness(1.2); }</style>"
+            df_tabla['DCC:ACC'] = np.where(df_tabla['ACC'] > 0, df_tabla['DCC'] / df_tabla['ACC'], 0)
             
-            cols_tabla = ['JUGADOR', 'POS', 'MIN_GPS', 'DIS', 'm/min', 'DIS AI', 'Nº SPR', 'ACC', 'DCC', 'VMAX', '% VMAX']
+            css_dark_table = "<style>.modern-dark-table { width: 100%; border-collapse: collapse; font-family: sans-serif; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4); background-color: #111318; color: #f8fafc; margin-bottom: 20px; } .modern-dark-table thead tr { background-color: #0b0e14; color: #C5A059; } .modern-dark-table th { padding: 12px 15px; font-weight: 800; text-transform: uppercase; font-size: 0.8rem; text-align: center !important; border-bottom: 2px solid #1c1f26; } .modern-dark-table td { padding: 10px 15px; text-align: center !important; border-bottom: 1px solid #1c1f26; font-weight: 700; font-size: 0.95rem; } .modern-dark-table tbody tr:hover td { filter: brightness(1.2); } .alerta-excentrica { color: #ef4444; font-weight: 900; }</style>"
+            
+            cols_tabla = ['JUGADOR', 'POS', 'MIN_GPS', 'DIS', 'm/min', 'DIS AI', 'Nº SPR', 'ACC', 'DCC', 'DCC:ACC', 'VMAX', '% VMAX']
             
             estilo_gps = (df_tabla[cols_tabla].style
                 .hide(axis="index")
-                .format({"MIN_GPS": "{:.0f}'", "DIS": "{:.2f}", "m/min": "{:.1f}", "DIS AI": "{:.0f}", "Nº SPR": "{:.1f}", "ACC": "{:.0f}", "DCC": "{:.0f}", "VMAX": "{:.1f}", "% VMAX": "{:.1f}"})
+                .format({"MIN_GPS": "{:.0f}'", "DIS": "{:.2f}", "m/min": "{:.1f}", "DIS AI": "{:.0f}", "Nº SPR": "{:.1f}", "ACC": "{:.0f}", "DCC": "{:.0f}", "DCC:ACC": "{:.2f}", "VMAX": "{:.1f}", "% VMAX": "{:.1f}"})
                 .background_gradient(subset=['DIS', 'm/min', 'DIS AI', 'Nº SPR', 'ACC', 'DCC', 'VMAX', '% VMAX'], cmap='Blues', text_color_threshold=0.6)
+                .map(lambda x: "color: #ef4444; font-weight: 900;" if isinstance(x, (int, float)) and x > 1.3 else "", subset=['DCC:ACC'])
                 .set_table_attributes('class="modern-dark-table"')
             )
             
@@ -521,8 +524,12 @@ else:
             st.markdown("#### :material/table_chart: Tabla Analítica")
             modo_comp = st.radio("¿Qué tipo de métricas quieres comparar en la tabla?", ["Absolutas (Totales)", "Relativas (Por Minuto)"], horizontal=True)
             
+            df_A['DCC:ACC'] = np.where(df_A['ACC'] > 0, df_A['DCC'] / df_A['ACC'], 0)
+            df_B['DCC:ACC'] = np.where(df_B['ACC'] > 0, df_B['DCC'] / df_B['ACC'], 0)
+            if usar_C: df_C['DCC:ACC'] = np.where(df_C['ACC'] > 0, df_C['DCC'] / df_C['ACC'], 0)
+            
             if modo_comp == "Absolutas (Totales)":
-                metrics_to_compare = ['MIN', 'DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC', 'VMAX', '% VMAX']
+                metrics_to_compare = ['MIN', 'DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC', 'DCC:ACC', 'VMAX', '% VMAX']
             else:
                 metrics_to_compare = ['DIS/min', 'DIS AI/min', 'ACC/min', 'DCC/min']
 
