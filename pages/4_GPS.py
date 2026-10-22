@@ -155,8 +155,12 @@ else:
         df_gps[f'{c}/min'] = np.where(min_efectivo > 0, (df_gps[c] * multiplicador) / min_efectivo, 0)
 
     # --- NUEVO CÁLCULO DE % VMAX HISTÓRICA ---
-    # Cogemos el máximo histórico de VMAX de cada jugador desde el Master
-    vmax_historica = st.session_state.df_master_informes.groupby('JUGADOR')['VMAX'].max().to_dict()
+    # Cogemos el máximo histórico de VMAX aislando los datos imputados (virtuales)
+    df_master_real = st.session_state.df_master_informes.copy()
+    if 'GPS_VIRTUAL' in df_master_real.columns:
+        df_master_real = df_master_real[df_master_real['GPS_VIRTUAL'] != True]
+        
+    vmax_historica = df_master_real.groupby('JUGADOR')['VMAX'].max().to_dict()
     df_gps['VMAX_HIST'] = df_gps['JUGADOR'].map(vmax_historica).fillna(0)
     df_gps['% VMAX'] = np.where(df_gps['VMAX_HIST'] > 0, (df_gps['VMAX'] / df_gps['VMAX_HIST']) * 100, 0.0)
     # ------------------------------------------
