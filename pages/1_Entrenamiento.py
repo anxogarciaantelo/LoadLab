@@ -405,7 +405,7 @@ with tab_micro:
                                 "JUGADOR": jugador, "POS": j["POS"], "ROL": rol_semanal[jugador],
                                 "FECHA": fecha_str, "DIA": dia_semana_nombre, "ESTADO": est_jug,
                                 "TQR": safe_float(d_jug.get("TQR")), "WELLNESS": safe_float(d_jug.get("WELLNESS")),
-                                "RPE": safe_float(d_jug.get("RPE")), "MIN": safe_float(d_jug.get("MIN")) + safe_float(d_jug.get("COMP_MIN", 0)),
+                                "RPE": safe_float(d_jug.get("RPE")), "MIN": safe_float(d_jug.get("MIN")),
                                 "CARGA": safe_float(d_jug.get("CARGA")), 
                                 "DIS": safe_float(d_jug.get("DIS")) + safe_float(d_jug.get("COMP_DIS", 0)),
                                 "DIS AI": safe_float(d_jug.get("HID >21", d_jug.get("DIS AI", 0))) + safe_float(d_jug.get("COMP_DIS_AI", 0)),
@@ -2311,7 +2311,8 @@ with tab_ses:
                                                     reg["COMP_ACC"] = safe_float(row_gc.get(cfg_g.get("acc_3", ""), 0))
                                                     reg["COMP_DCC"] = safe_float(row_gc.get(cfg_g.get("dcc_3", ""), 0))
 
-                                    reg["CARGA"] = (reg["MIN"] + reg.get("COMP_MIN", 0.0)) * reg["RPE"]
+                                    # Se respeta tu input manual de MIN totales para la carga interna
+                                    reg["CARGA"] = reg["MIN"] * reg["RPE"]
                                     ewma_excel = calcular_ewma_historico(st.session_state.sesiones, sesion["fecha"]).get(nombre_final, {})
                                     reg["EWMA AGUDA"] = ewma_excel.get("EWMA AGUDA", reg["CARGA"])
                                     reg["EWMA CRÓNICA"] = ewma_excel.get("EWMA CRÓNICA", reg["CARGA"])
