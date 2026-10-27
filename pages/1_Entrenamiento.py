@@ -1622,7 +1622,8 @@ with tab_ses:
                             "MD-1": {"DIS": [0.15, 0.35], "HSR": [0.00, 0.15], "ACC": [0.10, 0.30], "DCC": [0.10, 0.30]},
                             "MD+1": {"DIS": [0.15, 0.45], "HSR": [0.00, 0.20], "ACC": [0.10, 0.40], "DCC": [0.10, 0.40]},
                             "MD+2": {"DIS": [0.30, 0.60], "HSR": [0.10, 0.35], "ACC": [0.25, 0.60], "DCC": [0.25, 0.60]},
-                            "TD":   {"DIS": [0.45, 0.85], "HSR": [0.25, 0.75], "ACC": [0.45, 0.85], "DCC": [0.45, 0.85]}
+                            "TD":   {"DIS": [0.45, 0.85], "HSR": [0.25, 0.75], "ACC": [0.45, 0.85], "DCC": [0.45, 0.85]},
+                            "Post-Partido": {"DIS": [0.30, 0.60], "HSR": [0.40, 0.80], "ACC": [0.50, 0.90], "DCC": [0.50, 0.90]}
                         }
                         
                         ses_md = sesion.get('descripcion', 'TD')
@@ -2433,7 +2434,7 @@ with tab_add:
             ciudad_manual_nuevo = ""
             
             if tipo_nuevo == "Entrenamiento":
-                desc_nuevo = st.selectbox("Match Day:", ["MD-6", "MD-5", "MD-4", "MD-3", "MD-2", "MD-1", "MD+1", "MD+2", "TD"])
+                desc_nuevo = st.selectbox("Match Day:", ["MD-6", "MD-5", "MD-4", "MD-3", "MD-2", "MD-1", "MD+1", "MD+2", "TD", "Post-Partido"])
             else:
                 if tipo_nuevo == "Partido Oficial":
                     comp_nuevo = st.selectbox("Competición:", ["Liga", "Copa"])
