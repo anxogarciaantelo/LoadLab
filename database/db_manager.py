@@ -344,8 +344,15 @@ def reconstruir_dataframes_globales():
         # --- CÁLCULO VECTORIZADO DEL RATIO A/C (EWMA) ---
         df_master['FECHA_DT'] = pd.to_datetime(df_master['FECHA'])
         
+        # Integración de la Carga de Compensación Post-Partido
+        if 'COMP_DIS_AI' not in df_master.columns: df_master['COMP_DIS_AI'] = 0.0
+        if 'COMP_ACC' not in df_master.columns: df_master['COMP_ACC'] = 0.0
+        
+        df_master['EWMA_DIS_AI'] = pd.to_numeric(df_master['DIS AI'], errors='coerce').fillna(0.0) + pd.to_numeric(df_master['COMP_DIS_AI'], errors='coerce').fillna(0.0)
+        df_master['EWMA_ACC'] = pd.to_numeric(df_master['ACC'], errors='coerce').fillna(0.0) + pd.to_numeric(df_master['COMP_ACC'], errors='coerce').fillna(0.0)
+        
         # Mapeo de columnas objetivo y sus sufijos para el DataFrame Maestro
-        metricas_ewma = {'CARGA': '', 'DIS AI': ' HSR', 'ACC': ' ACC'}
+        metricas_ewma = {'CARGA': '', 'EWMA_DIS_AI': ' HSR', 'EWMA_ACC': ' ACC'}
         
         # Eliminar las columnas estáticas si vienen del JSON de Supabase para evitar conflictos de sufijos
         columnas_dinamicas = ['EWMA AGUDA', 'EWMA CRÓNICA', 'RATIO A/C', 'EWMA AGUDA HSR', 'EWMA CRÓNICA HSR', 'RATIO A/C HSR', 'EWMA AGUDA ACC', 'EWMA CRÓNICA ACC', 'RATIO A/C ACC']
