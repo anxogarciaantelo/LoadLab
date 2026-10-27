@@ -1751,7 +1751,7 @@ with tab_ses:
                         es_compensatoria = not es_partido and sesion.get('descripcion') in ['MD+1', 'MD+2', 'Post-Partido']
                         
                         if es_partido or es_compensatoria:
-                            st.markdown(f"#### :material/battery_charging_full: Carga Compensatoria {'(Seguimiento en Vivo)' if es_compensatoria else '(Recomendada 60 min)'}")
+                            st.markdown("#### :material/battery_charging_full: Carga Compensatoria (Seguimiento en Vivo)")
                             st.caption("Ajustado por posición específica (Titulares) y carga semanal acumulada en microciclo.")
                             
                             df_hist = st.session_state.df_master_informes.copy()
@@ -1871,119 +1871,114 @@ with tab_ses:
                                             target_partido = densidad_obj[m] * minutos_objetivo_partido
                                             total_target = entreno_obj[m] + target_partido
                                             
-                                            # Cargar lo del partido + lo de la compensación si existe
+                                            # El objetivo (déficit) debe ser la brecha dejada por el partido, SIN contar la compensación
                                             val_match = safe_float(sup.get(m, 0))
-                                            if m == 'DIS': val_match += safe_float(sup.get('COMP_DIS', 0))
-                                            elif m == 'DIS AI': val_match += safe_float(sup.get('COMP_DIS_AI', 0))
-                                            elif m == 'Nº SPR': val_match += safe_float(sup.get('COMP_SPR', 0))
-                                            elif m == 'ACC': val_match += safe_float(sup.get('COMP_ACC', 0))
-                                            elif m == 'DCC': val_match += safe_float(sup.get('COMP_DCC', 0))
                                             
                                             total_actual = (df_sup_ent[m].sum() if not df_sup_ent.empty else 0) + val_match
                                             deficit[m] = max(0, total_target - total_actual)
                                             
                                         if deficit['DIS'] > 0 or deficit['DIS AI'] > 0:
-                                            if es_compensatoria:
+                                            d_hoy = next((d for d in sesion['datos_informe'] if limpiar_nombre(d['JUGADOR']) == limpiar_nombre(jug)), {})
+                                            
+                                            if es_partido:
+                                                m_hoy = safe_float(d_hoy.get('COMP_MIN', 0))
+                                                hoy_dis = safe_float(d_hoy.get('COMP_DIS', 0))
+                                                hoy_hsr = safe_float(d_hoy.get('COMP_DIS_AI', 0))
+                                                hoy_spr = safe_float(d_hoy.get('COMP_SPR', 0))
+                                                hoy_mec = safe_float(d_hoy.get('COMP_ACC', 0)) + safe_float(d_hoy.get('COMP_DCC', 0))
+                                            else:
                                                 disp_hoy_dict = {limpiar_nombre(k): v for k, v in sesion.get('disponibilidad', {}).items()}
                                                 estado_hoy = disp_hoy_dict.get(limpiar_nombre(jug), "Disponible")
                                                 if estado_hoy not in ["Disponible", "Recuperación Post-Partido", "Titular", "Suplente"]:
                                                     continue 
                                                     
-                                                d_hoy = next((d for d in sesion['datos_informe'] if limpiar_nombre(d['JUGADOR']) == limpiar_nombre(jug)), {})
                                                 m_hoy = safe_float(d_hoy.get('MIN_GPS', d_hoy.get('MIN', 0)))
                                                 if not d_hoy or m_hoy == 0: continue 
                                                 
-                                                min_obj_v = deficit['DIS'] / densidad_obj['DIS'] if densidad_obj['DIS'] > 0 else 0
-                                                min_obj_i = deficit['DIS AI'] / densidad_obj['DIS AI'] if densidad_obj['DIS AI'] > 0 else 0
-                                                min_obj_m = (deficit['ACC'] + deficit['DCC']) / (densidad_obj['ACC'] + densidad_obj['DCC']) if (densidad_obj['ACC'] + densidad_obj['DCC']) > 0 else 0
-                                                min_obj_real = (min_obj_v + min_obj_i + min_obj_m) / 3
+                                                hoy_dis = safe_float(d_hoy.get('DIS', 0))
+                                                hoy_hsr = safe_float(d_hoy.get('DIS AI', d_hoy.get('HID >21', 0)))
+                                                hoy_spr = safe_float(d_hoy.get('Nº SPR', d_hoy.get('SPR >24', 0)))
+                                                hoy_mec = safe_float(d_hoy.get('ACC', 0)) + safe_float(d_hoy.get('DCC', 0))
 
-                                                comp_data.append({
-                                                    "JUGADOR": jug, "POS": pos_e,
-                                                    "Obj_DIS": deficit['DIS'], "Hoy_DIS": safe_float(d_hoy.get('DIS', 0)),
-                                                    "Obj_HSR": deficit['DIS AI'], "Hoy_HSR": safe_float(d_hoy.get('DIS AI', d_hoy.get('HID >21', 0))),
-                                                    "Obj_SPR": deficit['Nº SPR'], "Hoy_SPR": safe_float(d_hoy.get('Nº SPR', d_hoy.get('SPR >24', 0))),
-                                                    "Obj_MEC": deficit['ACC'] + deficit['DCC'], "Hoy_MEC": safe_float(d_hoy.get('ACC', 0)) + safe_float(d_hoy.get('DCC', 0)),
-                                                    "MIN_Hoy": m_hoy,
-                                                    "Den_Obj_DIS": densidad_obj['DIS'] * 1000, "Den_Hoy_DIS": (safe_float(d_hoy.get('DIS', 0))*1000)/m_hoy if m_hoy>0 else 0,
-                                                    "Den_Obj_HSR": densidad_obj['DIS AI'], "Den_Hoy_HSR": safe_float(d_hoy.get('DIS AI', 0))/m_hoy if m_hoy>0 else 0,
-                                                    "Den_Obj_MEC": densidad_obj['ACC'] + densidad_obj['DCC'],
-                                                    "Min_Obj_Real": min_obj_real,
-                                                    "Target_Base": minutos_objetivo_partido
-                                                })
-                                            else:
-                                                comp_data.append({
-                                                    "JUGADOR": jug, "POS": pos_e,
-                                                    "Déficit Volumen (km)": deficit['DIS'], "Déficit HSR (>21 km/h)": deficit['DIS AI'],
-                                                    "Déficit Sprints (>24)": deficit['Nº SPR'], "Déficit Tensión (ACC+DCC)": deficit['ACC'] + deficit['DCC']
-                                                })
+                                            min_obj_v = deficit['DIS'] / densidad_obj['DIS'] if densidad_obj['DIS'] > 0 else 0
+                                            min_obj_i = deficit['DIS AI'] / densidad_obj['DIS AI'] if densidad_obj['DIS AI'] > 0 else 0
+                                            min_obj_m = (deficit['ACC'] + deficit['DCC']) / (densidad_obj['ACC'] + densidad_obj['DCC']) if (densidad_obj['ACC'] + densidad_obj['DCC']) > 0 else 0
+                                            min_obj_real = (min_obj_v + min_obj_i + min_obj_m) / 3
+
+                                            comp_data.append({
+                                                "JUGADOR": jug, "POS": pos_e,
+                                                "Obj_DIS": deficit['DIS'], "Hoy_DIS": hoy_dis,
+                                                "Obj_HSR": deficit['DIS AI'], "Hoy_HSR": hoy_hsr,
+                                                "Obj_SPR": deficit['Nº SPR'], "Hoy_SPR": hoy_spr,
+                                                "Obj_MEC": deficit['ACC'] + deficit['DCC'], "Hoy_MEC": hoy_mec,
+                                                "MIN_Hoy": m_hoy,
+                                                "Den_Obj_DIS": densidad_obj['DIS'] * 1000, "Den_Hoy_DIS": (hoy_dis*1000)/m_hoy if m_hoy>0 else 0,
+                                                "Den_Obj_HSR": densidad_obj['DIS AI'], "Den_Hoy_HSR": hoy_hsr/m_hoy if m_hoy>0 else 0,
+                                                "Den_Obj_MEC": densidad_obj['ACC'] + densidad_obj['DCC'],
+                                                "Min_Obj_Real": min_obj_real,
+                                                "Target_Base": minutos_objetivo_partido
+                                            })
                                         else:
                                             if jug not in jugadores_cumplidos:
                                                 jugadores_cumplidos.append(jug)
 
                                     if comp_data:
-                                        if es_partido:
-                                            df_comp = pd.DataFrame(comp_data)
-                                            mostrar_tabla_moderna(df_comp.style.hide(axis="index").format(precision=1))
-                                        else:
-                                            for c in comp_data:
-                                                p_dis = min(100, (c['Hoy_DIS'] / c['Obj_DIS']) * 100) if c['Obj_DIS'] > 0 else 100
-                                                p_hsr = min(100, (c['Hoy_HSR'] / c['Obj_HSR']) * 100) if c['Obj_HSR'] > 0 else 100
-                                                p_mec = min(100, (c['Hoy_MEC'] / c['Obj_MEC']) * 100) if c['Obj_MEC'] > 0 else 100
-                                                
-                                                min_comp_v = (c['Hoy_DIS'] / (c['Den_Obj_DIS']/1000)) if c['Den_Obj_DIS'] > 0 else 0
-                                                min_comp_i = (c['Hoy_HSR'] / c['Den_Obj_HSR']) if c['Den_Obj_HSR'] > 0 else 0
-                                                min_comp_m = (c['Hoy_MEC'] / c['Den_Obj_MEC']) if c.get('Den_Obj_MEC', 0) > 0 else 0
-                                                
-                                                min_comp_real = (min_comp_v + min_comp_i + min_comp_m) / 3
-                                                
-                                                # Material Icon en lugar de emoji para el Target 90'
-                                                target_90_html = ""
-                                                if c.get("Target_Base", 60) == 90:
-                                                    target_90_html = "<span style='color: #f59e0b; margin-left: 5px;' title='Target 90 minutos por desentrenamiento'><span class='material-symbols-rounded' style='vertical-align: text-bottom; font-size: 1.1rem;'>warning</span> Target 90'</span>"
+                                        for c in comp_data:
+                                            p_dis = min(100, (c['Hoy_DIS'] / c['Obj_DIS']) * 100) if c['Obj_DIS'] > 0 else 100
+                                            p_hsr = min(100, (c['Hoy_HSR'] / c['Obj_HSR']) * 100) if c['Obj_HSR'] > 0 else 100
+                                            p_mec = min(100, (c['Hoy_MEC'] / c['Obj_MEC']) * 100) if c['Obj_MEC'] > 0 else 100
+                                            
+                                            min_comp_v = (c['Hoy_DIS'] / (c['Den_Obj_DIS']/1000)) if c['Den_Obj_DIS'] > 0 else 0
+                                            min_comp_i = (c['Hoy_HSR'] / c['Den_Obj_HSR']) if c['Den_Obj_HSR'] > 0 else 0
+                                            min_comp_m = (c['Hoy_MEC'] / c['Den_Obj_MEC']) if c.get('Den_Obj_MEC', 0) > 0 else 0
+                                            
+                                            min_comp_real = (min_comp_v + min_comp_i + min_comp_m) / 3
+                                            
+                                            target_90_html = ""
+                                            if c.get("Target_Base", 60) == 90:
+                                                target_90_html = "<span style='color: #f59e0b; margin-left: 5px;' title='Target 90 minutos por desentrenamiento'><span class='material-symbols-rounded' style='vertical-align: text-bottom; font-size: 1.1rem;'>warning</span> Target 90'</span>"
 
-                                                st.markdown(f"""
-                                                <div style="background: #111318; border: 1px solid #1c1f26; border-left: 4px solid #C5A059; padding: 12px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
-                                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                                        <strong style="color: #f8fafc; font-size: 1.1rem;">{c['JUGADOR']} <span style="font-size: 0.8rem; color: #94a3b8;">({c['POS']})</span></strong>
-                                                        <span style="color: #10b981; font-weight: 800; font-size: 0.9rem;">Eq. Partido: ~{min_comp_real:.0f} / {c['Min_Obj_Real']:.0f} min {target_90_html}</span>
+                                            st.markdown(f"""
+                                            <div style="background: #111318; border: 1px solid #1c1f26; border-left: 4px solid #C5A059; padding: 12px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
+                                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                                    <strong style="color: #f8fafc; font-size: 1.1rem;">{c['JUGADOR']} <span style="font-size: 0.8rem; color: #94a3b8;">({c['POS']})</span></strong>
+                                                    <span style="color: #10b981; font-weight: 800; font-size: 0.9rem;">Eq. Partido: ~{min_comp_real:.0f} / {c['Min_Obj_Real']:.0f} min {target_90_html}</span>
+                                                </div>
+                                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
+                                                    <div>
+                                                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px; font-weight: 800;">
+                                                            <span>VOLUMEN ({c['Hoy_DIS']:.1f} / {c['Obj_DIS']:.1f} km)</span>
+                                                            <span style="color: #0ea5e9;">{p_dis:.0f}%</span>
+                                                        </div>
+                                                        <div style="background: #1c1f26; height: 6px; border-radius: 3px; overflow: hidden; margin-bottom: 4px;">
+                                                            <div style="background: #0ea5e9; width: {p_dis}%; height: 100%;"></div>
+                                                        </div>
+                                                        <div style="font-size: 0.7rem; color: #64748b; font-weight: 600;">Densidad actual: {c['Den_Hoy_DIS']:.0f} m/m (Obj: {c['Den_Obj_DIS']:.0f})</div>
                                                     </div>
-                                                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
-                                                        <div>
-                                                            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px; font-weight: 800;">
-                                                                <span>VOLUMEN ({c['Hoy_DIS']:.1f} / {c['Obj_DIS']:.1f} km)</span>
-                                                                <span style="color: #0ea5e9;">{p_dis:.0f}%</span>
-                                                            </div>
-                                                            <div style="background: #1c1f26; height: 6px; border-radius: 3px; overflow: hidden; margin-bottom: 4px;">
-                                                                <div style="background: #0ea5e9; width: {p_dis}%; height: 100%;"></div>
-                                                            </div>
-                                                            <div style="font-size: 0.7rem; color: #64748b; font-weight: 600;">Densidad actual: {c['Den_Hoy_DIS']:.0f} m/m (Obj: {c['Den_Obj_DIS']:.0f})</div>
+                                                    <div>
+                                                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px; font-weight: 800;">
+                                                            <span>HSR ({c['Hoy_HSR']:.0f} / {c['Obj_HSR']:.0f} m)</span>
+                                                            <span style="color: #f59e0b;">{p_hsr:.0f}%</span>
                                                         </div>
-                                                        <div>
-                                                            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px; font-weight: 800;">
-                                                                <span>HSR ({c['Hoy_HSR']:.0f} / {c['Obj_HSR']:.0f} m)</span>
-                                                                <span style="color: #f59e0b;">{p_hsr:.0f}%</span>
-                                                            </div>
-                                                            <div style="background: #1c1f26; height: 6px; border-radius: 3px; overflow: hidden; margin-bottom: 4px;">
-                                                                <div style="background: #f59e0b; width: {p_hsr}%; height: 100%;"></div>
-                                                            </div>
-                                                            <div style="font-size: 0.7rem; color: #64748b; font-weight: 600;">Densidad actual: {c['Den_Hoy_HSR']:.1f} m/m (Obj: {c['Den_Obj_HSR']:.1f})</div>
+                                                        <div style="background: #1c1f26; height: 6px; border-radius: 3px; overflow: hidden; margin-bottom: 4px;">
+                                                            <div style="background: #f59e0b; width: {p_hsr}%; height: 100%;"></div>
                                                         </div>
-                                                        <div>
-                                                            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px; font-weight: 800;">
-                                                                <span>TENSIÓN ({c['Hoy_MEC']:.0f} / {c['Obj_MEC']:.0f} acc)</span>
-                                                                <span style="color: #ef4444;">{p_mec:.0f}%</span>
-                                                            </div>
-                                                            <div style="background: #1c1f26; height: 6px; border-radius: 3px; overflow: hidden; margin-bottom: 4px;">
-                                                                <div style="background: #ef4444; width: {p_mec}%; height: 100%;"></div>
-                                                            </div>
-                                                            <div style="font-size: 0.7rem; color: #64748b; font-weight: 600;">Densidad actual: {(c['Hoy_MEC']/c['MIN_Hoy']) if c.get('MIN_Hoy',0)>0 else 0:.1f} n/m (Obj: {c['Den_Obj_MEC']:.1f})</div>
+                                                        <div style="font-size: 0.7rem; color: #64748b; font-weight: 600;">Densidad actual: {c['Den_Hoy_HSR']:.1f} m/m (Obj: {c['Den_Obj_HSR']:.1f})</div>
+                                                    </div>
+                                                    <div>
+                                                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px; font-weight: 800;">
+                                                            <span>TENSIÓN ({c['Hoy_MEC']:.0f} / {c['Obj_MEC']:.0f} acc)</span>
+                                                            <span style="color: #ef4444;">{p_mec:.0f}%</span>
                                                         </div>
+                                                        <div style="background: #1c1f26; height: 6px; border-radius: 3px; overflow: hidden; margin-bottom: 4px;">
+                                                            <div style="background: #ef4444; width: {p_mec}%; height: 100%;"></div>
+                                                        </div>
+                                                        <div style="font-size: 0.7rem; color: #64748b; font-weight: 600;">Densidad actual: {(c['Hoy_MEC']/c['MIN_Hoy']) if c.get('MIN_Hoy',0)>0 else 0:.1f} n/m (Obj: {c['Den_Obj_MEC']:.1f})</div>
                                                     </div>
                                                 </div>
-                                                """, unsafe_allow_html=True)
-                                                
-                                    # ALINEACIÓN CORRECTA: FUERA DEL BUCLE "for c in comp_data", y SIN REPETICIONES
+                                            </div>
+                                            """, unsafe_allow_html=True)
+                                            
                                     if jugadores_cumplidos:
                                         st.success(f"✅ **Carga semanal cumplida:** {', '.join(jugadores_cumplidos)} ya han igualado o superado el objetivo de su posición durante la semana (no requieren compensación extra).")
                             else:
