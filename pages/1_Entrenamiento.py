@@ -1746,8 +1746,8 @@ with tab_ses:
                                                   .format({"DIS": "{:.2f}", "% DIS (Part)": "{:.2f}%", "DIS AI": "{:.0f}", "% HSR (Part)": "{:.2f}%", "ACC": "{:.0f}", "DCC": "{:.0f}", "DCC:ACC": "{:.2f}", "VMAX": "{:.2f}", "% VMAX": "{:.2f}%"})
                                                   .map(lambda x: "color: #ef4444; font-weight: bold;" if isinstance(x, (int, float)) and x > 1.3 else "", subset=['DCC:ACC']))
                         
-                        # --- MÓDULO DE CARGA COMPENSATORIA (MD+1 / MD+2) ---
-                        es_compensatoria = not es_partido and sesion.get('descripcion') in ['MD+1', 'MD+2']
+                        # --- MÓDULO DE CARGA COMPENSATORIA (MD+1 / MD+2 / Post-Partido) ---
+                        es_compensatoria = not es_partido and sesion.get('descripcion') in ['MD+1', 'MD+2', 'Post-Partido']
                         
                         if es_partido or es_compensatoria:
                             st.markdown(f"#### :material/battery_charging_full: Carga Compensatoria {'(Seguimiento en Vivo)' if es_compensatoria else '(Recomendada 60 min)'}")
