@@ -2019,7 +2019,13 @@ with tab_ses:
                     if "ACC >3" not in df_manual_base.columns: df_manual_base["ACC >3"] = df_manual_base.get("ACC", 0.0)
                     if "DCC >3" not in df_manual_base.columns: df_manual_base["DCC >3"] = df_manual_base.get("DCC", 0.0)
 
-                    cols_to_show = ["JUGADOR", "POS", "TQR", "W_Humor", "W_Sueño", "W_Fatiga", "W_Dolor", "W_Estres", "RPE", "MIN", "MIN_GPS", "DIS", "HID >21", "HID >24", "SPR >24", "SPR >27", "V_Med", "V_Max", "ACC_Max", "ACC >2", "ACC >3", "ACC >4", "DCC >2", "DCC >3", "DCC >4", "R_0_7", "R_7_14", "R_14_21", "R_21_24", "R_24_27", "R_27_30", "R_30_45"]
+                    cols_to_show = ["JUGADOR", "POS", "TQR", "W_Humor", "W_Sueño", "W_Fatiga", "W_Dolor", "W_Estres", "RPE", "MIN", "MIN_GPS"]
+                    
+                    if es_partido:
+                        cols_to_show.extend(["COMP_MIN", "COMP_DIS", "COMP_DIS_AI", "COMP_SPR", "COMP_ACC", "COMP_DCC"])
+                        
+                    cols_to_show.extend(["DIS", "HID >21", "HID >24", "SPR >24", "SPR >27", "V_Med", "V_Max", "ACC_Max", "ACC >2", "ACC >3", "ACC >4", "DCC >2", "DCC >3", "DCC >4", "R_0_7", "R_7_14", "R_14_21", "R_21_24", "R_24_27", "R_27_30", "R_30_45"])
+                    
                     for c in cols_to_show:
                         if c not in df_manual_base.columns: df_manual_base[c] = 0.0
                             
@@ -2067,15 +2073,21 @@ with tab_ses:
                                     "RPE": safe_float(row["RPE"]),
                                     "MIN": min_ses,
                                     "MIN_GPS": min_gps_val,
+                                    "COMP_MIN": safe_float(row.get("COMP_MIN", 0.0)),
                                     "CARGA": min_ses * safe_float(row["RPE"]),
                                     "EWMA AGUDA": ewma_aguda,
                                     "EWMA CRÓNICA": ewma_cronica,
                                     "RATIO A/C": ratio_ac,
                                     "DIS": dis,
+                                    "COMP_DIS": safe_float(row.get("COMP_DIS", 0.0)),
                                     "DIS AI": dis_ai_21,
+                                    "COMP_DIS_AI": safe_float(row.get("COMP_DIS_AI", 0.0)),
                                     "Nº SPR": spr_24,
+                                    "COMP_SPR": safe_float(row.get("COMP_SPR", 0.0)),
                                     "ACC": acc_3,
+                                    "COMP_ACC": safe_float(row.get("COMP_ACC", 0.0)),
                                     "DCC": dcc_3,
+                                    "COMP_DCC": safe_float(row.get("COMP_DCC", 0.0)),
                                     "VMAX": v_max,
                                     "HID >21": dis_ai_21,
                                     "HID >24": dis_ai_24,
