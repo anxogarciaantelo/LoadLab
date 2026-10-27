@@ -602,8 +602,13 @@ if st.session_state.get("equipo_seleccionado", False):
             elif (tqr <= 4 and z_well < 1.0) or (tqr > 4 and z_well >= 1.5): alertas_readiness.append({"jug": jug, "txt": "Discordancia TQR/Wellness", "lvl": "amarillo"})
 
     # --- B. ALERTAS DE CARGA Y EFICIENCIA METABÓLICA ---
-    ewma_hoy = calcular_ewma_historico(st.session_state.sesiones, hoy_str)
-    hsr_dict = {}
+        # Usamos la fecha de la última sesión con datos para evitar falsas alarmas de desentrenamiento en días libres
+        fecha_ewma = hoy_str
+        if sesiones_con_datos:
+            fecha_ewma = sorted(sesiones_con_datos, key=lambda x: x["fecha"])[-1]["fecha"]
+            
+        ewma_hoy = calcular_ewma_historico(st.session_state.sesiones, fecha_ewma)
+        hsr_dict = {}
     vmax_hist_dict = {}
     ult_sprint_dict = {}
     
