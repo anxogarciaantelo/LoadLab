@@ -71,8 +71,8 @@ def calcular_ewma_historico(_sesiones, fecha_objetivo):
             {
                 "fecha": s["fecha"], "JUGADOR": d["JUGADOR"], 
                 "CARGA": float(d.get("CARGA", 0)), 
-                "DIS AI": float(d.get("DIS AI", d.get("HID >21", 0))), 
-                "ACC": float(d.get("ACC", d.get("ACC >3", 0)))
+                "DIS AI": float(d.get("DIS AI", d.get("HID >21", 0))) + float(d.get("COMP_DIS_AI", 0)), 
+                "ACC": float(d.get("ACC", d.get("ACC >3", 0))) + float(d.get("COMP_ACC", 0))
             }
             for s in _sesiones if s.get("informe_generado") and s["fecha"] <= fecha_objetivo
             for d in s["datos_informe"]
