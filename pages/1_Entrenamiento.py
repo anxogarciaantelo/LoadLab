@@ -405,12 +405,13 @@ with tab_micro:
                                 "JUGADOR": jugador, "POS": j["POS"], "ROL": rol_semanal[jugador],
                                 "FECHA": fecha_str, "DIA": dia_semana_nombre, "ESTADO": est_jug,
                                 "TQR": safe_float(d_jug.get("TQR")), "WELLNESS": safe_float(d_jug.get("WELLNESS")),
-                                "RPE": safe_float(d_jug.get("RPE")), "MIN": safe_float(d_jug.get("MIN")),
-                                "CARGA": safe_float(d_jug.get("CARGA")), "DIS": safe_float(d_jug.get("DIS")),
-                                "DIS AI": safe_float(d_jug.get("HID >21", d_jug.get("DIS AI", 0))),
-                                "Nº SPR": safe_float(d_jug.get("SPR >24", d_jug.get("Nº SPR", 0))),
-                                "ACC": safe_float(d_jug.get("ACC >3", d_jug.get("ACC", 0))),
-                                "DCC": safe_float(d_jug.get("DCC >3", d_jug.get("DCC", 0))),
+                                "RPE": safe_float(d_jug.get("RPE")), "MIN": safe_float(d_jug.get("MIN")) + safe_float(d_jug.get("COMP_MIN", 0)),
+                                "CARGA": safe_float(d_jug.get("CARGA")), 
+                                "DIS": safe_float(d_jug.get("DIS")) + safe_float(d_jug.get("COMP_DIS", 0)),
+                                "DIS AI": safe_float(d_jug.get("HID >21", d_jug.get("DIS AI", 0))) + safe_float(d_jug.get("COMP_DIS_AI", 0)),
+                                "Nº SPR": safe_float(d_jug.get("SPR >24", d_jug.get("Nº SPR", 0))) + safe_float(d_jug.get("COMP_SPR", 0)),
+                                "ACC": safe_float(d_jug.get("ACC >3", d_jug.get("ACC", 0))) + safe_float(d_jug.get("COMP_ACC", 0)),
+                                "DCC": safe_float(d_jug.get("DCC >3", d_jug.get("DCC", 0))) + safe_float(d_jug.get("COMP_DCC", 0)),
                                 "VMAX": safe_float(d_jug.get("V_Max", d_jug.get("VMAX", 0))), "ENTRENO": 1 
                             })
                         else:
@@ -1869,7 +1870,16 @@ with tab_ses:
                                         for m in metricas_carga:
                                             target_partido = densidad_obj[m] * minutos_objetivo_partido
                                             total_target = entreno_obj[m] + target_partido
-                                            total_actual = (df_sup_ent[m].sum() if not df_sup_ent.empty else 0) + sup.get(m, 0)
+                                            
+                                            # Cargar lo del partido + lo de la compensación si existe
+                                            val_match = safe_float(sup.get(m, 0))
+                                            if m == 'DIS': val_match += safe_float(sup.get('COMP_DIS', 0))
+                                            elif m == 'DIS AI': val_match += safe_float(sup.get('COMP_DIS_AI', 0))
+                                            elif m == 'Nº SPR': val_match += safe_float(sup.get('COMP_SPR', 0))
+                                            elif m == 'ACC': val_match += safe_float(sup.get('COMP_ACC', 0))
+                                            elif m == 'DCC': val_match += safe_float(sup.get('COMP_DCC', 0))
+                                            
+                                            total_actual = (df_sup_ent[m].sum() if not df_sup_ent.empty else 0) + val_match
                                             deficit[m] = max(0, total_target - total_actual)
                                             
                                         if deficit['DIS'] > 0 or deficit['DIS AI'] > 0:
@@ -2116,10 +2126,18 @@ with tab_ses:
 
                 with t_exc:
                     st.caption("Asegúrate de haber configurado el nombre de las columnas en la pestaña de Configuración.")
-                    col_up1, col_up2, col_up3 = st.columns(3)
-                    with col_up1: archivo_well = st.file_uploader("1. Wellness:", type=["xlsx"], key=f"up_w_{idx_real}")
-                    with col_up2: archivo_rpe = st.file_uploader("2. RPE:", type=["xlsx"], key=f"up_r_{idx_real}")
-                    with col_up3: archivo_gps = st.file_uploader("3. GPS:", type=["xlsx"], key=f"up_g_{idx_real}")
+                    if es_partido:
+                        col_up1, col_up2, col_up3, col_up4 = st.columns(4)
+                        with col_up1: archivo_well = st.file_uploader("1. Wellness:", type=["xlsx"], key=f"up_w_{idx_real}")
+                        with col_up2: archivo_rpe = st.file_uploader("2. RPE:", type=["xlsx"], key=f"up_r_{idx_real}")
+                        with col_up3: archivo_gps = st.file_uploader("3. GPS Partido:", type=["xlsx"], key=f"up_g_{idx_real}")
+                        with col_up4: archivo_gps_comp = st.file_uploader("4. GPS Compensación:", type=["xlsx"], key=f"up_gc_{idx_real}")
+                    else:
+                        col_up1, col_up2, col_up3 = st.columns(3)
+                        with col_up1: archivo_well = st.file_uploader("1. Wellness:", type=["xlsx"], key=f"up_w_{idx_real}")
+                        with col_up2: archivo_rpe = st.file_uploader("2. RPE:", type=["xlsx"], key=f"up_r_{idx_real}")
+                        with col_up3: archivo_gps = st.file_uploader("3. GPS:", type=["xlsx"], key=f"up_g_{idx_real}")
+                        archivo_gps_comp = None
                     
                     if st.button(":material/settings: Sincronizar Archivos", type="primary", use_container_width=True):
                         try:
@@ -2127,6 +2145,7 @@ with tab_ses:
                             df_w_up = pd.read_excel(archivo_well) if archivo_well else pd.DataFrame()
                             df_r_up = pd.read_excel(archivo_rpe) if archivo_rpe else pd.DataFrame()
                             df_g_up = pd.read_excel(archivo_gps) if archivo_gps else pd.DataFrame()
+                            df_gc_up = pd.read_excel(archivo_gps_comp) if archivo_gps_comp else pd.DataFrame()
                             
                             cfg_w = st.session_state.get("config_mapeo", {}).get("wellness", {})
                             cfg_r = st.session_state.get("config_mapeo", {}).get("rpe", {})
@@ -2209,7 +2228,7 @@ with tab_ses:
                                     pos_jug = match_p['POS'] if match_p else "DEF"
 
                                     reg = datos_actuales.get(nombre_final, {
-                                        "JUGADOR": nombre_final, "POS": pos_jug, "TQR": 0.0, "WELLNESS": 0.0, "W_Humor": 0.0, "W_Sueño": 0.0, "W_Fatiga": 0.0, "W_Dolor": 0.0, "W_Estres": 0.0, "RPE": 0.0, "MIN": 0.0, "MIN_GPS": 0.0, "CARGA": 0.0, "EWMA AGUDA": 0.0, "EWMA CRÓNICA": 0.0, "RATIO A/C": 0.0, "DIS": 0.0, "DIS AI": 0.0, "Nº SPR": 0.0, "ACC": 0.0, "DCC": 0.0, "VMAX": 0.0, "Z1": 0.0, "Z2": 0.0, "Z3": 0.0, "Z4": 0.0, "Z5": 0.0, "Z6": 0.0, "HID >21": 0.0, "HID >24": 0.0, "SPR >24": 0.0, "SPR >27": 0.0, "V_Med": 0.0, "V_Max": 0.0, "ACC_Max": 0.0, "ACC >2": 0.0, "ACC >3": 0.0, "ACC >4": 0.0, "DCC >2": 0.0, "DCC >3": 0.0, "DCC >4": 0.0, "R_0_7": 0.0, "R_7_14": 0.0, "R_14_21": 0.0, "R_21_24": 0.0, "R_24_27": 0.0, "R_27_30": 0.0, "R_30_45": 0.0
+                                        "JUGADOR": nombre_final, "POS": pos_jug, "TQR": 0.0, "WELLNESS": 0.0, "W_Humor": 0.0, "W_Sueño": 0.0, "W_Fatiga": 0.0, "W_Dolor": 0.0, "W_Estres": 0.0, "RPE": 0.0, "MIN": 0.0, "MIN_GPS": 0.0, "COMP_MIN": 0.0, "CARGA": 0.0, "EWMA AGUDA": 0.0, "EWMA CRÓNICA": 0.0, "RATIO A/C": 0.0, "DIS": 0.0, "COMP_DIS": 0.0, "DIS AI": 0.0, "COMP_DIS_AI": 0.0, "Nº SPR": 0.0, "COMP_SPR": 0.0, "ACC": 0.0, "COMP_ACC": 0.0, "DCC": 0.0, "COMP_DCC": 0.0, "VMAX": 0.0, "Z1": 0.0, "Z2": 0.0, "Z3": 0.0, "Z4": 0.0, "Z5": 0.0, "Z6": 0.0, "HID >21": 0.0, "HID >24": 0.0, "SPR >24": 0.0, "SPR >27": 0.0, "V_Med": 0.0, "V_Max": 0.0, "ACC_Max": 0.0, "ACC >2": 0.0, "ACC >3": 0.0, "ACC >4": 0.0, "DCC >2": 0.0, "DCC >3": 0.0, "DCC >4": 0.0, "R_0_7": 0.0, "R_7_14": 0.0, "R_14_21": 0.0, "R_21_24": 0.0, "R_24_27": 0.0, "R_27_30": 0.0, "R_30_45": 0.0
                                     })
 
                                     if not df_r_up.empty and cfg_r:
@@ -2271,7 +2290,28 @@ with tab_ses:
                                                 reg["Z5"] = reg["R_27_30"]
                                                 reg["Z6"] = reg["R_30_45"]
 
-                                    reg["CARGA"] = reg["MIN"] * reg["RPE"]
+                                    # LÓGICA DE COMPENSACIÓN POST-PARTIDO
+                                    if not df_gc_up.empty and cfg_g:
+                                        # Hacemos match manual para el df_gc_up (evitando saturar el bloque general)
+                                        df_gc_up_f = df_gc_up.copy()
+                                        col_g_nom = cfg_g.get("nombre", "Player Name")
+                                        if col_g_nom in df_gc_up_f.columns:
+                                            df_gc_up_f['JUGADOR_MATCH'] = df_gc_up_f[col_g_nom].apply(emparejar_nombre)
+                                            match_gc = df_gc_up_f[df_gc_up_f['JUGADOR_MATCH'] == nombre_final]
+                                            
+                                            if not match_gc.empty:
+                                                row_gc = match_gc.iloc[0]
+                                                comp_dis = safe_float(row_gc.get(cfg_g.get("dis", "Distance (km)"), 0))
+                                                if comp_dis > 0:
+                                                    min_comp_excel = extraer_minutos(str(row_gc.get(cfg_g.get("min_gps", "Time Played"), '0')))
+                                                    reg["COMP_MIN"] = min_comp_excel if min_comp_excel > 0 else 30.0
+                                                    reg["COMP_DIS"] = comp_dis
+                                                    reg["COMP_DIS_AI"] = safe_float(row_gc.get(cfg_g.get("hid_21", ""), 0)) * 1000.0
+                                                    reg["COMP_SPR"] = safe_float(row_gc.get(cfg_g.get("spr_24", ""), 0))
+                                                    reg["COMP_ACC"] = safe_float(row_gc.get(cfg_g.get("acc_3", ""), 0))
+                                                    reg["COMP_DCC"] = safe_float(row_gc.get(cfg_g.get("dcc_3", ""), 0))
+
+                                    reg["CARGA"] = (reg["MIN"] + reg.get("COMP_MIN", 0.0)) * reg["RPE"]
                                     ewma_excel = calcular_ewma_historico(st.session_state.sesiones, sesion["fecha"]).get(nombre_final, {})
                                     reg["EWMA AGUDA"] = ewma_excel.get("EWMA AGUDA", reg["CARGA"])
                                     reg["EWMA CRÓNICA"] = ewma_excel.get("EWMA CRÓNICA", reg["CARGA"])
