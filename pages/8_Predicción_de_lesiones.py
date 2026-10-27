@@ -73,11 +73,12 @@ def construir_dataset_entrenamiento(sesiones, lesiones):
             jug_limpio = limpiar_nombre(jug_nombre)
             min_jug = safe_float(d.get("MIN", 0))
             
-            dis_jug = safe_float(d.get("DIS")) * 1000.0
-            hsr_jug = safe_float(d.get("DIS AI", d.get("HID >21", 0)))
-            spr_jug = safe_float(d.get("Nº SPR", d.get("SPR >24", 0)))
-            acc_jug = safe_float(d.get("ACC", d.get("ACC >3", 0)))
-            dcc_jug = safe_float(d.get("DCC", d.get("DCC >3", 0)))
+            # Sumamos la huella del partido + la compensación para que la IA lea el estrés mecánico total
+            dis_jug = (safe_float(d.get("DIS")) + safe_float(d.get("COMP_DIS", 0))) * 1000.0
+            hsr_jug = safe_float(d.get("DIS AI", d.get("HID >21", 0))) + safe_float(d.get("COMP_DIS_AI", 0))
+            spr_jug = safe_float(d.get("Nº SPR", d.get("SPR >24", 0))) + safe_float(d.get("COMP_SPR", 0))
+            acc_jug = safe_float(d.get("ACC", d.get("ACC >3", 0))) + safe_float(d.get("COMP_ACC", 0))
+            dcc_jug = safe_float(d.get("DCC", d.get("DCC >3", 0))) + safe_float(d.get("COMP_DCC", 0))
             
             estado = disp_dict.get(jug_limpio, "Disponible" if not es_partido else "Titular")
             elegible = (estado in ["Titular", "Suplente"] and min_jug > 0) if es_partido else (estado == "Disponible" and min_jug > 0)
