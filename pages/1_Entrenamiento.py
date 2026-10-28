@@ -672,15 +672,22 @@ with tab_micro:
                 cols_ordenadas = ['JUGADOR', 'POS', 'ROL', 'MIN', 'WELLNESS', 'RPE', 'DIS', 'xPartido DIS', 'DIS AI', 'xPartido HSR', 'DCC:ACC', 'xPartido MEC', 'Días >90% VMax']
                 df_indiv = df_indiv[cols_ordenadas]
                 
-                estilo_indiv = (df_indiv.style.format(precision=1)
-                    .format({"xPartido DIS": "{:.1f}x", "xPartido HSR": "{:.1f}x", "xPartido MEC": "{:.1f}x", "DCC:ACC": "{:.2f}"})
+                css_dark_table = "<style>.modern-dark-table { width: 100%; border-collapse: collapse; font-family: sans-serif; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4); background-color: #111318; color: #f8fafc; margin-bottom: 20px; } .modern-dark-table thead tr { background-color: #0b0e14; color: #C5A059; } .modern-dark-table th { padding: 12px 15px; font-weight: 800; text-transform: uppercase; font-size: 0.8rem; text-align: center !important; border-bottom: 2px solid #1c1f26; } .modern-dark-table td { padding: 10px 15px; text-align: center !important; border-bottom: 1px solid #1c1f26; font-weight: 700; font-size: 0.95rem; } .modern-dark-table tbody tr:hover td { filter: brightness(1.2); }</style>"
+                
+                estilo_indiv = (df_indiv.style.hide(axis="index")
+                    .format({
+                        "MIN": "{:.0f}", "WELLNESS": "{:.1f}", "RPE": "{:.1f}", "DIS": "{:.1f}",
+                        "xPartido DIS": "{:.1f}x", "xPartido HSR": "{:.1f}x", "xPartido MEC": "{:.1f}x",
+                        "DCC:ACC": "{:.1f}", "DIS AI": "{:.0f}", "Días >90% VMax": "{:.0f}"
+                    })
                     .background_gradient(subset=['WELLNESS'], cmap='Reds', vmin=5, vmax=35)
                     .background_gradient(subset=['RPE'], cmap='Reds', vmin=1, vmax=10)
                     .background_gradient(subset=['MIN', 'DIS', 'DIS AI'], cmap='Blues')
                     .map(lambda x: "color: #ef4444; font-weight: bold;" if isinstance(x, (int, float)) and x > 1.3 else "", subset=['DCC:ACC'])
-                    .map(lambda x: "background-color: #ef4444; color: white; font-weight: bold;" if isinstance(x, (int, float)) and x > 8 else "", subset=['Días >90% VMax']))
+                    .map(lambda x: "background-color: #ef4444; color: white; font-weight: bold;" if isinstance(x, (int, float)) and x > 8 else "", subset=['Días >90% VMax'])
+                    .set_table_attributes('class="modern-dark-table"'))
                 
-                st.dataframe(estilo_indiv, use_container_width=True, hide_index=True)
+                st.markdown(css_dark_table + estilo_indiv.to_html(), unsafe_allow_html=True)
                 
                 kpis_micro = {
                     "Wellness": df_diario['WELLNESS'].replace(0, np.nan).mean() if not df_diario.empty else 0,
