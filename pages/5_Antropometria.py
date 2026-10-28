@@ -493,15 +493,32 @@ with tab_antro_jug:
             cols_perimetros = ['P. Pecho', 'P. Cintura', 'P. Cadera', 'P. Bíceps D', 'P. Bíceps I', 'P. Muslo D', 'P. Muslo I', 'P. Pierna D', 'P. Pierna I']
             cols_asimetrias = ['Asimetría Bíceps', 'Asimetría Muslo', 'Asimetría Pierna']
             
-            # 1. Los 0.0 en perímetros significan que no se midió, los pasamos a NaN
+           # 1. Los 0.0 en perímetros significan que no se midió, los pasamos a NaN
             df_historial[cols_perimetros] = df_historial[cols_perimetros].replace(0.0, np.nan)
             
-            # 2. Formateamos a 2 decimales. Si es NaN (nulo), ponemos el guion.
-            for col in cols_perimetros + cols_asimetrias:
-                df_historial[col] = df_historial[col].apply(lambda x: f"{x:.2f}" if pd.notna(x) else "-")
+            # Formateos condicionales y aplicación del estilo de Élite
+            format_dict = {}
+            def formater_0_dec(val):
+                if pd.isna(val) or val == "" or val == "-": return "-"
+                try: return f"{float(val):.0f}"
+                except: return str(val)
+
+            def formater_1_dec(val):
+                if pd.isna(val) or val == "" or val == "-": return "-"
+                try: return f"{float(val):.1f}"
+                except: return str(val)
+                
+            for c in ['Peso', '% Graso'] + cols_asimetrias:
+                format_dict[c] = formater_1_dec
+            for c in ['Peso magro', 'Σ pliegues'] + cols_perimetros:
+                format_dict[c] = formater_0_dec
+                
+            css_dark_table = "<style>.modern-dark-table { width: 100%; border-collapse: collapse; font-family: sans-serif; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4); background-color: #111318; color: #f8fafc; margin-bottom: 20px; } .modern-dark-table thead tr { background-color: #0b0e14; color: #C5A059; } .modern-dark-table th { padding: 12px 15px; font-weight: 800; text-transform: uppercase; font-size: 0.8rem; text-align: center !important; border-bottom: 2px solid #1c1f26; } .modern-dark-table td { padding: 10px 15px; text-align: center !important; border-bottom: 1px solid #1c1f26; font-weight: 700; font-size: 0.95rem; } .modern-dark-table tbody tr:hover td { filter: brightness(1.2); }</style>"
             
-            # Mostramos la tabla moderna (el formato de las demás columnas lo maneja la función global)
-            mostrar_tabla_moderna(df_historial.style.hide(axis="index"))
+            estilo_historial = (df_historial.style.hide(axis="index")
+                                .format(format_dict)
+                                .set_table_attributes('class="modern-dark-table"'))
+            st.markdown(css_dark_table + estilo_historial.to_html(), unsafe_allow_html=True)
 
             # --- PREPARACIÓN DE DICCIONARIOS PARA EL PDF ---
             prom_muslo_jug = (ultimo_valido['Per_Muslo_D'] + ultimo_valido['Per_Muslo_I']) / 2 if (ultimo_valido['Per_Muslo_D']>0 and ultimo_valido['Per_Muslo_I']>0) else ultimo_valido['Per_Muslo_D'] or ultimo_valido['Per_Muslo_I']
