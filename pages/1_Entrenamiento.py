@@ -324,13 +324,22 @@ with tab_temp:
                 # Excluir las sub-columnas de Wellness para no saturar la vista
                 cols_mostrar = [c for c in df_temporada_show.columns if c not in ['Fatiga', 'Sueño', 'Dolor', 'Estrés', 'Humor']]
                 
-                estilo_temp = (df_temporada_show[cols_mostrar].style.format(precision=1)
-                    .background_gradient(subset=['Wellness'], cmap='Reds', vmin=5, vmax=35)
-                    .background_gradient(subset=['TQR'], cmap='RdYlGn', vmin=1, vmax=10)
-                    .background_gradient(subset=['RPE'], cmap='Reds', vmin=1, vmax=10)
-                    .background_gradient(subset=['Minutos', 'Carga', 'DIS', 'HSR', 'Sprints', 'ACC', 'DCC'], cmap='Blues'))
+                css_dark_table = "<style>.modern-dark-table { width: 100%; border-collapse: collapse; font-family: sans-serif; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4); background-color: #111318; color: #f8fafc; margin-bottom: 20px; } .modern-dark-table thead tr { background-color: #0b0e14; color: #C5A059; } .modern-dark-table th { padding: 12px 15px; font-weight: 800; text-transform: uppercase; font-size: 0.8rem; text-align: center !important; border-bottom: 2px solid #1c1f26; } .modern-dark-table td { padding: 10px 15px; text-align: center !important; border-bottom: 1px solid #1c1f26; font-weight: 700; font-size: 0.95rem; } .modern-dark-table tbody tr:hover td { filter: brightness(1.2); }</style>"
                 
-                st.dataframe(estilo_temp, use_container_width=True, hide_index=True)
+                estilo_indiv = (df_indiv.style.hide(axis="index")
+                    .format({
+                        "MIN": "{:.0f}", "WELLNESS": "{:.1f}", "RPE": "{:.1f}", "DIS": "{:.1f}",
+                        "xPartido DIS": "{:.1f}x", "xPartido HSR": "{:.1f}x", "xPartido MEC": "{:.1f}x",
+                        "DCC:ACC": "{:.1f}", "DIS AI": "{:.0f}", "Días >90% VMax": "{:.0f}"
+                    })
+                    .background_gradient(subset=['WELLNESS'], cmap='Reds', vmin=5, vmax=35)
+                    .background_gradient(subset=['RPE'], cmap='Reds', vmin=1, vmax=10)
+                    .background_gradient(subset=['MIN', 'DIS', 'DIS AI'], cmap='Blues')
+                    .map(lambda x: "color: #ef4444; font-weight: bold;" if isinstance(x, (int, float)) and x > 1.3 else "", subset=['DCC:ACC'])
+                    .map(lambda x: "background-color: #ef4444; color: white; font-weight: bold;" if isinstance(x, (int, float)) and x > 8 else "", subset=['Días >90% VMax'])
+                    .set_table_attributes('class="modern-dark-table"'))
+                
+                st.markdown(css_dark_table + estilo_indiv.to_html(), unsafe_allow_html=True)
 
 with tab_micro:
     if not st.session_state.sesiones:
@@ -474,12 +483,15 @@ with tab_micro:
                 st.markdown("---")
                 st.markdown("#### :material/list_alt: Resumen por Día")
                 if not df_diario.empty:
+                    css_dark_table = "<style>.modern-dark-table { width: 100%; border-collapse: collapse; font-family: sans-serif; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4); background-color: #111318; color: #f8fafc; margin-bottom: 20px; } .modern-dark-table thead tr { background-color: #0b0e14; color: #C5A059; } .modern-dark-table th { padding: 12px 15px; font-weight: 800; text-transform: uppercase; font-size: 0.8rem; text-align: center !important; border-bottom: 2px solid #1c1f26; } .modern-dark-table td { padding: 10px 15px; text-align: center !important; border-bottom: 1px solid #1c1f26; font-weight: 700; font-size: 0.95rem; } .modern-dark-table tbody tr:hover td { filter: brightness(1.2); }</style>"
+                    
                     estilo_diario = (df_diario.style.hide(axis="index").format(precision=2)
                         .background_gradient(subset=['WELLNESS'], cmap='Reds', vmin=5, vmax=35)
                         .background_gradient(subset=['TQR'], cmap='RdYlGn', vmin=1, vmax=10)
                         .background_gradient(subset=['RPE'], cmap='Reds', vmin=1, vmax=10)
-                        .background_gradient(subset=['MIN', 'CARGA', 'DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC'], cmap='Blues'))
-                    mostrar_tabla_moderna(estilo_diario)
+                        .background_gradient(subset=['MIN', 'CARGA', 'DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC'], cmap='Blues')
+                        .set_table_attributes('class="modern-dark-table"'))
+                    st.markdown(css_dark_table + estilo_diario.to_html(), unsafe_allow_html=True)
 
                 st.markdown("---")
                 st.markdown("#### :material/psychology: Bienestar")
@@ -1493,10 +1505,13 @@ with tab_ses:
                             cols_ver_ci = ['JUGADOR', 'ESTADO', 'MIN', 'RPE', 'CARGA', 'EWMA AGUDA', 'EWMA CRÓNICA', 'RATIO A/C', 'RATIO A/C HSR', 'RATIO A/C ACC']
                             df_tabla_riesgo = df_informe[cols_ver_ci].rename(columns={'RATIO A/C': 'A/C INT', 'RATIO A/C HSR': 'A/C HSR', 'RATIO A/C ACC': 'A/C ACC'})
                             
+                            css_dark_table = "<style>.modern-dark-table { width: 100%; border-collapse: collapse; font-family: sans-serif; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4); background-color: #111318; color: #f8fafc; margin-bottom: 20px; } .modern-dark-table thead tr { background-color: #0b0e14; color: #C5A059; } .modern-dark-table th { padding: 12px 15px; font-weight: 800; text-transform: uppercase; font-size: 0.8rem; text-align: center !important; border-bottom: 2px solid #1c1f26; } .modern-dark-table td { padding: 10px 15px; text-align: center !important; border-bottom: 1px solid #1c1f26; font-weight: 700; font-size: 0.95rem; } .modern-dark-table tbody tr:hover td { filter: brightness(1.2); }</style>"
+                            
                             estilo_ci = (df_tabla_riesgo.style.hide(axis="index")
                                          .format({"MIN": "{:.0f}'", "RPE": "{:.0f}", "CARGA": "{:.0f}", "EWMA AGUDA": "{:.0f}", "EWMA CRÓNICA": "{:.0f}", "A/C INT": "{:.2f}", "A/C HSR": "{:.2f}", "A/C ACC": "{:.2f}"})
-                                         .map(lambda x: f"background-color: {color_ratio_ac(x)}; color: black; font-weight: bold;" if isinstance(x, (int, float)) else "", subset=['A/C INT', 'A/C HSR', 'A/C ACC']))
-                            mostrar_tabla_moderna(estilo_ci)
+                                         .map(lambda x: f"background-color: {color_ratio_ac(x)}; color: black; font-weight: bold;" if isinstance(x, (int, float)) else "", subset=['A/C INT', 'A/C HSR', 'A/C ACC'])
+                                         .set_table_attributes('class="modern-dark-table"'))
+                            st.markdown(css_dark_table + estilo_ci.to_html(), unsafe_allow_html=True)
                         
                         st.markdown("---")
 
@@ -1743,9 +1758,14 @@ with tab_ses:
                             df_tabla_ce['DCC:ACC'] = (df_tabla_ce['DCC'] / df_tabla_ce['ACC'].replace(0, np.nan)).fillna(0)
                             
                             cols_ver_ce = ['JUGADOR', 'DIS', '% DIS (Part)', 'DIS AI', '% HSR (Part)', 'ACC', 'DCC', 'DCC:ACC', 'VMAX', '% VMAX']
-                            mostrar_tabla_moderna(df_tabla_ce[cols_ver_ce].style.hide(axis="index")
-                                                  .format({"DIS": "{:.2f}", "% DIS (Part)": "{:.2f}%", "DIS AI": "{:.0f}", "% HSR (Part)": "{:.2f}%", "ACC": "{:.0f}", "DCC": "{:.0f}", "DCC:ACC": "{:.2f}", "VMAX": "{:.2f}", "% VMAX": "{:.2f}%"})
-                                                  .map(lambda x: "color: #ef4444; font-weight: bold;" if isinstance(x, (int, float)) and x > 1.3 else "", subset=['DCC:ACC']))
+                            
+                            css_dark_table = "<style>.modern-dark-table { width: 100%; border-collapse: collapse; font-family: sans-serif; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4); background-color: #111318; color: #f8fafc; margin-bottom: 20px; } .modern-dark-table thead tr { background-color: #0b0e14; color: #C5A059; } .modern-dark-table th { padding: 12px 15px; font-weight: 800; text-transform: uppercase; font-size: 0.8rem; text-align: center !important; border-bottom: 2px solid #1c1f26; } .modern-dark-table td { padding: 10px 15px; text-align: center !important; border-bottom: 1px solid #1c1f26; font-weight: 700; font-size: 0.95rem; } .modern-dark-table tbody tr:hover td { filter: brightness(1.2); }</style>"
+                            
+                            estilo_ce = (df_tabla_ce[cols_ver_ce].style.hide(axis="index")
+                                         .format({"DIS": "{:.2f}", "% DIS (Part)": "{:.2f}%", "DIS AI": "{:.0f}", "% HSR (Part)": "{:.2f}%", "ACC": "{:.0f}", "DCC": "{:.0f}", "DCC:ACC": "{:.2f}", "VMAX": "{:.2f}", "% VMAX": "{:.2f}%"})
+                                         .map(lambda x: "color: #ef4444; font-weight: bold;" if isinstance(x, (int, float)) and x > 1.3 else "", subset=['DCC:ACC'])
+                                         .set_table_attributes('class="modern-dark-table"'))
+                            st.markdown(css_dark_table + estilo_ce.to_html(), unsafe_allow_html=True)
                         
                         # --- MÓDULO DE CARGA COMPENSATORIA (MD+1 / MD+2 / Post-Partido) ---
                         es_compensatoria = not es_partido and sesion.get('descripcion') in ['MD+1', 'MD+2', 'Post-Partido']
