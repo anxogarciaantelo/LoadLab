@@ -634,7 +634,7 @@ with tab_micro:
                 df_jug_sum['xPartido DIS'] = df_jug_sum.apply(lambda r: calc_xmatch(r, r['DIS'], 'DIS'), axis=1)
                 df_jug_sum['xPartido HSR'] = df_jug_sum.apply(lambda r: calc_xmatch(r, r['DIS AI'], 'HSR'), axis=1)
                 df_jug_sum['xPartido MEC'] = df_jug_sum.apply(lambda r: calc_xmatch(r, r['ACC'] + r['DCC'], 'MEC'), axis=1)
-                df_jug_sum['DCC:ACC'] = np.where(df_jug_sum['ACC'] > 0, df_jug_sum['DCC'] / df_jug_sum['ACC'], 0)
+                df_jug_sum['DCC:ACC'] = (df_jug_sum['DCC'] / df_jug_sum['ACC'].replace(0, np.nan)).fillna(0)
 
                 # --- VACUNA DE VELOCIDAD ---
                 df_master_vac = st.session_state.df_master_informes
@@ -1740,7 +1740,7 @@ with tab_ses:
                             df_tabla_ce['% DIS (Part)'] = df_tabla_ce.apply(lambda r: calc_pct_match(r, 'DIS'), axis=1)
                             df_tabla_ce['% HSR (Part)'] = df_tabla_ce.apply(lambda r: calc_pct_match(r, 'DIS AI'), axis=1)
                             df_tabla_ce['% ACC (Part)'] = df_tabla_ce.apply(lambda r: calc_pct_match(r, 'ACC'), axis=1)
-                            df_tabla_ce['DCC:ACC'] = np.where(df_tabla_ce['ACC'] > 0, df_tabla_ce['DCC'] / df_tabla_ce['ACC'], 0)
+                            df_tabla_ce['DCC:ACC'] = (df_tabla_ce['DCC'] / df_tabla_ce['ACC'].replace(0, np.nan)).fillna(0)
                             
                             cols_ver_ce = ['JUGADOR', 'DIS', '% DIS (Part)', 'DIS AI', '% HSR (Part)', 'ACC', 'DCC', 'DCC:ACC', 'VMAX', '% VMAX']
                             mostrar_tabla_moderna(df_tabla_ce[cols_ver_ce].style.hide(axis="index")
