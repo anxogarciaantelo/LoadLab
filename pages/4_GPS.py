@@ -421,7 +421,7 @@ else:
                 'Nº SPR': 'mean', 'ACC': 'mean', 'DCC': 'mean', 'VMAX': 'max', '% VMAX': 'max'
             }).reset_index()
             
-            df_tabla['DCC:ACC'] = np.where(df_tabla['ACC'] > 0, df_tabla['DCC'] / df_tabla['ACC'], 0)
+            df_tabla['DCC:ACC'] = (df_tabla['DCC'] / df_tabla['ACC'].replace(0, np.nan)).fillna(0)
             
             css_dark_table = "<style>.modern-dark-table { width: 100%; border-collapse: collapse; font-family: sans-serif; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4); background-color: #111318; color: #f8fafc; margin-bottom: 20px; } .modern-dark-table thead tr { background-color: #0b0e14; color: #C5A059; } .modern-dark-table th { padding: 12px 15px; font-weight: 800; text-transform: uppercase; font-size: 0.8rem; text-align: center !important; border-bottom: 2px solid #1c1f26; } .modern-dark-table td { padding: 10px 15px; text-align: center !important; border-bottom: 1px solid #1c1f26; font-weight: 700; font-size: 0.95rem; } .modern-dark-table tbody tr:hover td { filter: brightness(1.2); } .alerta-excentrica { color: #ef4444; font-weight: 900; }</style>"
             
@@ -558,7 +558,7 @@ else:
                     df_x['SPR/min'] = np.where(min_ef_x > 0, df_x['Nº SPR'] / min_ef_x, 0)
                     df_x['ACC/min'] = np.where(min_ef_x > 0, df_x['ACC'] / min_ef_x, 0)
                     df_x['DCC/min'] = np.where(min_ef_x > 0, df_x['DCC'] / min_ef_x, 0)
-                    df_x['DCC:ACC'] = np.where(df_x['ACC'] > 0, df_x['DCC'] / df_x['ACC'], 0)
+                    df_x['DCC:ACC'] = (df_x['DCC'] / df_x['ACC'].replace(0, np.nan)).fillna(0)
             
             if modo_comp == "Absolutas (Totales)":
                 metrics_to_compare = ['MIN', 'DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC', 'DCC:ACC', 'VMAX', '% VMAX']
