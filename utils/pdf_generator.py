@@ -1,399 +1,415 @@
 import os
 import tempfile
+import base64
 from fpdf import FPDF
 import pandas as pd
 
-def generar_pdf_completo(sesion, df_para_medias, df_graficos, alertas_multi, alertas_rec, alertas_car, dict_figs):
-    # Formato horizontal (Landscape)
+def generar_pdf_completo(sesion, df_para_medias, df_graficos, alertas_multi, alertas_rec, alertas_car, dict_figs, escudo_b64=None):
     pdf = FPDF(orientation='L', unit='mm', format='A4') 
     pdf.set_auto_page_break(auto=True, margin=15)
 
-    # CORRECCIÓN EMOJIS: 'ignore' elimina los caracteres especiales sin dejar '?'
     def clean_txt(t): return str(t).encode('latin-1', 'ignore').decode('latin-1').strip()
 
-    # Paleta de colores
-    C_PRIMARY = (41, 128, 185)
-    C_BG_KPI = (240, 240, 240)
-    C_BG_TAB_H = (220, 220, 220)
-    C_BG_TAB_R = (248, 248, 248)
+    # PALETA DE COLORES ÉLITE
+    C_DARK = (11, 14, 20)
+    C_GOLD = (197, 160, 89)
+    C_RED = (239, 68, 68)
+    C_GREEN = (16, 185, 129)
+    C_GRAY = (148, 163, 184)
+    C_TAB_H = (17, 19, 24)
+    C_TAB_R1 = (255, 255, 255)
+    C_TAB_R2 = (248, 250, 252)
 
-    # Guardar temporalmente las imágenes
     img_paths = {}
+    if escudo_b64:
+        tmp_esc = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
+        if str(escudo_b64).startswith("http"):
+            import requests
+            r = requests.get(escudo_b64)
+            tmp_esc.write(r.content)
+        else:
+            tmp_esc.write(base64.b64decode(escudo_b64.split(",")[1] if "," in escudo_b64 else escudo_b64))
+        tmp_esc.close()
+        img_paths['escudo'] = tmp_esc.name
+
     for name, fig in dict_figs.items():
         if fig is not None:
-            # 1. Forzar fondo blanco sólido
-            fig.update_layout(paper_bgcolor="white", plot_bgcolor="white")
-            
-            # 2. Cambiar a JPG para que FPDF no pierda los colores por la transparencia
+            fig.update_layout(paper_bgcolor="white", plot_bgcolor="white", font=dict(color="#111318"))
             tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
             tmp.close()  
-            fig.write_image(tmp.name, engine="kaleido", width=750, height=450, format="jpg")
+            fig.write_image(tmp.name, engine="kaleido", width=800, height=450, format="jpg")
             img_paths[name] = tmp.name
 
+    def draw_header(title, subtitle):
+        pdf.set_fill_color(*C_DARK)
+        pdf.rect(0, 0, 297, 24, 'F')
+        pdf.set_fill_color(*C_GOLD)
+        pdf.rect(0, 24, 297, 1, 'F')
+        
+        if 'escudo' in img_paths:
+            pdf.image(img_paths['escudo'], x=12, y=3, w=18)
+            
+        pdf.set_xy(35, 5)
+        pdf.set_font("Arial", 'B', 15)
+        pdf.set_text_color(255, 255, 255)
+        pdf.cell(200, 7, clean_txt(title.upper()), ln=1)
+        
+        pdf.set_xy(35, 13)
+        pdf.set_font("Arial", 'B', 9)
+        pdf.set_text_color(*C_GOLD)
+        pdf.cell(200, 6, clean_txt(subtitle.upper()), ln=1)
+        pdf.set_y(32)
+
+    def draw_kpi(x, y, w, h, title, val, subtitle="", val_color=C_DARK):
+        pdf.set_fill_color(255, 255, 255)
+        pdf.set_draw_color(226, 232, 240)
+        pdf.rect(x, y, w, h, 'DF')
+        pdf.set_fill_color(*C_GOLD)
+        pdf.rect(x, y, w, 2, 'F')
+        
+        pdf.set_xy(x+3, y+4)
+        pdf.set_font("Arial", 'B', 7)
+        pdf.set_text_color(*C_GRAY)
+        pdf.cell(w-6, 4, clean_txt(title.upper()), align='C')
+        
+        pdf.set_xy(x+3, y+9)
+        pdf.set_font("Arial", 'B', 14)
+        pdf.set_text_color(*val_color)
+        pdf.cell(w-6, 7, clean_txt(str(val)), align='C')
+        
+        if subtitle:
+            pdf.set_xy(x+3, y+16)
+            pdf.set_font("Arial", 'B', 7)
+            pdf.set_text_color(*C_GOLD)
+            pdf.cell(w-6, 4, clean_txt(subtitle), align='C')
+
+    def draw_section_title(txt, y):
+        pdf.set_xy(10, y)
+        pdf.set_font("Arial", 'B', 12)
+        pdf.set_text_color(*C_DARK)
+        pdf.cell(200, 8, clean_txt(txt), ln=1)
+        pdf.set_draw_color(*C_GOLD)
+        pdf.line(10, y+8, 287, y+8)
+        pdf.set_y(y+12)
+
+    # PAGE 1
     pdf.add_page()
-
-    # --- PORTADA Y TÍTULO ---
-    pdf.set_font("Arial", 'B', 16)
-    pdf.cell(0, 10, clean_txt(f"INFORME DE SESIÓN | {sesion['fecha']} | {sesion.get('tipo', '')}"), ln=True, align='C')
-    pdf.ln(5)
-
-    # --- KPIs GLOBALES ---
-    pdf.set_font("Arial", 'B', 10)
-    pdf.set_fill_color(*C_BG_KPI)
-    w_kpi = 277 / 4 
+    draw_header("INFORME DE SESIÓN DIARIA", f"{sesion['fecha']} | {sesion.get('tipo', '')}")
     
     tqr_m = df_para_medias['TQR'].mean() if not df_para_medias.empty else 0
     well_m = df_para_medias['WELLNESS'].mean() if not df_para_medias.empty else 0
     rpe_m = df_para_medias['RPE'].mean() if not df_para_medias.empty else 0
     carga_m = df_para_medias['CARGA'].mean() if not df_para_medias.empty else 0
-
-    y_kpi = pdf.get_y()
-    pdf.multi_cell(w_kpi, 6, clean_txt(f"TQR Medio (Recuperación)\n{tqr_m:.1f} / 10"), border=1, align='C', fill=True)
-    pdf.set_xy(10 + w_kpi, y_kpi)
-    pdf.multi_cell(w_kpi, 6, clean_txt(f"Wellness Medio (Fatiga)\n{well_m:.1f} pts"), border=1, align='C', fill=True)
-    pdf.set_xy(10 + w_kpi*2, y_kpi)
-    pdf.multi_cell(w_kpi, 6, clean_txt(f"RPE Medio (Esfuerzo)\n{rpe_m:.1f} / 10"), border=1, align='C', fill=True)
-    pdf.set_xy(10 + w_kpi*3, y_kpi)
-    pdf.multi_cell(w_kpi, 6, clean_txt(f"Carga Media Sesión\n{carga_m:.0f} UA"), border=1, align='C', fill=True)
-    pdf.ln(8)
-
-    # --- SECCIÓN 1: BIENESTAR ---
-    pdf.set_font("Arial", 'B', 14)
-    pdf.set_text_color(*C_PRIMARY)
-    pdf.cell(0, 10, clean_txt("1. Bienestar y Recuperación"), ln=True)
-    pdf.set_text_color(0, 0, 0)
-
-    y_img = pdf.get_y()
-    if "Desglose de Wellness" in img_paths:
-        pdf.image(img_paths["Desglose de Wellness"], x=10, y=y_img, w=135)
-    if "Calidad de Recuperación (TQR)" in img_paths:
-        pdf.image(img_paths["Calidad de Recuperación (TQR)"], x=150, y=y_img, w=135)
-    
-    # --- SECCIÓN 2: CARGA INTERNA ---
-    pdf.add_page()
-    pdf.set_font("Arial", 'B', 14)
-    pdf.set_text_color(*C_PRIMARY)
-    pdf.cell(0, 10, clean_txt("2. Carga Interna (RPE & Acumulada)"), ln=True)
-    pdf.set_text_color(0, 0, 0)
-
-    pdf.set_font("Arial", 'B', 10)
-    pdf.set_fill_color(*C_BG_KPI)
-    w_kpi3 = 277 / 3
-    y_kpi = pdf.get_y()
     min_m = df_para_medias['MIN'].mean() if not df_para_medias.empty else 0
-    pdf.multi_cell(w_kpi3, 6, clean_txt(f"Minutos Sesión (Media)\n{min_m:.1f}"), border=1, align='C', fill=True)
-    pdf.set_xy(10 + w_kpi3, y_kpi)
-    pdf.multi_cell(w_kpi3, 6, clean_txt(f"RPE Medio\n{rpe_m:.1f}"), border=1, align='C', fill=True)
-    pdf.set_xy(10 + w_kpi3*2, y_kpi)
-    pdf.multi_cell(w_kpi3, 6, clean_txt(f"Carga Media (UA)\n{carga_m:.0f}"), border=1, align='C', fill=True)
-    pdf.ln(8)
 
-    y_img = pdf.get_y()
-    if "Carga de Sesión" in img_paths:
-        pdf.image(img_paths["Carga de Sesión"], x=10, y=y_img, w=135)
-    if "Riesgo de Lesión (Ratio A/C)" in img_paths:
-        pdf.image(img_paths["Riesgo de Lesión (Ratio A/C)"], x=150, y=y_img, w=135)
+    draw_section_title("1. BIENESTAR Y CARGA INTERNA", pdf.get_y())
     
-    # Salto de página para la primera tabla
-    pdf.add_page()
-    
-    pdf.set_font("Arial", 'B', 8)
-    pdf.set_fill_color(*C_BG_TAB_H)
-    cols_ci = ['JUGADOR', 'POS', 'ESTADO', 'MIN', 'RPE', 'CARGA', 'EWMA AGUDA', 'EWMA CRÓNICA', 'RATIO A/C']
-    widths_ci = [45, 15, 25, 20, 15, 20, 30, 32, 25] 
-    
-    offset_x = (297 - sum(widths_ci)) / 2
-    pdf.set_x(offset_x)
-    for i, col in enumerate(cols_ci):
-        pdf.cell(widths_ci[i], 6, clean_txt(col), border=1, fill=True, align='C')
-    pdf.ln()
-
-    pdf.set_font("Arial", '', 8)
-    row_count = 0
-    for _, row in df_graficos.iterrows():
-        pdf.set_x(offset_x)
-        if row_count % 2 == 0:
-            pdf.set_fill_color(*C_BG_TAB_R)
-        else:
-            pdf.set_fill_color(255, 255, 255)
-            
-        for i, col in enumerate(cols_ci):
-            val = row.get(col, 0)
-            val_str = f"{val:.2f}" if isinstance(val, float) else str(val)[:20]
-            pdf.cell(widths_ci[i], 6, clean_txt(val_str), border=1, align='C', fill=True)
-        pdf.ln()
-        row_count += 1
-
-    # --- SECCIÓN 3: CARGA EXTERNA ---
-    pdf.add_page()
-    pdf.set_font("Arial", 'B', 14)
-    pdf.set_text_color(*C_PRIMARY)
-    pdf.cell(0, 10, clean_txt("3. Carga Externa (GPS) - Solo jugadores con GPS > 0m"), ln=True)
-    pdf.set_text_color(0, 0, 0)
-
-    df_para_medias_gps = df_para_medias[df_para_medias['DIS'] > 0]
-    pdf.set_font("Arial", 'B', 9)
-    pdf.set_fill_color(*C_BG_KPI)
-    w_kpi5 = 277 / 5
     y_kpi = pdf.get_y()
+    w_kpi = 277 / 5
+    draw_kpi(10, y_kpi, w_kpi-2, 22, "TQR Medio", f"{tqr_m:.1f} / 10")
+    draw_kpi(10 + w_kpi, y_kpi, w_kpi-2, 22, "Wellness Medio", f"{well_m:.1f} pts")
+    draw_kpi(10 + w_kpi*2, y_kpi, w_kpi-2, 22, "Minutos Sesión", f"{min_m:.0f}'")
+    draw_kpi(10 + w_kpi*3, y_kpi, w_kpi-2, 22, "RPE Medio", f"{rpe_m:.1f} / 10")
+    draw_kpi(10 + w_kpi*4, y_kpi, w_kpi-2, 22, "Carga Media", f"{carga_m:.0f} UA")
     
+    y_img = pdf.get_y() + 26
+    w_img_3 = 277 / 3
+    if "Desglose de Wellness" in img_paths: pdf.image(img_paths["Desglose de Wellness"], x=10, y=y_img, w=w_img_3)
+    if "Calidad de Recuperación (TQR)" in img_paths: pdf.image(img_paths["Calidad de Recuperación (TQR)"], x=10 + w_img_3, y=y_img, w=w_img_3)
+    if "Carga de Sesión" in img_paths: pdf.image(img_paths["Carga de Sesión"], x=10 + w_img_3*2, y=y_img, w=w_img_3)
+
+    # PAGE 2
+    pdf.add_page()
+    draw_header("INFORME DE SESIÓN DIARIA", f"{sesion['fecha']} | {sesion.get('tipo', '')}")
+    draw_section_title("2. CARGA EXTERNA (GPS)", pdf.get_y())
+    
+    df_para_medias_gps = df_para_medias[df_para_medias['DIS'] > 0]
     dis_m = df_para_medias_gps['DIS'].mean() if not df_para_medias_gps.empty else 0
     hsr_m = df_para_medias_gps['DIS AI'].mean() if not df_para_medias_gps.empty else 0
     spr_m = df_para_medias_gps['Nº SPR'].mean() if not df_para_medias_gps.empty else 0
     acc_m = df_para_medias_gps['ACC'].mean() if not df_para_medias_gps.empty else 0
     dcc_m = df_para_medias_gps['DCC'].mean() if not df_para_medias_gps.empty else 0
-
-    pdf.multi_cell(w_kpi5, 6, clean_txt(f"Distancia (km)\n{dis_m:.2f}"), border=1, align='C', fill=True)
-    pdf.set_xy(10 + w_kpi5, y_kpi)
-    pdf.multi_cell(w_kpi5, 6, clean_txt(f"HSR (>21 km/h)\n{hsr_m:.2f}"), border=1, align='C', fill=True)
-    pdf.set_xy(10 + w_kpi5*2, y_kpi)
-    pdf.multi_cell(w_kpi5, 6, clean_txt(f"Nº SPRINTS (>24)\n{spr_m:.1f}"), border=1, align='C', fill=True)
-    pdf.set_xy(10 + w_kpi5*3, y_kpi)
-    pdf.multi_cell(w_kpi5, 6, clean_txt(f"ACC (>3 m/s²)\n{acc_m:.0f}"), border=1, align='C', fill=True)
-    pdf.set_xy(10 + w_kpi5*4, y_kpi)
-    pdf.multi_cell(w_kpi5, 6, clean_txt(f"DCC (>3 m/s²)\n{dcc_m:.0f}"), border=1, align='C', fill=True)
-    pdf.ln(8)
-
-    y_img = pdf.get_y()
-    w_img3 = 277 / 3
-    if "Huella Dactilar" in img_paths:
-        pdf.image(img_paths["Huella Dactilar"], x=10, y=y_img, w=w_img3)
-    if "Volumen vs Intensidad" in img_paths:
-        pdf.image(img_paths["Volumen vs Intensidad"], x=10 + w_img3, y=y_img, w=w_img3)
-    if "ACC vs DCC" in img_paths:
-        pdf.image(img_paths["ACC vs DCC"], x=10 + w_img3*2, y=y_img, w=w_img3)
     
-    # Salto de página para la segunda tabla
+    y_kpi = pdf.get_y()
+    w_kpi = 277 / 5
+    draw_kpi(10, y_kpi, w_kpi-2, 22, "Distancia", f"{dis_m:.2f} km")
+    draw_kpi(10 + w_kpi, y_kpi, w_kpi-2, 22, "HSR (>21 km/h)", f"{hsr_m:.0f} m")
+    draw_kpi(10 + w_kpi*2, y_kpi, w_kpi-2, 22, "Sprints (>24 km/h)", f"{spr_m:.1f}")
+    draw_kpi(10 + w_kpi*3, y_kpi, w_kpi-2, 22, "ACC (>3 m/s²)", f"{acc_m:.0f}")
+    draw_kpi(10 + w_kpi*4, y_kpi, w_kpi-2, 22, "DCC (>3 m/s²)", f"{dcc_m:.0f}")
+    
+    y_img = pdf.get_y() + 26
+    if "Huella Dactilar" in img_paths: pdf.image(img_paths["Huella Dactilar"], x=10, y=y_img, w=w_img_3)
+    if "Volumen vs Intensidad" in img_paths: pdf.image(img_paths["Volumen vs Intensidad"], x=10 + w_img_3, y=y_img, w=w_img_3)
+    if "ACC vs DCC" in img_paths: pdf.image(img_paths["ACC vs DCC"], x=10 + w_img_3*2, y=y_img, w=w_img_3)
+
+    # PAGE 3
     pdf.add_page()
+    draw_header("INFORME DE SESIÓN DIARIA", f"{sesion['fecha']} | {sesion.get('tipo', '')}")
+    draw_section_title("3. TABLA MAESTRA DE RENDIMIENTO INDIVIDUAL", pdf.get_y())
     
     if 'HID >21' not in df_graficos.columns:
         df_graficos['HID >21'] = df_graficos.get('DIS AI', 0.0)
 
-    pdf.set_font("Arial", 'B', 8)
-    pdf.set_fill_color(*C_BG_TAB_H)
-    cols_ce = ['JUGADOR', 'POS', 'ESTADO', 'DIS', 'HID >21', 'Nº SPR', 'ACC', 'DCC', 'VMAX']
-    widths_ce = [45, 15, 25, 20, 25, 20, 20, 20, 20]
+    pdf.set_font("Arial", 'B', 7)
+    pdf.set_fill_color(*C_TAB_H)
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_draw_color(255, 255, 255)
     
-    offset_x = (297 - sum(widths_ce)) / 2
+    cols_all = ['JUGADOR', 'POS', 'MIN', 'RPE', 'CARGA', 'TQR', 'WELLNESS', 'A/C INT', 'DIS', 'HSR >21', 'SPR >24', 'ACC', 'DCC', 'VMAX']
+    widths_all = [35, 12, 12, 12, 15, 15, 20, 20, 15, 18, 18, 15, 15, 15]
+    
+    offset_x = (297 - sum(widths_all)) / 2
     pdf.set_x(offset_x)
-    for i, col in enumerate(cols_ce):
-        pdf.cell(widths_ce[i], 6, clean_txt(col), border=1, fill=True, align='C')
+    for i, col in enumerate(cols_all):
+        pdf.cell(widths_all[i], 8, clean_txt(col), border=1, fill=True, align='C')
     pdf.ln()
 
-    pdf.set_font("Arial", '', 8)
+    pdf.set_font("Arial", '', 7)
+    pdf.set_draw_color(226, 232, 240)
     row_count = 0
     for _, row in df_graficos.iterrows():
         pdf.set_x(offset_x)
         if row_count % 2 == 0:
-            pdf.set_fill_color(*C_BG_TAB_R)
+            pdf.set_fill_color(*C_TAB_R2)
         else:
-            pdf.set_fill_color(255, 255, 255)
+            pdf.set_fill_color(*C_TAB_R1)
             
-        for i, col in enumerate(cols_ce):
-            val = row.get(col, 0)
-            val_str = f"{val:.2f}" if isinstance(val, float) else str(val)[:20]
-            pdf.cell(widths_ce[i], 6, clean_txt(val_str), border=1, align='C', fill=True)
+        vals = [
+            str(row.get('JUGADOR', ''))[:20],
+            str(row.get('POS', '')),
+            f"{row.get('MIN', 0):.0f}",
+            f"{row.get('RPE', 0):.1f}",
+            f"{row.get('CARGA', 0):.0f}",
+            f"{row.get('TQR', 0):.1f}",
+            f"{row.get('WELLNESS', 0):.1f}",
+            f"{row.get('RATIO A/C', 0):.2f}",
+            f"{row.get('DIS', 0):.2f}",
+            f"{row.get('HID >21', 0):.0f}",
+            f"{row.get('Nº SPR', 0):.0f}",
+            f"{row.get('ACC', 0):.0f}",
+            f"{row.get('DCC', 0):.0f}",
+            f"{row.get('VMAX', 0):.1f}"
+        ]
+        
+        for i, val in enumerate(vals):
+            if cols_all[i] == 'A/C INT':
+                v = float(val) if val else 0
+                if v >= 1.5: pdf.set_text_color(*C_RED); pdf.set_font("Arial", 'B', 7)
+                elif v <= 0.8: pdf.set_text_color(245, 158, 11); pdf.set_font("Arial", 'B', 7)
+                else: pdf.set_text_color(*C_GREEN); pdf.set_font("Arial", 'B', 7)
+            else:
+                pdf.set_text_color(*C_DARK)
+                pdf.set_font("Arial", '', 7)
+                
+            align = 'L' if i == 0 else 'C'
+            pdf.cell(widths_all[i], 6, clean_txt(val), border='B', align=align, fill=True)
         pdf.ln()
         row_count += 1
 
-    # --- SECCIÓN 4: ALERTAS MÉDICAS ---
-    pdf.add_page()
-    pdf.set_font("Arial", 'B', 14)
-    pdf.set_text_color(200, 0, 0)
-    pdf.cell(0, 10, clean_txt("Alertas de Rendimiento y Riesgo"), ln=True)
-    pdf.set_text_color(0, 0, 0)
-    pdf.set_font("Arial", '', 10)
+    # PAGE 4
+    if alertas_multi or alertas_rec or alertas_car:
+        pdf.add_page()
+        draw_header("INFORME DE SESIÓN DIARIA", f"{sesion['fecha']} | {sesion.get('tipo', '')}")
+        draw_section_title("4. ALERTAS DE RENDIMIENTO Y RIESGO", pdf.get_y())
+        
+        def print_alert_group(title, alerts, color, icon_text):
+            if not alerts: return
+            pdf.set_fill_color(*color)
+            pdf.set_text_color(255, 255, 255)
+            pdf.set_font("Arial", 'B', 10)
+            pdf.cell(277, 8, clean_txt(f" {icon_text} {title.upper()}"), fill=True, ln=1)
+            
+            pdf.set_text_color(*C_DARK)
+            pdf.set_font("Arial", '', 9)
+            pdf.ln(2)
+            for al in alerts:
+                pdf.set_x(12)
+                pdf.multi_cell(273, 6, clean_txt(f"• {al.replace('**', '')}"))
+            pdf.ln(6)
 
-    if not alertas_multi and not alertas_rec and not alertas_car:
-        pdf.cell(0, 6, clean_txt("Todo en parámetros normales."), ln=True)
-    else:
-        if alertas_multi:
-            pdf.set_font("Arial", 'B', 11)
-            pdf.cell(0, 8, clean_txt("RIESGO MULTIFACTORIAL (2 o más alertas simultáneas):"), ln=True)
-            pdf.set_font("Arial", '', 10)
-            for al in alertas_multi: 
-                pdf.set_x(15)
-                pdf.multi_cell(260, 6, clean_txt(f"- {al.replace('**', '')}"))
-            pdf.ln(4)
+        print_alert_group("Riesgo Multifactorial (2 o más alertas simultáneas)", alertas_multi, C_RED, "!!")
+        print_alert_group("Alertas de Recuperación", alertas_rec, (245, 158, 11), "!")
+        print_alert_group("Alertas de Carga Extrema / Desentrenamiento", alertas_car, C_GOLD, "!")
 
-        pdf.set_font("Arial", 'B', 11)
-        pdf.cell(0, 8, clean_txt("Recuperación (1 alerta):"), ln=True)
-        pdf.set_font("Arial", '', 10)
-        if alertas_rec:
-            for al in alertas_rec: 
-                pdf.set_x(15)
-                pdf.multi_cell(260, 6, clean_txt(f"- {al.replace('**', '')}"))
-        else:
-            pdf.cell(0, 6, clean_txt("Sin alertas individuales."), ln=True)
-        pdf.ln(4)
-
-        pdf.set_font("Arial", 'B', 11)
-        pdf.cell(0, 8, clean_txt("Carga (1 alerta):"), ln=True)
-        pdf.set_font("Arial", '', 10)
-        if alertas_car:
-            for al in alertas_car: 
-                pdf.set_x(15)
-                pdf.multi_cell(260, 6, clean_txt(f"- {al.replace('**', '')}"))
-        else:
-            pdf.cell(0, 6, clean_txt("Sin alertas individuales."), ln=True)
-
-    # Limpieza de imágenes temporales
     for path in img_paths.values():
         if os.path.exists(path): os.unlink(path)
 
     out = pdf.output(dest='S')
     return out.encode('latin-1') if isinstance(out, str) else bytes(out)
 
-import tempfile
-import os
-from fpdf import FPDF
 
-def generar_pdf_microciclo(nombre_micro, df_diario, df_indiv, kpis_globales, dict_figs):
+def generar_pdf_microciclo(nombre_micro, df_diario, df_indiv, kpis_globales, dict_figs, escudo_b64=None):
+    import os
+    import tempfile
+    import base64
+    from fpdf import FPDF
+    import pandas as pd
+    
     pdf = FPDF(orientation='L', unit='mm', format='A4')
     pdf.set_auto_page_break(auto=True, margin=15)
-    
     def clean_txt(t): return str(t).encode('latin-1', 'ignore').decode('latin-1').strip()
     
-    C_PRIMARY = (41, 128, 185)
-    C_BG_KPI = (240, 240, 240)
-    C_BG_TAB_H = (220, 220, 220)
-    C_BG_TAB_R = (248, 248, 248)
+    C_DARK = (11, 14, 20)
+    C_GOLD = (197, 160, 89)
+    C_RED = (239, 68, 68)
+    C_GREEN = (16, 185, 129)
+    C_GRAY = (148, 163, 184)
+    C_TAB_H = (17, 19, 24)
+    C_TAB_R1 = (255, 255, 255)
+    C_TAB_R2 = (248, 250, 252)
 
-    # Exportar gráficos de Plotly a JPG temporales
     img_paths = {}
+    if escudo_b64:
+        tmp_esc = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
+        if str(escudo_b64).startswith("http"):
+            import requests
+            r = requests.get(escudo_b64)
+            tmp_esc.write(r.content)
+        else:
+            tmp_esc.write(base64.b64decode(escudo_b64.split(",")[1] if "," in escudo_b64 else escudo_b64))
+        tmp_esc.close()
+        img_paths['escudo'] = tmp_esc.name
+
     for name, fig in dict_figs.items():
         if fig is not None:
-            fig.update_layout(paper_bgcolor="white", plot_bgcolor="white")
+            fig.update_layout(paper_bgcolor="white", plot_bgcolor="white", font=dict(color="#111318"))
             tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
             tmp.close()  
-            fig.write_image(tmp.name, engine="kaleido", width=750, height=450, format="jpg")
+            fig.write_image(tmp.name, engine="kaleido", width=800, height=450, format="jpg")
             img_paths[name] = tmp.name
 
+    def draw_header(title, subtitle):
+        pdf.set_fill_color(*C_DARK)
+        pdf.rect(0, 0, 297, 24, 'F')
+        pdf.set_fill_color(*C_GOLD)
+        pdf.rect(0, 24, 297, 1, 'F')
+        if 'escudo' in img_paths:
+            pdf.image(img_paths['escudo'], x=12, y=3, w=18)
+        pdf.set_xy(35, 5)
+        pdf.set_font("Arial", 'B', 15)
+        pdf.set_text_color(255, 255, 255)
+        pdf.cell(200, 7, clean_txt(title.upper()), ln=1)
+        pdf.set_xy(35, 13)
+        pdf.set_font("Arial", 'B', 9)
+        pdf.set_text_color(*C_GOLD)
+        pdf.cell(200, 6, clean_txt(subtitle.upper()), ln=1)
+        pdf.set_y(32)
+
+    def draw_kpi(x, y, w, h, title, val):
+        pdf.set_fill_color(255, 255, 255)
+        pdf.set_draw_color(226, 232, 240)
+        pdf.rect(x, y, w, h, 'DF')
+        pdf.set_fill_color(*C_GOLD)
+        pdf.rect(x, y, w, 2, 'F')
+        pdf.set_xy(x+3, y+4)
+        pdf.set_font("Arial", 'B', 7)
+        pdf.set_text_color(*C_GRAY)
+        pdf.cell(w-6, 4, clean_txt(title.upper()), align='C')
+        pdf.set_xy(x+3, y+9)
+        pdf.set_font("Arial", 'B', 14)
+        pdf.set_text_color(*C_DARK)
+        pdf.cell(w-6, 7, clean_txt(str(val)), align='C')
+
+    def draw_section_title(txt, y):
+        pdf.set_xy(10, y)
+        pdf.set_font("Arial", 'B', 12)
+        pdf.set_text_color(*C_DARK)
+        pdf.cell(200, 8, clean_txt(txt), ln=1)
+        pdf.set_draw_color(*C_GOLD)
+        pdf.line(10, y+8, 287, y+8)
+        pdf.set_y(y+12)
+
     pdf.add_page()
-
-    # TÍTULO
-    pdf.set_font("Arial", 'B', 16)
-    pdf.cell(0, 10, clean_txt(f"INFORME DE MICROCICLO | {nombre_micro}"), ln=True, align='C')
-    pdf.ln(5)
-
-    # BLOQUE DE KPIs
-    pdf.set_font("Arial", 'B', 9)
-    pdf.set_fill_color(*C_BG_KPI)
-    w_kpi = 277 / 5
+    draw_header("INFORME DE MICROCICLO", f"{nombre_micro}")
+    draw_section_title("1. RESUMEN ACUMULADO DEL MICROCICLO", pdf.get_y())
     
     y_kpi = pdf.get_y()
-    pdf.multi_cell(w_kpi, 6, clean_txt(f"Wellness Medio\n{kpis_globales.get('Wellness', 0):.1f}"), border=1, align='C', fill=True)
-    pdf.set_xy(10 + w_kpi, y_kpi)
-    pdf.multi_cell(w_kpi, 6, clean_txt(f"TQR Medio\n{kpis_globales.get('TQR', 0):.1f}"), border=1, align='C', fill=True)
-    pdf.set_xy(10 + w_kpi*2, y_kpi)
-    pdf.multi_cell(w_kpi, 6, clean_txt(f"RPE Medio\n{kpis_globales.get('RPE', 0):.1f}"), border=1, align='C', fill=True)
-    pdf.set_xy(10 + w_kpi*3, y_kpi)
-    pdf.multi_cell(w_kpi, 6, clean_txt(f"Minutos Totales\n{kpis_globales.get('Minutos', 0):.1f}"), border=1, align='C', fill=True)
-    pdf.set_xy(10 + w_kpi*4, y_kpi)
-    pdf.multi_cell(w_kpi, 6, clean_txt(f"Carga Total (UA)\n{kpis_globales.get('Carga', 0):.0f}"), border=1, align='C', fill=True)
-    pdf.ln(8)
-
-    y_kpi = pdf.get_y()
-    pdf.multi_cell(w_kpi, 6, clean_txt(f"Distancia Total\n{kpis_globales.get('DIS', 0):.2f} km"), border=1, align='C', fill=True)
-    pdf.set_xy(10 + w_kpi, y_kpi)
-    pdf.multi_cell(w_kpi, 6, clean_txt(f"HSR Total\n{kpis_globales.get('HSR', 0):.2f} m"), border=1, align='C', fill=True)
-    pdf.set_xy(10 + w_kpi*2, y_kpi)
-    pdf.multi_cell(w_kpi, 6, clean_txt(f"Sprints Totales\n{kpis_globales.get('SPR', 0):.1f}"), border=1, align='C', fill=True)
-    pdf.set_xy(10 + w_kpi*3, y_kpi)
-    pdf.multi_cell(w_kpi, 6, clean_txt(f"ACC Totales\n{kpis_globales.get('ACC', 0):.1f}"), border=1, align='C', fill=True)
-    pdf.set_xy(10 + w_kpi*4, y_kpi)
-    pdf.multi_cell(w_kpi, 6, clean_txt(f"DCC Totales\n{kpis_globales.get('DCC', 0):.1f}"), border=1, align='C', fill=True)
-    pdf.ln(10)
-
-    # TABLA: RESUMEN POR DÍA
-    pdf.set_font("Arial", 'B', 12)
-    pdf.set_text_color(*C_PRIMARY)
-    pdf.cell(0, 10, clean_txt("Resumen por Día"), ln=True)
-    pdf.set_text_color(0, 0, 0)
+    w_kpi = 277 / 5
+    draw_kpi(10, y_kpi, w_kpi-2, 18, "Wellness Medio", f"{kpis_globales.get('Wellness', 0):.1f}")
+    draw_kpi(10 + w_kpi, y_kpi, w_kpi-2, 18, "TQR Medio", f"{kpis_globales.get('TQR', 0):.1f}")
+    draw_kpi(10 + w_kpi*2, y_kpi, w_kpi-2, 18, "RPE Medio", f"{kpis_globales.get('RPE', 0):.1f}")
+    draw_kpi(10 + w_kpi*3, y_kpi, w_kpi-2, 18, "Minutos Totales", f"{kpis_globales.get('Minutos', 0):.0f}'")
+    draw_kpi(10 + w_kpi*4, y_kpi, w_kpi-2, 18, "Carga Total", f"{kpis_globales.get('Carga', 0):.0f} UA")
+    
+    y_kpi2 = y_kpi + 22
+    draw_kpi(10, y_kpi2, w_kpi-2, 18, "Distancia", f"{kpis_globales.get('DIS', 0):.2f} km")
+    draw_kpi(10 + w_kpi, y_kpi2, w_kpi-2, 18, "HSR (>21)", f"{kpis_globales.get('HSR', 0):.0f} m")
+    draw_kpi(10 + w_kpi*2, y_kpi2, w_kpi-2, 18, "Sprints (>24)", f"{kpis_globales.get('SPR', 0):.1f}")
+    draw_kpi(10 + w_kpi*3, y_kpi2, w_kpi-2, 18, "ACC (>3)", f"{kpis_globales.get('ACC', 0):.0f}")
+    draw_kpi(10 + w_kpi*4, y_kpi2, w_kpi-2, 18, "DCC (>3)", f"{kpis_globales.get('DCC', 0):.0f}")
+    
+    pdf.set_y(y_kpi2 + 24)
+    draw_section_title("2. RESUMEN DIARIO", pdf.get_y())
     
     cols_dia = ['DIA', 'WELLNESS', 'TQR', 'RPE', 'MIN', 'CARGA', 'DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC']
     widths_dia = [25, 25, 20, 20, 20, 25, 25, 25, 25, 25, 25] 
     offset_x = (297 - sum(widths_dia)) / 2
     
     pdf.set_font("Arial", 'B', 8)
-    pdf.set_fill_color(*C_BG_TAB_H)
+    pdf.set_fill_color(*C_TAB_H)
+    pdf.set_text_color(255, 255, 255)
     pdf.set_x(offset_x)
     for i, col in enumerate(cols_dia):
-        pdf.cell(widths_dia[i], 6, clean_txt(col), border=1, fill=True, align='C')
+        pdf.cell(widths_dia[i], 8, clean_txt(col), border=1, fill=True, align='C')
     pdf.ln()
 
     pdf.set_font("Arial", '', 8)
+    pdf.set_draw_color(226, 232, 240)
     for r_idx, row in df_diario.iterrows():
         pdf.set_x(offset_x)
-        if r_idx % 2 == 0:
-            pdf.set_fill_color(*C_BG_TAB_R)
-        else:
-            pdf.set_fill_color(255, 255, 255)
-            
+        pdf.set_fill_color(*C_TAB_R2) if r_idx % 2 == 0 else pdf.set_fill_color(*C_TAB_R1)
+        pdf.set_text_color(*C_DARK)
         for i, col in enumerate(cols_dia):
             val = row.get(col, 0)
             val_str = f"{val:.2f}" if isinstance(val, float) else str(val)
-            pdf.cell(widths_dia[i], 6, clean_txt(val_str), border=1, align='C', fill=True)
+            pdf.cell(widths_dia[i], 6, clean_txt(val_str), border='B', align='C', fill=True)
         pdf.ln()
 
-    # SECCIÓN: GRÁFICOS DE BIENESTAR
+    w_img3 = 277 / 3
+
     pdf.add_page()
-    pdf.set_font("Arial", 'B', 14)
-    pdf.set_text_color(*C_PRIMARY)
-    pdf.cell(0, 10, clean_txt("Bienestar"), ln=True)
-    pdf.set_text_color(0, 0, 0)
+    draw_header("INFORME DE MICROCICLO", f"{nombre_micro}")
+    draw_section_title("3. BIENESTAR Y CARGA INTERNA DIARIA", pdf.get_y())
     y_img = pdf.get_y()
     if "TQR" in img_paths: pdf.image(img_paths["TQR"], x=10, y=y_img, w=135)
     if "Wellness" in img_paths: pdf.image(img_paths["Wellness"], x=150, y=y_img, w=135)
+    
+    y_img2 = y_img + 80
+    if "Minutos" in img_paths: pdf.image(img_paths["Minutos"], x=10, y=y_img2, w=w_img3)
+    if "RPE" in img_paths: pdf.image(img_paths["RPE"], x=10 + w_img3, y=y_img2, w=w_img3)
+    if "Carga" in img_paths: pdf.image(img_paths["Carga"], x=10 + w_img3*2, y=y_img2, w=w_img3)
 
-    # SECCIÓN: GRÁFICOS DE CARGA INTERNA
     pdf.add_page()
-    pdf.set_font("Arial", 'B', 14)
-    pdf.set_text_color(*C_PRIMARY)
-    pdf.cell(0, 10, clean_txt("Carga Interna"), ln=True)
-    pdf.set_text_color(0, 0, 0)
-    y_img = pdf.get_y()
-    w_img3 = 277 / 3
-    if "Minutos" in img_paths: pdf.image(img_paths["Minutos"], x=10, y=y_img, w=w_img3)
-    if "RPE" in img_paths: pdf.image(img_paths["RPE"], x=10 + w_img3, y=y_img, w=w_img3)
-    if "Carga" in img_paths: pdf.image(img_paths["Carga"], x=10 + w_img3*2, y=y_img, w=w_img3)
-
-    # SECCIÓN: GRÁFICOS DE CARGA EXTERNA
-    pdf.add_page()
-    pdf.set_font("Arial", 'B', 14)
-    pdf.set_text_color(*C_PRIMARY)
-    pdf.cell(0, 10, clean_txt("Carga Externa (Solo datos GPS > 0m)"), ln=True)
-    pdf.set_text_color(0, 0, 0)
+    draw_header("INFORME DE MICROCICLO", f"{nombre_micro}")
+    draw_section_title("4. CARGA EXTERNA DIARIA (GPS)", pdf.get_y())
     y_img = pdf.get_y()
     if "ACC_DCC" in img_paths: pdf.image(img_paths["ACC_DCC"], x=10, y=y_img, w=w_img3)
     if "DIS" in img_paths: pdf.image(img_paths["DIS"], x=10 + w_img3, y=y_img, w=w_img3)
     if "DIS_AI" in img_paths: pdf.image(img_paths["DIS_AI"], x=10 + w_img3*2, y=y_img, w=w_img3)
 
-    # TABLA: RESUMEN SEMANAL POR JUGADOR
     pdf.add_page()
-    pdf.set_font("Arial", 'B', 12)
-    pdf.set_text_color(*C_PRIMARY)
-    pdf.cell(0, 10, clean_txt("Resumen Semanal por Jugador"), ln=True)
-    pdf.set_text_color(0, 0, 0)
+    draw_header("INFORME DE MICROCICLO", f"{nombre_micro}")
+    draw_section_title("5. RESUMEN SEMANAL POR JUGADOR", pdf.get_y())
     
     cols_indiv = ['JUGADOR', 'POS', 'MIN', 'TQR', 'WELLNESS', 'RPE', 'CARGA', 'DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC']
     widths_indiv = [40, 15, 15, 15, 22, 15, 20, 20, 20, 20, 20, 20] 
     offset_x_indiv = (297 - sum(widths_indiv)) / 2
     
-    pdf.set_font("Arial", 'B', 8)
-    pdf.set_fill_color(*C_BG_TAB_H)
+    pdf.set_font("Arial", 'B', 7)
+    pdf.set_fill_color(*C_TAB_H)
+    pdf.set_text_color(255, 255, 255)
     pdf.set_x(offset_x_indiv)
     for i, col in enumerate(cols_indiv):
-        pdf.cell(widths_indiv[i], 6, clean_txt(col), border=1, fill=True, align='C')
+        pdf.cell(widths_indiv[i], 8, clean_txt(col), border=1, fill=True, align='C')
     pdf.ln()
 
-    pdf.set_font("Arial", '', 8)
+    pdf.set_font("Arial", '', 7)
+    pdf.set_draw_color(226, 232, 240)
     for r_idx, row in df_indiv.iterrows():
         pdf.set_x(offset_x_indiv)
-        if r_idx % 2 == 0:
-            pdf.set_fill_color(*C_BG_TAB_R)
-        else:
-            pdf.set_fill_color(255, 255, 255)
+        pdf.set_fill_color(*C_TAB_R2) if r_idx % 2 == 0 else pdf.set_fill_color(*C_TAB_R1)
+        pdf.set_text_color(*C_DARK)
             
         for i, col in enumerate(cols_indiv):
             val = row.get(col, 0)
@@ -401,20 +417,15 @@ def generar_pdf_microciclo(nombre_micro, df_diario, df_indiv, kpis_globales, dic
                 val_str = f"{val:.1f}" if col in ['TQR', 'WELLNESS', 'RPE', 'Nº SPR', 'ACC', 'DCC'] else f"{val:.2f}" if col in ['DIS', 'DIS AI'] else f"{val:.0f}"
             else:
                 val_str = str(val)[:20]
-            pdf.cell(widths_indiv[i], 6, clean_txt(val_str), border=1, align='C', fill=True)
+            align = 'L' if i == 0 else 'C'
+            pdf.cell(widths_indiv[i], 6, clean_txt(val_str), border='B', align=align, fill=True)
         pdf.ln()
 
-    # LIMPIEZA ARCHIVOS TEMPORALES
     for path in img_paths.values():
         if os.path.exists(path): os.unlink(path)
 
     out = pdf.output(dest='S')
     return out.encode('latin-1') if isinstance(out, str) else bytes(out)
-
-import base64
-import tempfile
-import os
-from fpdf import FPDF
 
 def generar_pdf_antropometria_jugador(jugador_nombre, jugador_info, fecha_pesaje, kpis_pesaje, kpis_perimetros, kpis_asimetrias, dict_figs, df_historial, escudo_b64, foto_b64):
     pdf = FPDF(orientation='L', unit='mm', format='A4')
