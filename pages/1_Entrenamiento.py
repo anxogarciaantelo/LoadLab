@@ -649,7 +649,10 @@ with tab_micro:
                 df_jug_sum['DCC:ACC'] = (df_jug_sum['DCC'] / df_jug_sum['ACC'].replace(0, np.nan)).fillna(0)
 
                 # --- VACUNA DE VELOCIDAD ---
-                df_master_vac = st.session_state.df_master_informes
+                df_master_vac = st.session_state.df_master_informes.copy()
+                if 'GPS_VIRTUAL' in df_master_vac.columns:
+                    df_master_vac = df_master_vac[df_master_vac['GPS_VIRTUAL'] != True]
+                    
                 vmax_hist_dict = df_master_vac.groupby('JUGADOR')['VMAX'].max().to_dict() if 'VMAX' in df_master_vac.columns else {}
                 
                 def dias_sin_vmax(jug):
