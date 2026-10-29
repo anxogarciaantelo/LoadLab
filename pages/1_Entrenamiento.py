@@ -720,7 +720,7 @@ with tab_micro:
                 if pdf_key not in st.session_state:
                     if st.button(":material/settings: Generar PDF del Microciclo", key=f"btn_prepara_pdf_{num_sem}_{idx_real}"):
                         with st.spinner("Procesando gráficos y PDF (esto puede tardar unos segundos)..."):
-                            st.session_state[pdf_key] = generar_pdf_microciclo(nombre_etiqueta, df_diario, df_indiv, kpis_micro, diccionario_figuras_micro)
+                            st.session_state[pdf_key] = generar_pdf_microciclo(nombre_etiqueta, df_diario, df_indiv, kpis_micro, diccionario_figuras_micro, st.session_state.get('escudo_equipo'))
                         st.rerun()
                 else:
                     col_pdf1, col_pdf2 = st.columns(2)
@@ -2037,7 +2037,8 @@ with tab_ses:
                                 with st.spinner("Procesando gráficos y compilando PDF (esto puede tardar unos segundos)..."):
                                     st.session_state[pdf_key] = generar_pdf_completo(
                                         sesion, df_para_medias, df_graficos, 
-                                        alertas_multi, alertas_rec, alertas_car, dict_figs_sesion
+                                        alertas_multi, alertas_rec, alertas_car, dict_figs_sesion,
+                                        st.session_state.get('escudo_equipo')
                                     )
                                 st.rerun()
                         else:
