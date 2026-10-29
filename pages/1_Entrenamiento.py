@@ -655,13 +655,17 @@ with tab_micro:
                     
                 vmax_hist_dict = df_master_vac.groupby('JUGADOR')['VMAX'].max().to_dict() if 'VMAX' in df_master_vac.columns else {}
                 
+                # Obtener el último día con sesión real en este microciclo para no calcular contra el domingo vacío
+                fecha_micro_activa = df_filtrado[df_filtrado['ENTRENO'] == 1]['FECHA'].max()
+                fecha_ref_str = fecha_micro_activa if not pd.isna(fecha_micro_activa) else df_filtrado['FECHA'].max()
+                fecha_ref_dt = pd.to_datetime(fecha_ref_str).date()
+                
                 def dias_sin_vmax(jug):
                     if vmax_hist_dict.get(jug, 0) > 25.0:
-                        df_picos = df_master_vac[(df_master_vac['JUGADOR'] == jug) & (df_master_vac['FECHA'] <= df_filtrado['FECHA'].max()) & (df_master_vac['VMAX'] >= vmax_hist_dict[jug] * 0.9)]
+                        df_picos = df_master_vac[(df_master_vac['JUGADOR'] == jug) & (df_master_vac['FECHA'] <= fecha_ref_str) & (df_master_vac['VMAX'] >= vmax_hist_dict[jug] * 0.9)]
                         if not df_picos.empty:
                             ult_fecha = pd.to_datetime(df_picos['FECHA'].max()).date()
-                            fecha_micro = pd.to_datetime(df_filtrado['FECHA'].max()).date()
-                            return (fecha_micro - ult_fecha).days
+                            return (fecha_ref_dt - ult_fecha).days
                     return 0
                 
                 df_jug_sum['Días >90% VMax'] = df_jug_sum['JUGADOR'].apply(dias_sin_vmax)
