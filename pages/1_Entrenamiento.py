@@ -662,7 +662,7 @@ with tab_micro:
                 
                 def dias_sin_vmax(jug):
                     if vmax_hist_dict.get(jug, 0) > 25.0:
-                        df_picos = df_master_vac[(df_master_vac['JUGADOR'] == jug) & (df_master_vac['FECHA'] <= fecha_ref_str) & (df_master_vac['VMAX'] >= vmax_hist_dict[jug] * 0.9)]
+                        df_picos = df_master_vac[(df_master_vac['JUGADOR'] == jug) & (df_master_vac['FECHA'] <= fecha_ref_str) & (df_master_vac['VMAX'] >= vmax_hist_dict[jug] * 0.85)]
                         if not df_picos.empty:
                             ult_fecha = pd.to_datetime(df_picos['FECHA'].max()).date()
                             return (fecha_ref_dt - ult_fecha).days
