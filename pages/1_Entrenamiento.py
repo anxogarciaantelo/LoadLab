@@ -2014,6 +2014,44 @@ with tab_ses:
                             else:
                                 st.info("No hay registros de un partido previo o titulares para calcular el déficit.")
 
+                        # --- 8. EXPORTACIÓN A PDF (INFORME MAESTRO) ---
+                        st.markdown("---")
+                        
+                        dict_figs_sesion = {
+                            "Desglose de Wellness": fig_well,
+                            "Calidad de Recuperación (TQR)": fig_tqr,
+                            "Carga de Sesión": fig2,
+                            "Riesgo de Lesión (Ratio A/C)": fig3,
+                            "Huella Dactilar": locals().get('fig_hd', None),
+                            "Volumen vs Intensidad": fig5,
+                            "ACC vs DCC": fig4
+                        }
+                        
+                        pdf_key = f"pdf_inf_{idx_real}"
+                        if pdf_key not in st.session_state:
+                            if st.button(":material/picture_as_pdf: Generar PDF del Informe de Sesión", use_container_width=True, key=f"btn_pdf_inf_{idx_real}"):
+                                with st.spinner("Procesando gráficos y compilando PDF (esto puede tardar unos segundos)..."):
+                                    st.session_state[pdf_key] = generar_pdf_completo(
+                                        sesion, df_para_medias, df_graficos, 
+                                        alertas_multi, alertas_rec, alertas_car, dict_figs_sesion
+                                    )
+                                st.rerun()
+                        else:
+                            c_pdf1, c_pdf2 = st.columns(2)
+                            with c_pdf1:
+                                st.download_button(
+                                    label=":material/download: Descargar PDF",
+                                    data=st.session_state[pdf_key],
+                                    file_name=f"Informe_Sesion_{sesion['fecha']}.pdf",
+                                    mime="application/pdf",
+                                    use_container_width=True,
+                                    key=f"btn_down_pdf_{idx_real}"
+                                )
+                            with c_pdf2:
+                                if st.button(":material/delete: Descartar PDF", use_container_width=True, key=f"btn_del_pdf_{idx_real}"):
+                                    del st.session_state[pdf_key]
+                                    st.rerun()
+
             # ---------------------------------------------------------
             # HERRAMIENTA 3: CARGA DE DATOS (FORMULARIO OPTIMIZADO)
             # ---------------------------------------------------------
