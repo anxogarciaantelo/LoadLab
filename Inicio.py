@@ -617,12 +617,12 @@ if st.session_state.get("equipo_seleccionado", False):
         if not df_7d.empty:
             hsr_dict = df_7d.groupby('JUGADOR')['DIS AI'].sum().to_dict()
             
-        # Vacuna de Velocidad: Última exposición a >= 90% Vmax (SOLO GPS REAL)
+        # Vacuna de Velocidad: Última exposición a >= 85% Vmax (SOLO GPS REAL)
         if 'VMAX' in df_master.columns:
             df_real_gps = df_master[df_master.get('GPS_VIRTUAL', False) != True].copy()
             if not df_real_gps.empty:
                 vmax_hist_dict = df_real_gps.groupby('JUGADOR')['VMAX'].max().to_dict()
-                df_real_gps['es_pico'] = df_real_gps.apply(lambda r: r['VMAX'] >= (vmax_hist_dict.get(r['JUGADOR'], 0) * 0.9) if vmax_hist_dict.get(r['JUGADOR'], 0) > 25.0 else False, axis=1)
+                df_real_gps['es_pico'] = df_real_gps.apply(lambda r: r['VMAX'] >= (vmax_hist_dict.get(r['JUGADOR'], 0) * 0.85) if vmax_hist_dict.get(r['JUGADOR'], 0) > 25.0 else False, axis=1)
                 df_picos = df_real_gps[df_real_gps['es_pico'] & (df_real_gps['FECHA'] <= hoy_str)]
                 ult_sprint_dict = df_picos.groupby('JUGADOR')['FECHA'].max().to_dict()
 
