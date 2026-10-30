@@ -728,7 +728,7 @@ with tab_micro:
                         st.download_button(
                             label=":material/download: Descargar PDF",
                             data=st.session_state[pdf_key],
-                            file_name=f"Microciclo_{num_sem}.pdf",
+                            file_name=f"M{idx_real}.pdf",
                             mime="application/pdf",
                             key=f"btn_descarga_pdf_{num_sem}_{idx_real}"
                         )
@@ -2043,11 +2043,24 @@ with tab_ses:
                                 st.rerun()
                         else:
                             c_pdf1, c_pdf2 = st.columns(2)
+                            
+                            nom_dyn = sesion.get("nombre_dinamico", "")
+                            num = ''.join(filter(str.isdigit, nom_dyn)) if nom_dyn else "X"
+                            fecha_f = datetime.strptime(sesion['fecha'], "%Y-%m-%d").strftime("%d-%m-%Y")
+                            
+                            if "Partido" in sesion.get("tipo", ""):
+                                rival = sesion.get("rival", "Rival")
+                                pref = "J" if "Oficial" in sesion.get("tipo", "") else "A"
+                                nombre_archivo_pdf = f"{pref}{num}_vs_{rival.replace(' ', '_')}.pdf"
+                            else:
+                                md = sesion.get("descripcion", "TD")
+                                nombre_archivo_pdf = f"S{num}_{md}_{fecha_f}.pdf"
+
                             with c_pdf1:
                                 st.download_button(
                                     label=":material/download: Descargar PDF",
                                     data=st.session_state[pdf_key],
-                                    file_name=f"Informe_Sesion_{sesion['fecha']}.pdf",
+                                    file_name=nombre_archivo_pdf,
                                     mime="application/pdf",
                                     use_container_width=True,
                                     key=f"btn_down_pdf_{idx_real}"
