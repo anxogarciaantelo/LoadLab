@@ -3,6 +3,8 @@ import tempfile
 import base64
 from fpdf import FPDF
 import pandas as pd
+from datetime import datetime
+import re
 
 def generar_pdf_completo(sesion, df_para_medias, df_graficos, alertas_multi, alertas_rec, alertas_car, dict_figs, escudo_b64=None):
     pdf = FPDF(orientation='L', unit='mm', format='A4') 
@@ -32,12 +34,29 @@ def generar_pdf_completo(sesion, df_para_medias, df_graficos, alertas_multi, ale
         tmp_esc.close()
         img_paths['escudo'] = tmp_esc.name
 
+    # --- INYECTOR DE FORMATO PARA PDF (Fuerza color negro y previene cortes) ---
+    def adaptar_grafico_para_pdf(fig, title_text):
+        if fig is None: return None
+        fig.update_layout(
+            paper_bgcolor="white", 
+            plot_bgcolor="white", 
+            font=dict(color="black", family="Arial", size=12),
+            title=dict(text=title_text, font=dict(color="black", size=18, family="Arial"), x=0.5, xanchor="center"),
+            xaxis=dict(tickfont=dict(color="black", size=11), title_font=dict(color="black", size=12), showgrid=True, gridcolor="#e2e8f0", tickangle=-45, automargin=True),
+            yaxis=dict(tickfont=dict(color="black", size=11), title_font=dict(color="black", size=12), showgrid=True, gridcolor="#e2e8f0"),
+            legend=dict(font=dict(color="black")),
+            margin=dict(b=130, t=60, l=40, r=40) # Margen inferior gigante para nombres largos
+        )
+        if hasattr(fig.layout, 'polar'):
+            fig.update_layout(polar=dict(angularaxis=dict(tickfont=dict(color="black")), radialaxis=dict(tickfont=dict(color="black"))))
+        return fig
+
     for name, fig in dict_figs.items():
         if fig is not None:
-            fig.update_layout(paper_bgcolor="white", plot_bgcolor="white", font=dict(color="#111318"))
+            fig = adaptar_grafico_para_pdf(fig, name)
             tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
             tmp.close()  
-            fig.write_image(tmp.name, engine="kaleido", width=800, height=450, format="jpg")
+            fig.write_image(tmp.name, engine="kaleido", width=800, height=530, format="jpg")
             img_paths[name] = tmp.name
 
     def draw_header(title, subtitle):
@@ -92,9 +111,26 @@ def generar_pdf_completo(sesion, df_para_medias, df_graficos, alertas_multi, ale
         pdf.line(10, y+8, 287, y+8)
         pdf.set_y(y+12)
 
+    # --- PARSEO INTELIGENTE DE TÍTULOS ---
+    try:
+        fecha_f = datetime.strptime(sesion['fecha'], "%Y-%m-%d").strftime("%d-%m-%Y")
+    except:
+        fecha_f = sesion['fecha']
+        
+    nom_dyn = sesion.get("nombre_dinamico", "")
+    num = ''.join(filter(str.isdigit, nom_dyn)) if nom_dyn else "X"
+    
+    if "Partido" in sesion.get("tipo", ""):
+        rival = sesion.get("rival", "Rival")
+        pref = "J" if "Oficial" in sesion.get("tipo", "") else "A"
+        subtitle = f"{pref}{num} vs {rival} | {fecha_f}"
+    else:
+        md = sesion.get("descripcion", "TD")
+        subtitle = f"S{num} | {md} | {fecha_f}"
+
     # PAGE 1
     pdf.add_page()
-    draw_header("INFORME DE SESIÓN DIARIA", f"{sesion['fecha']} | {sesion.get('tipo', '')}")
+    draw_header("INFORME DE SESIÓN DIARIA", subtitle)
     
     tqr_m = df_para_medias['TQR'].mean() if not df_para_medias.empty else 0
     well_m = df_para_medias['WELLNESS'].mean() if not df_para_medias.empty else 0
@@ -120,7 +156,7 @@ def generar_pdf_completo(sesion, df_para_medias, df_graficos, alertas_multi, ale
 
     # PAGE 2
     pdf.add_page()
-    draw_header("INFORME DE SESIÓN DIARIA", f"{sesion['fecha']} | {sesion.get('tipo', '')}")
+    draw_header("INFORME DE SESIÓN DIARIA", subtitle)
     draw_section_title("2. CARGA EXTERNA (GPS)", pdf.get_y())
     
     df_para_medias_gps = df_para_medias[df_para_medias['DIS'] > 0]
@@ -145,7 +181,7 @@ def generar_pdf_completo(sesion, df_para_medias, df_graficos, alertas_multi, ale
 
     # PAGE 3
     pdf.add_page()
-    draw_header("INFORME DE SESIÓN DIARIA", f"{sesion['fecha']} | {sesion.get('tipo', '')}")
+    draw_header("INFORME DE SESIÓN DIARIA", subtitle)
     draw_section_title("3. TABLA MAESTRA DE RENDIMIENTO INDIVIDUAL", pdf.get_y())
     
     if 'HID >21' not in df_graficos.columns:
@@ -210,7 +246,7 @@ def generar_pdf_completo(sesion, df_para_medias, df_graficos, alertas_multi, ale
     # PAGE 4
     if alertas_multi or alertas_rec or alertas_car:
         pdf.add_page()
-        draw_header("INFORME DE SESIÓN DIARIA", f"{sesion['fecha']} | {sesion.get('tipo', '')}")
+        draw_header("INFORME DE SESIÓN DIARIA", subtitle)
         draw_section_title("4. ALERTAS DE RENDIMIENTO Y RIESGO", pdf.get_y())
         
         def print_alert_group(title, alerts, color, icon_text):
@@ -245,6 +281,7 @@ def generar_pdf_microciclo(nombre_micro, df_diario, df_indiv, kpis_globales, dic
     import base64
     from fpdf import FPDF
     import pandas as pd
+    import re
     
     pdf = FPDF(orientation='L', unit='mm', format='A4')
     pdf.set_auto_page_break(auto=True, margin=15)
@@ -271,12 +308,28 @@ def generar_pdf_microciclo(nombre_micro, df_diario, df_indiv, kpis_globales, dic
         tmp_esc.close()
         img_paths['escudo'] = tmp_esc.name
 
+    def adaptar_grafico_para_pdf(fig, title_text):
+        if fig is None: return None
+        fig.update_layout(
+            paper_bgcolor="white", 
+            plot_bgcolor="white", 
+            font=dict(color="black", family="Arial", size=12),
+            title=dict(text=title_text, font=dict(color="black", size=18, family="Arial"), x=0.5, xanchor="center"),
+            xaxis=dict(tickfont=dict(color="black", size=11), title_font=dict(color="black", size=12), showgrid=True, gridcolor="#e2e8f0", tickangle=-45, automargin=True),
+            yaxis=dict(tickfont=dict(color="black", size=11), title_font=dict(color="black", size=12), showgrid=True, gridcolor="#e2e8f0"),
+            legend=dict(font=dict(color="black")),
+            margin=dict(b=130, t=60, l=40, r=40)
+        )
+        if hasattr(fig.layout, 'polar'):
+            fig.update_layout(polar=dict(angularaxis=dict(tickfont=dict(color="black")), radialaxis=dict(tickfont=dict(color="black"))))
+        return fig
+
     for name, fig in dict_figs.items():
         if fig is not None:
-            fig.update_layout(paper_bgcolor="white", plot_bgcolor="white", font=dict(color="#111318"))
+            fig = adaptar_grafico_para_pdf(fig, name)
             tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
             tmp.close()  
-            fig.write_image(tmp.name, engine="kaleido", width=800, height=450, format="jpg")
+            fig.write_image(tmp.name, engine="kaleido", width=800, height=530, format="jpg")
             img_paths[name] = tmp.name
 
     def draw_header(title, subtitle):
@@ -320,8 +373,16 @@ def generar_pdf_microciclo(nombre_micro, df_diario, df_indiv, kpis_globales, dic
         pdf.line(10, y+8, 287, y+8)
         pdf.set_y(y+12)
 
+    match = re.search(r'Microciclo (\d+)', nombre_micro)
+    num_m = match.group(1) if match else "X"
+    if "|" in nombre_micro:
+        rango = nombre_micro.split("|")[1].strip().replace("Semana del ", "")
+        subtitle = f"M{num_m} | {rango}"
+    else:
+        subtitle = f"M{num_m}"
+
     pdf.add_page()
-    draw_header("INFORME DE MICROCICLO", f"{nombre_micro}")
+    draw_header("INFORME DE MICROCICLO", subtitle)
     draw_section_title("1. RESUMEN ACUMULADO DEL MICROCICLO", pdf.get_y())
     
     y_kpi = pdf.get_y()
@@ -369,7 +430,7 @@ def generar_pdf_microciclo(nombre_micro, df_diario, df_indiv, kpis_globales, dic
     w_img3 = 277 / 3
 
     pdf.add_page()
-    draw_header("INFORME DE MICROCICLO", f"{nombre_micro}")
+    draw_header("INFORME DE MICROCICLO", subtitle)
     draw_section_title("3. BIENESTAR Y CARGA INTERNA DIARIA", pdf.get_y())
     y_img = pdf.get_y()
     if "TQR" in img_paths: pdf.image(img_paths["TQR"], x=10, y=y_img, w=135)
@@ -381,7 +442,7 @@ def generar_pdf_microciclo(nombre_micro, df_diario, df_indiv, kpis_globales, dic
     if "Carga" in img_paths: pdf.image(img_paths["Carga"], x=10 + w_img3*2, y=y_img2, w=w_img3)
 
     pdf.add_page()
-    draw_header("INFORME DE MICROCICLO", f"{nombre_micro}")
+    draw_header("INFORME DE MICROCICLO", subtitle)
     draw_section_title("4. CARGA EXTERNA DIARIA (GPS)", pdf.get_y())
     y_img = pdf.get_y()
     if "ACC_DCC" in img_paths: pdf.image(img_paths["ACC_DCC"], x=10, y=y_img, w=w_img3)
@@ -389,7 +450,7 @@ def generar_pdf_microciclo(nombre_micro, df_diario, df_indiv, kpis_globales, dic
     if "DIS_AI" in img_paths: pdf.image(img_paths["DIS_AI"], x=10 + w_img3*2, y=y_img, w=w_img3)
 
     pdf.add_page()
-    draw_header("INFORME DE MICROCICLO", f"{nombre_micro}")
+    draw_header("INFORME DE MICROCICLO", subtitle)
     draw_section_title("5. RESUMEN SEMANAL POR JUGADOR", pdf.get_y())
     
     cols_indiv = ['JUGADOR', 'POS', 'MIN', 'TQR', 'WELLNESS', 'RPE', 'CARGA', 'DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC']
