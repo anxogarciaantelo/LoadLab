@@ -882,3 +882,169 @@ def generar_pdf_valoracion_jugador(jug_masivo, jug_datos, v_latest, v_ref, peso_
 
     out = pdf.output(dest='S')
     return out.encode('latin-1') if isinstance(out, str) else bytes(out)
+
+def generar_pdf_gps_individual(jugador_nombre, sesion_nombre, kpis_abs, kpis_rel, img_paths, escudo_b64, foto_b64, pos_jugador):
+    from fpdf import FPDF
+    import tempfile
+    import os
+    import base64
+
+    def clean_txt(t): return str(t).encode('latin-1', 'ignore').decode('latin-1').strip()
+    
+    C_DARK = (11, 14, 20)
+    C_GOLD = (197, 160, 89)
+    C_GRAY = (148, 163, 184)
+    
+    pdf = FPDF(orientation='L', unit='mm', format='A4')
+    pdf.set_auto_page_break(auto=True, margin=15)
+    
+    img_files_to_delete = []
+    
+    if escudo_b64:
+        tmp_esc = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
+        if str(escudo_b64).startswith("http"):
+            import requests
+            r = requests.get(escudo_b64)
+            tmp_esc.write(r.content)
+        else:
+            tmp_esc.write(base64.b64decode(escudo_b64.split(",")[1] if "," in escudo_b64 else escudo_b64))
+        tmp_esc.close()
+        img_paths['escudo'] = tmp_esc.name
+        img_files_to_delete.append(tmp_esc.name)
+        
+    if foto_b64:
+        tmp_foto = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
+        if str(foto_b64).startswith("http"):
+            import requests
+            r = requests.get(foto_b64)
+            tmp_foto.write(r.content)
+        else:
+            tmp_foto.write(base64.b64decode(foto_b64.split(',')[1] if ',' in foto_b64 else foto_b64))
+        tmp_foto.close()
+        img_paths['foto'] = tmp_foto.name
+        img_files_to_delete.append(tmp_foto.name)
+
+    def draw_header(title, subtitle):
+        pdf.set_fill_color(*C_DARK)
+        pdf.rect(0, 0, 297, 24, 'F')
+        pdf.set_fill_color(*C_GOLD)
+        pdf.rect(0, 24, 297, 1, 'F')
+        if 'escudo' in img_paths:
+            pdf.image(img_paths['escudo'], x=12, y=3, w=18)
+        if 'foto' in img_paths:
+            pdf.image(img_paths['foto'], x=265, y=3, w=18)
+            
+        pdf.set_xy(35, 5)
+        pdf.set_font("Arial", 'B', 15)
+        pdf.set_text_color(255, 255, 255)
+        pdf.cell(200, 7, clean_txt(title.upper()), ln=1)
+        pdf.set_xy(35, 13)
+        pdf.set_font("Arial", 'B', 9)
+        pdf.set_text_color(*C_GOLD)
+        pdf.cell(200, 6, clean_txt(subtitle.upper()), ln=1)
+        pdf.set_y(32)
+
+    def draw_kpi(x, y, w, h, title, val_abs, lbl_abs, val_rel, lbl_rel, color_bar=(197, 160, 89)):
+        pdf.set_fill_color(255, 255, 255)
+        pdf.set_draw_color(226, 232, 240)
+        pdf.rect(x, y, w, h, 'DF')
+        pdf.set_fill_color(*color_bar)
+        pdf.rect(x, y, w, 2, 'F')
+        
+        pdf.set_xy(x+3, y+4)
+        pdf.set_font("Arial", 'B', 7)
+        pdf.set_text_color(*C_GRAY)
+        pdf.cell(w-6, 4, clean_txt(title.upper()), align='C')
+        
+        pdf.set_xy(x+3, y+9)
+        pdf.set_font("Arial", 'B', 14)
+        pdf.set_text_color(0, 0, 0)
+        pdf.cell(w-6, 7, f"{val_abs} {lbl_abs}", align='C')
+        
+        pdf.set_xy(x+3, y+18)
+        pdf.set_font("Arial", 'B', 7)
+        pdf.set_text_color(*C_GRAY)
+        pdf.cell((w-6)/2, 4, "Densidad:", align='L')
+        pdf.set_text_color(*color_bar)
+        pdf.cell((w-6)/2, 4, f"{val_rel} {lbl_rel}", align='R')
+
+    def draw_section_title(txt, y):
+        pdf.set_xy(10, y)
+        pdf.set_font("Arial", 'B', 12)
+        pdf.set_text_color(*C_DARK)
+        pdf.cell(200, 8, clean_txt(txt), ln=1)
+        pdf.set_draw_color(*C_GOLD)
+        pdf.line(10, y+8, 287, y+8)
+        pdf.set_y(y+12)
+
+    # PÁGINA 1
+    pdf.add_page()
+    subtitle = f"{jugador_nombre} | {pos_jugador} | {sesion_nombre}"
+    draw_header("INFORME GPS INDIVIDUAL", subtitle)
+    
+    draw_section_title("1. RENDIMIENTO FISICO MEDIO (ABSOLUTO VS RELATIVO)", pdf.get_y())
+    
+    y_kpi = pdf.get_y()
+    w_kpi = 277 / 6
+    draw_kpi(10, y_kpi, w_kpi-2, 24, "Distancia", f"{kpis_abs['DIS']:.2f}", "km", f"{kpis_rel['m/min']:.1f}", "m/min", (197, 160, 89))
+    draw_kpi(10 + w_kpi, y_kpi, w_kpi-2, 24, "HSR (>21)", f"{kpis_abs['DIS AI']:.0f}", "m", f"{kpis_rel['HSR/min']:.2f}", "m/min", (245, 158, 11))
+    draw_kpi(10 + w_kpi*2, y_kpi, w_kpi-2, 24, "Sprints (>24)", f"{kpis_abs['Nº SPR']:.1f}", "n", f"{kpis_rel['SPR/min']:.2f}", "n/min", (239, 68, 68))
+    draw_kpi(10 + w_kpi*3, y_kpi, w_kpi-2, 24, "ACC (>3)", f"{kpis_abs['ACC']:.0f}", "n", f"{kpis_rel['ACC/min']:.2f}", "n/min", (16, 185, 129))
+    draw_kpi(10 + w_kpi*4, y_kpi, w_kpi-2, 24, "DCC (>3)", f"{kpis_abs['DCC']:.0f}", "n", f"{kpis_rel['DCC/min']:.2f}", "n/min", (139, 92, 246))
+    
+    x_v = 10 + w_kpi*5
+    pdf.set_fill_color(255, 255, 255)
+    pdf.set_draw_color(226, 232, 240)
+    pdf.rect(x_v, y_kpi, w_kpi-2, 24, 'DF')
+    pdf.set_fill_color(236, 72, 153)
+    pdf.rect(x_v, y_kpi, w_kpi-2, 2, 'F')
+    pdf.set_xy(x_v+3, y_kpi+4)
+    pdf.set_font("Arial", 'B', 7)
+    pdf.set_text_color(*C_GRAY)
+    pdf.cell(w_kpi-8, 4, "VELOCIDAD MAX", align='C')
+    pdf.set_xy(x_v+3, y_kpi+9)
+    pdf.set_font("Arial", 'B', 14)
+    pdf.set_text_color(0, 0, 0)
+    pdf.cell(w_kpi-8, 7, f"{kpis_abs['VMAX']:.1f} km/h", align='C')
+    pdf.set_xy(x_v+3, y_kpi+18)
+    pdf.set_font("Arial", 'B', 7)
+    pdf.set_text_color(*C_GRAY)
+    pdf.cell((w_kpi-8)/2, 4, "% Hist:", align='L')
+    pdf.set_text_color(236, 72, 153)
+    pdf.cell((w_kpi-8)/2, 4, f"{kpis_abs['% VMAX']:.1f}%", align='R')
+
+    draw_section_title("2. COMPARACION DATOS / MINUTO (RADAR)", y_kpi + 30)
+    if 'radar' in img_paths:
+        pdf.image(img_paths['radar'], x=70, y=pdf.get_y()+5, w=150)
+        img_files_to_delete.append(img_paths['radar'])
+
+    # PÁGINA 2
+    pdf.add_page()
+    draw_header("INFORME GPS INDIVIDUAL", subtitle)
+    
+    draw_section_title("3. DATOS TOTALES", pdf.get_y())
+    w_img = 135
+    y_img1 = pdf.get_y()
+    
+    if 'vol_int' in img_paths:
+        pdf.image(img_paths['vol_int'], x=10, y=y_img1, w=w_img)
+        img_files_to_delete.append(img_paths['vol_int'])
+    if 'tension' in img_paths:
+        pdf.image(img_paths['tension'], x=150, y=y_img1, w=w_img)
+        img_files_to_delete.append(img_paths['tension'])
+
+    draw_section_title("4. DENSIDAD", y_img1 + 80)
+    y_img2 = pdf.get_y()
+    
+    if 'den_vol_int' in img_paths:
+        pdf.image(img_paths['den_vol_int'], x=10, y=y_img2, w=w_img)
+        img_files_to_delete.append(img_paths['den_vol_int'])
+    if 'den_tension' in img_paths:
+        pdf.image(img_paths['den_tension'], x=150, y=y_img2, w=w_img)
+        img_files_to_delete.append(img_paths['den_tension'])
+        
+    for path in img_files_to_delete:
+        if os.path.exists(path): os.unlink(path)
+
+    out = pdf.output(dest='S')
+    return out.encode('latin-1') if isinstance(out, str) else bytes(out)
