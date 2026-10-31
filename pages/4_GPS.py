@@ -278,19 +278,68 @@ else:
             label_radar_ref = ""
 
             if f_nivel == "Por jugador" and f_jug != "TODOS":
-                # Caso Jugador (Mantiene lógica previa)
                 jugador_info = next((p for p in st.session_state.plantilla if p['JUGADOR'] == f_jug), None)
                 pos_exacta = jugador_info.get('pos_1', 'Desconocida') if jugador_info else 'Desconocida'
-                jugadores_misma_pos = [p['JUGADOR'] for p in st.session_state.plantilla if p.get('pos_1') == pos_exacta]
                 
-                df_radar_target = df_perfil
-                # Filtramos la referencia de su posición para que sea real (Solo Disponibles)
-                df_radar_ref = df_gps[(df_gps['JUGADOR'].isin(jugadores_misma_pos)) & (df_gps['ESTADO'].isin(["Disponible", "Titular", "Suplente"]))].copy()
-                if f_tipo != "Todas":
-                    df_radar_ref = df_radar_ref[df_radar_ref['TIPO'] == f_tipo]
+                df_radar_target = df_perfil.copy()
+                
+                # --- NUEVOS FILTROS DE RADAR DINÁMICOS Y COMPACTOS ---
+                st.markdown("##### ⚙️ Ajustes de Comparación (Radar)")
+                st.markdown("""
+                <style>
+                div[role="radiogroup"] { gap: 0.2rem !important; margin-bottom: 10px; }
+                div[role="radiogroup"] label { margin-right: 15px !important; }
+                </style>
+                """, unsafe_allow_html=True)
+
+                c_rad1, c_rad2 = st.columns(2)
+                with c_rad1:
+                    rad_who = st.radio("1. Comparar contra:", ["Compañeros (Misma Posición)", "Su propio histórico"], horizontal=True)
+                    
+                opciones_ctx = ["Mismo tipo de MD", "Promedios en Partido"]
+                # Añadir "Esta sesión exacta" solo si el filtro principal aísla una sesión
+                if f_tiempo == "Sesión":
+                    opciones_ctx.insert(0, "Esta sesión exacta")
+                    
+                with c_rad2:
+                    rad_ctx = st.radio("2. Contexto de referencia:", opciones_ctx, horizontal=True)
+                
+                # Lógica de extracción de referencia
+                df_ref_base = df_gps[df_gps['ESTADO'].isin(["Disponible", "Titular", "Suplente"])].copy()
+                
+                if rad_who == "Compañeros (Misma Posición)":
+                    df_radar_ref = df_ref_base[(df_ref_base['POS_ESP'] == pos_exacta) & (df_ref_base['JUGADOR'] != f_jug)].copy()
+                    lbl_w = f"Comps. ({pos_exacta})"
+                else:
+                    df_radar_ref = df_ref_base[df_ref_base['JUGADOR'] == f_jug].copy()
+                    lbl_w = "Histórico"
+                    
+                md_target = df_radar_target['MD'].iloc[0] if not df_radar_target.empty else "TD"
+                ses_target = df_radar_target['Nombre_Sesion'].iloc[0] if not df_radar_target.empty else ""
+                tipo_target = df_radar_target['TIPO'].iloc[0] if not df_radar_target.empty else "Entrenamiento"
+                
+                if rad_ctx == "Esta sesión exacta":
+                    df_radar_ref = df_radar_ref[df_radar_ref['Nombre_Sesion'] == ses_target]
+                    lbl_c = "Misma Sesión"
+                elif rad_ctx == "Mismo tipo de MD":
+                    if "Partido" in tipo_target:
+                        df_radar_ref = df_radar_ref[df_radar_ref['TIPO'].str.contains("Partido", na=False)]
+                        lbl_c = "Partidos"
+                    else:
+                        df_radar_ref = df_radar_ref[(df_radar_ref['TIPO'] == 'Entrenamiento') & (df_radar_ref['MD'] == md_target)]
+                        lbl_c = f"Media {md_target}"
+                else:
+                    df_radar_ref = df_radar_ref[df_radar_ref['TIPO'].str.contains("Partido", na=False)]
+                    lbl_c = "Partidos"
                 
                 label_radar_target = f_jug
-                label_radar_ref = f"Media Posición ({pos_exacta})"
+                label_radar_ref = f"{lbl_w} | {lbl_c}"
+                
+                # Fallback por si la referencia elegida se queda vacía (ej. es el único central que entrena hoy)
+                if df_radar_ref.empty and rad_ctx == "Esta sesión exacta":
+                    st.warning(f"⚠️ No hay suficientes datos de compañeros en esta sesión concreta para comparar. Mostrando contra el promedio histórico ({md_target}).")
+                    df_radar_ref = df_ref_base[(df_ref_base['POS_ESP'] == pos_exacta) & (df_ref_base['JUGADOR'] != f_jug) & (df_ref_base['TIPO'] == 'Entrenamiento') & (df_ref_base['MD'] == md_target)].copy()
+                    label_radar_ref = f"Comps. ({pos_exacta}) | Media {md_target}"
 
             elif f_tiempo == "Promedio total":
                 if f_nivel == "Equipo completo":
