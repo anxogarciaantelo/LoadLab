@@ -140,9 +140,10 @@ if "df_master_informes" in st.session_state and not st.session_state.df_master_i
 else:
     df_gps = pd.DataFrame()
 
-tab_gps_perf, tab_gps_comp = st.tabs([
+tab_gps_perf, tab_gps_comp, tab_gps_inf = st.tabs([
     ":material/insights: Perfil de Rendimiento", 
-    ":material/balance: Comparador"
+    ":material/balance: Comparador",
+    ":material/picture_as_pdf: Informe Individual"
 ])
 
 if df_gps.empty:
@@ -621,3 +622,169 @@ else:
             css_dark_table = "<style>.modern-dark-table { width: 100%; border-collapse: collapse; font-family: sans-serif; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4); background-color: #111318; color: #f8fafc; margin-bottom: 20px; } .modern-dark-table thead tr { background-color: #0b0e14; color: #C5A059; } .modern-dark-table th { padding: 12px 15px; font-weight: 800; text-transform: uppercase; font-size: 0.8rem; text-align: center !important; border-bottom: 2px solid #1c1f26; } .modern-dark-table td { padding: 10px 15px; text-align: center !important; border-bottom: 1px solid #1c1f26; font-weight: 700; font-size: 0.95rem; } .modern-dark-table tbody tr:hover td { filter: brightness(1.2); } </style>"
             
             st.markdown(css_dark_table + estilo_comp.to_html(), unsafe_allow_html=True)
+# ==========================================
+    # PESTAÑA 3: INFORME INDIVIDUAL
+    # ==========================================
+    with tab_gps_inf:
+        st.markdown("#### :material/picture_as_pdf: Generador de Informe GPS Individual")
+        st.caption("Selecciona una sesión y un jugador para generar un informe en PDF detallado y enfocado exclusivamente en su rendimiento. Se aislará su métrica frente a los promedios posicionales.")
+        
+        col_s1, col_s2 = st.columns(2)
+        lista_sesiones = sorted(df_gps['Nombre_Sesion'].unique(), reverse=True)
+        sesion_sel = col_s1.selectbox("1. Selecciona la Sesión:", ["Selecciona..."] + lista_sesiones, key="inf_ses")
+        
+        if sesion_sel != "Selecciona...":
+            df_ses = df_gps[df_gps['Nombre_Sesion'] == sesion_sel].copy()
+            jugadores_ses = sorted(df_ses['JUGADOR'].unique())
+            jug_sel = col_s2.selectbox("2. Selecciona el Jugador:", ["Selecciona..."] + jugadores_ses, key="inf_jug")
+            
+            if jug_sel != "Selecciona...":
+                st.markdown("---")
+                
+                # Densidades previas
+                for df_calc in [df_ses]:
+                    min_ef = np.where(df_calc['MIN_GPS'] > 0, df_calc['MIN_GPS'], df_calc['MIN'])
+                    df_calc['m/min'] = np.where(min_ef > 0, (df_calc['DIS'] * 1000) / min_ef, 0)
+                    df_calc['HSR/min'] = np.where(min_ef > 0, df_calc['DIS AI'] / min_ef, 0)
+                    df_calc['SPR/min'] = np.where(min_ef > 0, df_calc['Nº SPR'] / min_ef, 0)
+                    df_calc['ACC/min'] = np.where(min_ef > 0, df_calc['ACC'] / min_ef, 0)
+                    df_calc['DCC/min'] = np.where(min_ef > 0, df_calc['DCC'] / min_ef, 0)
+                    df_calc['Mec/min'] = np.where(min_ef > 0, (df_calc['ACC'] + df_calc['DCC']) / min_ef, 0)
+
+                df_jug = df_ses[df_ses['JUGADOR'] == jug_sel].copy()
+                pos_jug = df_jug.iloc[0]['POS_ESP'] if 'POS_ESP' in df_jug.columns else "Desconocida"
+                
+                df_ref_pos = df_ses[(df_ses['POS_ESP'] == pos_jug) & (df_ses['JUGADOR'] != jug_sel) & (df_ses['ESTADO'].isin(["Disponible", "Titular", "Suplente"]))]
+                if df_ref_pos.empty:
+                    df_ref_pos = df_ses[df_ses['POS_ESP'] == pos_jug]
+                
+                # Radar (Jugador vs Posición)
+                fig_radar = generar_grafico_radar_gps(df_jug, df_ref_pos, jug_sel, f"Media ({pos_jug})")
+                
+                # Referencias 100% (para bandas objetivo)
+                df_partidos = st.session_state.df_master_informes[(st.session_state.df_master_informes['TIPO_SESION'].str.contains("Partido", na=False)) & (st.session_state.df_master_informes['DIS'] > 0)].copy()
+                if not df_partidos.empty:
+                    df_partidos['MIN_REAL'] = np.where(df_partidos.get('MIN_GPS', df_partidos['MIN']) > 0, df_partidos.get('MIN_GPS', df_partidos['MIN']), df_partidos['MIN'])
+                    min_tot = df_partidos['MIN_REAL'].sum()
+                    dis_100_eq = (df_partidos['DIS'].sum() / min_tot) * 90 if min_tot > 0 else 10.0
+                    hsr_100_eq = (df_partidos['DIS AI'].sum() / min_tot) * 90 if min_tot > 0 else 600.0
+                    acc_100_eq = (df_partidos['ACC'].sum() / min_tot) * 90 if min_tot > 0 else 40.0
+                    dcc_100_eq = (df_partidos['DCC'].sum() / min_tot) * 90 if min_tot > 0 else 40.0
+                else:
+                    dis_100_eq, hsr_100_eq, acc_100_eq, dcc_100_eq = 10.0, 600.0, 40.0, 40.0
+
+                es_entreno = df_jug.iloc[0]['TIPO'] == "Entrenamiento"
+                md_ses = df_jug.iloc[0]['MD']
+                
+                # 1. Scatter Vol vs Int
+                fig_vi = px.scatter(df_jug, x='DIS', y='DIS AI', text='JUGADOR', title=f"Volumen vs Intensidad ({md_ses})")
+                fig_vi.update_traces(marker=dict(size=16, color="#10b981", line=dict(width=2, color="DarkSlateGrey")), textposition='top center')
+                
+                x1_v, y1_v = 0, 0
+                if es_entreno:
+                    zonas_pt = {
+                        "MD-5": {"DIS": [0.15, 0.45], "HSR": [0.00, 0.20], "ACC": [0.10, 0.40], "DCC": [0.10, 0.40]},
+                        "MD-4": {"DIS": [0.40, 0.70], "HSR": [0.10, 0.40], "ACC": [0.70, 1.30], "DCC": [0.70, 1.30]},
+                        "MD-3": {"DIS": [0.60, 0.90], "HSR": [0.50, 0.95], "ACC": [0.40, 0.75], "DCC": [0.40, 0.75]},
+                        "MD-2": {"DIS": [0.30, 0.55], "HSR": [0.15, 0.45], "ACC": [0.25, 0.55], "DCC": [0.25, 0.55]},
+                        "MD-1": {"DIS": [0.15, 0.35], "HSR": [0.00, 0.15], "ACC": [0.10, 0.30], "DCC": [0.10, 0.30]},
+                        "MD+1": {"DIS": [0.15, 0.45], "HSR": [0.00, 0.20], "ACC": [0.10, 0.40], "DCC": [0.10, 0.40]},
+                        "MD+2": {"DIS": [0.30, 0.60], "HSR": [0.10, 0.35], "ACC": [0.25, 0.60], "DCC": [0.25, 0.60]},
+                        "TD":   {"DIS": [0.45, 0.85], "HSR": [0.25, 0.75], "ACC": [0.45, 0.85], "DCC": [0.45, 0.85]},
+                        "Post-Partido": {"DIS": [0.30, 0.60], "HSR": [0.40, 0.80], "ACC": [0.50, 0.90], "DCC": [0.50, 0.90]}
+                    }
+                    z_obj = zonas_pt.get(md_ses, zonas_pt["TD"])
+                    x0_v, x1_v = z_obj["DIS"][0]*dis_100_eq, z_obj["DIS"][1]*dis_100_eq
+                    y0_v, y1_v = z_obj["HSR"][0]*hsr_100_eq, z_obj["HSR"][1]*hsr_100_eq
+                    fig_vi.add_shape(type="rect", x0=x0_v, x1=x1_v, y0=y0_v, y1=y1_v, fillcolor="green", opacity=0.15, line_color="green", layer="below")
+                
+                fig_vi.update_layout(
+                    xaxis=dict(range=[0, max(x1_v*1.2, df_jug['DIS'].max()*1.2)]),
+                    yaxis=dict(range=[0, max(y1_v*1.2, df_jug['DIS AI'].max()*1.2)]),
+                    plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)'
+                )
+
+                # 2. Scatter ACC vs DCC
+                fig_mec = px.scatter(df_jug, x='DCC', y='ACC', text='JUGADOR', title=f"Tensión Mecánica ({md_ses})")
+                fig_mec.update_traces(marker=dict(size=16, color="#ef4444", line=dict(width=2, color="DarkSlateGrey")), textposition='top center')
+                
+                x1_m, y1_m = 0, 0
+                if es_entreno:
+                    x0_m, x1_m = z_obj["DCC"][0]*dcc_100_eq, z_obj["DCC"][1]*dcc_100_eq
+                    y0_m, y1_m = z_obj["ACC"][0]*acc_100_eq, z_obj["ACC"][1]*acc_100_eq
+                    fig_mec.add_shape(type="rect", x0=x0_m, x1=x1_m, y0=y0_m, y1=y1_m, fillcolor="green", opacity=0.15, line_color="green", layer="below")
+                    
+                fig_mec.update_layout(
+                    xaxis=dict(range=[0, max(x1_m*1.2, df_jug['DCC'].max()*1.2)]),
+                    yaxis=dict(range=[0, max(y1_m*1.2, df_jug['ACC'].max()*1.2)]),
+                    plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)'
+                )
+
+                # 3. Densidades
+                fig_den1 = px.scatter(df_jug, x='m/min', y='HSR/min', text='JUGADOR', title="Densidad: Volumen vs Intensidad", size='VMAX')
+                fig_den1.update_traces(marker=dict(color="#0ea5e9", line=dict(width=2, color="DarkSlateGrey")), textposition='top center')
+                fig_den1.update_layout(xaxis=dict(range=[0, df_jug['m/min'].max()*1.5]), yaxis=dict(range=[0, df_jug['HSR/min'].max()*1.5]), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+                
+                fig_den2 = px.scatter(df_jug, x='m/min', y='Mec/min', text='JUGADOR', title="Densidad: Volumen vs Tensión Mecánica")
+                fig_den2.update_traces(marker=dict(size=16, color="#8b5cf6", line=dict(width=2, color="DarkSlateGrey")), textposition='top center')
+                fig_den2.update_layout(xaxis=dict(range=[0, df_jug['m/min'].max()*1.5]), yaxis=dict(range=[0, df_jug['Mec/min'].max()*1.5]), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+
+                # Dicc. KPIs (Aseguramos la integridad de los datos para FPDF)
+                kpis_abs = {
+                    "DIS": df_jug.iloc[0]['DIS'], "DIS AI": df_jug.iloc[0]['DIS AI'],
+                    "Nº SPR": df_jug.iloc[0]['Nº SPR'], "ACC": df_jug.iloc[0]['ACC'],
+                    "DCC": df_jug.iloc[0]['DCC'], "VMAX": df_jug.iloc[0]['VMAX'], "% VMAX": df_jug.iloc[0]['% VMAX']
+                }
+                kpis_rel = {
+                    "m/min": df_jug.iloc[0]['m/min'], "HSR/min": df_jug.iloc[0]['HSR/min'],
+                    "SPR/min": df_jug.iloc[0]['SPR/min'], "ACC/min": df_jug.iloc[0]['ACC/min'], "DCC/min": df_jug.iloc[0]['DCC/min']
+                }
+                
+                pdf_key = f"pdf_gps_ind_{jug_sel}_{sesion_sel}"
+                
+                if pdf_key not in st.session_state:
+                    if st.button(":material/picture_as_pdf: Generar Informe en PDF", use_container_width=True, type="primary"):
+                        with st.spinner("Compilando gráficos y generando informe..."):
+                            import tempfile
+                            
+                            def render_plot_for_pdf(fig):
+                                if not fig: return None
+                                # Acomodamos fondo y márgenes para el PDF
+                                fig.update_layout(paper_bgcolor="white", plot_bgcolor="white", font=dict(color="black"), title_font=dict(color="black"))
+                                tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
+                                tmp.close()
+                                fig.write_image(tmp.name, engine="kaleido", width=800, height=530, format="jpg")
+                                return tmp.name
+                                
+                            img_paths = {
+                                "radar": render_plot_for_pdf(fig_radar),
+                                "vol_int": render_plot_for_pdf(fig_vi),
+                                "tension": render_plot_for_pdf(fig_mec),
+                                "den_vol_int": render_plot_for_pdf(fig_den1),
+                                "den_tension": render_plot_for_pdf(fig_den2)
+                            }
+                            
+                            jug_datos = next((p for p in st.session_state.plantilla if p["JUGADOR"] == jug_sel), None)
+                            foto_b64 = jug_datos.get("foto") if jug_datos else None
+                            
+                            from utils.pdf_generator import generar_pdf_gps_individual
+                            pdf_bytes = generar_pdf_gps_individual(
+                                jug_sel, sesion_sel, kpis_abs, kpis_rel, img_paths,
+                                st.session_state.get('escudo_equipo'), foto_b64, pos_jug
+                            )
+                            st.session_state[pdf_key] = pdf_bytes
+                            st.rerun()
+                else:
+                    c_down1, c_down2 = st.columns(2)
+                    with c_down1:
+                        st.download_button(
+                            label=":material/download: Descargar PDF",
+                            data=st.session_state[pdf_key],
+                            file_name=f"GPS_{jug_sel}_{sesion_sel}.pdf",
+                            mime="application/pdf",
+                            use_container_width=True
+                        )
+                    with c_down2:
+                        if st.button(":material/delete: Descartar PDF", use_container_width=True):
+                            del st.session_state[pdf_key]
+                            st.rerun()
