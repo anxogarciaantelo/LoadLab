@@ -1024,7 +1024,7 @@ def generar_pdf_gps_individual(jugador_nombre, sesion_nombre, kpis_abs, kpis_rel
     
     draw_section_title("3. DATOS TOTALES", pdf.get_y())
     w_img = 135
-    y_img1 = pdf.get_y()
+    y_img1 = pdf.get_y() + 10 # Bajamos un poco los gráficos para centrarlos visualmente
     
     if 'vol_int' in img_paths:
         pdf.image(img_paths['vol_int'], x=10, y=y_img1, w=w_img)
@@ -1033,8 +1033,12 @@ def generar_pdf_gps_individual(jugador_nombre, sesion_nombre, kpis_abs, kpis_rel
         pdf.image(img_paths['tension'], x=150, y=y_img1, w=w_img)
         img_files_to_delete.append(img_paths['tension'])
 
-    draw_section_title("4. DENSIDAD", y_img1 + 80)
-    y_img2 = pdf.get_y()
+    # PÁGINA 3 (Salto de página para que los gráficos de densidad tengan su propio espacio)
+    pdf.add_page()
+    draw_header("INFORME GPS INDIVIDUAL", subtitle)
+    
+    draw_section_title("4. DENSIDAD", pdf.get_y())
+    y_img2 = pdf.get_y() + 10
     
     if 'den_vol_int' in img_paths:
         pdf.image(img_paths['den_vol_int'], x=10, y=y_img2, w=w_img)
