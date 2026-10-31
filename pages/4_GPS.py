@@ -21,18 +21,18 @@ if not st.session_state.get("autenticado", False) or not st.session_state.get("e
 
 aplicar_color_sidebar()
 
-def generar_grafico_radar_gps(df_target, df_ref, label_target, label_ref):
+def generar_grafico_radar_gps(df_target, df_ref, label_target, label_ref, modo="Densidad"):
     df_t_val = df_target[df_target['DIS'] > 0].copy()
     df_r_val = df_ref[df_ref['DIS'] > 0].copy()
     
     if df_t_val.empty or df_r_val.empty: return None
 
     for df in [df_t_val, df_r_val]:
-            min_efectivo_radar = np.where(df['MIN_GPS'] > 0, df['MIN_GPS'], df['MIN'])
-            for col in ['DIS', 'DIS AI', 'ACC', 'Nº SPR']:
-                if f'{col}/min' not in df.columns:
-                    multiplicador = 1000.0 if col == 'DIS' else 1.0
-                    df[f'{col}/min'] = np.where(min_efectivo_radar > 0, (df[col] * multiplicador) / min_efectivo_radar, 0)
+        min_efectivo_radar = np.where(df['MIN_GPS'] > 0, df['MIN_GPS'], df['MIN'])
+        for col in ['DIS', 'DIS AI', 'ACC', 'Nº SPR', 'DCC']:
+            if f'{col}/min' not in df.columns:
+                multiplicador = 1000.0 if col == 'DIS' else 1.0
+                df[f'{col}/min'] = np.where(min_efectivo_radar > 0, (df[col] * multiplicador) / min_efectivo_radar, 0)
     
     min_ref_sum = np.where(df_r_val['MIN_GPS'] > 0, df_r_val['MIN_GPS'], df_r_val['MIN']).sum()
     min_tar_sum = np.where(df_t_val['MIN_GPS'] > 0, df_t_val['MIN_GPS'], df_t_val['MIN']).sum()
@@ -41,21 +41,29 @@ def generar_grafico_radar_gps(df_target, df_ref, label_target, label_ref):
         'ACC/min': df_r_val['ACC/min'].mean(), 'VMAX': df_r_val['VMAX'].mean(),
         'V_Media': (df_r_val['DIS'].sum() / min_ref_sum) * 60 if min_ref_sum > 0 else 0,
         'DIS/min': df_r_val['DIS/min'].mean(), 'Nº SPR/min': df_r_val['Nº SPR/min'].mean(),
-        'DIS AI/min': df_r_val['DIS AI/min'].mean(), '% VMAX': df_r_val['% VMAX'].mean()
+        'DIS AI/min': df_r_val['DIS AI/min'].mean(), '% VMAX': df_r_val['% VMAX'].mean(),
+        'ACC': df_r_val['ACC'].mean(), 'DIS': df_r_val['DIS'].mean(), 'DCC': df_r_val['DCC'].mean(),
+        'Nº SPR': df_r_val['Nº SPR'].mean(), 'DIS AI': df_r_val['DIS AI'].mean()
     }
     
     medias_target = {
         'ACC/min': df_t_val['ACC/min'].mean(), 'VMAX': df_t_val['VMAX'].mean(),
         'V_Media': (df_t_val['DIS'].sum() / min_tar_sum) * 60 if min_tar_sum > 0 else 0,
         'DIS/min': df_t_val['DIS/min'].mean(), 'Nº SPR/min': df_t_val['Nº SPR/min'].mean(),
-        'DIS AI/min': df_t_val['DIS AI/min'].mean(), '% VMAX': df_t_val['% VMAX'].mean()
+        'DIS AI/min': df_t_val['DIS AI/min'].mean(), '% VMAX': df_t_val['% VMAX'].mean(),
+        'ACC': df_t_val['ACC'].mean(), 'DIS': df_t_val['DIS'].mean(), 'DCC': df_t_val['DCC'].mean(),
+        'Nº SPR': df_t_val['Nº SPR'].mean(), 'DIS AI': df_t_val['DIS AI'].mean()
     }
 
-    categorias = ['Aceleraciones (>3)/min', 'Velocidad Máxima (Pico)', 'Velocidad Media', 'Distancia/min', 'Sprints/min', 'HSR (>21)/min', '% V. Máx']
-    claves = ['ACC/min', 'VMAX', 'V_Media', 'DIS/min', 'Nº SPR/min', 'DIS AI/min', '% VMAX']
+    if modo == "Densidad":
+        categorias = ['Aceleraciones (>3)/min', 'Velocidad Máxima (Pico)', 'Velocidad Media', 'Distancia/min', 'Sprints/min', 'HSR (>21)/min', '% V. Máx']
+        claves = ['ACC/min', 'VMAX', 'V_Media', 'DIS/min', 'Nº SPR/min', 'DIS AI/min', '% VMAX']
+    else:
+        categorias = ['Aceleraciones Totales', 'Velocidad Máxima (Pico)', 'Deceleraciones Totales', 'Distancia Total', 'Sprints Totales', 'HSR Total (>21)', '% V. Máx']
+        claves = ['ACC', 'VMAX', 'DCC', 'DIS', 'Nº SPR', 'DIS AI', '% VMAX']
     
     valores_target = []
-    valores_referencia = [100] * 7
+    valores_referencia = [100] * len(claves)
 
     for clave in claves:
         m_ref = medias_ref[clave]
@@ -67,12 +75,17 @@ def generar_grafico_radar_gps(df_target, df_ref, label_target, label_ref):
     fig.add_trace(go.Scatterpolar(r=valores_referencia + [valores_referencia[0]], theta=categorias + [categorias[0]], fill='toself', name=label_ref, line=dict(color='rgba(150, 150, 150, 0.8)', width=2), fillcolor='rgba(200, 200, 200, 0.2)'))
     fig.add_trace(go.Scatterpolar(r=valores_target + [valores_target[0]], theta=categorias + [categorias[0]], fill='toself', name=label_target, line=dict(color='#00b4d8', width=3), fillcolor='rgba(0, 180, 216, 0.3)'))
 
-    fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, max(150, max(valores_target) + 20)], gridcolor="#1c1f26", linecolor="#1c1f26"), bgcolor="rgba(0,0,0,0)", angularaxis=dict(gridcolor="#1c1f26", linecolor="#1c1f26")), title=f"<b>Perfil Radar: {label_target} vs {label_ref}</b>", showlegend=True, margin=dict(l=40, r=40, t=40, b=40), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='#f8fafc'))
+    fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, max(150, max(valores_target) + 20)], gridcolor="#1c1f26", linecolor="#1c1f26"), bgcolor="rgba(0,0,0,0)", angularaxis=dict(gridcolor="#1c1f26", linecolor="#1c1f26")), title=f"<b>Perfil Radar ({modo}): {label_target} vs {label_ref}</b>", showlegend=True, margin=dict(l=40, r=40, t=40, b=40), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='#f8fafc'))
     return fig
 
-def generar_radar_comparador(dict_medias, usar_C):
-    categorias = ['Aceleraciones (>3)/min', 'Velocidad Máxima', 'Velocidad Media', 'Distancia/min', 'Sprints/min', 'HSR (>21)/min', '% V. Máx']
-    claves = ['ACC/min', 'VMAX', 'V_Media', 'DIS/min', 'Nº SPR/min', 'DIS AI/min', '% VMAX']
+def generar_radar_comparador(dict_medias, usar_C, modo="Densidad"):
+    if modo == "Densidad":
+        categorias = ['Aceleraciones (>3)/min', 'Velocidad Máxima', 'Velocidad Media', 'Distancia/min', 'Sprints/min', 'HSR (>21)/min', '% V. Máx']
+        claves = ['ACC/min', 'VMAX', 'V_Media', 'DIS/min', 'Nº SPR/min', 'DIS AI/min', '% VMAX']
+    else:
+        categorias = ['Aceleraciones Totales', 'Velocidad Máxima', 'Deceleraciones Totales', 'Distancia Total', 'Sprints Totales', 'HSR Total (>21)', '% V. Máx']
+        claves = ['ACC', 'VMAX', 'DCC', 'DIS', 'Nº SPR', 'DIS AI', '% VMAX']
+        
     datos_graf = {'A': [], 'B': [], 'C': []}
     
     for clave in claves:
@@ -90,7 +103,7 @@ def generar_radar_comparador(dict_medias, usar_C):
     fig.add_trace(go.Scatterpolar(r=datos_graf['B'] + [datos_graf['B'][0]], theta=categorias + [categorias[0]], fill='toself', name=dict_medias['B_label'], line=dict(color='#ff4b4b', width=2), fillcolor='rgba(255, 75, 75, 0.2)'))
     if usar_C: fig.add_trace(go.Scatterpolar(r=datos_graf['C'] + [datos_graf['C'][0]], theta=categorias + [categorias[0]], fill='toself', name=dict_medias['C_label'], line=dict(color='#28a745', width=2), fillcolor='rgba(40, 167, 69, 0.2)'))
 
-    fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 110], gridcolor="#1c1f26", linecolor="#1c1f26"), bgcolor="rgba(0,0,0,0)", angularaxis=dict(gridcolor="#1c1f26", linecolor="#1c1f26")), title="<b>Comparativa Multidimensional (100% = Valor Máximo)</b>", margin=dict(l=40, r=40, t=40, b=40), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='#f8fafc'))
+    fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 110], gridcolor="#1c1f26", linecolor="#1c1f26"), bgcolor="rgba(0,0,0,0)", angularaxis=dict(gridcolor="#1c1f26", linecolor="#1c1f26")), title=f"<b>Comparativa Multidimensional ({modo}) (100% = Valor Máximo)</b>", margin=dict(l=40, r=40, t=40, b=40), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='#f8fafc'))
     return fig
 
 st.subheader(":material/satellite_alt: GPS")
@@ -415,7 +428,9 @@ else:
 
             # Mostrar Radar si corresponde
             if mostrar_radar and not df_radar_target.empty and not df_radar_ref.empty:
-                fig_radar = generar_grafico_radar_gps(df_radar_target, df_radar_ref, label_radar_target, label_radar_ref)
+                c_rad_modo = st.columns([1, 3])[0]
+                modo_radar_tab1 = c_rad_modo.radio("Métrica del Radar:", ["Densidad", "Volumen"], horizontal=True, key="modo_rad_tab1")
+                fig_radar = generar_grafico_radar_gps(df_radar_target, df_radar_ref, label_radar_target, label_radar_ref, modo=modo_radar_tab1)
                 if fig_radar:
                     st.plotly_chart(fig_radar, use_container_width=True)
                 else:
@@ -574,7 +589,7 @@ else:
             st.warning(":material/warning: Uno de los perfiles activos no tiene datos para los filtros seleccionados.")
         else:
             # 1. CÁLCULO DE MEDIAS PARA EL RADAR MULTI-PERFIL
-            metrics_radar = ['ACC/min', 'VMAX', 'DIS/min', 'Nº SPR/min', 'DIS AI/min', 'MIN', 'DIS', '% VMAX']
+            metrics_radar = ['ACC/min', 'VMAX', 'DIS/min', 'Nº SPR/min', 'DIS AI/min', 'MIN', 'DIS', '% VMAX', 'ACC', 'Nº SPR', 'DIS AI', 'DCC']
             mean_A = df_A[metrics_radar].mean().to_dict()
             mean_B = df_B[metrics_radar].mean().to_dict()
             mean_C = df_C[metrics_radar].mean().to_dict() if usar_C else {}
@@ -589,7 +604,8 @@ else:
 
             # 2. MOSTRAR RADAR
             st.markdown("#### :material/radar: Radar Comparativo")
-            fig_comp = generar_radar_comparador(dict_medias_radar, usar_C)
+            modo_radar_tab2 = st.radio("Métrica del Radar:", ["Densidad", "Volumen"], horizontal=True, key="modo_rad_tab2")
+            fig_comp = generar_radar_comparador(dict_medias_radar, usar_C, modo=modo_radar_tab2)
             st.plotly_chart(fig_comp, use_container_width=True)
             
             st.markdown("---")
@@ -689,6 +705,7 @@ else:
             
             if jug_sel != "Selecciona...":
                 st.markdown("---")
+                modo_radar_inf = st.radio("Tipo de métrica para el Gráfico Radar:", ["Densidad", "Volumen"], horizontal=True, key="modo_rad_inf")
                 
                 # Densidades previas
                 for df_calc in [df_ses]:
@@ -708,7 +725,7 @@ else:
                     df_ref_pos = df_ses[df_ses['POS_ESP'] == pos_jug]
                 
                 # Radar (Jugador vs Posición)
-                fig_radar = generar_grafico_radar_gps(df_jug, df_ref_pos, jug_sel, f"Media ({pos_jug})")
+                fig_radar = generar_grafico_radar_gps(df_jug, df_ref_pos, jug_sel, f"Media ({pos_jug})", modo=modo_radar_inf)
                 
                 # Referencias 100% (para bandas objetivo)
                 df_partidos = st.session_state.df_master_informes[(st.session_state.df_master_informes['TIPO_SESION'].str.contains("Partido", na=False)) & (st.session_state.df_master_informes['DIS'] > 0)].copy()
