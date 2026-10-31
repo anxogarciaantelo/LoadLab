@@ -749,8 +749,19 @@ else:
                             
                             def render_plot_for_pdf(fig):
                                 if not fig: return None
-                                # Acomodamos fondo y márgenes para el PDF
-                                fig.update_layout(paper_bgcolor="white", plot_bgcolor="white", font=dict(color="black"), title_font=dict(color="black"))
+                                # Acomodamos fondo, márgenes y color de ejes para el PDF en blanco
+                                fig.update_layout(
+                                    paper_bgcolor="white", 
+                                    plot_bgcolor="white", 
+                                    font=dict(color="black"), 
+                                    title_font=dict(color="black"),
+                                    xaxis=dict(tickfont=dict(color="black"), title_font=dict(color="black"), gridcolor="#e2e8f0"),
+                                    yaxis=dict(tickfont=dict(color="black"), title_font=dict(color="black"), gridcolor="#e2e8f0")
+                                )
+                                # Adaptación específica para el gráfico de radar
+                                if hasattr(fig.layout, 'polar'):
+                                    fig.update_layout(polar=dict(angularaxis=dict(tickfont=dict(color="black")), radialaxis=dict(tickfont=dict(color="black"))))
+                                    
                                 tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
                                 tmp.close()
                                 fig.write_image(tmp.name, engine="kaleido", width=800, height=530, format="jpg")
