@@ -141,7 +141,8 @@ MIN_LESIONES_REQUERIDAS = 10
 lesiones_musculares_validas = [l for l in st.session_state.lesiones if l.get('tipo') in ["Muscular", "Tendinosa"] and l.get('contacto') == "No"]
 total_lesiones_reales = len(lesiones_musculares_validas)
 
-predictores = ['Ratio_AC', 'Carga_Aguda', 'Ratio_AC_HSR', 'Ratio_AC_ACC', 'Monotonia_7d', 'Strain_7d', 'Z_Wellness', 'Dias_Sin_VMax', 'Edad', 'Lesiones_Previas']
+# Se añade la Carga Crónica (factor protector) y las Deceleraciones (daño excéntrico)
+predictores = ['Ratio_AC', 'Carga_Aguda', 'Carga_Cronica', 'Ratio_AC_HSR', 'Ratio_AC_ACC', 'DCC_7d', 'Monotonia_7d', 'Strain_7d', 'Z_Wellness', 'Dias_Sin_VMax', 'Edad', 'Lesiones_Previas']
 modo_ia = False
 
 if total_lesiones_reales >= MIN_LESIONES_REQUERIDAS:
@@ -180,22 +181,26 @@ else:
         elif row['Ratio_AC'] > 1.3 or row['Ratio_AC_HSR'] > 1.3: riesgo += 20.0
         elif row['Ratio_AC'] < 0.8: riesgo += 15.0 
         
-        # 2. Carga Extrema (Spike) y Strain (Fatiga Residual)
+        # 2. Carga Extrema (Spike), Daño Excéntrico y Strain (Fatiga Residual)
         if row['Carga_Aguda'] > 3000: riesgo += 10.0
-        if row['Strain_7d'] > 4000: riesgo += 15.0
+        if row['DCC_7d'] > 250: riesgo += 15.0 # Alta acumulación de frenadas
+        if row['Strain_7d'] > 4000: riesgo += 10.0
         
-        # 3. Wellness Z-Score (Deterioro de Readiness)
+        # 3. Factor Protector: Carga Crónica (Suelo aeróbico y robustez)
+        if row['Carga_Cronica'] > 2000: riesgo -= 10.0
+        elif row['Carga_Cronica'] < 1000: riesgo += 15.0 # Jugador "frágil" por falta de base
+        
+        # 4. Wellness Z-Score (Deterioro de Readiness)
         if row['Z_Wellness'] <= -1.5: riesgo += 15.0 
         elif row['Z_Wellness'] <= -1.0: riesgo += 5.0 
         
-        # 4. Vacuna de Velocidad
+        # 5. Vacuna de Velocidad
         if row['Dias_Sin_VMax'] >= 10: riesgo += 15.0
         
-        # 5. Historial clínico
+        # 6. Historial clínico
         if row['Lesiones_Previas'] > 0: riesgo += 15.0
                         
-        return min(riesgo, 95.0)
-
+        return max(min(riesgo, 95.0), 0.0) # Asegura que el riesgo no baje de 0% por los factores protectores
     df_hoy['Riesgo_%'] = df_hoy.apply(calcular_riesgo_cientifico, axis=1)
 
 # ==========================================
