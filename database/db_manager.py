@@ -210,7 +210,7 @@ def guardar_datos(modulo="todo"):
                         b64_clean = foto_url.split(",")[1] if foto_url.startswith("data:image") else foto_url
                         img_bytes = base64.b64decode(b64_clean)
                         nombre_arch = f"{eq_id}/jugadores/{limpiar_nombre_archivo(p['JUGADOR'])}.jpg"
-                        supabase.storage.from_("loadlab_media").upload(nombre_arch, img_bytes, file_options={"content-type": "image/jpeg", "upsert": "true"})
+                        supabase.storage.from_("loadlab_media").upload(nombre_arch, img_bytes, file_options={"content-type": "image/jpeg", "x-upsert": "true"})
                         import time
                         url_base = supabase.storage.from_("loadlab_media").get_public_url(nombre_arch)
                         foto_url = f"{url_base}?t={int(time.time())}" # Cache-busting
