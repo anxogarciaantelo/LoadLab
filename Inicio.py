@@ -773,15 +773,8 @@ if st.session_state.get("equipo_seleccionado", False):
                 elif gf < gc: color_res, letra = "#ef4444", "D"
                 else: color_res, letra = "#f59e0b", "E"
                 
-                html_ultimos += f"""
-                <div style="background: #111318; border: 1px solid #1c1f26; border-left: 3px solid {color_res}; border-radius: 6px; padding: 6px 10px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.15);">
-                    <div style="display: flex; align-items: center; gap: 8px; overflow: hidden;">
-                        <span style="color: {color_res}; font-weight: 900; font-size: 0.7rem; background: {color_res}20; padding: 2px 5px; border-radius: 4px;">{letra}</span>
-                        <span style="color: #94a3b8; font-size: 0.8rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">vs {rival}</span>
-                    </div>
-                    <span style="color: #f8fafc; font-size: 0.9rem; font-weight: 800; margin-left: 10px; flex-shrink: 0;">{gf} - {gc}</span>
-                </div>
-                """
+                # Se construye en una sola línea continua para evitar el bug del parser Markdown de Streamlit
+                html_ultimos += f"<div style='background: #111318; border: 1px solid #1c1f26; border-left: 3px solid {color_res}; border-radius: 6px; padding: 6px 10px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.15);'><div style='display: flex; align-items: center; gap: 8px; overflow: hidden;'><span style='color: {color_res}; font-weight: 900; font-size: 0.7rem; background: {color_res}20; padding: 2px 5px; border-radius: 4px;'>{letra}</span><span style='color: #94a3b8; font-size: 0.8rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;'>vs {rival}</span></div><span style='color: #f8fafc; font-size: 0.9rem; font-weight: 800; margin-left: 10px; flex-shrink: 0;'>{gf} - {gc}</span></div>"
         else:
             html_ultimos += "<div style='background: #111318; border: 1px solid #1c1f26; border-radius: 6px; padding: 10px; text-align: center;'><span style='color: #64748b; font-size: 0.75rem; font-weight: 700;'>Sin historial previo</span></div>"
             
