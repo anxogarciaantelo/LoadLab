@@ -32,14 +32,20 @@ def construir_dataset_entrenamiento(df_master, lesiones, plantilla):
     
     dict_edad = {limpiar_nombre(p["JUGADOR"]): safe_float(p.get("edad", 25)) for p in plantilla}
     
-    # 1. Base utilizando la BBDD Maestra (Garantiza coherencia total con GPS imputado virtualmente)
-    df_base = df_master[['FECHA', 'JUGADOR', 'CARGA', 'WELLNESS', 'DIS', 'DIS AI', 'ACC', 'VMAX']].copy()
+    # 1. Base utilizando la BBDD Maestra (Añadidas columnas DCC y Nº SPR)
+    df_base = df_master[['FECHA', 'JUGADOR', 'CARGA', 'WELLNESS', 'DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC', 'VMAX']].copy()
     df_base['FECHA'] = pd.to_datetime(df_base['FECHA'])
     
     features = []
     for jug, group in df_base.groupby("JUGADOR"):
         # 2. Resample diario para mantener la continuidad temporal del EWMA y Monotonía
         group = group.set_index("FECHA").resample('D').sum().fillna(0)
+        
+        # --- ACUMULADOS 7 DÍAS (MECÁNICA Y HSR PARA EL MODELO) ---
+        group['HSR_7d'] = group['DIS AI'].rolling(window=7, min_periods=1).sum()
+        group['Sprints_7d'] = group['Nº SPR'].rolling(window=7, min_periods=1).sum()
+        group['ACC_7d'] = group['ACC'].rolling(window=7, min_periods=1).sum()
+        group['DCC_7d'] = group['DCC'].rolling(window=7, min_periods=1).sum()
         
         # --- CARGAS Y RATIOS (EWMA Uncoupled) ---
         group['Carga_Aguda'] = group['CARGA'].ewm(span=7, adjust=False).mean() * 7
