@@ -119,8 +119,11 @@ else:
                 with k1: render_kpi_elite("Lesiones Totales", f"{total_lesiones}", color_borde="#C5A059")
                 with k2: render_kpi_elite("Días de Baja Totales", f"{total_dias}", color_borde="#f59e0b")
                 with k3: render_kpi_elite("Días de baja  / Lesión", f"{promedio_dias:.1f}", color_borde="#8b5cf6")
-                with k4: render_kpi_elite("Incidencia Lesional", f"{incidencia:.1f}", color_borde="#ef4444")
-                with k5: render_kpi_elite("Burden", f"{burden:.0f}", color_borde="#ef4444")
+                info_inc = "<span title='Normativa UEFA ECIS:\nGlobal: 6-8 / 1000h\nEntrenos: 3-4 / 1000h\nPartidos: 20-25 / 1000h' style='cursor:help; opacity: 0.7;'>ℹ️</span>"
+                info_bur = "<span title='Normativa UEFA ECIS:\nBurden óptimo: < 150 días de baja / 1000h' style='cursor:help; opacity: 0.7;'>ℹ️</span>"
+                
+                with k4: render_kpi_elite("Incidencia Lesional", f"{incidencia:.1f}", icono=info_inc, color_borde="#ef4444")
+                with k5: render_kpi_elite("Burden", f"{burden:.0f}", icono=info_bur, color_borde="#ef4444")
                 
         # 5. DIBUJAR GRÁFICOS EN MEDIO (Usando el contenedor reservado)
         with cont_graficos:
