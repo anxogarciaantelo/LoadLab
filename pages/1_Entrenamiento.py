@@ -84,11 +84,24 @@ with tab_cal:
     dias_semana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
     hoy_str = str(date.today())
     
-    # --- CABECERAS DE LOS DÍAS (Limpias y reducidas) ---
-    html_cal = "<div style='display: grid; grid-template-columns: 60px repeat(7, 1fr); gap: 8px; text-align: center; margin-bottom: 5px; align-items: end;'>"
+    # --- ESTRUCTURA CSS Y CABECERAS ---
+    html_cal = """
+    <style>
+    .cal-week-row { background-color: #0b0e14; border: 1px solid #1c1f26; border-radius: 10px; padding: 6px; margin-bottom: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.2); display: grid; grid-template-columns: 45px repeat(7, 1fr); gap: 6px; }
+    .cal-micro { display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid #1c1f26; padding-right: 4px; }
+    .cal-day { background-color: #111318; padding: 6px; border-radius: 6px; min-height: 80px; display: flex; flex-direction: column; align-items: center; border: 1px solid transparent; transition: border-color 0.2s; }
+    .cal-day:hover { border-color: #334155; }
+    .cal-day.hoy { border-color: #C5A059; background-color: #161922; }
+    .cal-day-num { color: #f8fafc; font-weight: 800; font-size: 1rem; margin-bottom: 4px; }
+    .cal-badge { color: white; font-size: 0.7rem; font-weight: 800; padding: 4px; border-radius: 4px; margin-top: 4px; width: 100%; box-sizing: border-box; line-height: 1.1; box-shadow: 0 2px 4px rgba(0,0,0,0.2); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+    .cal-badge span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
+    .cal-badge-sub { font-size: 0.6rem; font-weight: 600; margin-top: 2px; }
+    </style>
+    <div style='display: grid; grid-template-columns: 45px repeat(7, 1fr); gap: 6px; text-align: center; margin-bottom: 6px; align-items: end;'>
+    """
     html_cal += "<div></div>" # Espacio vacío sobre la columna de microciclos
     for d in dias_semana:
-        html_cal += f"<div style='color: #94a3b8; font-weight: 800; font-size: 0.8rem; text-transform: uppercase; padding-bottom: 6px; border-bottom: 2px solid #1c1f26;'>{d}</div>"
+        html_cal += f"<div style='color: #C5A059; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; padding-bottom: 6px; border-bottom: 1px solid #1c1f26;'>{d}</div>"
     html_cal += "</div>"
     
     # --- MAPA CRONOLÓGICO DE MICROCICLOS ---
@@ -97,29 +110,25 @@ with tab_cal:
         semanas_unicas_cal.add(obtener_numero_semana(s["fecha"]))
     mapa_micros_cal = {n_sem: i + 1 for i, n_sem in enumerate(sorted(list(semanas_unicas_cal)))}
     
-    # --- FILAS DE SEMANAS (Tarjetas horizontales largas) ---
+    # --- FILAS DE SEMANAS ---
     for week in cal:
         dia_sem = next((d for d in week if d != 0), None)
         num_sem = obtener_numero_semana(f"{year}-{month:02d}-{dia_sem:02d}") if dia_sem else 0
         micro_relativo = mapa_micros_cal.get(num_sem)
         
-        # Tarjeta contenedora de la semana completa
-        html_cal += "<div style='background-color: #111318; border: 1px solid #1c1f26; border-radius: 12px; padding: 10px; margin-bottom: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); display: grid; grid-template-columns: 60px repeat(7, 1fr); gap: 8px;'>"
+        html_cal += "<div class='cal-week-row'>"
         
-        # Etiqueta del Microciclo (Píldora azul a la izquierda)
         if micro_relativo is not None:
-            html_cal += f"<div style='background-color: transparent; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.2);'><span style='font-size: 0.65rem; font-weight: 800; text-transform: uppercase; margin-bottom: 2px; opacity: 0.9;'>Micro</span><span style='font-size: 1.4rem; font-weight: 800; line-height: 1;'>{micro_relativo}</span></div>"
+            html_cal += f"<div class='cal-micro'><span style='font-size: 0.6rem; font-weight: 800; text-transform: uppercase; color: #94a3b8; margin-bottom: 2px;'>Micro</span><span style='font-size: 1.3rem; font-weight: 900; color: #C5A059; line-height: 1;'>{micro_relativo}</span></div>"
         else:
             html_cal += "<div></div>"
 
-        # Cajas interiores para cada día de la semana
         for day in week:
             if day == 0:
-                html_cal += "<div style='padding: 9px; background-color: transparent;'></div>"
+                html_cal += "<div style='background-color: transparent;'></div>"
             else:
                 fecha_str = f"{year}-{month:02d}-{day:02d}"
-                es_hoy = "border: 2px solid #C5A059;" if fecha_str == hoy_str else "border: 1px solid #111318;"
-                bg_color = "#0b0e14" if fecha_str == hoy_str else "#0b1120"
+                clase_hoy = " hoy" if fecha_str == hoy_str else ""
                 
                 sesiones_dia = [s for s in st.session_state.sesiones if s["fecha"] == fecha_str]
                 contenido_extra = ""
@@ -134,9 +143,9 @@ with tab_cal:
                             color_badge = "#10b981" 
                             sub = s.get('descripcion', 'TD')
                             
-                        contenido_extra += f"<div style='background-color: {color_badge}; color: white; font-size: 0.8rem; font-weight: 800; padding: 6px; border-radius: 6px; margin-top: 6px; width: 100%; box-sizing: border-box; line-height: 1.2; box-shadow: 0 2px 4px rgba(0,0,0,0.2); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;' title='{nom} | {sub}'><span style='white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;'>{nom}</span><span style='font-size: 0.65rem; font-weight: 600; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;'>{sub}</span></div>"
+                        contenido_extra += f"<div class='cal-badge' style='background-color: {color_badge};' title='{nom} | {sub}'><span>{nom}</span><span class='cal-badge-sub'>{sub}</span></div>"
                 
-                html_cal += f"<div style='background-color: {bg_color}; {es_hoy} padding: 10px 5px; border-radius: 8px; min-height: 107px; display: flex; flex-direction: column; align-items: center; transition: transform 0.2s ease;' onmouseover=\"this.style.transform='scale(1.03)'\" onmouseout=\"this.style.transform='scale(1)'\"><span style='color: #f8fafc; font-weight: 800; font-size: 1.15rem; margin-bottom: 4px;'>{day}</span>{contenido_extra}</div>"
+                html_cal += f"<div class='cal-day{clase_hoy}'><span class='cal-day-num'>{day}</span>{contenido_extra}</div>"
         
         html_cal += "</div>" 
         
