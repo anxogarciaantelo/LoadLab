@@ -27,108 +27,62 @@ st.caption("Sistema Híbrido: Combina algoritmos científicos de prevención dep
 # 1. CONSTRUCCIÓN DEL DATASET TEMPORAL (CON IMPUTACIÓN Y AJUSTE A METROS)
 # ==========================================
 @st.cache_data(ttl=3600, show_spinner=False)
-def construir_dataset_entrenamiento(sesiones, lesiones):
-    registros = []
-    dict_pos_esp = {limpiar_nombre(p["JUGADOR"]): p.get("pos_1", "Desconocida") for p in st.session_state.get("plantilla", [])}
-    dict_pos_gen = {limpiar_nombre(p["JUGADOR"]): p.get("POS", "DEF") for p in st.session_state.get("plantilla", [])}
-    dict_edad = {limpiar_nombre(p["JUGADOR"]): safe_float(p.get("edad", 25)) for p in st.session_state.get("plantilla", [])}
+def construir_dataset_entrenamiento(df_master, lesiones, plantilla):
+    if df_master.empty: return pd.DataFrame()
     
-    for s in sesiones:
-        if not s.get("informe_generado"): continue
-            
-        es_partido = "Partido" in s.get("tipo", "")
-        disp_dict = {limpiar_nombre(k): v for k, v in s.get("disponibilidad", {}).items()}
-        
-        datos_gps_validos = []
-        for d in s.get("datos_informe", []):
-            # CORRECCIÓN: Convertir explícitamente los KM a METROS multiplicando por 1000
-            dis_val = safe_float(d.get("DIS")) * 1000.0
-            min_val = safe_float(d.get("MIN", 0))
-            
-            if dis_val > 0 and min_val > 0:
-                jug_limpio = limpiar_nombre(d["JUGADOR"])
-                hsr_val = safe_float(d.get("DIS AI", d.get("HID >21", 0)))
-                
-                datos_gps_validos.append({
-                    "POS_ESP": dict_pos_esp.get(jug_limpio, "Desconocida"),
-                    "POS_GEN": dict_pos_gen.get(jug_limpio, "DEF"),
-                    "MIN": min_val,
-                    "DIS_pm": dis_val / min_val,
-                    "HSR_pm": hsr_val / min_val,
-                    "SPRINTS_pm": safe_float(d.get("Nº SPR", d.get("SPR >24", 0))) / min_val,
-                    "ACC_pm": safe_float(d.get("ACC", d.get("ACC >3", 0))) / min_val,
-                    "DCC_pm": safe_float(d.get("DCC", d.get("DCC >3", 0))) / min_val,
-                })
-        
-        medias_esp, medias_gen, medias_equipo = {}, {}, {}
-        if datos_gps_validos:
-            df_validos = pd.DataFrame(datos_gps_validos)
-            cols_pm = ["DIS_pm", "HSR_pm", "SPRINTS_pm", "ACC_pm", "DCC_pm"]
-            medias_esp = df_validos.groupby("POS_ESP")[cols_pm].mean().to_dict('index')
-            medias_gen = df_validos.groupby("POS_GEN")[cols_pm].mean().to_dict('index')
-            medias_equipo = df_validos[cols_pm].mean().to_dict()
-
-        for d in s.get("datos_informe", []):
-            jug_nombre = d["JUGADOR"]
-            jug_limpio = limpiar_nombre(jug_nombre)
-            min_jug = safe_float(d.get("MIN", 0))
-            
-            # Sumamos la huella del partido + la compensación para que la IA lea el estrés mecánico total
-            dis_jug = (safe_float(d.get("DIS")) + safe_float(d.get("COMP_DIS", 0))) * 1000.0
-            hsr_jug = safe_float(d.get("DIS AI", d.get("HID >21", 0))) + safe_float(d.get("COMP_DIS_AI", 0))
-            spr_jug = safe_float(d.get("Nº SPR", d.get("SPR >24", 0))) + safe_float(d.get("COMP_SPR", 0))
-            acc_jug = safe_float(d.get("ACC", d.get("ACC >3", 0))) + safe_float(d.get("COMP_ACC", 0))
-            dcc_jug = safe_float(d.get("DCC", d.get("DCC >3", 0))) + safe_float(d.get("COMP_DCC", 0))
-            
-            estado = disp_dict.get(jug_limpio, "Disponible" if not es_partido else "Titular")
-            elegible = (estado in ["Titular", "Suplente"] and min_jug > 0) if es_partido else (estado == "Disponible" and min_jug > 0)
-
-            if elegible and dis_jug == 0 and min_jug > 0 and datos_gps_validos:
-                pos_e = dict_pos_esp.get(jug_limpio, "Desconocida")
-                pos_g = dict_pos_gen.get(jug_limpio, "DEF")
-                ratios = medias_esp.get(pos_e, medias_gen.get(pos_g, medias_equipo))
-                
-                dis_jug = ratios["DIS_pm"] * min_jug
-                hsr_jug = ratios["HSR_pm"] * min_jug
-                spr_jug = ratios["SPRINTS_pm"] * min_jug
-                acc_jug = ratios["ACC_pm"] * min_jug
-                dcc_jug = ratios["DCC_pm"] * min_jug
-
-            registros.append({
-                "FECHA": pd.to_datetime(s["fecha"]),
-                "JUGADOR": jug_nombre,
-                "RPE": safe_float(d.get("RPE")),
-                "WELLNESS": safe_float(d.get("WELLNESS")),
-                "SUEÑO": safe_float(d.get("W_Sueño")),
-                "FATIGA": safe_float(d.get("W_Fatiga")),
-                "ESTRES": safe_float(d.get("W_Estres")),
-                "DIS_TOTAL": dis_jug,
-                "HSR": hsr_jug,
-                "SPRINTS": spr_jug,
-                "ACC": acc_jug,
-                "DCC": dcc_jug,
-                "CARGA": safe_float(d.get("CARGA"))
-            })
-                
-    if not registros: return pd.DataFrame()
-        
-    df = pd.DataFrame(registros).sort_values("FECHA")
+    dict_edad = {limpiar_nombre(p["JUGADOR"]): safe_float(p.get("edad", 25)) for p in plantilla}
+    
+    # 1. Base utilizando la BBDD Maestra (Garantiza coherencia total con GPS imputado virtualmente)
+    df_base = df_master[['FECHA', 'JUGADOR', 'CARGA', 'WELLNESS', 'DIS', 'DIS AI', 'ACC', 'VMAX']].copy()
+    df_base['FECHA'] = pd.to_datetime(df_base['FECHA'])
     
     features = []
-    for jug, group in df.groupby("JUGADOR"):
+    for jug, group in df_base.groupby("JUGADOR"):
+        # 2. Resample diario para mantener la continuidad temporal del EWMA y Monotonía
         group = group.set_index("FECHA").resample('D').sum().fillna(0)
-        # Aplicación estricta de EWMA Uncoupled (desacoplado) para coherencia científica con el tracker diario
+        
+        # --- CARGAS Y RATIOS (EWMA Uncoupled) ---
         group['Carga_Aguda'] = group['CARGA'].ewm(span=7, adjust=False).mean() * 7
         group['Carga_Cronica'] = group['CARGA'].shift(7).ewm(span=21, adjust=False).mean() * 7
         group['Ratio_AC'] = np.where(group['Carga_Cronica'] > 0, group['Carga_Aguda'] / group['Carga_Cronica'], 1.0)
-        group['HSR_7d'] = group['HSR'].rolling(window=7, min_periods=1).sum()
-        group['Sprints_7d'] = group['SPRINTS'].rolling(window=7, min_periods=1).sum()
-        group['ACC_7d'] = group['ACC'].rolling(window=7, min_periods=1).sum()
-        group['DCC_7d'] = group['DCC'].rolling(window=7, min_periods=1).sum()
-        group['Wellness_3d'] = group['WELLNESS'].replace(0, np.nan).rolling(window=3, min_periods=1).mean().fillna(0)
-        group['Sueno_3d'] = group['SUEÑO'].replace(0, np.nan).rolling(window=3, min_periods=1).mean().fillna(0)
+        
+        group['HSR_Aguda'] = group['DIS AI'].ewm(span=7, adjust=False).mean() * 7
+        group['HSR_Cronica'] = group['DIS AI'].shift(7).ewm(span=21, adjust=False).mean() * 7
+        group['Ratio_AC_HSR'] = np.where(group['HSR_Cronica'] > 0, group['HSR_Aguda'] / group['HSR_Cronica'], 1.0)
+        
+        group['ACC_Aguda'] = group['ACC'].ewm(span=7, adjust=False).mean() * 7
+        group['ACC_Cronica'] = group['ACC'].shift(7).ewm(span=21, adjust=False).mean() * 7
+        group['Ratio_AC_ACC'] = np.where(group['ACC_Cronica'] > 0, group['ACC_Aguda'] / group['ACC_Cronica'], 1.0)
+        
+        # --- MONOTONÍA Y STRAIN ---
+        carga_7d = group['CARGA'].rolling(window=7, min_periods=1)
+        group['Media_Carga_7d'] = carga_7d.mean()
+        group['Std_Carga_7d'] = carga_7d.std(ddof=1).fillna(0)
+        group['Std_Carga_7d_Segura'] = np.where(group['Std_Carga_7d'] > 0, group['Std_Carga_7d'], 1.0)
+        group['Monotonia_7d'] = np.where(group['Media_Carga_7d'] > 0, group['Media_Carga_7d'] / group['Std_Carga_7d_Segura'], 0.0)
+        group['Monotonia_7d'] = group['Monotonia_7d'].clip(upper=3.0)
+        group['Strain_7d'] = group['Media_Carga_7d'] * 7 * group['Monotonia_7d']
+        
+        # --- Z-SCORE WELLNESS (Línea base de 28 días) ---
+        well_28d = group['WELLNESS'].replace(0, np.nan).rolling(window=28, min_periods=1)
+        group['Well_Mean'] = well_28d.mean().fillna(0)
+        group['Well_Std'] = well_28d.std(ddof=1).fillna(1.0)
+        group['Z_Wellness'] = np.where(group['Well_Std'] > 0, (group['WELLNESS'] - group['Well_Mean']) / group['Well_Std'], 0.0)
+        group['Z_Wellness'] = group['Z_Wellness'].fillna(0)
+        
+        # --- VACUNA DE VELOCIDAD (Días sin alcanzar el 85% de VMax) ---
+        vmax_historica = group['VMAX'].max()
+        if vmax_historica > 25.0:
+            group['Es_Pico_VMax'] = group['VMAX'] >= (vmax_historica * 0.85)
+            group['Ultimo_Pico'] = group.index.where(group['Es_Pico_VMax']).ffill()
+            group['Dias_Sin_VMax'] = (group.index - group['Ultimo_Pico']).dt.days.fillna(14.0)
+        else:
+            group['Dias_Sin_VMax'] = 0.0
+            
         group['JUGADOR'] = jug
         group['Edad'] = dict_edad.get(limpiar_nombre(jug), 25.0)
+        
+        # --- LESIONES PREVIAS ---
         def calcular_lesiones_previas(fecha_fila, nombre_jugador):
             count = 0
             for l in lesiones:
@@ -143,7 +97,7 @@ def construir_dataset_entrenamiento(sesiones, lesiones):
         
     df_features = pd.concat(features, ignore_index=True)
     
-    # Target: Solo lesiones MUSCULARES/TENDINOSAS SIN CONTACTO
+    # 3. Target: Lesiones MUSCULARES/TENDINOSAS SIN CONTACTO
     df_features['Lesion_Target'] = 0
     fechas_lesiones = [
         (l['jugador'], pd.to_datetime(l['id_sesion'])) 
@@ -151,23 +105,20 @@ def construir_dataset_entrenamiento(sesiones, lesiones):
         if l.get('tipo') in ["Muscular", "Tendinosa"] and l.get('contacto') == "No"
     ]
     
-    # Separación del filtrado para evitar mutación del DataFrame durante la iteración
     mask_bajas_global = pd.Series(False, index=df_features.index)
-
     for jug, fecha_lesion in fechas_lesiones:
         mask_riesgo = (df_features['JUGADOR'] == jug) & (df_features['FECHA'] >= fecha_lesion - pd.Timedelta(days=7)) & (df_features['FECHA'] < fecha_lesion)
         df_features.loc[mask_riesgo, 'Lesion_Target'] = 1
-
+        
         mask_baja_jugador = (df_features['JUGADOR'] == jug) & (df_features['FECHA'] >= fecha_lesion) & (df_features['FECHA'] <= fecha_lesion + pd.Timedelta(days=21))
         mask_bajas_global = mask_bajas_global | mask_baja_jugador
-
-    df_features = df_features[~mask_bajas_global].copy()
-    return df_features
+        
+    return df_features[~mask_bajas_global].copy()
 
 # ==========================================
 # 2. SELECCIÓN DEL MOTOR DE IA (HÍBRIDO)
 # ==========================================
-df_master = construir_dataset_entrenamiento(st.session_state.sesiones, st.session_state.lesiones)
+df_master = construir_dataset_entrenamiento(st.session_state.get("df_master_informes", pd.DataFrame()), st.session_state.lesiones, st.session_state.plantilla)
 
 if df_master.empty:
     from utils.math_helpers import render_estado_vacio
@@ -190,7 +141,7 @@ MIN_LESIONES_REQUERIDAS = 10
 lesiones_musculares_validas = [l for l in st.session_state.lesiones if l.get('tipo') in ["Muscular", "Tendinosa"] and l.get('contacto') == "No"]
 total_lesiones_reales = len(lesiones_musculares_validas)
 
-predictores = ['Ratio_AC', 'Carga_Aguda', 'HSR_7d', 'Sprints_7d', 'ACC_7d', 'DCC_7d', 'Wellness_3d', 'Sueno_3d', 'Edad', 'Lesiones_Previas']
+predictores = ['Ratio_AC', 'Carga_Aguda', 'Ratio_AC_HSR', 'Ratio_AC_ACC', 'Monotonia_7d', 'Strain_7d', 'Z_Wellness', 'Dias_Sin_VMax', 'Edad', 'Lesiones_Previas']
 modo_ia = False
 
 if total_lesiones_reales >= MIN_LESIONES_REQUERIDAS:
@@ -224,30 +175,25 @@ else:
     def calcular_riesgo_cientifico(row):
         riesgo = 5.0 # Riesgo base fisiológico
         
-        # 1. Ratio A/C (The Sweet Spot Model)
-        if row['Ratio_AC'] > 1.5: riesgo += 40.0
-        elif row['Ratio_AC'] > 1.3: riesgo += 20.0
-        elif row['Ratio_AC'] < 0.8: riesgo += 15.0 # Under-training risk
+        # 1. Ratio A/C Interno y Mecánico
+        if row['Ratio_AC'] > 1.5 or row['Ratio_AC_HSR'] > 1.5: riesgo += 35.0
+        elif row['Ratio_AC'] > 1.3 or row['Ratio_AC_HSR'] > 1.3: riesgo += 20.0
+        elif row['Ratio_AC'] < 0.8: riesgo += 15.0 
         
-        # 2. Carga Aguda Extrema (Spike)
+        # 2. Carga Extrema (Spike) y Strain (Fatiga Residual)
         if row['Carga_Aguda'] > 3000: riesgo += 10.0
+        if row['Strain_7d'] > 4000: riesgo += 15.0
         
-        # 3. Wellness y Sueño (Recuperación del SNC)
-        if row['Sueno_3d'] >= 5: riesgo += 15.0
-        if row['Wellness_3d'] >= 24: riesgo += 15.0 
-        elif row['Wellness_3d'] >= 18: riesgo += 5.0 
+        # 3. Wellness Z-Score (Deterioro de Readiness)
+        if row['Z_Wellness'] <= -1.5: riesgo += 15.0 
+        elif row['Z_Wellness'] <= -1.0: riesgo += 5.0 
         
-        # 4. Historial clínico (La mayor predictibilidad de lesión es una lesión previa)
-        riesgo_previo = 0.0
-        for l in st.session_state.lesiones:
-            if l['jugador'] == row['JUGADOR']:
-                fecha_l = datetime.strptime(l['id_sesion'], "%Y-%m-%d")
-                if (datetime.today() - fecha_l).days <= 60:
-                    tipo_lesion = l.get('tipo', '')
-                    if tipo_lesion in ["Muscular", "Tendinosa"]: riesgo_previo = max(riesgo_previo, 25.0) 
-                    elif tipo_lesion == "Artículo-ligamentosa": riesgo_previo = max(riesgo_previo, 10.0)
+        # 4. Vacuna de Velocidad
+        if row['Dias_Sin_VMax'] >= 10: riesgo += 15.0
+        
+        # 5. Historial clínico
+        if row['Lesiones_Previas'] > 0: riesgo += 15.0
                         
-        riesgo += riesgo_previo
         return min(riesgo, 95.0)
 
     df_hoy['Riesgo_%'] = df_hoy.apply(calcular_riesgo_cientifico, axis=1)
@@ -319,10 +265,10 @@ with c_alertas:
                     <span style="background: #ef4444; color: white; padding: 3px 8px; border-radius: 4px; font-weight: 800; font-size: 0.8rem;">{row['Riesgo_%']:.0f}% RIESGO</span>
                 </div>
                 <div style="font-size: 0.85rem; color: #94a3b8; display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
-                    <div>A/C: <b style="color: #f8fafc;">{row['Ratio_AC']:.2f}</b></div>
-                    <div>Carga: <b style="color: #f8fafc;">{row['Carga_Aguda']:.0f}</b></div>
-                    <div>Wellness: <b style="color: #f8fafc;">{row['Wellness_3d']:.1f}</b></div>
-                    <div>HSR (7d): <b style="color: #f8fafc;">{row['HSR_7d']:.0f}m</b></div>
+                    <div>A/C Int: <b style="color: #f8fafc;">{row['Ratio_AC']:.2f}</b></div>
+                    <div>A/C HSR: <b style="color: #f8fafc;">{row['Ratio_AC_HSR']:.2f}</b></div>
+                    <div>Strain: <b style="color: #f8fafc;">{row['Strain_7d']:.0f}</b></div>
+                    <div>Z-Wellness: <b style="color: #f8fafc;">{row['Z_Wellness']:.1f}</b></div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -333,18 +279,16 @@ st.markdown("---")
 st.markdown("#### :material/list_alt: Evaluación Completa de la Plantilla")
 st.caption("Ordenado de mayor a menor riesgo lesional. Haz clic en las cabeceras para reordenar.")
 
-# Preparar DataFrame para visualización
-df_display = df_hoy[['JUGADOR', 'Riesgo_%', 'Ratio_AC', 'Carga_Aguda', 'Wellness_3d', 'HSR_7d', 'Sprints_7d']].copy()
+df_display = df_hoy[['JUGADOR', 'Riesgo_%', 'Ratio_AC', 'Ratio_AC_HSR', 'Strain_7d', 'Z_Wellness', 'Dias_Sin_VMax']].copy()
 df_display.rename(columns={
     'Riesgo_%': 'Riesgo Global',
-    'Ratio_AC': 'Ratio A/C',
-    'Carga_Aguda': 'Carga Aguda (UA)',
-    'Wellness_3d': 'Fatiga / Dolor (Pts)',
-    'HSR_7d': 'HSR Acum. (m)',
-    'Sprints_7d': 'Sprints Acum.'
+    'Ratio_AC': 'A/C (Int)',
+    'Ratio_AC_HSR': 'A/C (HSR)',
+    'Strain_7d': 'Strain (7d)',
+    'Z_Wellness': 'Z-Score Wellness',
+    'Dias_Sin_VMax': 'Días sin VMax'
 }, inplace=True)
 
-# Renderizar tabla nativa con configuraciones de columnas espectaculares
 st.dataframe(
     df_display,
     column_config={
@@ -354,13 +298,13 @@ st.dataframe(
             help="Probabilidad de sufrir una lesión muscular/tendinosa en los próximos 7 días.",
             format="%.0f%%",
             min_value=0,
-            max_value=75, # Escala ajustada: un >70% llenará la barra advirtiendo de criticidad máxima
+            max_value=75, 
         ),
-        "Ratio A/C": st.column_config.NumberColumn("Ratio A/C", format="%.2f"),
-        "Carga Aguda (UA)": st.column_config.NumberColumn("Carga (7d)", format="%.0f"),
-        "Fatiga / Dolor (Pts)": st.column_config.NumberColumn("Wellness (3d)", format="%.1f"),
-        "HSR Acum. (m)": st.column_config.NumberColumn("Alta Intensidad (7d)", format="%.0f m"),
-        "Sprints Acum.": st.column_config.NumberColumn("Sprints (7d)", format="%.0f")
+        "A/C (Int)": st.column_config.NumberColumn("A/C (Int)", format="%.2f"),
+        "A/C (HSR)": st.column_config.NumberColumn("A/C (HSR)", format="%.2f"),
+        "Strain (7d)": st.column_config.NumberColumn("Strain (7d)", format="%.0f UA"),
+        "Z-Score Wellness": st.column_config.NumberColumn("Z-Score Wellness", format="%.2f", help="Negativo indica peor estado del habitual"),
+        "Días sin VMax": st.column_config.NumberColumn("Días sin VMax", format="%.0f d")
     },
     hide_index=True,
     use_container_width=True
