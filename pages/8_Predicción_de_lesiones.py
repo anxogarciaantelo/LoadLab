@@ -74,7 +74,8 @@ def construir_dataset_entrenamiento(df_master, lesiones, plantilla):
         vmax_historica = group['VMAX'].max()
         if vmax_historica > 25.0:
             group['Es_Pico_VMax'] = group['VMAX'] >= (vmax_historica * 0.85)
-            group['Ultimo_Pico'] = group.index.where(group['Es_Pico_VMax']).ffill()
+            # Transformamos explícitamente el índice a Series para habilitar el .ffill()
+            group['Ultimo_Pico'] = group.index.to_series().where(group['Es_Pico_VMax']).ffill()
             group['Dias_Sin_VMax'] = (group.index - group['Ultimo_Pico']).dt.days.fillna(14.0)
         else:
             group['Dias_Sin_VMax'] = 0.0
