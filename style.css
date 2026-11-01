@@ -260,3 +260,9 @@ div[data-testid="stExpander"] details[open] summary ~ * {
 [data-testid="stSidebarCollapseButton"] {
     display: none !important;
 }
+/* Ocultar el icono de enlace (clip) automático de Streamlit en las tarjetas */
+a.header-anchor {
+    display: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
