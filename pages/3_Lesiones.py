@@ -112,18 +112,27 @@ else:
             else:
                 total_lesiones, total_dias, promedio_dias, incidencia, burden = calcular_metricas(df_filtrado, filtro_mes, filtro_tipo_ses, filtro_jugador)
 
-                from utils.math_helpers import render_kpi_elite
+                # Definimos la tarjeta con el diseño de Valoraciones (incluyendo Tooltip interactivo)
+                def tarjeta_kpi_lesiones(titulo, valor, subtitulo="", tooltip="", color_borde="#C5A059"):
+                    tt_html = f" title='{tooltip}'" if tooltip else ""
+                    icon = " <span class='material-symbols-rounded' style='vertical-align: middle; font-size: 1.1rem; color: #94a3b8; opacity: 0.9;'>info</span>" if tooltip else ""
+                    cursor = "help" if tooltip else "default"
+                    
+                    st.markdown(f"""
+                    <div{tt_html} style="background: #111318; border: 1px solid #1c1f26; border-top: 3px solid {color_borde}; border-radius: 10px; padding: 15px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); height: 100%; display: flex; flex-direction: column; justify-content: center; cursor: {cursor};">
+                        <p style="color: #f8fafc; font-size: 0.8rem; font-weight: 800; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.2; text-align: left;">{titulo}{icon}</p>
+                        <h2 style="color: #f8fafc; font-size: 1.6rem; font-weight: 800; margin: 0; line-height: 1; text-align: center;">{valor}</h2>
+                        {f"<p style='color: {color_borde}; font-size: 0.7rem; font-weight: 600; margin: 8px 0 0 0; text-align: center;'>{subtitulo}</p>" if subtitulo else ""}
+                    </div>
+                    """, unsafe_allow_html=True)
                 
-                # Tarjetas renderizadas con texto en el título para evitar el fallo HTML interno
                 k1, k2, k3, k4, k5 = st.columns(5)
-                with k1: render_kpi_elite("Lesiones Totales", f"{total_lesiones}", color_borde="#C5A059")
-                with k2: render_kpi_elite("Días de Baja Totales", f"{total_dias}", color_borde="#f59e0b")
-                with k3: render_kpi_elite("Días de baja  / Lesión", f"{promedio_dias:.1f}", color_borde="#8b5cf6")
-                info_inc = "<span title='Normativa UEFA ECIS:\nGlobal: 6-8 / 1000h\nEntrenos: 3-4 / 1000h\nPartidos: 20-25 / 1000h' style='cursor:help; opacity: 0.7;'>ℹ️</span>"
-                info_bur = "<span title='Normativa UEFA ECIS:\nBurden óptimo: < 150 días de baja / 1000h' style='cursor:help; opacity: 0.7;'>ℹ️</span>"
-                
-                with k4: render_kpi_elite("Incidencia Lesional", f"{incidencia:.1f}", icono=info_inc, color_borde="#ef4444")
-                with k5: render_kpi_elite("Burden", f"{burden:.0f}", icono=info_bur, color_borde="#ef4444")
+                with k1: tarjeta_kpi_lesiones("Lesiones Totales", f"{total_lesiones}", color_borde="#C5A059")
+                with k2: tarjeta_kpi_lesiones("Días Baja Totales", f"{total_dias}", color_borde="#f59e0b")
+                with k3: tarjeta_kpi_lesiones("Días / Lesión", f"{promedio_dias:.1f}", color_borde="#8b5cf6")
+                # En HTML se usa &#10; para forzar los saltos de línea limpios dentro del tooltip
+                with k4: tarjeta_kpi_lesiones("Incidencia", f"{incidencia:.1f}", tooltip="Normativa UEFA ECIS:&#10;Global: 6-8 / 1000h&#10;Entrenos: 3-4 / 1000h&#10;Partidos: 20-25 / 1000h", color_borde="#ef4444")
+                with k5: tarjeta_kpi_lesiones("Burden", f"{burden:.0f}", tooltip="Normativa UEFA ECIS:&#10;Burden óptimo: < 150 días de baja / 1000h", color_borde="#ef4444")
                 
         # 5. DIBUJAR GRÁFICOS EN MEDIO (Usando el contenedor reservado)
         with cont_graficos:
