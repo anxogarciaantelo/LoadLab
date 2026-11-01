@@ -161,7 +161,7 @@ def construir_dataset_entrenamiento(sesiones, lesiones):
         mask_baja_jugador = (df_features['JUGADOR'] == jug) & (df_features['FECHA'] >= fecha_lesion) & (df_features['FECHA'] <= fecha_lesion + pd.Timedelta(days=21))
         mask_bajas_global = mask_bajas_global | mask_baja_jugador
 
-  df_features = df_features[~mask_bajas_global].copy()
+    df_features = df_features[~mask_bajas_global].copy()
     return df_features
 
 # ==========================================
