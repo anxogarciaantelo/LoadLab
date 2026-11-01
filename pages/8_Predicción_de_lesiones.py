@@ -117,8 +117,9 @@ def construir_dataset_entrenamiento(sesiones, lesiones):
     features = []
     for jug, group in df.groupby("JUGADOR"):
         group = group.set_index("FECHA").resample('D').sum().fillna(0)
+        # Aplicación estricta de EWMA Uncoupled (desacoplado) para coherencia científica con el tracker diario
         group['Carga_Aguda'] = group['CARGA'].ewm(span=7, adjust=False).mean() * 7
-        group['Carga_Cronica'] = group['CARGA'].ewm(span=28, adjust=False).mean() * 7
+        group['Carga_Cronica'] = group['CARGA'].shift(7).ewm(span=21, adjust=False).mean() * 7
         group['Ratio_AC'] = np.where(group['Carga_Cronica'] > 0, group['Carga_Aguda'] / group['Carga_Cronica'], 1.0)
         group['HSR_7d'] = group['HSR'].rolling(window=7, min_periods=1).sum()
         group['Sprints_7d'] = group['SPRINTS'].rolling(window=7, min_periods=1).sum()
@@ -150,12 +151,17 @@ def construir_dataset_entrenamiento(sesiones, lesiones):
         if l.get('tipo') in ["Muscular", "Tendinosa"] and l.get('contacto') == "No"
     ]
     
+    # Separación del filtrado para evitar mutación del DataFrame durante la iteración
+    mask_bajas_global = pd.Series(False, index=df_features.index)
+
     for jug, fecha_lesion in fechas_lesiones:
         mask_riesgo = (df_features['JUGADOR'] == jug) & (df_features['FECHA'] >= fecha_lesion - pd.Timedelta(days=7)) & (df_features['FECHA'] < fecha_lesion)
         df_features.loc[mask_riesgo, 'Lesion_Target'] = 1
-        mask_baja = (df_features['JUGADOR'] == jug) & (df_features['FECHA'] >= fecha_lesion) & (df_features['FECHA'] <= fecha_lesion + pd.Timedelta(days=21))
-        df_features = df_features[~mask_baja]
 
+        mask_baja_jugador = (df_features['JUGADOR'] == jug) & (df_features['FECHA'] >= fecha_lesion) & (df_features['FECHA'] <= fecha_lesion + pd.Timedelta(days=21))
+        mask_bajas_global = mask_bajas_global | mask_baja_jugador
+
+  df_features = df_features[~mask_bajas_global].copy()
     return df_features
 
 # ==========================================
