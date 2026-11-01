@@ -167,10 +167,11 @@ def calcular_monotonia_7d(_sesiones, jugador, fecha_objetivo, metrica="CARGA", d
     media = float(np.mean(cargas))
     desviacion = float(np.std(cargas, ddof=1)) 
     
-    if desviacion > 0:
-        monotonia = media / desviacion
-    elif media > 0:
-        monotonia = 4.0 
+    if media > 0:
+        # Se establece 1.0 como estabilizador matemático recomendado para varianzas nulas
+        desviacion_segura = max(desviacion, 1.0)
+        monotonia = media / desviacion_segura
+        monotonia = min(monotonia, 3.0) # Límite fisiológico para no inflar el Strain artificialmente
     else:
         monotonia = 0.0
         
