@@ -65,6 +65,8 @@ def calcular_ewma_historico(_sesiones, fecha_objetivo):
     # 1. Usar la caché maestra si está disponible para O(1) de acceso a datos base
     if "df_master_informes" in st.session_state and not st.session_state.df_master_informes.empty:
         df_hist = st.session_state.df_master_informes[st.session_state.df_master_informes['FECHA'] <= fecha_objetivo].copy()
+        if 'EWMA_DIS_AI' in df_hist.columns: df_hist['DIS AI'] = df_hist['EWMA_DIS_AI']
+        if 'EWMA_ACC' in df_hist.columns: df_hist['ACC'] = df_hist['EWMA_ACC']
     else:
         # Fallback de seguridad (solo se ejecuta si la caché falló)
         df_hist = pd.DataFrame([
