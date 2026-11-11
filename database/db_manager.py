@@ -373,10 +373,12 @@ def reconstruir_dataframes_globales():
                     if primer_dia_valido:
                         df_pivot.loc[:primer_dia_valido - pd.Timedelta(days=1), col] = np.nan
                 
-                # Cálculo Uncoupled EWMA (Desplazamos 7 días el inicio de la crónica y evaluamos 21)
+                # Cálculo Uncoupled EWMA con estabilizador de carga crónica y límite fisiológico (4.0)
                 aguda = df_pivot.ewm(span=7, adjust=False).mean() * 7
                 cronica = df_pivot.shift(7).ewm(span=21, adjust=False).mean() * 7
-                ratio = aguda / cronica.replace(0, np.nan)
+                c_min = 10.0 if col_metrica == 'CARGA' else 1.0
+                cronica_segura = cronica.clip(lower=c_min).where(cronica > 0, np.nan)
+                ratio = (aguda / cronica_segura).clip(upper=4.0)
                 
                 a_melt = aguda.reset_index().melt(id_vars='index', var_name='JUGADOR', value_name=f'EWMA AGUDA{sufijo}')
                 c_melt = cronica.reset_index().melt(id_vars='index', var_name='JUGADOR', value_name=f'EWMA CRÓNICA{sufijo}')
