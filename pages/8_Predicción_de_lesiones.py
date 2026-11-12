@@ -47,18 +47,27 @@ def construir_dataset_entrenamiento(df_master, lesiones, plantilla):
         group['ACC_7d'] = group['ACC'].rolling(window=7, min_periods=1).sum()
         group['DCC_7d'] = group['DCC'].rolling(window=7, min_periods=1).sum()
         
-        # --- CARGAS Y RATIOS (EWMA Uncoupled) ---
-        group['Carga_Aguda'] = group['CARGA'].ewm(span=7, adjust=False).mean() * 7
-        group['Carga_Cronica'] = group['CARGA'].shift(7).ewm(span=21, adjust=False).mean() * 7
-        group['Ratio_AC'] = np.where(group['Carga_Cronica'] > 0, group['Carga_Aguda'] / group['Carga_Cronica'], 1.0)
-        
-        group['HSR_Aguda'] = group['DIS AI'].ewm(span=7, adjust=False).mean() * 7
-        group['HSR_Cronica'] = group['DIS AI'].shift(7).ewm(span=21, adjust=False).mean() * 7
-        group['Ratio_AC_HSR'] = np.where(group['HSR_Cronica'] > 0, group['HSR_Aguda'] / group['HSR_Cronica'], 1.0)
-        
-        group['ACC_Aguda'] = group['ACC'].ewm(span=7, adjust=False).mean() * 7
-        group['ACC_Cronica'] = group['ACC'].shift(7).ewm(span=21, adjust=False).mean() * 7
-        group['Ratio_AC_ACC'] = np.where(group['ACC_Cronica'] > 0, group['ACC_Aguda'] / group['ACC_Cronica'], 1.0)
+        # --- CARGAS Y RATIOS (EWMA Uncoupled con Semilla de Microciclo Inicial) ---
+        for col_m, pref in [('CARGA', 'Carga'), ('DIS AI', 'HSR'), ('ACC', 'ACC')]:
+            s_val = group[col_m].copy()
+            p_idx = s_val[s_val > 0].first_valid_index()
+            if p_idx:
+                v_ini = s_val.loc[p_idx : p_idx + pd.Timedelta(days=6)]
+                m_ini = v_ini.sum() / 7.0 if len(v_ini) >= 7 else v_ini.mean()
+                idx_seed = pd.date_range(start=p_idx - pd.Timedelta(days=7), end=p_idx - pd.Timedelta(days=1), freq='D')
+                s_seed = pd.Series(m_ini, index=idx_seed)
+                s_calc = pd.concat([s_seed, s_val.loc[p_idx:]])
+                ag = (s_calc.ewm(span=7, adjust=False).mean() * 7).reindex(group.index, fill_value=0.0)
+                cr = (s_calc.shift(7).ewm(span=21, adjust=False).mean() * 7).reindex(group.index, fill_value=0.0)
+            else:
+                ag = pd.Series(0.0, index=group.index)
+                cr = pd.Series(0.0, index=group.index)
+            c_min = 10.0 if col_m == 'CARGA' else 1.0
+            cr_seg = cr.clip(lower=c_min).where(cr > 0, np.nan)
+            suf_r = '' if pref == 'Carga' else f'_{pref}'
+            group[f'{pref}_Aguda'] = ag
+            group[f'{pref}_Cronica'] = cr
+            group[f'Ratio_AC{suf_r}'] = (ag / cr_seg).clip(upper=4.0).fillna(1.0)
         
         # --- MONOTONÍA Y STRAIN ---
         carga_7d = group['CARGA'].rolling(window=7, min_periods=1)
@@ -69,12 +78,17 @@ def construir_dataset_entrenamiento(df_master, lesiones, plantilla):
         group['Monotonia_7d'] = group['Monotonia_7d'].clip(upper=3.0)
         group['Strain_7d'] = group['Media_Carga_7d'] * 7 * group['Monotonia_7d']
         
-        # --- Z-SCORE WELLNESS (Línea base de 28 días) ---
-        well_28d = group['WELLNESS'].replace(0, np.nan).rolling(window=28, min_periods=1)
+        # --- Z-SCORE WELLNESS (Línea base de 28 días previos, sin contaminar con ceros) ---
+        well_clean = group['WELLNESS'].replace(0, np.nan)
+        well_28d = well_clean.shift(1).rolling(window=28, min_periods=1)
         group['Well_Mean'] = well_28d.mean().fillna(0)
-        group['Well_Std'] = well_28d.std(ddof=1).fillna(1.0)
-        group['Z_Wellness'] = np.where(group['Well_Std'] > 0, (group['WELLNESS'] - group['Well_Mean']) / group['Well_Std'], 0.0)
-        group['Z_Wellness'] = group['Z_Wellness'].fillna(0)
+        group['Well_Std'] = well_28d.std(ddof=1).replace(0, 1.0).fillna(1.0)
+        group['Z_Wellness'] = np.where(
+            (group['WELLNESS'] > 0) & (group['Well_Mean'] > 0),
+            (group['WELLNESS'] - group['Well_Mean']) / group['Well_Std'],
+            0.0
+        )
+        group['Z_Wellness'] = pd.Series(group['Z_Wellness'], index=group.index).replace(0.0, np.nan).ffill(limit=2).fillna(0.0)
         
         # --- VACUNA DE VELOCIDAD (Días sin alcanzar el 85% de VMax) ---
         vmax_historica = group['VMAX'].max()
@@ -197,9 +211,9 @@ else:
         if row['Carga_Cronica'] > 2000: riesgo -= 10.0
         elif row['Carga_Cronica'] < 1000: riesgo += 15.0 # Jugador "frágil" por falta de base
         
-        # 4. Wellness Z-Score (Deterioro de Readiness)
-        if row['Z_Wellness'] <= -1.5: riesgo += 15.0 
-        elif row['Z_Wellness'] <= -1.0: riesgo += 5.0 
+        # 4. Wellness Z-Score (Deterioro de Readiness: mayor puntuación = mayor fatiga)
+        if row['Z_Wellness'] >= 1.5: riesgo += 15.0 
+        elif row['Z_Wellness'] >= 1.0: riesgo += 5.0
         
         # 5. Vacuna de Velocidad
         if row['Dias_Sin_VMax'] >= 10: riesgo += 15.0
@@ -315,7 +329,7 @@ st.dataframe(
         "A/C (Int)": st.column_config.NumberColumn("A/C (Int)", format="%.2f"),
         "A/C (HSR)": st.column_config.NumberColumn("A/C (HSR)", format="%.2f"),
         "Strain (7d)": st.column_config.NumberColumn("Strain (7d)", format="%.0f UA"),
-        "Z-Score Wellness": st.column_config.NumberColumn("Z-Score Wellness", format="%.2f", help="Negativo indica peor estado del habitual"),
+        "Z-Score Wellness": st.column_config.NumberColumn("Z-Score Wellness", format="%.2f", help="Positivo (+1.5) indica mayor fatiga o peor estado del habitual"),
         "Días sin VMax": st.column_config.NumberColumn("Días sin VMax", format="%.0f d")
     },
     hide_index=True,
