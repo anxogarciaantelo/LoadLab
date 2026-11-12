@@ -128,15 +128,24 @@ def generar_pdf_completo(sesion, df_para_medias, df_graficos, alertas_multi, ale
         md = sesion.get("descripcion", "TD")
         subtitle = f"S{num} | {md} | {fecha_f}"
 
+    es_partido_pdf = "Partido" in sesion.get("tipo", "")
+    df_para_medias_gps = df_para_medias[df_para_medias['DIS'] > 0]
+
     # PAGE 1
     pdf.add_page()
     draw_header("INFORME DE SESIÓN DIARIA", subtitle)
     
-    tqr_m = df_para_medias['TQR'].mean() if not df_para_medias.empty else 0
-    well_m = df_para_medias['WELLNESS'].mean() if not df_para_medias.empty else 0
-    rpe_m = df_para_medias['RPE'].mean() if not df_para_medias.empty else 0
-    carga_m = df_para_medias['CARGA'].mean() if not df_para_medias.empty else 0
-    min_m = df_para_medias['MIN'].mean() if not df_para_medias.empty else 0
+    tqr_m = df_para_medias['TQR'].mean() if not df_para_medias.empty and pd.notna(df_para_medias['TQR'].mean()) else 0
+    well_m = df_para_medias['WELLNESS'].mean() if not df_para_medias.empty and pd.notna(df_para_medias['WELLNESS'].mean()) else 0
+    rpe_m = df_para_medias['RPE'].mean() if not df_para_medias.empty and pd.notna(df_para_medias['RPE'].mean()) else 0
+    
+    if es_partido_pdf:
+        min_tot_ci = df_para_medias[df_para_medias['MIN'] > 0]['MIN'].sum() if not df_para_medias.empty else 0
+        carga_m = (df_para_medias['CARGA'].sum() / min_tot_ci) * 90.0 if min_tot_ci > 0 else 0
+        min_m = 90.0 if min_tot_ci > 0 else 0
+    else:
+        carga_m = df_para_medias['CARGA'].mean() if not df_para_medias.empty and pd.notna(df_para_medias['CARGA'].mean()) else 0
+        min_m = df_para_medias['MIN'].mean() if not df_para_medias.empty and pd.notna(df_para_medias['MIN'].mean()) else 0
 
     draw_section_title("1. BIENESTAR Y CARGA INTERNA", pdf.get_y())
     
@@ -144,9 +153,9 @@ def generar_pdf_completo(sesion, df_para_medias, df_graficos, alertas_multi, ale
     w_kpi = 277 / 5
     draw_kpi(10, y_kpi, w_kpi-2, 22, "TQR Medio", f"{tqr_m:.1f} / 10")
     draw_kpi(10 + w_kpi, y_kpi, w_kpi-2, 22, "Wellness Medio", f"{well_m:.1f} pts")
-    draw_kpi(10 + w_kpi*2, y_kpi, w_kpi-2, 22, "Minutos Sesión", f"{min_m:.0f}'")
+    draw_kpi(10 + w_kpi*2, y_kpi, w_kpi-2, 22, "Minutos Ref." if es_partido_pdf else "Minutos Sesión", f"{min_m:.0f}'")
     draw_kpi(10 + w_kpi*3, y_kpi, w_kpi-2, 22, "RPE Medio", f"{rpe_m:.1f} / 10")
-    draw_kpi(10 + w_kpi*4, y_kpi, w_kpi-2, 22, "Carga Media", f"{carga_m:.0f} UA")
+    draw_kpi(10 + w_kpi*4, y_kpi, w_kpi-2, 22, "Carga Media (90')" if es_partido_pdf else "Carga Media", f"{carga_m:.0f} UA")
     
     y_img = pdf.get_y() + 26
     w_img_3 = 277 / 3
@@ -159,12 +168,21 @@ def generar_pdf_completo(sesion, df_para_medias, df_graficos, alertas_multi, ale
     draw_header("INFORME DE SESIÓN DIARIA", subtitle)
     draw_section_title("2. CARGA EXTERNA (GPS)", pdf.get_y())
     
-    df_para_medias_gps = df_para_medias[df_para_medias['DIS'] > 0]
-    dis_m = df_para_medias_gps['DIS'].mean() if not df_para_medias_gps.empty else 0
-    hsr_m = df_para_medias_gps['DIS AI'].mean() if not df_para_medias_gps.empty else 0
-    spr_m = df_para_medias_gps['Nº SPR'].mean() if not df_para_medias_gps.empty else 0
-    acc_m = df_para_medias_gps['ACC'].mean() if not df_para_medias_gps.empty else 0
-    dcc_m = df_para_medias_gps['DCC'].mean() if not df_para_medias_gps.empty else 0
+    if es_partido_pdf and not df_para_medias_gps.empty:
+        import numpy as np
+        min_ef_gps = np.where(df_para_medias_gps.get('MIN_GPS', df_para_medias_gps['MIN']) > 0, df_para_medias_gps.get('MIN_GPS', df_para_medias_gps['MIN']), df_para_medias_gps['MIN'])
+        min_tot_gps = min_ef_gps.sum()
+        dis_m = (df_para_medias_gps['DIS'].sum() / min_tot_gps) * 90.0 if min_tot_gps > 0 else 0
+        hsr_m = (df_para_medias_gps['DIS AI'].sum() / min_tot_gps) * 90.0 if min_tot_gps > 0 else 0
+        spr_m = (df_para_medias_gps['Nº SPR'].sum() / min_tot_gps) * 90.0 if min_tot_gps > 0 else 0
+        acc_m = (df_para_medias_gps['ACC'].sum() / min_tot_gps) * 90.0 if min_tot_gps > 0 else 0
+        dcc_m = (df_para_medias_gps['DCC'].sum() / min_tot_gps) * 90.0 if min_tot_gps > 0 else 0
+    else:
+        dis_m = df_para_medias_gps['DIS'].mean() if not df_para_medias_gps.empty else 0
+        hsr_m = df_para_medias_gps['DIS AI'].mean() if not df_para_medias_gps.empty else 0
+        spr_m = df_para_medias_gps['Nº SPR'].mean() if not df_para_medias_gps.empty else 0
+        acc_m = df_para_medias_gps['ACC'].mean() if not df_para_medias_gps.empty else 0
+        dcc_m = df_para_medias_gps['DCC'].mean() if not df_para_medias_gps.empty else 0
     
     y_kpi = pdf.get_y()
     w_kpi = 277 / 5
