@@ -1023,8 +1023,8 @@ with tab_ses:
                         df_informe['VMAX_HIST'] = df_informe['JUGADOR'].map(lambda j: vmax_historica.get(j, 0.0))
                         df_informe['% VMAX'] = np.where(df_informe['VMAX_HIST'] > 0, (df_informe['VMAX'] / df_informe['VMAX_HIST']) * 100, 0.0)
 
-                        # Re-filtrar con la nueva columna añadida
-                        df_para_medias = df_informe[(df_informe['ESTADO'].isin(["Disponible", "Titular", "Suplente"])) & (df_informe['POS'] != "POR")].copy()
+                        # Re-filtrar con la nueva columna añadida respetando los estados válidos
+                        df_para_medias = df_informe[(df_informe['ESTADO'].isin(estados_validos_medias)) & (df_informe['POS'] != "POR")].copy()
                         df_para_medias['TQR'] = df_para_medias['TQR'].replace(0, np.nan)
                         df_para_medias['WELLNESS'] = df_para_medias['WELLNESS'].replace(0, np.nan)
                         df_para_medias['RPE'] = df_para_medias['RPE'].replace(0, np.nan)
@@ -1174,53 +1174,7 @@ with tab_ses:
                         pct_vmax_m = df_para_medias_gps['% VMAX'].mean() if pd.notna(df_para_medias_gps['% VMAX'].mean()) else 0.0
 
                         efi_c_media = rpe_m / ((dis_m * 1000) / min_m) if min_m > 0 and dis_m > 0 else 0
-                        efi_n_media = rpe_m / (acc_m + dcc_m + spr_m) if (acc_m + dcc_m + spr_m) > 0 else 0
-
-                        # --- CÁLCULO DE LÍNEAS DE TENDENCIA (VS MISMO MD HISTÓRICO) ---
-                        ses_md_tend = sesion.get('descripcion', 'TD') if not es_partido else "Partido"
-                        
-                        # Extraemos el histórico limpio excluyendo la sesión de hoy
-                        df_hist_tend = df_master_hist[df_master_hist['FECHA'] < sesion["fecha"]].copy()
-                        if not es_partido:
-                            df_hist_tend = df_hist_tend[df_hist_tend['MD'] == ses_md_tend]
-                        else:
-                            df_hist_tend = df_hist_tend[df_hist_tend['TIPO_SESION'].str.contains("Partido", na=False)]
-                        
-                        hist_tqr_m = df_hist_tend['TQR'].replace(0, np.nan).mean() if not df_hist_tend.empty else 0
-                        hist_well_m = df_hist_tend['WELLNESS'].replace(0, np.nan).mean() if not df_hist_tend.empty else 0
-                        hist_rpe_m = df_hist_tend['RPE'].replace(0, np.nan).mean() if not df_hist_tend.empty else 0
-                        hist_carga_m = df_hist_tend['CARGA'].replace(0, np.nan).mean() if not df_hist_tend.empty else 0
-                        
-                        hist_efi_c = 0
-                        hist_efi_n = 0
-                        if not df_hist_tend.empty:
-                            df_hist_tend['m_min_h'] = np.where(df_hist_tend['MIN'] > 0, (df_hist_tend['DIS'] * 1000) / df_hist_tend['MIN'], 0)
-                            df_hist_tend['mec_h'] = df_hist_tend['ACC'] + df_hist_tend['DCC'] + df_hist_tend['Nº SPR']
-                            
-                            df_c_val = df_hist_tend[(df_hist_tend['m_min_h'] > 0) & (df_hist_tend['RPE'] > 0)]
-                            df_n_val = df_hist_tend[(df_hist_tend['mec_h'] > 0) & (df_hist_tend['RPE'] > 0)]
-                            
-                            hist_efi_c = (df_c_val['RPE'] / df_c_val['m_min_h']).mean() if not df_c_val.empty else 0
-                            hist_efi_n = (df_n_val['RPE'] / df_n_val['mec_h']).mean() if not df_n_val.empty else 0
-
-                        def calc_tend_html(actual, historico, inverso=False):
-                            if pd.isna(historico) or historico == 0: return ""
-                            diff = ((actual - historico) / historico) * 100
-                            if abs(diff) < 2: return "<span style='color: #94a3b8; font-size: 0.65rem; margin-left: 5px;'>▬ 0%</span>"
-                            
-                            if diff > 0:
-                                color = "#ef4444" if inverso else "#10b981"
-                                return f"<span style='color: {color}; font-size: 0.65rem; margin-left: 5px;' title='vs Media Histórica {ses_md_tend}'>▲ {abs(diff):.0f}%</span>"
-                            else:
-                                color = "#10b981" if inverso else "#ef4444"
-                                return f"<span style='color: {color}; font-size: 0.65rem; margin-left: 5px;' title='vs Media Histórica {ses_md_tend}'>▼ {abs(diff):.0f}%</span>"
-
-                        t_tqr = calc_tend_html(tqr_m, hist_tqr_m, inverso=False)
-                        t_well = calc_tend_html(well_m, hist_well_m, inverso=True) # Más fatiga = Peor
-                        t_rpe = calc_tend_html(rpe_m, hist_rpe_m, inverso=True)    # Más esfuerzo = Peor
-                        t_carga = calc_tend_html(carga_m, hist_carga_m, inverso=True)
-                        t_efic = calc_tend_html(efi_c_media, hist_efi_c, inverso=True) # Más coste = Peor
-                        t_efin = calc_tend_html(efi_n_media, hist_efi_n, inverso=True)
+                        efi_n_media = rpe_m / (acc_m + dcc_m + spr_m) if (acc_m + dcc_m + spr_m) > 0 else 0                  
 
                         # --- CÁLCULO DE REFERENCIAS HISTÓRICAS (MD) PARA TENDENCIAS ---
                         ses_md_tend = sesion.get('descripcion', 'TD') if not es_partido else "Partido"
@@ -1908,16 +1862,24 @@ with tab_ses:
                                                 minutos_objetivo_partido = 90
 
                                         df_sup_ent = df_sem_data[df_sem_data['JUGADOR'] == jug]
+                                        mapa_comp = {'DIS': 'COMP_DIS', 'DIS AI': 'COMP_DIS_AI', 'Nº SPR': 'COMP_SPR', 'ACC': 'COMP_ACC', 'DCC': 'COMP_DCC'}
+                                        df_post_prev = df_hist[(df_hist['FECHA'] > fecha_partido) & (df_hist['FECHA'] < sesion['fecha']) & (df_hist['JUGADOR'] == jug)] if not es_partido else pd.DataFrame()
                                         
                                         deficit = {}
                                         for m in metricas_carga:
                                             target_partido = densidad_obj[m] * minutos_objetivo_partido
                                             total_target = entreno_obj[m] + target_partido
                                             
-                                            # El objetivo (déficit) debe ser la brecha dejada por el partido, SIN contar la compensación
+                                            col_c = mapa_comp[m]
                                             val_match = safe_float(sup.get(m, 0))
+                                            if not es_partido:
+                                                # En sesiones MD+1/MD+2 descontamos lo que el suplente ya compensó en el post-partido
+                                                val_match += safe_float(sup.get(col_c, 0))
+                                                if not df_post_prev.empty and m in df_post_prev.columns:
+                                                    val_match += df_post_prev[m].sum()
                                             
-                                            total_actual = (df_sup_ent[m].sum() if not df_sup_ent.empty else 0) + val_match
+                                            ent_acum = (df_sup_ent[m].sum() + (df_sup_ent[col_c].sum() if col_c in df_sup_ent.columns else 0)) if not df_sup_ent.empty else 0
+                                            total_actual = ent_acum + val_match
                                             deficit[m] = max(0, total_target - total_actual)
                                             
                                         if deficit['DIS'] > 0 or deficit['DIS AI'] > 0:
@@ -2078,6 +2040,13 @@ with tab_ses:
                                 if st.button(":material/delete: Descartar PDF", use_container_width=True, key=f"btn_del_pdf_{idx_real}"):
                                     del st.session_state[pdf_key]
                                     st.rerun()
+                else:
+                    render_estado_vacio(
+                        icono=":material/bar_chart:",
+                        titulo="Informe no disponible",
+                        descripcion="Aún no se han procesado ni guardado datos para esta sesión.",
+                        accion_sugerida="Ve a la herramienta 'Cargar Datos' para introducir o sincronizar los registros de la sesión."
+                    )
 
             # ---------------------------------------------------------
             # HERRAMIENTA 3: CARGA DE DATOS (FORMULARIO OPTIMIZADO)
@@ -2211,10 +2180,11 @@ with tab_ses:
                             from utils.math_helpers import aplicar_imputacion_gps_global
                             full_records = aplicar_imputacion_gps_global(full_records, sesion, st.session_state.plantilla)
                             
-                            st.session_state.sesiones[idx_real]['datos_informe'] = full_records # (o registros_sesion en el bloque Excel)
+                            st.session_state.sesiones[idx_real]['datos_informe'] = full_records
                             st.session_state.sesiones[idx_real]['informe_generado'] = True
                             
-                            # NUEVO: Recalcular EWMA incluyendo la sesión actual recién guardada
+                            # Actualizar primero el DataFrame maestro en RAM para que el EWMA incluya esta sesión
+                            reconstruir_dataframes_globales()
                             ewma_post = calcular_ewma_historico(st.session_state.sesiones, sesion["fecha"])
                             for reg_item in st.session_state.sesiones[idx_real]['datos_informe']:
                                 d_ewma = ewma_post.get(reg_item["JUGADOR"], {})
@@ -2223,7 +2193,7 @@ with tab_ses:
                                 reg_item["RATIO A/C"] = d_ewma.get("RATIO A/C", 1.0)
                                 
                             guardar_datos(modulo="sesiones")
-                            st.success(":material/check_circle: Datos de la sesión borrados correctamente.")
+                            st.success(":material/check_circle: Datos de la sesión guardados y calculados correctamente.")
                             st.rerun()
 
                 with t_exc:
@@ -2415,11 +2385,6 @@ with tab_ses:
 
                                     # Se respeta tu input manual de MIN totales para la carga interna
                                     reg["CARGA"] = reg["MIN"] * reg["RPE"]
-                                    ewma_excel = calcular_ewma_historico(st.session_state.sesiones, sesion["fecha"]).get(nombre_final, {})
-                                    reg["EWMA AGUDA"] = ewma_excel.get("EWMA AGUDA", reg["CARGA"])
-                                    reg["EWMA CRÓNICA"] = ewma_excel.get("EWMA CRÓNICA", reg["CARGA"])
-                                    reg["RATIO A/C"] = ewma_excel.get("RATIO A/C", 1.0)
-                                    
                                     registros_sesion.append(reg)
                                     
                                 # Imputar GPS automático antes de guardar
@@ -2428,6 +2393,16 @@ with tab_ses:
                                 
                                 st.session_state.sesiones[idx_real]['datos_informe'] = registros_sesion
                                 st.session_state.sesiones[idx_real]['informe_generado'] = True
+                                
+                                # Actualizar DataFrame maestro en RAM y asignar EWMA actualizado de una sola pasada
+                                reconstruir_dataframes_globales()
+                                ewma_post_exc = calcular_ewma_historico(st.session_state.sesiones, sesion["fecha"])
+                                for reg_item in st.session_state.sesiones[idx_real]['datos_informe']:
+                                    d_ewma = ewma_post_exc.get(reg_item["JUGADOR"], {})
+                                    reg_item["EWMA AGUDA"] = d_ewma.get("EWMA AGUDA", reg_item["CARGA"])
+                                    reg_item["EWMA CRÓNICA"] = d_ewma.get("EWMA CRÓNICA", reg_item["CARGA"])
+                                    reg_item["RATIO A/C"] = d_ewma.get("RATIO A/C", 1.0)
+                                    
                                 guardar_datos(modulo="sesiones")
                                 
                                 msgs = [f":material/check_circle: Sincronización completada. Se generó la tabla con los {len(nombres_plantilla)} jugadores de tu plantilla."]
