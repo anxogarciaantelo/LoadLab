@@ -364,14 +364,18 @@ def reconstruir_dataframes_globales():
             df_pivot = df_master.pivot_table(index='FECHA_DT', columns='JUGADOR', values=col_metrica, aggfunc='sum').fillna(0)
             
             if not df_pivot.empty:
-                rango_fechas = pd.date_range(start=df_pivot.index.min(), end=df_pivot.index.max(), freq='D')
+                rango_fechas = pd.date_range(start=df_pivot.index.min() - pd.Timedelta(days=7), end=df_pivot.index.max(), freq='D')
                 df_pivot = df_pivot.reindex(rango_fechas, fill_value=0)
                 
                 for col in df_pivot.columns:
                     s_cargas = df_pivot[col]
                     primer_dia_valido = s_cargas[s_cargas > 0].first_valid_index()
                     if primer_dia_valido:
-                        df_pivot.loc[:primer_dia_valido - pd.Timedelta(days=1), col] = np.nan
+                        ventana_ini = s_cargas.loc[primer_dia_valido : primer_dia_valido + pd.Timedelta(days=6)]
+                        media_ini = ventana_ini.sum() / 7.0 if len(ventana_ini) >= 7 else ventana_ini.mean()
+                        inicio_semilla = primer_dia_valido - pd.Timedelta(days=7)
+                        df_pivot.loc[:inicio_semilla - pd.Timedelta(days=1), col] = np.nan
+                        df_pivot.loc[inicio_semilla : primer_dia_valido - pd.Timedelta(days=1), col] = media_ini
                 
                 # Cálculo Uncoupled EWMA con estabilizador de carga crónica y límite fisiológico (4.0)
                 aguda = df_pivot.ewm(span=7, adjust=False).mean() * 7
