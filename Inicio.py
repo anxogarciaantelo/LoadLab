@@ -576,8 +576,9 @@ if st.session_state.get("equipo_seleccionado", False):
                 readaptacion.append({"jug": jug_nom, "txt": "Readaptación (RTP)"})
 
     for s in sesiones_con_datos:
+        md_s = "MD" if "Partido" in str(s.get("tipo", "")) else s.get("descripcion", "TD")
         for d in s.get("datos_informe", []):
-            ultimas_sesiones[limpiar_nombre(d["JUGADOR"])] = {"fecha": s["fecha"], "datos": d}
+            ultimas_sesiones[limpiar_nombre(d["JUGADOR"])] = {"fecha": s["fecha"], "md": md_s, "datos": d}
 
     for jug_limpio, info_ult in ultimas_sesiones.items():
         jug = info_ult["datos"]["JUGADOR"]
@@ -649,22 +650,24 @@ if st.session_state.get("equipo_seleccionado", False):
         if ratio_hsr >= 1.5: alertas_carga.append({"jug": jug, "txt": f"Spike HSR: {ratio_hsr:.2f}", "lvl": "rojo"})
         if ratio_acc >= 1.5: alertas_carga.append({"jug": jug, "txt": f"Spike Tensión: {ratio_acc:.2f}", "lvl": "rojo"})
 
-        # 2. Eficiencia Metabólica y Neuromuscular (Cruzado con la última sesión)
+        # 2. Eficiencia Metabólica y Neuromuscular (Cruzado con la última sesión del mismo MD)
         jug_l = limpiar_nombre(jug)
         if jug_l in ultimas_sesiones:
             d_ult = ultimas_sesiones[jug_l]["datos"]
+            md_ult = ultimas_sesiones[jug_l].get("md", "TD")
             min_ses = safe_float(d_ult.get('MIN', 0))
             dis_ses = safe_float(d_ult.get('DIS', 0))
             rpe_ses = safe_float(d_ult.get('RPE', 0))
+            es_virtual_ult = d_ult.get('GPS_VIRTUAL', False)
             
-            if min_ses > 0 and dis_ses > 0 and rpe_ses > 0:
+            if min_ses > 0 and dis_ses > 0 and rpe_ses > 0 and not es_virtual_ult:
                 m_min_actual = (dis_ses * 1000) / min_ses
                 mec_actual = safe_float(d_ult.get('ACC', 0)) + safe_float(d_ult.get('DCC', 0)) + safe_float(d_ult.get('Nº SPR', 0))
                 
                 efi_cardio = rpe_ses / m_min_actual if m_min_actual > 0 else 0
                 efi_neuro = rpe_ses / mec_actual if mec_actual > 0 else 0
                 
-                st_efi = dict_zscore_efi.get(jug, {'cardio_mean': 0, 'cardio_std': 0.05, 'neuro_mean': 0, 'neuro_std': 0.05})
+                st_efi = dict_zscore_efi.get((jug, md_ult), dict_zscore_efi.get(jug, {'cardio_mean': 0, 'cardio_std': 0.05, 'neuro_mean': 0, 'neuro_std': 0.05}))
                 if st_efi['cardio_mean'] > 0 and st_efi['neuro_mean'] > 0:
                     z_cardio = (efi_cardio - st_efi['cardio_mean']) / st_efi['cardio_std']
                     z_neuro = (efi_neuro - st_efi['neuro_mean']) / st_efi['neuro_std']
