@@ -458,12 +458,15 @@ else:
 
                 def get_dolor_siguiente_dia(fecha_actual, nombre_jug):
                     f_dt = datetime.strptime(fecha_actual, "%Y-%m-%d")
-                    next_day_str = (f_dt + timedelta(days=1)).strftime("%Y-%m-%d")
-                    s_next = next((s for s in sesiones_ordenadas if s["fecha"] == next_day_str), None)
-                    if s_next and s_next.get("datos_informe"):
-                        for d in s_next["datos_informe"]:
-                            if limpiar_nombre(d["JUGADOR"]) == limpiar_nombre(nombre_jug):
-                                return safe_float(d.get("W_Dolor", 0))
+                    jug_clean = limpiar_nombre(nombre_jug)
+                    for s in sesiones_ordenadas:
+                        s_dt = datetime.strptime(s["fecha"], "%Y-%m-%d")
+                        if 1 <= (s_dt - f_dt).days <= 3 and s.get("datos_informe"):
+                            for d in s["datos_informe"]:
+                                if limpiar_nombre(d["JUGADOR"]) == jug_clean:
+                                    dol = safe_float(d.get("W_Dolor", 0))
+                                    if dol > 0 or safe_float(d.get("WELLNESS", 0)) > 0:
+                                        return dol
                     return 0.0
 
                 for i, ses in enumerate(sesiones_rehab):
@@ -653,10 +656,10 @@ else:
                 avg_fatiga = np.mean(fatigas) if fatigas else 0
                 crit_4 = (avg_dolor < 4 and avg_fatiga < 4) if (dolores and fatigas) else False
                 
-                # Fallback de crónica pre-lesión si es el inicio de temporada
+                # Fallback de crónica pre-lesión al promedio del equipo si no tenía historial previo
                 if cronica_pre_lesion == 0:
-                    cronica_pre_lesion = ewma_jug["EWMA CRÓNICA"]
-                crit_5 = (ewma_jug["EWMA CRÓNICA"] >= cronica_pre_lesion * 0.9)
+                    cronica_pre_lesion = avg_ewma_c_eq if avg_ewma_c_eq > 1 else 0
+                crit_5 = (cronica_pre_lesion > 0) and (ewma_jug["EWMA CRÓNICA"] >= cronica_pre_lesion * 0.9)
 
                 req_exposiciones = 2 if dias_rtp > 7 else 1
                 crit_6 = exposiciones_vmax >= req_exposiciones
