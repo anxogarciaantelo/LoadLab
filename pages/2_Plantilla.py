@@ -487,7 +487,7 @@ else:
                     st.markdown(f"#### :material/scale: Último Pesaje ({ultimo['fecha']})")
                     ca1, ca2, ca3 = st.columns(3)
                     ca1.metric("Peso", f"{ultimo['Peso']:.1f} kg")
-                    ca2.metric("% Graso (Yuhasz)", f"{ultimo['% Graso']:.2f} %")
+                    ca2.metric("% Graso (Faulkner)", f"{ultimo['% Graso']:.2f} %")
                     ca3.metric("Masa Magra", f"{ultimo['Kg Magros']:.1f} kg")
                     
                     df_aj['Mes_Num'] = df_aj['fecha_dt'].dt.month
