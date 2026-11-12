@@ -562,7 +562,7 @@ def generar_pdf_antropometria_jugador(jugador_nombre, jugador_info, fecha_pesaje
     w_pesaje = 35
     offset_pesaje = (297 - (w_pesaje * 4)) / 2
     pdf.set_x(offset_pesaje)
-    for title in ["Peso", "% Graso (Yuhasz)", "Masa Magra", "Sumatorio Pliegues"]:
+    for title in ["Peso", "% Graso (Faulkner)", "Masa Magra", "Sumatorio Pliegues"]:
         pdf.cell(w_pesaje, 5, clean_txt(title), align='C')
     pdf.ln()
     
