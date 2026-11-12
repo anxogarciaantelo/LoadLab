@@ -490,214 +490,267 @@ def generar_pdf_microciclo(nombre_micro, df_diario, df_indiv, kpis_globales, dic
 
 def generar_pdf_antropometria_jugador(jugador_nombre, jugador_info, fecha_pesaje, kpis_pesaje, kpis_perimetros, kpis_asimetrias, dict_figs, df_historial, escudo_b64, foto_b64):
     pdf = FPDF(orientation='L', unit='mm', format='A4')
-    pdf.set_auto_page_break(auto=True, margin=10)
+    pdf.set_auto_page_break(auto=True, margin=15)
     def clean_txt(t): return str(t).encode('latin-1', 'ignore').decode('latin-1').strip()
     
-    C_PRIMARY = (41, 128, 185)
-    C_BG_TAB_H = (0, 0, 0)
-    C_BG_TAB_R = (248, 248, 248)
+    # PALETA DE COLORES ÉLITE (Unificada con Sesión y Microciclo)
+    C_DARK = (11, 14, 20)
+    C_GOLD = (197, 160, 89)
+    C_RED = (239, 68, 68)
+    C_GREEN = (16, 185, 129)
+    C_GRAY = (148, 163, 184)
+    C_TAB_H = (17, 19, 24)
+    C_TAB_R1 = (255, 255, 255)
+    C_TAB_R2 = (248, 250, 252)
     
     img_paths = {}
     
     if escudo_b64:
-        tmp_esc = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
-        if str(escudo_b64).startswith("http"):
-            import requests
-            r = requests.get(escudo_b64)
-            tmp_esc.write(r.content)
-        else:
-            tmp_esc.write(base64.b64decode(escudo_b64))
-        tmp_esc.close()
-        img_paths['escudo'] = tmp_esc.name
+        try:
+            tmp_esc = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
+            if str(escudo_b64).startswith("http"):
+                import requests
+                r = requests.get(escudo_b64)
+                tmp_esc.write(r.content)
+            else:
+                tmp_esc.write(base64.b64decode(escudo_b64.split(",")[1] if "," in str(escudo_b64) else escudo_b64))
+            tmp_esc.close()
+            img_paths['escudo'] = tmp_esc.name
+        except Exception:
+            pass
         
     if foto_b64:
-        tmp_foto = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
-        if str(foto_b64).startswith("http"):
-            import requests
-            r = requests.get(foto_b64)
-            tmp_foto.write(r.content)
-        else:
-            tmp_foto.write(base64.b64decode(foto_b64))
-        tmp_foto.close()
-        img_paths['foto'] = tmp_foto.name
+        try:
+            tmp_foto = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
+            if str(foto_b64).startswith("http"):
+                import requests
+                r = requests.get(foto_b64)
+                tmp_foto.write(r.content)
+            else:
+                tmp_foto.write(base64.b64decode(foto_b64.split(",")[1] if "," in str(foto_b64) else foto_b64))
+            tmp_foto.close()
+            img_paths['foto'] = tmp_foto.name
+        except Exception:
+            pass
+
+    titulos_graficos = {
+        'peso': 'Evolución Peso (kg)',
+        'grasa': 'Evolución % Graso (Faulkner)',
+        'per1': 'Perímetros: Pecho y Bíceps',
+        'per2': 'Perímetros: Cintura y Cadera',
+        'per3': 'Perímetros: Muslo (D/I)',
+        'per4': 'Perímetros: Pierna (D/I)',
+        'quadrante': 'Posición en el Cuadrante Élite Corporal (FFMI vs % Grasa)'
+    }
+
+    def adaptar_grafico_para_pdf(fig, title_text):
+        if fig is None: return None
+        fig.update_layout(
+            paper_bgcolor="white", 
+            plot_bgcolor="white", 
+            font=dict(color="black", family="Arial", size=12),
+            title=dict(text=title_text, font=dict(color="black", size=17, family="Arial"), x=0.5, xanchor="center"),
+            xaxis=dict(tickfont=dict(color="black", size=11), title_font=dict(color="black", size=12), showgrid=True, gridcolor="#e2e8f0", tickangle=-35, automargin=True),
+            yaxis=dict(tickfont=dict(color="black", size=11), title_font=dict(color="black", size=12), showgrid=True, gridcolor="#e2e8f0", automargin=True),
+            legend=dict(font=dict(color="black", size=10), orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+            margin=dict(b=95, t=65, l=55, r=30)
+        )
+        return fig
         
     for name, fig in dict_figs.items():
         if fig is not None:
-            # Aumentamos márgenes (Izquierdo 'l' e Inferior 'b') para evitar superposiciones y recortes
-            fig.update_layout(
-                paper_bgcolor="white", 
-                plot_bgcolor="white", 
-                font=dict(color="black"), 
-                margin=dict(l=70, r=20, t=40, b=70)
-            )
+            fig_copy = go.Figure(fig) if 'go' in globals() else fig
+            fig_copy = adaptar_grafico_para_pdf(fig_copy, titulos_graficos.get(name, name))
             tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
             tmp.close()  
-            fig.write_image(tmp.name, engine="kaleido", width=800, height=350, format="jpg")
+            fig_copy.write_image(tmp.name, engine="kaleido", width=800, height=530, format="jpg")
             img_paths[name] = tmp.name
-            
-    pdf.add_page()
-    
-    # --- HEADER: FOTO, NOMBRE, ESCUDO (CENTRADO) ---
-    if 'foto' in img_paths:
-        pdf.image(img_paths['foto'], x=20, y=10, w=25)
-    if 'escudo' in img_paths:
-        pdf.image(img_paths['escudo'], x=252, y=10, w=25)
+
+    def draw_header(title, subtitle):
+        pdf.set_fill_color(*C_DARK)
+        pdf.rect(0, 0, 297, 24, 'F')
+        pdf.set_fill_color(*C_GOLD)
+        pdf.rect(0, 24, 297, 1, 'F')
         
-    pdf.set_xy(0, 15)
-    pdf.set_font("Arial", 'B', 20)
-    pdf.cell(297, 10, clean_txt(jugador_nombre), ln=True, align='C')
-    pdf.set_font("Arial", '', 10)
-    pdf.set_text_color(100, 100, 100)
-    pdf.cell(297, 6, clean_txt(jugador_info), ln=True, align='C')
-    pdf.set_text_color(0, 0, 0)
+        if 'escudo' in img_paths:
+            pdf.image(img_paths['escudo'], x=12, y=3, w=18)
+        if 'foto' in img_paths:
+            pdf.image(img_paths['foto'], x=265, y=3, w=18)
+            
+        pdf.set_xy(35, 5)
+        pdf.set_font("Arial", 'B', 15)
+        pdf.set_text_color(255, 255, 255)
+        pdf.cell(200, 7, clean_txt(title.upper()), ln=1)
+        
+        pdf.set_xy(35, 13)
+        pdf.set_font("Arial", 'B', 9)
+        pdf.set_text_color(*C_GOLD)
+        pdf.cell(200, 6, clean_txt(subtitle.upper()), ln=1)
+        pdf.set_y(32)
+
+    def draw_kpi(x, y, w, h, title, val, subtitle="", val_color=C_DARK):
+        pdf.set_fill_color(255, 255, 255)
+        pdf.set_draw_color(226, 232, 240)
+        pdf.rect(x, y, w, h, 'DF')
+        pdf.set_fill_color(*C_GOLD)
+        pdf.rect(x, y, w, 2, 'F')
+        
+        pdf.set_xy(x+2, y+3.5)
+        pdf.set_font("Arial", 'B', 7)
+        pdf.set_text_color(*C_GRAY)
+        pdf.cell(w-4, 4, clean_txt(title.upper()), align='C')
+        
+        pdf.set_xy(x+2, y+8.5)
+        pdf.set_font("Arial", 'B', 13)
+        pdf.set_text_color(*val_color)
+        pdf.cell(w-4, 6, clean_txt(str(val)), align='C')
+        
+        if subtitle:
+            pdf.set_xy(x+2, y+15.5)
+            pdf.set_font("Arial", 'B', 6.5)
+            pdf.set_text_color(*C_GOLD)
+            pdf.cell(w-4, 4, clean_txt(subtitle), align='C')
+
+    def draw_section_title(txt, y):
+        pdf.set_xy(10, y)
+        pdf.set_font("Arial", 'B', 12)
+        pdf.set_text_color(*C_DARK)
+        pdf.cell(200, 8, clean_txt(txt), ln=1)
+        pdf.set_draw_color(*C_GOLD)
+        pdf.line(10, y+8, 287, y+8)
+        pdf.set_y(y+12)
+
+    subtitle = f"{jugador_nombre} | {jugador_info} | ÚLTIMO CONTROL: {fecha_pesaje}"
+
+    # ==========================================
+    # PÁGINA 1: KPIs Y TABLA DE HISTORIAL
+    # ==========================================
+    pdf.add_page()
+    draw_header("INFORME DE COMPOSICIÓN CORPORAL Y ANTROPOMETRÍA", subtitle)
     
-    pdf.ln(10)
+    # 1. KPIs PESAJE
+    draw_section_title(f"1. COMPOSICIÓN CORPORAL ({fecha_pesaje})", pdf.get_y())
+    y_kpi1 = pdf.get_y()
+    w_kpi4 = 277 / 4
+    draw_kpi(10, y_kpi1, w_kpi4-2, 20, "Peso Corporal", kpis_pesaje.get('Peso', '-'))
+    draw_kpi(10 + w_kpi4, y_kpi1, w_kpi4-2, 20, "% Graso (Faulkner)", kpis_pesaje.get('Grasa', '-'))
+    draw_kpi(10 + w_kpi4*2, y_kpi1, w_kpi4-2, 20, "Masa Magra", kpis_pesaje.get('Magra', '-'))
+    draw_kpi(10 + w_kpi4*3, y_kpi1, w_kpi4-2, 20, "Sumatorio 4 Pliegues", kpis_pesaje.get('Pliegues', '-'))
     
-    # --- KPIs PESAJE ---
-    pdf.set_font("Arial", 'B', 12)
-    pdf.cell(297, 8, clean_txt(f"Pesaje ({fecha_pesaje})"), ln=True, align='C')
-    pdf.set_font("Arial", 'B', 8)
-    pdf.set_text_color(120, 120, 120)
+    # 2. KPIs PERÍMETROS Y ASIMETRÍAS
+    pdf.set_y(y_kpi1 + 24)
+    draw_section_title("2. PERÍMETROS CORPORALES Y ASIMETRÍAS BILATERALES", pdf.get_y())
+    y_kpi2 = pdf.get_y()
+    w_kpi6 = 277 / 6
+    draw_kpi(10, y_kpi2, w_kpi6-2, 22, "Pecho", kpis_perimetros.get('Pecho', '-'))
+    draw_kpi(10 + w_kpi6, y_kpi2, w_kpi6-2, 22, "Cintura", kpis_perimetros.get('Cintura', '-'))
+    draw_kpi(10 + w_kpi6*2, y_kpi2, w_kpi6-2, 22, "Cadera", kpis_perimetros.get('Cadera', '-'))
+    draw_kpi(10 + w_kpi6*3, y_kpi2, w_kpi6-2, 22, "Muslo (Media)", kpis_perimetros.get('Muslo', '-'), f"Asim D-I: {kpis_asimetrias.get('Muslo', '-')}")
+    draw_kpi(10 + w_kpi6*4, y_kpi2, w_kpi6-2, 22, "Pierna (Media)", kpis_perimetros.get('Pierna', '-'), f"Asim D-I: {kpis_asimetrias.get('Pierna', '-')}")
+    draw_kpi(10 + w_kpi6*5, y_kpi2, w_kpi6-2, 22, "Bíceps (Media)", kpis_perimetros.get('Biceps', '-'), f"Asim D-I: {kpis_asimetrias.get('Biceps', '-')}")
+
+    # 3. TABLA HISTORIAL COMPLETO
+    pdf.set_y(y_kpi2 + 26)
+    draw_section_title("3. HISTORIAL COMPLETO DE MEDICIONES", pdf.get_y())
     
-    w_pesaje = 35
-    offset_pesaje = (297 - (w_pesaje * 4)) / 2
-    pdf.set_x(offset_pesaje)
-    for title in ["Peso", "% Graso (Faulkner)", "Masa Magra", "Sumatorio Pliegues"]:
-        pdf.cell(w_pesaje, 5, clean_txt(title), align='C')
-    pdf.ln()
-    
-    pdf.set_font("Arial", '', 14)
-    pdf.set_text_color(0, 0, 0)
-    pdf.set_x(offset_pesaje)
-    for key in ['Peso', 'Grasa', 'Magra', 'Pliegues']:
-        pdf.cell(w_pesaje, 8, clean_txt(kpis_pesaje.get(key, '-')), align='C')
-    pdf.ln(8)
-    
-    # --- KPIs PERÍMETROS ---
-    pdf.set_font("Arial", 'B', 12)
-    pdf.cell(297, 8, clean_txt("Perimetros"), ln=True, align='C')
-    pdf.set_font("Arial", 'B', 8)
-    pdf.set_text_color(120, 120, 120)
-    
-    cols_per = ["Pecho", "Cintura", "Cadera", "Muslo", "Pierna", "Biceps"]
-    w_per = 30
-    offset_per = (297 - (w_per * 6)) / 2
-    pdf.set_x(offset_per)
-    for c in cols_per: 
-        pdf.cell(w_per, 5, clean_txt(c), align='C')
-    pdf.ln()
-    
-    pdf.set_font("Arial", '', 14)
-    pdf.set_text_color(0, 0, 0)
-    pdf.set_x(offset_per)
-    for c in cols_per: 
-        pdf.cell(w_per, 8, clean_txt(kpis_perimetros.get(c, '-')), align='C')
-    pdf.ln(8)
-    
-    # --- KPIs ASIMETRÍAS ---
-    pdf.set_font("Arial", 'B', 12)
-    pdf.cell(297, 8, clean_txt("Asimetrias Perimetrales"), ln=True, align='C')
-    pdf.set_font("Arial", 'B', 8)
-    pdf.set_text_color(120, 120, 120)
-    
-    cols_asim = ["Muslo (D - I)", "Pierna (D - I)", "Biceps (D - I)"]
-    w_asim = 50
-    offset_asim = (297 - (w_asim * 3)) / 2
-    pdf.set_x(offset_asim)
-    for c in cols_asim: 
-        pdf.cell(w_asim, 5, clean_txt(c), align='C')
-    pdf.ln()
-    
-    pdf.set_font("Arial", '', 14)
-    pdf.set_text_color(0, 0, 0)
-    pdf.set_x(offset_asim)
-    for k in ['Muslo', 'Pierna', 'Biceps']:
-        pdf.cell(w_asim, 8, clean_txt(kpis_asimetrias.get(k, '-')), align='C')
-    pdf.ln(12)
-    
-    # --- TABLA HISTORIAL PÁGINA 1 ---
-    pdf.set_font("Arial", 'B', 12)
-    pdf.cell(297, 8, clean_txt("Historial Completo"), ln=True, align='C')
-    
-    pdf.set_font("Arial", 'B', 7)
-    pdf.set_fill_color(*C_BG_TAB_H)
-    pdf.set_text_color(255, 255, 255)
-    
-    # Anchos calculados al milímetro para que quede centrado
-    widths = [17, 11, 13, 16, 16, 15, 15, 15, 16, 16, 19, 16, 16, 19, 16, 16, 19]
+    widths = [18, 13, 14, 16, 16, 15, 15, 15, 16, 16, 18, 16, 16, 18, 16, 16, 18]
     cols = list(df_historial.columns)
     offset_x = (297 - sum(widths)) / 2
     
+    pdf.set_font("Arial", 'B', 6.5)
+    pdf.set_fill_color(*C_TAB_H)
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_draw_color(255, 255, 255)
+    
     pdf.set_x(offset_x)
     for i, col in enumerate(cols):
-        clean_c = clean_txt(col.replace('Σ', 'Sum.'))
+        clean_c = clean_txt(col.replace('Σ', 'Sum.').replace('Asimetría ', 'Asim. '))
         pdf.cell(widths[i], 8, clean_c, border=1, fill=True, align='C')
     pdf.ln()
     
-    pdf.set_font("Arial", '', 7)
-    pdf.set_text_color(0, 0, 0)
-    for r_idx, row in df_historial.iterrows():
+    pdf.set_draw_color(226, 232, 240)
+    row_count = 0
+    for _, row in df_historial.iterrows():
         pdf.set_x(offset_x)
-        pdf.set_fill_color(*C_BG_TAB_R) if r_idx % 2 == 0 else pdf.set_fill_color(255, 255, 255)
+        pdf.set_fill_color(*C_TAB_R2) if row_count % 2 == 0 else pdf.set_fill_color(*C_TAB_R1)
             
         for i, col in enumerate(cols):
             val = row.get(col, "-")
+            es_asim = "Asimetría" in col
             
-            # Lógica para forzar 1 decimal en el PDF sin tocar la fecha ni los guiones
-            if pd.isna(val) or val == "-":
+            if pd.isna(val) or val == "-" or str(val).strip() == "":
                 val_str = "-"
+                num_val = None
             else:
                 try:
-                    val_str = f"{float(val):.1f}"
+                    num_val = float(val)
+                    val_str = f"{num_val:.1f}%" if es_asim else f"{num_val:.1f}"
                 except ValueError:
+                    num_val = None
                     val_str = str(val)
+            
+            if es_asim and num_val is not None:
+                if num_val > 5.0:
+                    pdf.set_text_color(*C_RED)
+                    pdf.set_font("Arial", 'B', 7)
+                elif num_val <= 2.0:
+                    pdf.set_text_color(*C_GREEN)
+                    pdf.set_font("Arial", 'B', 7)
+                else:
+                    pdf.set_text_color(245, 158, 11)
+                    pdf.set_font("Arial", 'B', 7)
+            else:
+                pdf.set_text_color(*C_DARK)
+                pdf.set_font("Arial", 'B' if i == 0 else '', 7)
                     
-            pdf.cell(widths[i], 6, clean_txt(val_str), border=1, align='C', fill=True)
+            pdf.cell(widths[i], 6, clean_txt(val_str), border='B', align='C', fill=True)
         pdf.ln()
+        row_count += 1
 
-    # --- GRÁFICOS PÁGINA 2 (TODOS EN UNA HOJA) ---
+    # ==========================================
+    # PÁGINA 2: EVOLUCIÓN HISTÓRICA (GRID 3x2)
+    # ==========================================
     pdf.add_page()
-    pdf.set_font("Arial", 'B', 14)
-    pdf.cell(297, 10, clean_txt("Evolucion Historica: Peso, % Graso y Perimetros"), ln=True, align='C')
+    draw_header("INFORME DE COMPOSICIÓN CORPORAL Y ANTROPOMETRÍA", subtitle)
+    draw_section_title("4. EVOLUCIÓN MENSUAL: PESO, % GRASO Y PERÍMETROS", pdf.get_y())
     
-    w_chart = 135
-    h_chart = 55
-    offset_c1 = (297 - (w_chart * 2)) / 3  # Espaciado dinámico para centrar 2 columnas
-    x1 = offset_c1
-    x2 = offset_c1 * 2 + w_chart
+    w_img_3 = 277 / 3
+    y_row1 = pdf.get_y() + 2
+    y_row2 = y_row1 + 68
     
-    y_row1 = 25
-    y_row2 = 85
-    y_row3 = 145
+    if 'peso' in img_paths: pdf.image(img_paths['peso'], x=10, y=y_row1, w=w_img_3)
+    if 'grasa' in img_paths: pdf.image(img_paths['grasa'], x=10 + w_img_3, y=y_row1, w=w_img_3)
+    if 'per1' in img_paths: pdf.image(img_paths['per1'], x=10 + w_img_3*2, y=y_row1, w=w_img_3)
     
-    if 'peso' in img_paths: pdf.image(img_paths['peso'], x=x1, y=y_row1, w=w_chart, h=h_chart)
-    if 'grasa' in img_paths: pdf.image(img_paths['grasa'], x=x2, y=y_row1, w=w_chart, h=h_chart)
-    
-    if 'per1' in img_paths: pdf.image(img_paths['per1'], x=x1, y=y_row2, w=w_chart, h=h_chart)
-    if 'per2' in img_paths: pdf.image(img_paths['per2'], x=x2, y=y_row2, w=w_chart, h=h_chart)
-    
-    if 'per3' in img_paths: pdf.image(img_paths['per3'], x=x1, y=y_row3, w=w_chart, h=h_chart)
-    if 'per4' in img_paths: pdf.image(img_paths['per4'], x=x2, y=y_row3, w=w_chart, h=h_chart)
-    
-    # --- NUEVA PÁGINA 3: CUADRANTE INDIVIDUAL ---
+    if 'per2' in img_paths: pdf.image(img_paths['per2'], x=10, y=y_row2, w=w_img_3)
+    if 'per3' in img_paths: pdf.image(img_paths['per3'], x=10 + w_img_3, y=y_row2, w=w_img_3)
+    if 'per4' in img_paths: pdf.image(img_paths['per4'], x=10 + w_img_3*2, y=y_row2, w=w_img_3)
+
+    # ==========================================
+    # PÁGINA 3: CUADRANTE ESTRUCTURAL (FFMI)
+    # ==========================================
     if 'quadrante' in img_paths:
         pdf.add_page()
-        pdf.set_font("Arial", 'B', 14)
-        pdf.cell(297, 10, clean_txt("Evaluacion Estructural (FFMI vs % Grasa)"), ln=True, align='C')
+        draw_header("INFORME DE COMPOSICIÓN CORPORAL Y ANTROPOMETRÍA", subtitle)
+        draw_section_title("5. EVALUACIÓN ESTRUCTURAL (CUADRANTE FFMI VS % GRASA)", pdf.get_y())
         
-        # Centrar el gráfico de cuadrante
-        w_quad = 170
-        h_quad = 90
+        w_quad = 165
         offset_quad = (297 - w_quad) / 2
-        pdf.image(img_paths['quadrante'], x=offset_quad, y=30, w=w_quad, h=h_quad)
+        y_quad = pdf.get_y() + 2
+        pdf.image(img_paths['quadrante'], x=offset_quad, y=y_quad, w=w_quad)
         
-        # Añadir leyenda técnica abajo
-        pdf.set_xy(offset_quad, 30 + h_quad + 15)
-        pdf.set_font("Arial", 'I', 10)
-        pdf.set_text_color(100, 100, 100)
-        texto_leyenda = "El recuadro verde delimita la de referencia a nivel de grasa y masa muscular (7.5% - 10.0% Grasa y 20 - 23 de FFMI). Este grafico aísla la masa muscular real anulando el sesgo de la estatura."
-        pdf.multi_cell(w_quad, 5, clean_txt(texto_leyenda), align='C')
-        pdf.set_text_color(0, 0, 0)
+        y_box = y_quad + 114
+        pdf.set_fill_color(*C_TAB_R2)
+        pdf.set_draw_color(*C_GOLD)
+        pdf.rect(25, y_box, 247, 16, 'DF')
+        pdf.set_xy(30, y_box + 3)
+        pdf.set_font("Arial", 'B', 8)
+        pdf.set_text_color(*C_DARK)
+        pdf.cell(237, 4, clean_txt("NOTA METODOLÓGICA: ZONA ÉLITE (7.5% - 10.0% GRASA | 20.0 - 23.0 FFMI)"), align='C', ln=1)
+        pdf.set_x(30)
+        pdf.set_font("Arial", '', 8)
+        pdf.set_text_color(100, 116, 139)
+        pdf.cell(237, 5, clean_txt("El Índice de Masa Libre de Grasa (FFMI) relativiza el desarrollo muscular respecto a la estatura del futbolista, eliminando el sesgo del peso absoluto."), align='C')
         
     for path in img_paths.values():
         if os.path.exists(path): os.unlink(path)
