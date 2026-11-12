@@ -97,6 +97,9 @@ def calcular_ewma_historico(_sesiones, fecha_objetivo):
         
         df_pivot = df_hist.pivot_table(index='fecha', columns='JUGADOR', values=col_metrica, aggfunc='sum').fillna(0)
         if df_pivot.empty: continue
+        
+        # Detectar sesiones abiertas hoy/mañana donde solo hay Wellness y aún no se ha subido carga
+        fechas_pendientes = df_pivot.index[df_pivot.sum(axis=1) == 0]
             
         fecha_ini = min(df_pivot.index.min(), fecha_fin) - pd.Timedelta(days=7)
         rango_fechas = pd.date_range(start=fecha_ini, end=fecha_fin, freq='D')
@@ -116,6 +119,13 @@ def calcular_ewma_historico(_sesiones, fecha_objetivo):
         # Cálculo vectorizado C y A (Uncoupled EWMA)
         aguda = df_pivot.ewm(span=7, adjust=False).mean()
         cronica = df_pivot.shift(7).ewm(span=21, adjust=False).mean()
+        
+        # Mantener el EWMA pre-sesión en sesiones donde aún no se ha registrado la carga del entrenamiento
+        if len(fechas_pendientes) > 0:
+            aguda.loc[fechas_pendientes] = np.nan
+            cronica.loc[fechas_pendientes] = np.nan
+            aguda = aguda.ffill()
+            cronica = cronica.ffill()
         
         try:
             aguda_hoy = aguda.loc[fecha_fin]
@@ -166,7 +176,10 @@ def calcular_monotonia_7d(_sesiones, jugador, fecha_objetivo, metrica="CARGA", d
         if s.get("informe_generado") and s["fecha"] in dic_cargas:
             for d in s["datos_informe"]:
                 if limpiar_nombre(d["JUGADOR"]) == limpiar_nombre(jugador):
-                    dic_cargas[s["fecha"]] += safe_float(d.get(metrica, 0))
+                    val_m = safe_float(d.get(metrica, 0))
+                    if metrica == "DIS AI":
+                        val_m += safe_float(d.get("COMP_DIS_AI", 0))
+                    dic_cargas[s["fecha"]] += val_m
                     break
                     
     cargas = list(dic_cargas.values())
@@ -828,27 +841,30 @@ def aplicar_imputacion_gps_global(registros, sesion_actual, plantilla_global):
                     reg["DCC"] = seguro(ratios.get("DCC_pm", 0) * min_partido)
                     reg["DCC >3"] = reg["DCC"]
                 else:
-                    # En entrenamientos, usamos la media de MIN_GPS del grupo
+                    # En entrenamientos, prorrateamos según los minutos reales del jugador respecto al grupo
                     min_grupo = seguro(ratios.get("MIN_GPS", 0))
                     if min_grupo == 0: continue
                     
-                    # IMPUTACIÓN ESTRICTA DE GPS (Respetando MIN y CARGA manuales)
-                    reg["MIN_GPS"] = min_grupo
-                    reg["DIS"] = seguro(ratios.get("DIS", 0))
-                    reg["DIS AI"] = seguro(ratios.get("DIS AI", 0))
+                    min_efectivo_imp = min_jug if min_jug > 0 else min_grupo
+                    factor_t = min_efectivo_imp / min_grupo
+                    
+                    # IMPUTACIÓN ESTRICTA DE GPS (Escalada por tiempo real en campo)
+                    reg["MIN_GPS"] = min_efectivo_imp
+                    reg["DIS"] = seguro(ratios.get("DIS", 0) * factor_t)
+                    reg["DIS AI"] = seguro(ratios.get("DIS AI", 0) * factor_t)
                     reg["HID >21"] = reg["DIS AI"]
-                    reg["Nº SPR"] = seguro(ratios.get("Nº SPR", 0))
+                    reg["Nº SPR"] = seguro(ratios.get("Nº SPR", 0) * factor_t)
                     reg["SPR >24"] = reg["Nº SPR"]
-                    reg["ACC"] = seguro(ratios.get("ACC", 0))
+                    reg["ACC"] = seguro(ratios.get("ACC", 0) * factor_t)
                     reg["ACC >3"] = reg["ACC"]
-                    reg["DCC"] = seguro(ratios.get("DCC", 0))
+                    reg["DCC"] = seguro(ratios.get("DCC", 0) * factor_t)
                     reg["DCC >3"] = reg["DCC"]
-                    reg["Z1"] = seguro(ratios.get("Z1", 0))
-                    reg["Z2"] = seguro(ratios.get("Z2", 0))
-                    reg["Z3"] = seguro(ratios.get("Z3", 0))
-                    reg["Z4"] = seguro(ratios.get("Z4", 0))
-                    reg["Z5"] = seguro(ratios.get("Z5", 0))
-                reg["Z6"] = seguro(ratios.get("Z6", 0))
+                    reg["Z1"] = seguro(ratios.get("Z1", 0) * factor_t)
+                    reg["Z2"] = seguro(ratios.get("Z2", 0) * factor_t)
+                    reg["Z3"] = seguro(ratios.get("Z3", 0) * factor_t)
+                    reg["Z4"] = seguro(ratios.get("Z4", 0) * factor_t)
+                    reg["Z5"] = seguro(ratios.get("Z5", 0) * factor_t)
+                    reg["Z6"] = seguro(ratios.get("Z6", 0) * factor_t)
 
                 reg["VMAX"] = seguro(ratios.get("VMAX", 0))
                 reg["V_Max"] = reg["VMAX"]
