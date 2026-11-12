@@ -32,9 +32,15 @@ def construir_dataset_entrenamiento(df_master, lesiones, plantilla):
     
     dict_edad = {limpiar_nombre(p["JUGADOR"]): safe_float(p.get("edad", 25)) for p in plantilla}
     
-    # 1. Base utilizando la BBDD Maestra (Añadidas columnas DCC y Nº SPR)
+    # 1. Base utilizando la BBDD Maestra + Carga Compensatoria de Suplentes
     df_base = df_master[['FECHA', 'JUGADOR', 'CARGA', 'WELLNESS', 'DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC', 'VMAX']].copy()
+    for c_base, c_comp in [('DIS', 'COMP_DIS'), ('DIS AI', 'COMP_DIS_AI'), ('Nº SPR', 'COMP_SPR'), ('ACC', 'COMP_ACC'), ('DCC', 'COMP_DCC')]:
+        if c_comp in df_master.columns:
+            df_base[c_base] = pd.to_numeric(df_base[c_base], errors='coerce').fillna(0.0) + pd.to_numeric(df_master[c_comp], errors='coerce').fillna(0.0)
+            
     df_base['FECHA'] = pd.to_datetime(df_base['FECHA'])
+    fechas_sin_carga_eq = df_base.groupby('FECHA')['CARGA'].sum()
+    fechas_pendientes_ia = fechas_sin_carga_eq[fechas_sin_carga_eq == 0].index
     
     features = []
     for jug, group in df_base.groupby("JUGADOR"):
@@ -59,6 +65,12 @@ def construir_dataset_entrenamiento(df_master, lesiones, plantilla):
                 s_calc = pd.concat([s_seed, s_val.loc[p_idx:]])
                 ag = (s_calc.ewm(span=7, adjust=False).mean() * 7).reindex(group.index, fill_value=0.0)
                 cr = (s_calc.shift(7).ewm(span=21, adjust=False).mean() * 7).reindex(group.index, fill_value=0.0)
+                f_pend_jug = group.index.intersection(fechas_pendientes_ia)
+                if len(f_pend_jug) > 0:
+                    ag.loc[f_pend_jug] = np.nan
+                    cr.loc[f_pend_jug] = np.nan
+                    ag = ag.ffill().fillna(0.0)
+                    cr = cr.ffill().fillna(0.0)
             else:
                 ag = pd.Series(0.0, index=group.index)
                 cr = pd.Series(0.0, index=group.index)
