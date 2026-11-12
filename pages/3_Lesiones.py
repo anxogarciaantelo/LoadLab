@@ -52,7 +52,9 @@ else:
         with st.expander(":material/filter_alt: Filtros Epidemiológicos", expanded=False):
             c_f1, c_f2, c_f3 = st.columns(3)
             with c_f1:
-                meses_unicos = ["TODOS"] + list(df_les['Mes'].dropna().unique())
+                orden_temp = ["Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio"]
+                meses_presentes = df_les['Mes'].dropna().unique()
+                meses_unicos = ["TODOS"] + [m for m in orden_temp if m in meses_presentes]
                 filtro_mes = st.selectbox("Mes:", meses_unicos)
             with c_f2:
                 filtro_tipo_ses = st.selectbox("Sesión:", ["TODOS", "Entrenamiento", "Partido"])
