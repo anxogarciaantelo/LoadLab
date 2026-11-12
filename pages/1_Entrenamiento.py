@@ -179,13 +179,18 @@ with tab_temp:
                 
                 df_sem = df_master[
                     (df_master['FECHA'].isin(fechas_semana)) & 
-                    (df_master['ESTADO'].isin(["Disponible", "Titular", "Suplente"]))
+                    (df_master['ESTADO'].isin(["Disponible", "Titular", "Suplente", "Recuperación Post-Partido"]))
                 ].copy()
                 
                 if 'HID >21' in df_sem.columns: df_sem['DIS AI'] = df_sem['HID >21']
                 if 'SPR >24' in df_sem.columns: df_sem['Nº SPR'] = df_sem['SPR >24']
                 if 'ACC >3' in df_sem.columns: df_sem['ACC'] = df_sem['ACC >3']
                 if 'DCC >3' in df_sem.columns: df_sem['DCC'] = df_sem['DCC >3']
+                
+                # Sumar cargas compensatorias post-partido al acumulado semanal del jugador
+                for col_base, col_comp in [('DIS', 'COMP_DIS'), ('DIS AI', 'COMP_DIS_AI'), ('Nº SPR', 'COMP_SPR'), ('ACC', 'COMP_ACC'), ('DCC', 'COMP_DCC')]:
+                    if col_base in df_sem.columns and col_comp in df_sem.columns:
+                        df_sem[col_base] = pd.to_numeric(df_sem[col_base], errors='coerce').fillna(0.0) + pd.to_numeric(df_sem[col_comp], errors='coerce').fillna(0.0)
                 
                 if not df_sem.empty:
                     df_sem['TQR'] = df_sem['TQR'].replace(0, np.nan)
@@ -451,7 +456,7 @@ with tab_micro:
             if df_filtrado.empty:
                 st.warning("No hay jugadores que coincidan con estos filtros en esta semana.")
             else:
-                df_disp = df_filtrado[(df_filtrado['ESTADO'].isin(["Disponible", "Titular", "Suplente"])) & (df_filtrado['ENTRENO'] == 1)].copy()
+                df_disp = df_filtrado[(df_filtrado['ESTADO'].isin(["Disponible", "Titular", "Suplente", "Recuperación Post-Partido"])) & (df_filtrado['ENTRENO'] == 1)].copy()
                 df_disp['TQR'] = df_disp['TQR'].replace(0, np.nan)
                 df_disp['WELLNESS'] = df_disp['WELLNESS'].replace(0, np.nan)
                 df_disp['RPE'] = df_disp['RPE'].replace(0, np.nan)
@@ -1003,13 +1008,9 @@ with tab_ses:
                         filtro_est = st.multiselect("Disponibilidad:", opcs_est, default=def_est, key=f"re_{idx_real}")
                         if filtro_est: df_informe = df_informe[df_informe["ESTADO"].isin(filtro_est)]
 
-                    estados_validos_medias = ["Disponible", "Titular", "Suplente", "Recuperación Post-Partido", "Readaptación"]
-                    df_para_medias = df_informe[(df_informe['ESTADO'].isin(estados_validos_medias)) & (df_informe['POS'] != "POR")].copy()
-                    df_para_medias['TQR'] = df_para_medias['TQR'].replace(0, np.nan)
-                    df_para_medias['WELLNESS'] = df_para_medias['WELLNESS'].replace(0, np.nan)
-                    df_para_medias['RPE'] = df_para_medias['RPE'].replace(0, np.nan)
-                    df_para_medias_gps = df_para_medias[df_para_medias['DIS'] > 0].copy()
-                    
+                    # En sesiones globales (y MD+1/MD+2) contamos Disponible y Recuperación Post-Partido para medias de equipo.
+                    # Readaptación NUNCA entra en las medias del equipo (solo análisis individual).
+                    estados_validos_medias = ["Titular", "Suplente"] if es_partido else ["Disponible", "Recuperación Post-Partido"]
                     df_graficos = df_informe[df_informe['JUGADOR'] != ""].copy()
                     fig_well = fig_tqr = fig2 = fig3 = fig5 = fig4 = None
 
@@ -1023,7 +1024,7 @@ with tab_ses:
                         df_informe['VMAX_HIST'] = df_informe['JUGADOR'].map(lambda j: vmax_historica.get(j, 0.0))
                         df_informe['% VMAX'] = np.where(df_informe['VMAX_HIST'] > 0, (df_informe['VMAX'] / df_informe['VMAX_HIST']) * 100, 0.0)
 
-                        # Re-filtrar con la nueva columna añadida respetando los estados válidos
+                        # Filtrar medias de equipo excluyendo siempre a Porteros y a jugadores en Readaptación
                         df_para_medias = df_informe[(df_informe['ESTADO'].isin(estados_validos_medias)) & (df_informe['POS'] != "POR")].copy()
                         df_para_medias['TQR'] = df_para_medias['TQR'].replace(0, np.nan)
                         df_para_medias['WELLNESS'] = df_para_medias['WELLNESS'].replace(0, np.nan)
@@ -1031,7 +1032,7 @@ with tab_ses:
                         df_para_medias_gps = df_para_medias[df_para_medias['DIS'] > 0].copy()
                         df_graficos = df_informe[df_informe['JUGADOR'] != ""].copy()
 
-                        # --- 2. CÁLCULO DE ALERTAS (MOVIDO ARRIBA) ---
+                        # --- 2. CÁLCULO DE ALERTAS (Incluye Recuperación y Readaptación a nivel individual) ---
                         media_carga = df_para_medias['CARGA'].mean() if not df_para_medias.empty else 0
                         std_carga = df_para_medias['CARGA'].std(ddof=0) if not df_para_medias.empty else 0
                         umbral_carga = media_carga + (2.0 * std_carga) if std_carga > 0 else media_carga * 1.4
@@ -1039,8 +1040,7 @@ with tab_ses:
                         dict_zscore = calcular_zscore_wellness(st.session_state.df_master_informes, sesion["fecha"])
                         dict_zscore_efi = calcular_zscores_eficiencia(st.session_state.df_master_informes, sesion["fecha"])
                         alertas_jugadores = {}
-                        activos = df_informe[df_informe['ESTADO'].isin(["Disponible", "Titular", "Suplente"])]
-
+                        activos = df_informe[df_informe['ESTADO'].isin(["Disponible", "Titular", "Suplente", "Recuperación Post-Partido", "Readaptación"])]
                         for _, row in activos.iterrows():
                             jug = row['JUGADOR']
                             alertas_jugadores[jug] = {'recuperacion': [], 'carga': [], 'total': 0}
@@ -1163,15 +1163,33 @@ with tab_ses:
                         tqr_m = df_para_medias['TQR'].mean() if pd.notna(df_para_medias['TQR'].mean()) else 0.0
                         well_m = df_para_medias['WELLNESS'].mean() if pd.notna(df_para_medias['WELLNESS'].mean()) else 0.0
                         rpe_m = df_para_medias['RPE'].mean() if pd.notna(df_para_medias['RPE'].mean()) else 0.0
-                        carga_m = df_para_medias['CARGA'].mean() if pd.notna(df_para_medias['CARGA'].mean()) else 0.0
-                        min_m = df_para_medias['MIN'].mean() if pd.notna(df_para_medias['MIN'].mean()) else 0.0
-                        
-                        dis_m = df_para_medias_gps['DIS'].mean() if pd.notna(df_para_medias_gps['DIS'].mean()) else 0.0
-                        hsr_m = df_para_medias_gps['DIS AI'].mean() if pd.notna(df_para_medias_gps['DIS AI'].mean()) else 0.0
-                        spr_m = df_para_medias_gps['Nº SPR'].mean() if pd.notna(df_para_medias_gps['Nº SPR'].mean()) else 0.0
-                        acc_m = df_para_medias_gps['ACC'].mean() if pd.notna(df_para_medias_gps['ACC'].mean()) else 0.0
-                        dcc_m = df_para_medias_gps['DCC'].mean() if pd.notna(df_para_medias_gps['DCC'].mean()) else 0.0
                         pct_vmax_m = df_para_medias_gps['% VMAX'].mean() if pd.notna(df_para_medias_gps['% VMAX'].mean()) else 0.0
+                        
+                        if es_partido:
+                            # En partido normalizamos a 90' para que los suplentes no hundan la media real del equipo
+                            min_tot_ci = df_para_medias[df_para_medias['MIN'] > 0]['MIN'].sum() if not df_para_medias.empty else 0.0
+                            carga_m = (df_para_medias['CARGA'].sum() / min_tot_ci) * 90.0 if min_tot_ci > 0 else 0.0
+                            min_m = 90.0 if min_tot_ci > 0 else 0.0
+                            
+                            if not df_para_medias_gps.empty:
+                                min_ef_gps = np.where(df_para_medias_gps.get('MIN_GPS', df_para_medias_gps['MIN']) > 0, df_para_medias_gps.get('MIN_GPS', df_para_medias_gps['MIN']), df_para_medias_gps['MIN'])
+                                min_tot_gps = min_ef_gps.sum()
+                            else:
+                                min_tot_gps = 0.0
+                                
+                            dis_m = (df_para_medias_gps['DIS'].sum() / min_tot_gps) * 90.0 if min_tot_gps > 0 else 0.0
+                            hsr_m = (df_para_medias_gps['DIS AI'].sum() / min_tot_gps) * 90.0 if min_tot_gps > 0 else 0.0
+                            spr_m = (df_para_medias_gps['Nº SPR'].sum() / min_tot_gps) * 90.0 if min_tot_gps > 0 else 0.0
+                            acc_m = (df_para_medias_gps['ACC'].sum() / min_tot_gps) * 90.0 if min_tot_gps > 0 else 0.0
+                            dcc_m = (df_para_medias_gps['DCC'].sum() / min_tot_gps) * 90.0 if min_tot_gps > 0 else 0.0
+                        else:
+                            carga_m = df_para_medias['CARGA'].mean() if pd.notna(df_para_medias['CARGA'].mean()) else 0.0
+                            min_m = df_para_medias['MIN'].mean() if pd.notna(df_para_medias['MIN'].mean()) else 0.0
+                            dis_m = df_para_medias_gps['DIS'].mean() if pd.notna(df_para_medias_gps['DIS'].mean()) else 0.0
+                            hsr_m = df_para_medias_gps['DIS AI'].mean() if pd.notna(df_para_medias_gps['DIS AI'].mean()) else 0.0
+                            spr_m = df_para_medias_gps['Nº SPR'].mean() if pd.notna(df_para_medias_gps['Nº SPR'].mean()) else 0.0
+                            acc_m = df_para_medias_gps['ACC'].mean() if pd.notna(df_para_medias_gps['ACC'].mean()) else 0.0
+                            dcc_m = df_para_medias_gps['DCC'].mean() if pd.notna(df_para_medias_gps['DCC'].mean()) else 0.0
 
                         efi_c_media = rpe_m / ((dis_m * 1000) / min_m) if min_m > 0 and dis_m > 0 else 0
                         efi_n_media = rpe_m / (acc_m + dcc_m + spr_m) if (acc_m + dcc_m + spr_m) > 0 else 0                  
@@ -1191,7 +1209,10 @@ with tab_ses:
                         hist_tqr_m = df_hist_tend['TQR'].replace(0, np.nan).mean() if not df_hist_tend.empty else 0
                         hist_well_m = df_hist_tend['WELLNESS'].replace(0, np.nan).mean() if not df_hist_tend.empty else 0
                         hist_rpe_m = df_hist_tend['RPE'].replace(0, np.nan).mean() if not df_hist_tend.empty else 0
-                        hist_carga_m = df_hist_tend['CARGA'].replace(0, np.nan).mean() if not df_hist_tend.empty else 0
+                        if es_partido and not df_hist_tend.empty and df_hist_tend['MIN'].sum() > 0:
+                            hist_carga_m = (df_hist_tend['CARGA'].sum() / df_hist_tend['MIN'].sum()) * 90.0
+                        else:
+                            hist_carga_m = df_hist_tend['CARGA'].replace(0, np.nan).mean() if not df_hist_tend.empty else 0
                         
                         hist_readiness_m = 0
                         if hist_well_m > 0 and hist_tqr_m > 0:
