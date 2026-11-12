@@ -84,7 +84,9 @@ with tab_antro_res:
             
             filtro_pos = ca2.selectbox("Posición:", ["TODOS", "POR", "DEF", "MED", "ATA"], key="ant_pos")
             
-            meses_unicos = ["TODOS Anual"] + list(df_antro['Mes'].dropna().unique())
+            orden_temp = ["Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio"]
+            meses_presentes = df_antro['Mes'].dropna().unique()
+            meses_unicos = ["TODOS Anual"] + [m for m in orden_temp if m in meses_presentes]
             filtro_mes = ca3.selectbox("Mes:", meses_unicos, key="ant_mes")
             
             df_filt = df_antro.copy()
