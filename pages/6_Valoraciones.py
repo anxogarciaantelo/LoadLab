@@ -269,6 +269,10 @@ with tab_informes:
             kgs_barra = np.array([k for k, v in zip(p_sq_data.get('kg', []), p_sq_data.get('vel', [])) if k > 0 and v > 0])
             vels = np.array([v for k, v in zip(p_sq_data.get('kg', []), p_sq_data.get('vel', [])) if k > 0 and v > 0])
             
+            fig_sq = None
+            v0, f0_kg_sistema, f0_kg_barra, f0_rel_N, r2 = 0.0, 0.0, 0.0, 0.0, 0.0
+            cuadrante, pauta_fv = "Sin datos", "Sin series suficientes para trazar el perfil F-V."
+            
             if len(kgs_barra) > 1:
                 # 1. Fuerza real del sistema (Barra + Peso corporal parcial)
                 kgs_sistema = kgs_barra + (peso_actual * 0.89)
