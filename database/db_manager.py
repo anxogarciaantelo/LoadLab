@@ -364,6 +364,7 @@ def reconstruir_dataframes_globales():
             df_pivot = df_master.pivot_table(index='FECHA_DT', columns='JUGADOR', values=col_metrica, aggfunc='sum').fillna(0)
             
             if not df_pivot.empty:
+                fechas_pendientes = df_pivot.index[df_pivot.sum(axis=1) == 0]
                 rango_fechas = pd.date_range(start=df_pivot.index.min() - pd.Timedelta(days=7), end=df_pivot.index.max(), freq='D')
                 df_pivot = df_pivot.reindex(rango_fechas, fill_value=0)
                 
@@ -380,6 +381,12 @@ def reconstruir_dataframes_globales():
                 # Cálculo Uncoupled EWMA con estabilizador de carga crónica y límite fisiológico (4.0)
                 aguda = df_pivot.ewm(span=7, adjust=False).mean() * 7
                 cronica = df_pivot.shift(7).ewm(span=21, adjust=False).mean() * 7
+                
+                if len(fechas_pendientes) > 0:
+                    aguda.loc[fechas_pendientes] = np.nan
+                    cronica.loc[fechas_pendientes] = np.nan
+                    aguda = aguda.ffill()
+                    cronica = cronica.ffill()
                 c_min = 10.0 if col_metrica == 'CARGA' else 1.0
                 cronica_segura = cronica.clip(lower=c_min).where(cronica > 0, np.nan)
                 ratio = (aguda / cronica_segura).clip(upper=4.0)
