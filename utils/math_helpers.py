@@ -41,7 +41,8 @@ def extraer_minutos(tiempo_str):
 
 def obtener_numero_semana(fecha_str):
     fecha = datetime.strptime(fecha_str, "%Y-%m-%d")
-    return fecha.isocalendar()[1]
+    iso_year, iso_week, _ = fecha.isocalendar()
+    return (iso_year * 100) + iso_week
 
 def obtener_rango_fechas_semana(fecha_str):
     fecha = datetime.strptime(fecha_str, "%Y-%m-%d")
