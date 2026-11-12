@@ -97,16 +97,20 @@ def calcular_ewma_historico(_sesiones, fecha_objetivo):
         df_pivot = df_hist.pivot_table(index='fecha', columns='JUGADOR', values=col_metrica, aggfunc='sum').fillna(0)
         if df_pivot.empty: continue
             
-        fecha_ini = min(df_pivot.index.min(), fecha_fin)
+        fecha_ini = min(df_pivot.index.min(), fecha_fin) - pd.Timedelta(days=7)
         rango_fechas = pd.date_range(start=fecha_ini, end=fecha_fin, freq='D')
         df_pivot = df_pivot.reindex(rango_fechas, fill_value=0)
         
-        # Máscara para evitar que el EWMA se diluya antes de que el jugador llegue al club
+        # Semilla de microciclo inicial para evitar picos artificiales en Día 1 y Día 8
         for col in df_pivot.columns:
             s_cargas = df_pivot[col]
             primer_idx = s_cargas[s_cargas > 0].first_valid_index()
             if primer_idx:
-                df_pivot.loc[:primer_idx - pd.Timedelta(days=1), col] = np.nan
+                ventana_ini = s_cargas.loc[primer_idx : primer_idx + pd.Timedelta(days=6)]
+                media_ini = ventana_ini.sum() / 7.0 if len(ventana_ini) >= 7 else ventana_ini.mean()
+                inicio_semilla = primer_idx - pd.Timedelta(days=7)
+                df_pivot.loc[:inicio_semilla - pd.Timedelta(days=1), col] = np.nan
+                df_pivot.loc[inicio_semilla : primer_idx - pd.Timedelta(days=1), col] = media_ini
 
         # Cálculo vectorizado C y A (Uncoupled EWMA)
         aguda = df_pivot.ewm(span=7, adjust=False).mean()
@@ -689,34 +693,54 @@ def calcular_zscore_wellness(df_master, fecha_objetivo):
     return res
 def calcular_zscores_eficiencia(df_master, fecha_objetivo):
     """
-    Calcula la media y desviación estándar de la Eficiencia Cardiovascular y Neuromuscular intra-sujeto.
-    Excluye la fecha objetivo para evitar contaminación de la línea base.
+    Calcula la media y desviación estándar de la Eficiencia Cardiovascular y Neuromuscular intra-sujeto,
+    aislando por contexto de sesión (MD) y excluyendo RPE=0 y datos GPS virtuales.
     """
     if df_master.empty or 'DIS' not in df_master.columns: 
         return {}
         
-    df_hist = df_master[df_master['FECHA'] < fecha_objetivo].copy()
+    df_hist = df_master[(df_master['FECHA'] < fecha_objetivo) & (df_master['DIS'] > 0) & (df_master['MIN'] > 0) & (df_master['RPE'] > 0)].copy()
+    if 'GPS_VIRTUAL' in df_hist.columns:
+        df_hist = df_hist[df_hist['GPS_VIRTUAL'] != True]
     if df_hist.empty: 
         return {}
         
-    df_hist['m_min'] = np.where(df_hist['MIN'] > 0, (df_hist['DIS'] * 1000) / df_hist['MIN'], 0)
+    df_hist['m_min'] = (df_hist['DIS'] * 1000) / df_hist['MIN']
     df_hist['mec_total'] = df_hist['ACC'] + df_hist['DCC'] + df_hist['Nº SPR']
     
-    # Eficiencia = RPE dividido por densidad externa
     df_hist['EFI_CARDIO'] = np.where(df_hist['m_min'] > 0, df_hist['RPE'] / df_hist['m_min'], np.nan)
     df_hist['EFI_NEURO'] = np.where(df_hist['mec_total'] > 0, df_hist['RPE'] / df_hist['mec_total'], np.nan)
     
-    stats_c = df_hist.groupby('JUGADOR')['EFI_CARDIO'].agg(['mean', 'std']).fillna({'mean': 0, 'std': 0.05})
-    stats_n = df_hist.groupby('JUGADOR')['EFI_NEURO'].agg(['mean', 'std']).fillna({'mean': 0, 'std': 0.05})
-    
     res = {}
+    # 1. Baseline general del jugador (fallback)
+    stats_c = df_hist.groupby('JUGADOR')['EFI_CARDIO'].agg(['mean', lambda x: x.std(ddof=0)]).fillna(0)
+    stats_n = df_hist.groupby('JUGADOR')['EFI_NEURO'].agg(['mean', lambda x: x.std(ddof=0)]).fillna(0)
+    stats_c.columns = ['mean', 'std']
+    stats_n.columns = ['mean', 'std']
+    
     for jug in df_hist['JUGADOR'].unique():
-        res[jug] = {
-            'cardio_mean': stats_c.loc[jug, 'mean'] if jug in stats_c.index else 0,
-            'cardio_std': stats_c.loc[jug, 'std'] if jug in stats_c.index and stats_c.loc[jug, 'std'] > 0 else 0.05,
-            'neuro_mean': stats_n.loc[jug, 'mean'] if jug in stats_n.index else 0,
-            'neuro_std': stats_n.loc[jug, 'std'] if jug in stats_n.index and stats_n.loc[jug, 'std'] > 0 else 0.05
-        }
+        mc = stats_c.loc[jug, 'mean'] if jug in stats_c.index else 0
+        sc = stats_c.loc[jug, 'std'] if jug in stats_c.index and stats_c.loc[jug, 'std'] > 0 else (mc * 0.1 if mc > 0 else 0.05)
+        mn = stats_n.loc[jug, 'mean'] if jug in stats_n.index else 0
+        sn = stats_n.loc[jug, 'std'] if jug in stats_n.index and stats_n.loc[jug, 'std'] > 0 else (mn * 0.1 if mn > 0 else 0.05)
+        res[jug] = {'cardio_mean': mc, 'cardio_std': sc, 'neuro_mean': mn, 'neuro_std': sn}
+        
+    # 2. Baseline específico por contexto MD / Partido
+    if 'MD' in df_hist.columns:
+        stats_c_md = df_hist.groupby(['JUGADOR', 'MD'])['EFI_CARDIO'].agg(['mean', lambda x: x.std(ddof=0)]).fillna(0)
+        stats_n_md = df_hist.groupby(['JUGADOR', 'MD'])['EFI_NEURO'].agg(['mean', lambda x: x.std(ddof=0)]).fillna(0)
+        stats_c_md.columns = ['mean', 'std']
+        stats_n_md.columns = ['mean', 'std']
+        
+        for (jug, md_val) in stats_c_md.index:
+            mc = stats_c_md.loc[(jug, md_val), 'mean']
+            sc = stats_c_md.loc[(jug, md_val), 'std']
+            sc = sc if sc > 0 else (mc * 0.1 if mc > 0 else 0.05)
+            mn = stats_n_md.loc[(jug, md_val), 'mean'] if (jug, md_val) in stats_n_md.index else 0
+            sn = stats_n_md.loc[(jug, md_val), 'std'] if (jug, md_val) in stats_n_md.index else 0
+            sn = sn if sn > 0 else (mn * 0.1 if mn > 0 else 0.05)
+            res[(jug, md_val)] = {'cardio_mean': mc, 'cardio_std': sc, 'neuro_mean': mn, 'neuro_std': sn}
+            
     return res
 def aplicar_imputacion_gps_global(registros, sesion_actual, plantilla_global):
     """
