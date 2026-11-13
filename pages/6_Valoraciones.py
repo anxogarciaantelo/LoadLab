@@ -45,6 +45,21 @@ def calc_asimetria(der, izq):
     if max(d, i) == 0: return 0.0
     return (abs(d - i) / max(d, i)) * 100
 
+def obtener_ultimo_peso_antropometria(nombre_jug, fecha_limite=None):
+    antros = st.session_state.get("antropometria", [])
+    if not antros or not nombre_jug:
+        return 70.0
+    j_clean = limpiar_nombre(nombre_jug)
+    reg_jug = [a for a in antros if limpiar_nombre(a.get("jugador", "")) == j_clean and safe_float(a.get("Peso", 0)) > 0]
+    if not reg_jug:
+        return 70.0
+    reg_jug_ord = sorted(reg_jug, key=lambda x: str(x.get("fecha", "")))
+    if fecha_limite:
+        reg_prev = [a for a in reg_jug_ord if str(a.get("fecha", "")) <= str(fecha_limite)]
+        if reg_prev:
+            return round(safe_float(reg_prev[-1]["Peso"]), 1)
+    return round(safe_float(reg_jug_ord[-1]["Peso"]), 1)
+
 def calcular_rm_cientifico(pesos, vels, peso_corp):
     validas = [(pesos[i], vels[i]) for i in range(len(pesos)) if vels[i] > 0 and pesos[i] > 0]
     
@@ -160,8 +175,9 @@ with tab_informes:
             st.info(":material/touch_app: Selecciona un deportista y su valoración para desplegar el informe exhaustivo.")
         else:
             v_data = next((v for v in vals_jugador if v['id'] == val_sel_id), None)
-            peso_actual = safe_float(v_data.get('peso_corporal', 70.0))
-            if peso_actual == 0: peso_actual = 70.0 
+            peso_actual = safe_float(v_data.get('peso_corporal', 0.0))
+            if peso_actual <= 0:
+                peso_actual = obtener_ultimo_peso_antropometria(jug_sel, v_data.get('fecha'))
 
             st.markdown("---")
             st.markdown("#### :material/accessibility_new: Movilidad (Grados)")
@@ -940,13 +956,15 @@ with tab_nuevo:
         modo_ingreso = st.radio("Método de registro:", [":material/edit_document: Formulario Manual", ":material/upload_file: Importar desde Excel"], horizontal=True)
         
         if modo_ingreso == ":material/edit_document: Formulario Manual":
+            st.markdown("#### :material/settings: Datos Generales")
+            cg1, cg2, cg3, cg4 = st.columns(4)
+            with cg1: jugador_sel = st.selectbox("Deportista:", options=jugadores, key="val_man_jug")
+            with cg2: fecha_test = st.date_input("Fecha:", value=date.today(), key="val_man_fec")
+            peso_auto = obtener_ultimo_peso_antropometria(jugador_sel, fecha_test)
+            with cg3: lesion = st.radio("¿Lesión activa?", options=["No", "Sí"], horizontal=True, index=0, key="val_man_les")
+            with cg4: peso = st.number_input("Peso (kg) [Auto desde Antropometría]:", min_value=30.0, value=float(peso_auto), step=0.5, key=f"val_man_peso_{jugador_sel}")
+            
             with st.form("form_nueva_val_detallada"):
-                st.markdown("#### :material/settings: Datos Generales")
-                cg1, cg2, cg3, cg4 = st.columns(4)
-                with cg1: jugador_sel = st.selectbox("Deportista:", options=jugadores)
-                with cg2: fecha_test = st.date_input("Fecha:", value=date.today())
-                with cg3: lesion = st.radio("¿Lesión activa?", options=["No", "Sí"], horizontal=True, index=0)
-                with cg4: peso = st.number_input("Peso (kg):", min_value=30.0, value=70.0, step=0.5)
                 
                 st.markdown("---")
                 st.markdown("#### :material/accessibility_new: 1. Movilidad (Grados)")
@@ -1038,6 +1056,8 @@ with tab_nuevo:
                         def s(val): return 0.0 if pd.isna(val) else float(val)
 
                         peso_val = s(row.iloc[3])
+                        if peso_val <= 0:
+                            peso_val = obtener_ultimo_peso_antropometria(jug_bd, fecha_val)
                         
                         p_sq = [s(row.iloc[i]) for i in range(22, 32, 2)]
                         v_sq = [s(row.iloc[i]) for i in range(23, 33, 2)]
