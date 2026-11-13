@@ -62,7 +62,7 @@ else:
                 jugs_unicos = ["TODOS"] + sorted([j["JUGADOR"] for j in st.session_state.plantilla])
                 filtro_jugador = st.selectbox("Jugador:", jugs_unicos)
                 
-        # 3. LÓGICA DE CÁLCULO
+        # 3. LÓGICA DE CÁLCULO (Con reparto mensual exacto de Días de Baja y Burden)
         def calcular_dias_reales(row):
             if row.get('estado') == 'Activa':
                 fecha_les = datetime.strptime(row['id_sesion'], "%Y-%m-%d").date()
@@ -70,25 +70,40 @@ else:
             else:
                 return safe_float(row.get('dias_baja', 0))
 
-        df_anual = df_les.copy()
-        df_filtrado = df_anual.copy()
-        if filtro_mes != "TODOS": df_filtrado = df_filtrado[df_filtrado['Mes'] == filtro_mes]
-        if filtro_tipo_ses != "TODOS": df_filtrado = df_filtrado[df_filtrado['tipo_sesion'] == filtro_tipo_ses]
-        if filtro_jugador != "TODOS": df_filtrado = df_filtrado[df_filtrado['jugador'] == filtro_jugador]
+        def dias_baja_en_mes(row, mes_objetivo):
+            dias_tot = int(calcular_dias_reales(row))
+            if dias_tot <= 0:
+                return 0
+            if mes_objetivo == "TODOS":
+                return dias_tot
+            fecha_ini = datetime.strptime(row['id_sesion'], "%Y-%m-%d").date()
+            return sum(1 for d_off in range(dias_tot) if meses_esp[(fecha_ini + timedelta(days=d_off)).month] == mes_objetivo)
 
-        def calcular_metricas(df_eval, mes_eval, ses_eval, jug_eval):
-            if df_eval.empty:
-                return 0, 0, 0.0, 0.0, 0.0
+        df_anual = df_les.copy()
+        df_base_filtro = df_anual.copy()
+        if filtro_tipo_ses != "TODOS": df_base_filtro = df_base_filtro[df_base_filtro['tipo_sesion'] == filtro_tipo_ses]
+        if filtro_jugador != "TODOS": df_base_filtro = df_base_filtro[df_base_filtro['jugador'] == filtro_jugador]
+
+        df_filtrado = df_base_filtro.copy()
+        if filtro_mes != "TODOS":
+            df_filtrado = df_filtrado[df_filtrado['Mes'] == filtro_mes]
+
+        def calcular_metricas(df_eval_nuevas, df_eval_base, mes_eval, ses_eval, jug_eval):
+            t_les = len(df_eval_nuevas)
+            if not df_eval_base.empty:
+                t_dias = int(df_eval_base.apply(lambda r: dias_baja_en_mes(r, mes_eval), axis=1).sum())
+            else:
+                t_dias = 0
                 
-            df_eval_calc = df_eval.copy()
-            df_eval_calc['dias_reales'] = df_eval_calc.apply(calcular_dias_reales, axis=1)
-            t_les = len(df_eval_calc)
-            t_dias = int(df_eval_calc['dias_reales'].sum())
-            p_dias = t_dias / t_les if t_les > 0 else 0
+            if not df_eval_nuevas.empty:
+                dias_totales_nuevas = df_eval_nuevas.apply(calcular_dias_reales, axis=1).sum()
+                p_dias = dias_totales_nuevas / t_les if t_les > 0 else 0.0
+            else:
+                p_dias = 0.0
             
-            h_tot = 0
+            h_tot = 0.0
             for s in st.session_state.sesiones:
-                if s.get("informe_generado", False):
+                if s.get("informe_generado", False) and s.get("datos_informe"):
                     try:
                         mes_s = meses_esp[datetime.strptime(s["fecha"], "%Y-%m-%d").month]
                     except: continue
@@ -103,16 +118,17 @@ else:
                         if jug_eval == "TODOS" or d["JUGADOR"] == jug_eval:
                             h_tot += float(d.get("MIN", 0)) / 60.0
 
-            inc = (t_les / h_tot * 1000) if h_tot > 0 else 0
-            bur = (t_dias / h_tot * 1000) if h_tot > 0 else 0
+            inc = (t_les / h_tot * 1000) if h_tot > 0 else 0.0
+            bur = (t_dias / h_tot * 1000) if h_tot > 0 else 0.0
             return t_les, t_dias, p_dias, inc, bur
+
+        total_lesiones, total_dias, promedio_dias, incidencia, burden = calcular_metricas(df_filtrado, df_base_filtro, filtro_mes, filtro_tipo_ses, filtro_jugador)
 
         # 4. DIBUJAR KPIs ARRIBA (Usando el contenedor reservado)
         with cont_kpis:
-            if df_filtrado.empty:
-                st.warning("No hay lesiones que coincidan con los filtros aplicados.")
+            if df_filtrado.empty and total_dias == 0:
+                st.warning("No hay lesiones ni días de baja activos que coincidan con los filtros aplicados.")
             else:
-                total_lesiones, total_dias, promedio_dias, incidencia, burden = calcular_metricas(df_filtrado, filtro_mes, filtro_tipo_ses, filtro_jugador)
 
                 # Definimos la tarjeta con el diseño de Valoraciones (incluyendo Tooltip interactivo)
                 def tarjeta_kpi_lesiones(titulo, valor, subtitulo="", tooltip="", color_borde="#C5A059"):
@@ -556,73 +572,11 @@ else:
 
                 st.markdown("---")
                 
-                # 6. EVALUACIÓN AUTOMÁTICA DE CRITERIOS DE ALTA COMPETITIVA
+                # 6. EVALUACIÓN AUTOMÁTICA DE CRITERIOS DE ALTA COMPETITIVA (CON CONSOLIDACIÓN DE HITOS)
                 st.markdown("#### :material/verified: Criterios de Alta Competitiva (RTP)")
                 
                 hoy_str = str(date.today())
-                _, _, lunes, domingo = obtener_rango_fechas_semana(hoy_str)
-                
-                # Filtramos estrictamente por Entrenamientos para evaluar volumen, HSR y VMax sin distorsión de partidos
-                sesiones_micro = [
-                    s for s in sesiones_ordenadas 
-                    if str(lunes.date()) <= s['fecha'] <= str(domingo.date()) 
-                    and s.get("tipo") == "Entrenamiento"
-                ]
-                
-                # --- Cálculo de promedios del equipo en el microciclo (Alineado con Pestaña Microciclo) ---
-                df_eq_micro = []
-                for s in sesiones_micro:
-                    if not s.get("informe_generado"): continue
-                    disp = {limpiar_nombre(k): v for k, v in s.get("disponibilidad", {}).items()}
-                    for d in s.get("datos_informe", []):
-                        j_n = limpiar_nombre(d["JUGADOR"])
-                        if disp.get(j_n) in ["Disponible", "Titular", "Suplente"]:
-                            df_eq_micro.append({
-                                "FECHA": s["fecha"],
-                                "MIN": safe_float(d.get("MIN", 0))
-                            })
-                            
-                if df_eq_micro:
-                    df_micro_disp = pd.DataFrame(df_eq_micro)
-                    # Sumamos las medias diarias para que coincida EXACTAMENTE con la pestaña de Microciclo
-                    avg_min_eq = df_micro_disp.groupby("FECHA")["MIN"].mean().sum()
-                else:
-                    avg_min_eq = 1
-
-                # --- EWMA del equipo (Fotografía a día de hoy) ---
-                ewma_hoy_eq = calcular_ewma_historico(st.session_state.sesiones, hoy_str)
-                ewma_a_vals = [v["EWMA AGUDA"] for k, v in ewma_hoy_eq.items() if k != limpiar_nombre(jug_rtp) and v["EWMA AGUDA"] > 0]
-                ewma_c_vals = [v["EWMA CRÓNICA"] for k, v in ewma_hoy_eq.items() if k != limpiar_nombre(jug_rtp) and v["EWMA CRÓNICA"] > 0]
-                
-                avg_ewma_a_eq = np.mean(ewma_a_vals) if ewma_a_vals else 1
-                avg_ewma_c_eq = np.mean(ewma_c_vals) if ewma_c_vals else 1
-                
-                # Extracción semanal del jugador
-                min_jug = 0
-                gps_jug_micro = {"DIS": 0, "HSR": 0, "SPR": 0, "ACC": 0, "DCC": 0}
-                vmax_micro = 0
-                dolores, fatigas = [], []
-                
-                for s in sesiones_micro:
-                    if not s.get("informe_generado"): continue
-                    d_jug = next((d for d in s.get("datos_informe", []) if limpiar_nombre(d["JUGADOR"]) == limpiar_nombre(jug_rtp)), None)
-                    if d_jug:
-                        min_jug += safe_float(d_jug.get("MIN", 0))
-                        gps_jug_micro["DIS"] += safe_float(d_jug.get("DIS", 0))
-                        gps_jug_micro["HSR"] += safe_float(d_jug.get("DIS AI", d_jug.get("HID >21", 0)))
-                        gps_jug_micro["SPR"] += safe_float(d_jug.get("Nº SPR", d_jug.get("SPR >24", 0)))
-                        gps_jug_micro["ACC"] += safe_float(d_jug.get("ACC", d_jug.get("ACC >3", 0)))
-                        gps_jug_micro["DCC"] += safe_float(d_jug.get("DCC", d_jug.get("DCC >3", 0)))
-                        
-                        v = safe_float(d_jug.get("VMAX", d_jug.get("V_Max", 0)))
-                        if v > vmax_micro: vmax_micro = v
-                        
-                        dol = safe_float(d_jug.get("W_Dolor", 0))
-                        fat = safe_float(d_jug.get("W_Fatiga", 0))
-                        if dol > 0: dolores.append(dol)
-                        if fat > 0: fatigas.append(fat)
-
-                ewma_jug = calcular_ewma_historico(st.session_state.sesiones, hoy_str).get(jug_rtp, {"EWMA AGUDA": 0, "EWMA CRÓNICA": 0})
+                sem_actual_id = obtener_numero_semana(hoy_str)
                 
                 # --- Demandas en 90min de Partido del Jugador (Con Fallback Posicional) ---
                 gps_90 = {"DIS_pm": 0, "HSR_pm": 0, "SPR_pm": 0, "ACC_pm": 0, "DCC_pm": 0}
@@ -635,30 +589,121 @@ else:
                     df_p_pos = pd.DataFrame(partidos_posicion)
                     gps_90 = (df_p_pos.mean() * 90).to_dict()
                     usa_fallback = True
-                    # Si nunca ha entrenado con GPS, hereda también el pico de velocidad de su posición
                     if vmax_hist == 0: vmax_hist = vmax_posicion 
                 else:
                     gps_90 = {"DIS_pm": 9, "HSR_pm": 400, "SPR_pm": 10, "ACC_pm": 20, "DCC_pm": 20}
                     usa_fallback = True
 
-                # --- Evaluación Booleana ---
-                crit_1 = min_jug >= (avg_min_eq * 0.85)
+                # --- Evaluar todos los microciclos desde la lesión para consolidar hitos alcanzados ---
+                sesiones_post_lesion = [
+                    s for s in sesiones_ordenadas 
+                    if str(fecha_lesion_dt) <= s["fecha"] <= hoy_str 
+                    and s.get("tipo") == "Entrenamiento" and s.get("informe_generado")
+                ]
                 
-                crit_2 = True
-                falla_demanda = []
-                for m_key in ["DIS", "HSR", "SPR", "ACC", "DCC"]:
-                    val_90 = gps_90.get(f"{m_key}_pm", 0)
-                    if gps_jug_micro[m_key] < val_90:
-                        crit_2 = False
-                        falla_demanda.append(m_key)
+                semanas_rehab_ids = sorted(list(set([obtener_numero_semana(s["fecha"]) for s in sesiones_post_lesion])))
+                if sem_actual_id not in semanas_rehab_ids:
+                    semanas_rehab_ids.append(sem_actual_id)
+                
+                crit_1_logrado, crit_1_origen, crit_1_detalle = False, "", ""
+                crit_2_logrado, crit_2_origen, crit_2_fallos = False, "", ["DIS", "HSR", "SPR", "ACC", "DCC"]
+                crit_3_logrado, crit_3_origen = False, ""
+                vmax_max_rehab = 0.0
+                
+                min_jug_actual, avg_min_eq_actual = 0.0, 1.0
+                falla_demanda_actual = ["DIS", "HSR", "SPR", "ACC", "DCC"]
+                
+                for sem_id in semanas_rehab_ids:
+                    ses_sem_eval = [s for s in sesiones_post_lesion if obtener_numero_semana(s["fecha"]) == sem_id]
+                    es_sem_actual = (sem_id == sem_actual_id)
+                    
+                    df_eq_sem = []
+                    for s in ses_sem_eval:
+                        disp = {limpiar_nombre(k): v for k, v in s.get("disponibilidad", {}).items()}
+                        for d in s.get("datos_informe", []):
+                            j_n = limpiar_nombre(d["JUGADOR"])
+                            if disp.get(j_n) in ["Disponible", "Titular", "Suplente", "Recuperación Post-Partido"]:
+                                df_eq_sem.append({"FECHA": s["fecha"], "MIN": safe_float(d.get("MIN", 0))})
+                    avg_eq_sem = pd.DataFrame(df_eq_sem).groupby("FECHA")["MIN"].mean().sum() if df_eq_sem else 0.0
+                    
+                    min_j_sem = 0.0
+                    gps_j_sem = {"DIS": 0.0, "HSR": 0.0, "SPR": 0.0, "ACC": 0.0, "DCC": 0.0}
+                    vmax_j_sem = 0.0
+                    
+                    for s in ses_sem_eval:
+                        d_jug = next((d for d in s.get("datos_informe", []) if limpiar_nombre(d["JUGADOR"]) == limpiar_nombre(jug_rtp)), None)
+                        if d_jug:
+                            min_j_sem += safe_float(d_jug.get("MIN", 0))
+                            gps_j_sem["DIS"] += safe_float(d_jug.get("DIS", 0))
+                            gps_j_sem["HSR"] += safe_float(d_jug.get("DIS AI", d_jug.get("HID >21", 0)))
+                            gps_j_sem["SPR"] += safe_float(d_jug.get("Nº SPR", d_jug.get("SPR >24", 0)))
+                            gps_j_sem["ACC"] += safe_float(d_jug.get("ACC", d_jug.get("ACC >3", 0)))
+                            gps_j_sem["DCC"] += safe_float(d_jug.get("DCC", d_jug.get("DCC >3", 0)))
+                            v = safe_float(d_jug.get("VMAX", d_jug.get("V_Max", 0)))
+                            if v > vmax_j_sem: vmax_j_sem = v
+                            if v > vmax_max_rehab: vmax_max_rehab = v
+                            
+                    if es_sem_actual or not ses_sem_eval:
+                        min_jug_actual = min_j_sem
+                        avg_min_eq_actual = avg_eq_sem if avg_eq_sem > 0 else 1.0
                         
-                crit_3 = vmax_micro >= (vmax_hist * 0.90) if vmax_hist > 0 else False
+                    # Evaluar Criterio 1 en esta semana
+                    if avg_eq_sem > 0 and min_j_sem >= (avg_eq_sem * 0.85):
+                        crit_1_logrado = True
+                        crit_1_origen = "Esta semana" if es_sem_actual else "Consolidado en semana previa"
+                        crit_1_detalle = f"{min_j_sem:.0f}' completados vs {avg_eq_sem*0.85:.0f}' req. ({crit_1_origen})"
+                        
+                    # Evaluar Criterio 2 en esta semana
+                    fallos_sem = [m_k for m_k in ["DIS", "HSR", "SPR", "ACC", "DCC"] if gps_j_sem[m_k] < gps_90.get(f"{m_k}_pm", 0)]
+                    if es_sem_actual:
+                        falla_demanda_actual = fallos_sem
+                    if min_j_sem > 0 and len(fallos_sem) == 0:
+                        crit_2_logrado = True
+                        crit_2_origen = "Esta semana" if es_sem_actual else "Consolidado en semana previa"
+                        crit_2_fallos = []
+                        
+                    # Evaluar Criterio 3 en esta semana
+                    if vmax_hist > 0 and vmax_j_sem >= (vmax_hist * 0.90):
+                        crit_3_logrado = True
+                        crit_3_origen = "Esta semana" if es_sem_actual else "Consolidado en semana previa"
+
+                crit_1 = crit_1_logrado
+                if not crit_1:
+                    crit_1_detalle = f"Semana actual: {min_jug_actual:.0f}' vs {avg_min_eq_actual*0.85:.0f}' requeridos (Media Equipo {avg_min_eq_actual:.0f}')"
+                    
+                crit_2 = crit_2_logrado
+                falla_demanda = [] if crit_2 else falla_demanda_actual
                 
+                crit_3 = crit_3_logrado
+
+                # --- Criterio 4: Dolor y Fatiga en los últimos 7 días con registro activo del jugador ---
+                dolores, fatigas = [], []
+                fechas_con_datos_jug = [
+                    s["fecha"] for s in sesiones_post_lesion 
+                    if any(limpiar_nombre(d["JUGADOR"]) == limpiar_nombre(jug_rtp) and (safe_float(d.get("W_Dolor", 0)) > 0 or safe_float(d.get("W_Fatiga", 0)) > 0 or safe_float(d.get("MIN", 0)) > 0) for d in s.get("datos_informe", []))
+                ]
+                fecha_ref_well = max(fechas_con_datos_jug) if fechas_con_datos_jug else hoy_str
+                fecha_ini_well = str(datetime.strptime(fecha_ref_well, "%Y-%m-%d").date() - timedelta(days=6))
+                
+                for s in sesiones_post_lesion:
+                    if fecha_ini_well <= s["fecha"] <= fecha_ref_well:
+                        d_jug = next((d for d in s.get("datos_informe", []) if limpiar_nombre(d["JUGADOR"]) == limpiar_nombre(jug_rtp)), None)
+                        if d_jug:
+                            dol = safe_float(d_jug.get("W_Dolor", 0))
+                            fat = safe_float(d_jug.get("W_Fatiga", 0))
+                            if dol > 0: dolores.append(dol)
+                            if fat > 0: fatigas.append(fat)
+
                 avg_dolor = np.mean(dolores) if dolores else 0
                 avg_fatiga = np.mean(fatigas) if fatigas else 0
                 crit_4 = (avg_dolor < 4 and avg_fatiga < 4) if (dolores and fatigas) else False
+
+                # --- EWMA del equipo y Tolerancia Crónica (Criterio 5) ---
+                ewma_hoy_eq = calcular_ewma_historico(st.session_state.sesiones, hoy_str)
+                ewma_c_vals = [v["EWMA CRÓNICA"] for k, v in ewma_hoy_eq.items() if k != limpiar_nombre(jug_rtp) and v["EWMA CRÓNICA"] > 0]
+                avg_ewma_c_eq = np.mean(ewma_c_vals) if ewma_c_vals else 1
+                ewma_jug = ewma_hoy_eq.get(jug_rtp, {"EWMA AGUDA": 0, "EWMA CRÓNICA": 0})
                 
-                # Fallback de crónica pre-lesión al promedio del equipo si no tenía historial previo
                 if cronica_pre_lesion == 0:
                     cronica_pre_lesion = avg_ewma_c_eq if avg_ewma_c_eq > 1 else 0
                 crit_5 = (cronica_pre_lesion > 0) and (ewma_jug["EWMA CRÓNICA"] >= cronica_pre_lesion * 0.9)
@@ -683,19 +728,20 @@ else:
 
                 c_auto1, c_auto2 = st.columns(2)
                 with c_auto1:
-                    render_criterio(crit_1, "Microciclo Completo (>85% Minutos)", f"Completados {min_jug:.0f}' vs {avg_min_eq*0.85:.0f}' requeridos (Media Equipo {avg_min_eq:.0f}')")
-                    render_criterio(crit_3, "Velocidad Máxima Recuperada (>90%)", f"Alcanzados {vmax_micro:.1f} km/h vs {vmax_hist*0.90:.1f} km/h requeridos (VMax Histórica: {vmax_hist:.1f})")
+                    render_criterio(crit_1, "Microciclo Completo (>85% Minutos)", crit_1_detalle)
+                    det_vmax = f"Alcanzados {vmax_max_rehab:.1f} km/h vs {vmax_hist*0.90:.1f} km/h req. ({crit_3_origen if crit_3 else f'VMax Hist: {vmax_hist:.1f}'})"
+                    render_criterio(crit_3, "Velocidad Máxima Recuperada (>90%)", det_vmax)
                     render_criterio(crit_5, "Tolerancia Crónica Individual (>90% Pre-Lesión)", f"Crónica Actual: {ewma_jug['EWMA CRÓNICA']:.0f} UA | Crónica Pre-lesión: {cronica_pre_lesion:.0f} UA")
                 
                 with c_auto2:
                     if usa_fallback:
-                        fallos_txt = f"Falla en: {', '.join(falla_demanda)}" if not crit_2 else "Métricas superan estándar."
-                        render_criterio(crit_2, "Demandas de Partido Alcanzadas", f"Volumen semanal >= 90' (Heredadas de su posición: {pos_esp_rtp}). {fallos_txt}")
+                        fallos_txt = f"Pendiente en semana actual: {', '.join(falla_demanda)}" if not crit_2 else f"Métricas superan estándar ({crit_2_origen})."
+                        render_criterio(crit_2, "Demandas de Partido Alcanzadas", f"Volumen semanal >= 90' (Ref. Posición: {pos_esp_rtp}). {fallos_txt}")
                     else:
-                        fallos_txt = f"Falla en: {', '.join(falla_demanda)}" if not crit_2 else "Todas las métricas superan su media."
+                        fallos_txt = f"Pendiente en semana actual: {', '.join(falla_demanda)}" if not crit_2 else f"Todas las métricas superadas ({crit_2_origen})."
                         render_criterio(crit_2, "Demandas de Partido Alcanzadas", f"Volumen semanal >= a 90' de partido propio. {fallos_txt}")
                         
-                    render_criterio(crit_4, "Dolor y Fatiga bajo control (< 4/7)", f"Media Semanal -> Dolor: {avg_dolor:.1f} | Fatiga: {avg_fatiga:.1f}")
+                    render_criterio(crit_4, "Dolor y Fatiga bajo control (< 4/7)", f"Últimos 7d activos -> Dolor: {avg_dolor:.1f} | Fatiga: {avg_fatiga:.1f}")
                     render_criterio(crit_6, f"Exposiciones Vmax (>90%) en Fase 3/4", f"Conseguidas {exposiciones_vmax} exposiciones de {req_exposiciones} requeridas.")
 
                 st.markdown("---")
