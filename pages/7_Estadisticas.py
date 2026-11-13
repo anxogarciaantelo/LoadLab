@@ -16,7 +16,16 @@ st.title(":material/query_stats: Estadísticas de Rendimiento")
 
 aplicar_color_sidebar()
 
-partidos_totales = [s for s in st.session_state.sesiones if "Partido" in s.get("tipo", "")]
+from datetime import date
+hoy_stats_str = str(date.today())
+partidos_totales = [
+    s for s in st.session_state.sesiones 
+    if "Partido" in s.get("tipo", "") and (
+        bool(s.get("estadisticas_partido")) or 
+        s.get("informe_generado", False) or 
+        (s.get("fecha", "9999-12-31") < hoy_stats_str and (s.get("goles_favor") is not None or s.get("goles_contra") is not None))
+    )
+]
 
 # ==========================================
 # 1. FUNCIONES AUXILIARES
@@ -203,13 +212,17 @@ with tab_jugadores:
         datos_jugadores[p["JUGADOR"]] = {
             "POS": p["POS"], "Convocatorias": 0, "Partidos Jugados": 0,
             "Minutos": 0.0, "Goles": 0, "Asistencias": 0, 
-            "Amarillas": 0, "Rojas": 0, "Goles Encajados": 0
+            "Amarillas": 0, "Rojas": 0, "Goles Encajados": 0,
+            "GF_Campo": 0, "GC_Campo": 0
         }
     
     for p in partidos_jug:
         stats = p.get("estadisticas_partido", {})
         disp = p.get("disponibilidad", {})
         invitados = p.get("estadisticas_invitados", [])
+        eventos_g = stats.get("_eventos_goles", {})
+        lista_gf_p = eventos_g.get("gf", [])
+        lista_gc_p = eventos_g.get("gc", [])
         
         disp_clean = {k.strip().lower(): v for k, v in disp.items()}
         for jug in datos_jugadores.keys():
@@ -218,14 +231,29 @@ with tab_jugadores:
                 datos_jugadores[jug]["Convocatorias"] += 1
                 
         for jug, vals in stats.items():
+            if jug == "_eventos_goles" or not isinstance(vals, dict):
+                continue
             if jug in datos_jugadores:
-                mins = vals.get("Minutos", 0)
+                mins = safe_float(vals.get("Minutos", 0))
+                rol_j = disp_clean.get(jug.strip().lower(), "Titular" if mins >= 45 else "Suplente")
                 datos_jugadores[jug]["Minutos"] += mins
-                datos_jugadores[jug]["Goles"] += vals.get("Goles", 0)
-                datos_jugadores[jug]["Goles Encajados"] += vals.get("Goles Encajados", 0)
-                datos_jugadores[jug]["Asistencias"] += vals.get("Asistencias", 0)
-                datos_jugadores[jug]["Amarillas"] += vals.get("Amarillas", 0)
-                datos_jugadores[jug]["Rojas"] += vals.get("Rojas", 0)
+                datos_jugadores[jug]["Goles"] += int(safe_float(vals.get("Goles", 0)))
+                datos_jugadores[jug]["Goles Encajados"] += int(safe_float(vals.get("Goles Encajados", 0)))
+                datos_jugadores[jug]["Asistencias"] += int(safe_float(vals.get("Asistencias", 0)))
+                datos_jugadores[jug]["Amarillas"] += int(safe_float(vals.get("Amarillas", 0)))
+                datos_jugadores[jug]["Rojas"] += int(safe_float(vals.get("Rojas", 0)))
+                
+                if "GF_Campo" in vals or "GC_Campo" in vals:
+                    gf_c = int(safe_float(vals.get("GF_Campo", 0)))
+                    gc_c = int(safe_float(vals.get("GC_Campo", 0)))
+                elif lista_gf_p or lista_gc_p:
+                    gf_c = sum(1 for mg in lista_gf_p if mins > 0 and (mg <= mins if rol_j == "Titular" else mg > (90 - mins)))
+                    gc_c = sum(1 for mg in lista_gc_p if mins > 0 and (mg <= mins if rol_j == "Titular" else mg > (90 - mins)))
+                else:
+                    gf_c, gc_c = 0, 0
+                    
+                datos_jugadores[jug]["GF_Campo"] += gf_c
+                datos_jugadores[jug]["GC_Campo"] += gc_c
                 if mins > 0: datos_jugadores[jug]["Partidos Jugados"] += 1
                     
         for inv in invitados:
@@ -233,18 +261,21 @@ with tab_jugadores:
             if n_inv not in datos_jugadores:
                 datos_jugadores[n_inv] = {
                     "POS": inv.get("POS", "CANTERA"), "Convocatorias": 1, "Partidos Jugados": 0,
-                    "Minutos": 0.0, "Goles": 0, "Asistencias": 0, "Amarillas": 0, "Rojas": 0, "Goles Encajados": 0
+                    "Minutos": 0.0, "Goles": 0, "Asistencias": 0, "Amarillas": 0, "Rojas": 0, "Goles Encajados": 0,
+                    "GF_Campo": 0, "GC_Campo": 0
                 }
             else:
                 datos_jugadores[n_inv]["Convocatorias"] += 1
                 
-            mins = inv.get("Minutos", 0)
+            mins = safe_float(inv.get("Minutos", 0))
             datos_jugadores[n_inv]["Minutos"] += mins
-            datos_jugadores[n_inv]["Goles"] += inv.get("Goles", 0)
-            datos_jugadores[n_inv]["Goles Encajados"] += inv.get("Goles Encajados", 0)
-            datos_jugadores[n_inv]["Asistencias"] += inv.get("Asistencias", 0)
-            datos_jugadores[n_inv]["Amarillas"] += inv.get("Amarillas", 0)
-            datos_jugadores[n_inv]["Rojas"] += inv.get("Rojas", 0)
+            datos_jugadores[n_inv]["Goles"] += int(safe_float(inv.get("Goles", 0)))
+            datos_jugadores[n_inv]["Goles Encajados"] += int(safe_float(inv.get("Goles Encajados", 0)))
+            datos_jugadores[n_inv]["Asistencias"] += int(safe_float(inv.get("Asistencias", 0)))
+            datos_jugadores[n_inv]["Amarillas"] += int(safe_float(inv.get("Amarillas", 0)))
+            datos_jugadores[n_inv]["Rojas"] += int(safe_float(inv.get("Rojas", 0)))
+            datos_jugadores[n_inv]["GF_Campo"] += int(safe_float(inv.get("GF_Campo", 0)))
+            datos_jugadores[n_inv]["GC_Campo"] += int(safe_float(inv.get("GC_Campo", 0)))
             if mins > 0: datos_jugadores[n_inv]["Partidos Jugados"] += 1
 
     if filtro_competicion_jug in ["Liga", "Global"]:
@@ -266,11 +297,11 @@ with tab_jugadores:
                     for s in sancionados: st.error(f":material/block: **SANCIONADO:** {s}")
                 else:
                     st.success(":material/check_circle: Ningún jugador cumple ciclo.")
-                with c_al2:
-                    if apercibidos:
-                        for a in apercibidos: st.warning(f":material/warning: **APERCIBIDO:** {a}")
-                    else:
-                        st.info(":material/check_circle: Ningún jugador apercibido.")
+            with c_al2:
+                if apercibidos:
+                    for a in apercibidos: st.warning(f":material/warning: **APERCIBIDO:** {a}")
+                else:
+                    st.info(":material/check_circle: Ningún jugador apercibido.")
             st.markdown("---")
 
     lista_stats = []
@@ -281,15 +312,24 @@ with tab_jugadores:
         mins = d["Minutos"]
         goles = d["Goles"]
         asistencias = d["Asistencias"]
+        gf_c = d["GF_Campo"]
+        gc_c = d["GC_Campo"]
+        bal_c = gf_c - gc_c
         
         min_por_gol = (mins / goles) if goles > 0 else 0
         min_por_asist = (mins / asistencias) if asistencias > 0 else 0
         porc_mins = (mins / minutos_posibles * 100) if minutos_posibles > 0 else 0
         
+        gf_90 = (gf_c / mins * 90.0) if mins > 0 else 0.0
+        gc_90 = (gc_c / mins * 90.0) if mins > 0 else 0.0
+        bal_90 = (bal_c / mins * 90.0) if mins > 0 else 0.0
+        
         lista_stats.append({
             "JUGADOR": jug, "POS": d["POS"], "Conv.": d["Convocatorias"], "PJ": d["Partidos Jugados"],
             "MIN": int(mins), "% MIN": porc_mins, "G": goles, "A": asistencias,
             "Min/Gol": min_por_gol, "Min/Asist": min_por_asist, "GE": d["Goles Encajados"],
+            "GF Campo": gf_c, "GC Campo": gc_c, "+/- Campo": bal_c,
+            "GF/90'": gf_90, "GC/90'": gc_90, "+/- 90'": bal_90,
             "TA": d["Amarillas"], "TR": d["Rojas"]
         })
         
@@ -391,21 +431,49 @@ with tab_jugadores:
         else:
             df_mostrar = df_jugadores
             
-        st.markdown("##### Tabla Detallada de Rendimiento e Individuales")
+        st.markdown("##### :material/shield_with_heart: Impacto Colectivo con el Jugador en el Campo (Goles Anotados vs Encajados)")
+        st.caption("Analiza con qué futbolistas en el césped el equipo anota más y encaja menos, tanto en volumen total como ponderado por cada 90 minutos jugados.")
+        
+        c_imp_f1, c_imp_f2 = st.columns([1, 2])
+        min_umbral_imp = c_imp_f1.slider("Mínimo de minutos jugados para el ranking /90':", min_value=0, max_value=max(int(df_jugadores["MIN"].max()), 90), value=min(90, int(df_jugadores["MIN"].max())), step=15, key="sl_min_imp")
+        
+        df_imp_valid = df_mostrar[df_mostrar["MIN"] >= max(min_umbral_imp, 1)].copy()
+        if not df_imp_valid.empty:
+            ci_1, ci_2, ci_3, ci_4 = st.columns(4)
+            with ci_1:
+                df_top_gf90 = df_imp_valid.sort_values(by=["GF/90'", "GF Campo"], ascending=[False, False]).head(3)
+                render_tarjeta_top3(":material/trending_up: Más Anotan / 90'", df_top_gf90, "GF/90'", " GF/90'")
+            with ci_2:
+                df_top_gc90 = df_imp_valid.sort_values(by=["GC/90'", "MIN"], ascending=[True, False]).head(3)
+                render_tarjeta_top3(":material/security: Menos Encajan / 90'", df_top_gc90, "GC/90'", " GC/90'")
+            with ci_3:
+                df_top_bal90 = df_imp_valid.sort_values(by=["+/- 90'", "+/- Campo"], ascending=[False, False]).head(3)
+                render_tarjeta_top3(":material/balance: Mejor Balance / 90'", df_top_bal90, "+/- 90'", " /90'")
+            with ci_4:
+                df_top_bal_tot = df_imp_valid.sort_values(by=["+/- Campo", "GF Campo"], ascending=[False, False]).head(3)
+                render_tarjeta_top3(":material/emoji_events: Mejor Balance Global", df_top_bal_tot, "+/- Campo", " goles")
+
+        st.markdown("---")
+        st.markdown("##### Tabla Detallada de Rendimiento e Impacto en Campo (+/-)")
         estilo_jugadores = (df_mostrar.style
                             .hide(axis="index")
                             .format({
                                 "% MIN": "{:.1f}%", 
                                 "Min/Gol": lambda x: f"{x:.1f}'" if x > 0 else "-", 
-                                "Min/Asist": lambda x: f"{x:.1f}'" if x > 0 else "-"
+                                "Min/Asist": lambda x: f"{x:.1f}'" if x > 0 else "-",
+                                "+/- Campo": lambda x: f"+{int(x)}" if x > 0 else str(int(x)),
+                                "GF/90'": "{:.2f}",
+                                "GC/90'": "{:.2f}",
+                                "+/- 90'": lambda x: f"+{x:.2f}" if x > 0 else f"{x:.2f}"
                             })
                             .background_gradient(subset=["MIN"], cmap="Blues")
-                            .background_gradient(subset=["G"], cmap="Greens")
+                            .background_gradient(subset=["G", "GF/90'"], cmap="Greens")
+                            .background_gradient(subset=["GC/90'"], cmap="Reds")
                             .background_gradient(subset=["TA"], cmap="YlOrBr")
                            )
                            
         mostrar_tabla_moderna(estilo_jugadores)
-        st.caption("Acrónimos: Conv. (Convocatorias) | PJ (Partidos Jugados) | MIN (Minutos) | G (Goles) | A (Asistencias) | Min/Gol (Minutos necesarios por gol) | GE (Goles Encajados porteros).")
+        st.caption("Acrónimos: Conv. (Convocatorias) | PJ (Partidos Jugados) | MIN (Minutos) | G (Goles) | A (Asistencias) | GE (Goles Encajados POR) | GF/GC Campo (Goles del equipo con el jugador en el césped) | GF/90' y GC/90' (Goles a favor y en contra por cada 90 min en el campo).")
 # ==========================================
 # 🆚 PESTAÑA 3: ESTADÍSTICAS DE RIVAL
 # ==========================================
