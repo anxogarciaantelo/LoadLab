@@ -694,9 +694,9 @@ if st.session_state.get("equipo_seleccionado", False):
             if fecha_base_conteo:
                 dias_sin_sprint = (hoy_dt - fecha_base_conteo).days
                 if dias_sin_sprint >= 10:
-                    alertas_carga.append({"jug": jug, "txt": f"Sin >90% VMax: {dias_sin_sprint}d", "lvl": "rojo"})
+                    alertas_carga.append({"jug": jug, "txt": f"Sin >85% VMax: {dias_sin_sprint}d", "lvl": "rojo"})
                 elif dias_sin_sprint >= 8:
-                    alertas_carga.append({"jug": jug, "txt": f"Sin >90% VMax: {dias_sin_sprint}d", "lvl": "amarillo"})
+                    alertas_carga.append({"jug": jug, "txt": f"Sin >85% VMax: {dias_sin_sprint}d", "lvl": "amarillo"})
             else:
                 alertas_carga.append({"jug": jug, "txt": f"Falta estímulo VMax", "lvl": "amarillo"})
 
