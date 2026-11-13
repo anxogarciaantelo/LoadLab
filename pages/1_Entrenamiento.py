@@ -638,19 +638,20 @@ with tab_micro:
                 
                 df_jug_sum = pd.merge(df_jug_sum_int, df_jug_sum_ext, on='JUGADOR', how='left').fillna(0)
                 
-                # --- MÚLTIPLOS DE PARTIDO Y RATIO DCC/ACC ---
+                # --- MÚLTIPLOS DE PARTIDO Y RATIO DCC/ACC (Priorizando partidos >= 45') ---
                 df_historico_partidos = st.session_state.df_master_informes[(st.session_state.df_master_informes['TIPO_SESION'].str.contains("Partido", na=False)) & (st.session_state.df_master_informes['DIS'] > 0)].copy()
                 medias_indiv_partido = {}
                 if not df_historico_partidos.empty:
                     df_historico_partidos['MIN_REAL'] = np.where(df_historico_partidos.get('MIN_GPS', df_historico_partidos['MIN']) > 0, df_historico_partidos.get('MIN_GPS', df_historico_partidos['MIN']), df_historico_partidos['MIN'])
-                    df_sum_indiv = df_historico_partidos.groupby('JUGADOR')[['DIS', 'DIS AI', 'Nº SPR', 'ACC', 'DCC', 'MIN_REAL']].sum()
-                    for j_nom, j_row in df_sum_indiv.iterrows():
-                        m_jug = j_row['MIN_REAL']
+                    for j_nom, df_j_part in df_historico_partidos.groupby('JUGADOR'):
+                        df_j_45 = df_j_part[df_j_part['MIN_REAL'] >= 45]
+                        df_j_uso = df_j_45 if not df_j_45.empty else df_j_part
+                        m_jug = df_j_uso['MIN_REAL'].sum()
                         if m_jug > 0:
                             medias_indiv_partido[j_nom] = {
-                                'DIS': (j_row['DIS'] / m_jug) * 90,
-                                'HSR': (j_row['DIS AI'] / m_jug) * 90,
-                                'MEC': ((j_row['ACC'] + j_row['DCC']) / m_jug) * 90
+                                'DIS': (df_j_uso['DIS'].sum() / m_jug) * 90,
+                                'HSR': (df_j_uso['DIS AI'].sum() / m_jug) * 90,
+                                'MEC': ((df_j_uso['ACC'].sum() + df_j_uso['DCC'].sum()) / m_jug) * 90
                             }
 
                 def calc_xmatch(row, metrica_val, metrica_key):
@@ -1326,8 +1327,18 @@ with tab_ses:
                             acc_100_eq = (df_historico_partidos['ACC'].sum() / min_totales_eq) * 90 if min_totales_eq > 0 else 40.0
                             dcc_100_eq = (df_historico_partidos['DCC'].sum() / min_totales_eq) * 90 if min_totales_eq > 0 else 40.0
                             
-                            df_sum_indiv = df_historico_partidos.groupby('JUGADOR')[['DIS', 'DIS AI', 'ACC', 'DCC', 'MIN_REAL']].sum()
-                            medias_indiv_partido = {j_nom: {'DIS': (j_row['DIS']/j_row['MIN_REAL'])*90, 'DIS AI': (j_row['DIS AI']/j_row['MIN_REAL'])*90, 'ACC': (j_row['ACC']/j_row['MIN_REAL'])*90, 'DCC': (j_row['DCC']/j_row['MIN_REAL'])*90} for j_nom, j_row in df_sum_indiv.iterrows() if j_row['MIN_REAL'] > 0}
+                            medias_indiv_partido = {}
+                            for j_nom, df_j_part in df_historico_partidos.groupby('JUGADOR'):
+                                df_j_45 = df_j_part[df_j_part['MIN_REAL'] >= 45]
+                                df_j_uso = df_j_45 if not df_j_45.empty else df_j_part
+                                m_jug = df_j_uso['MIN_REAL'].sum()
+                                if m_jug > 0:
+                                    medias_indiv_partido[j_nom] = {
+                                        'DIS': (df_j_uso['DIS'].sum() / m_jug) * 90,
+                                        'DIS AI': (df_j_uso['DIS AI'].sum() / m_jug) * 90,
+                                        'ACC': (df_j_uso['ACC'].sum() / m_jug) * 90,
+                                        'DCC': (df_j_uso['DCC'].sum() / m_jug) * 90
+                                    }
                         else:
                             dis_100_eq, hsr_100_eq, acc_100_eq, dcc_100_eq = 10.0, 600.0, 40.0, 40.0
                             medias_indiv_partido = {}
@@ -2472,14 +2483,22 @@ with tab_ses:
             # ---------------------------------------------------------
             elif active_view == "stats" and es_partido:
                 st.markdown(f"#### :material/bolt: ESTADÍSTICAS DE PARTIDO | vs {sesion.get('rival', 'Rival')} ({sesion['fecha']})")
-                col_g1, col_g2 = st.columns(2)
-                condicion_actual = sesion.get("condicion", "Casa")
-                nueva_condicion = col_g1.selectbox("Condición:", ["Casa", "Fuera"], index=["Casa", "Fuera"].index(condicion_actual), key=f"cond_{idx_real}")
-                goles_f_actual = sesion.get("goles_favor", 0)
-                nuevo_gf = col_g2.number_input("Goles Anotados (Favor del Equipo):", min_value=0, value=int(goles_f_actual or 0), key=f"gf_{idx_real}")
                 
-                sesion["condicion"] = nueva_condicion
-                sesion["goles_favor"] = nuevo_gf
+                eventos_guardados = sesion.get("estadisticas_partido", {}).get("_eventos_goles", {})
+                gf_mins_prev = ", ".join(str(m) for m in eventos_guardados.get("gf", []))
+                gc_mins_prev = ", ".join(str(m) for m in eventos_guardados.get("gc", []))
+                
+                col_g1, col_g2, col_g3 = st.columns(3)
+                condicion_actual = sesion.get("condicion", "Casa")
+                nueva_condicion = col_g1.selectbox("Condición:", ["Casa", "Fuera"], index=["Casa", "Fuera"].index(condicion_actual if condicion_actual in ["Casa", "Fuera"] else "Casa"), key=f"cond_{idx_real}")
+                goles_f_actual = int(safe_float(sesion.get("goles_favor", 0)))
+                goles_c_actual = int(safe_float(sesion.get("goles_contra", 0)))
+                nuevo_gf = col_g2.number_input("Goles a Favor (Total Equipo):", min_value=0, value=goles_f_actual, key=f"gf_{idx_real}")
+                nuevo_gc = col_g3.number_input("Goles en Contra (Total Equipo):", min_value=0, value=goles_c_actual, key=f"gc_{idx_real}")
+                
+                col_m1, col_m2 = st.columns(2)
+                str_min_gf = col_m1.text_input("⏱️ Minutos Goles a Favor (Base 90', sep. por comas, ej: 18, 45, 82):", value=gf_mins_prev, key=f"mgf_{idx_real}", help="Si es en descuento de 1ª o 2ª parte, anota 45 o 90. Calcula automáticamente qué jugadores estaban en el césped.")
+                str_min_gc = col_m2.text_input("⏱️ Minutos Goles en Contra (Base 90', sep. por comas, ej: 34, 90):", value=gc_mins_prev, key=f"mgc_{idx_real}", help="Calcula automáticamente qué jugadores (y qué portero) estaban en el campo al encajar.")
 
                 st.markdown("##### :material/list_alt: Rendimiento de Jugadores Convocados")
                 disp_s = sesion.get("disponibilidad", {})
@@ -2488,25 +2507,37 @@ with tab_ses:
                 for p in st.session_state.plantilla:
                     rol = disp_clean.get(limpiar_nombre(p["JUGADOR"]), "No convocado")
                     if rol in ["Titular", "Suplente"]:
+                        st_prev = sesion.get("estadisticas_partido", {}).get(p["JUGADOR"], {})
                         jugadores_convocados.append({
                             "JUGADOR": p["JUGADOR"], "POS": p["POS"], "Rol": rol,
-                            **sesion.get("estadisticas_partido", {}).get(p["JUGADOR"], {"Minutos": 90 if rol == "Titular" else 0, "Goles": 0, "Goles Encajados": 0, "Asistencias": 0, "Amarillas": 0, "Rojas": 0})
+                            "Minutos": st_prev.get("Minutos", 90 if rol == "Titular" else 0),
+                            "Goles": st_prev.get("Goles", 0),
+                            "Asistencias": st_prev.get("Asistencias", 0),
+                            "Amarillas": st_prev.get("Amarillas", 0),
+                            "Rojas": st_prev.get("Rojas", 0),
+                            "GF en Campo": st_prev.get("GF_Campo", 0),
+                            "GC en Campo": st_prev.get("GC_Campo", 0)
                         })
                 
                 invitados_guardados = sesion.get("estadisticas_invitados", [])
                 for inv in invitados_guardados:
-                    jugadores_convocados.append({"JUGADOR": inv["JUGADOR"], "POS": inv["POS"], "Rol": inv["Rol"], "Minutos": inv["Minutos"], "Goles": inv["Goles"], "Goles Encajados": inv["Goles Encajados"], "Asistencias": inv["Asistencias"], "Amarillas": inv["Amarillas"], "Rojas": inv["Rojas"]})
+                    jugadores_convocados.append({
+                        "JUGADOR": inv["JUGADOR"], "POS": inv["POS"], "Rol": inv["Rol"],
+                        "Minutos": inv.get("Minutos", 0), "Goles": inv.get("Goles", 0),
+                        "Asistencias": inv.get("Asistencias", 0), "Amarillas": inv.get("Amarillas", 0),
+                        "Rojas": inv.get("Rojas", 0), "GF en Campo": inv.get("GF_Campo", 0), "GC en Campo": inv.get("GC_Campo", 0)
+                    })
 
                 with st.expander(":material/add_circle: Añadir jugador del filial / juvenil / invitado"):
                     c_inv1, c_inv2, c_inv3, c_inv4 = st.columns([2, 1, 1, 1])
                     nombre_invitado = c_inv1.text_input("Nombre del Jugador Invitado:", key=f"nombre_inv_{idx_real}")
                     pos_invitado = c_inv2.selectbox("Posición:", ["POR", "DEF", "MED", "ATA"], key=f"pos_inv_{idx_real}")
                     rol_invitado = c_inv3.selectbox("Rol:", ["Suplente", "Titular"], key=f"rol_inv_{idx_real}")
-                    min_invitado = c_inv4.number_input("Minutos:", min_value=0, max_value=120, value=45, key=f"min_inv_{idx_real}")
+                    min_invitado = c_inv4.number_input("Minutos:", min_value=0, max_value=90, value=45, key=f"min_inv_{idx_real}")
                     if st.button(":material/add_circle: Incluir en la tabla del partido", key=f"btn_add_inv_{idx_real}"):
                         if nombre_invitado.strip():
                             if "estadisticas_invitados" not in sesion: sesion["estadisticas_invitados"] = []
-                            sesion["estadisticas_invitados"].append({"JUGADOR": nombre_invitado.strip() + " (Cantera)", "POS": pos_invitado, "Rol": rol_invitado, "Minutos": min_invitado, "Goles": 0, "Goles Encajados": 0, "Asistencias": 0, "Amarillas": 0, "Rojas": 0})
+                            sesion["estadisticas_invitados"].append({"JUGADOR": nombre_invitado.strip() + " (Cantera)", "POS": pos_invitado, "Rol": rol_invitado, "Minutos": min_invitado, "Goles": 0, "Goles Encajados": 0, "GF_Campo": 0, "GC_Campo": 0, "Asistencias": 0, "Amarillas": 0, "Rojas": 0})
                             guardar_datos(modulo="sesiones")
                             st.success(f":material/check_circle: {nombre_invitado} añadido al partido.")
                             st.rerun()
@@ -2516,33 +2547,78 @@ with tab_ses:
                     st.warning(":material/warning: No hay jugadores convocados. Configura la disponibilidad o añade un jugador invitado arriba.")
                 else:
                     df_stats_base = pd.DataFrame(jugadores_convocados)
-                    cols_orden_stats = ["JUGADOR", "POS", "Rol", "Minutos", "Goles", "Goles Encajados", "Asistencias", "Amarillas", "Rojas"]
+                    cols_orden_stats = ["JUGADOR", "POS", "Rol", "Minutos", "Goles", "Asistencias", "Amarillas", "Rojas", "GF en Campo", "GC en Campo"]
                     for c in cols_orden_stats:
                         if c not in df_stats_base.columns: df_stats_base[c] = 0
                     
                     with st.form(f"form_stats_{idx_real}"):
-                        edited_stats = st.data_editor(df_stats_base[cols_orden_stats], use_container_width=True, hide_index=True, disabled=["JUGADOR", "POS", "Rol"])
+                        edited_stats = st.data_editor(
+                            df_stats_base[cols_orden_stats],
+                            use_container_width=True,
+                            hide_index=True,
+                            disabled=["JUGADOR", "POS", "Rol", "GF en Campo", "GC en Campo"]
+                        )
                         if st.form_submit_button(":material/save: Guardar Estadísticas de Partido", type="primary"):
-                            stats_dict, invitados_actualizados, goles_contra_totales = {}, [], 0
+                            import re
+                            lista_gf = [min(max(int(x), 1), 90) for x in re.findall(r'\d+', str_min_gf)]
+                            lista_gc = [min(max(int(x), 1), 90) for x in re.findall(r'\d+', str_min_gc)]
+                            
+                            gf_final = len(lista_gf) if lista_gf else int(nuevo_gf)
+                            gc_final = len(lista_gc) if lista_gc else int(nuevo_gc)
+                            
+                            def estaba_en_campo(rol_j, min_j, min_gol):
+                                if min_j <= 0: return False
+                                if rol_j == "Titular":
+                                    return min_gol <= min_j
+                                else:
+                                    return min_gol > (90 - min_j)
+
+                            stats_dict = {"_eventos_goles": {"gf": lista_gf, "gc": lista_gc}}
+                            invitados_actualizados = []
                             nombres_plantilla_oficial = [p["JUGADOR"] for p in st.session_state.plantilla]
+                            
                             for _, r in edited_stats.iterrows():
                                 j_nom = r["JUGADOR"]
-                                g_e = int(safe_float(r["Goles Encajados"]))
-                                goles_contra_totales += g_e
-                                d_jug = {"Minutos": safe_float(r["Minutos"]), "Goles": int(safe_float(r["Goles"])), "Goles Encajados": g_e, "Asistencias": int(safe_float(r["Asistencias"])), "Amarillas": int(safe_float(r["Amarillas"])), "Rojas": int(safe_float(r["Rojas"]))}
-                                if j_nom in nombres_plantilla_oficial: stats_dict[j_nom] = d_jug
-                                else: invitados_actualizados.append({"JUGADOR": j_nom, "POS": r["POS"], "Rol": r["Rol"], **d_jug})
+                                rol_j = r["Rol"]
+                                pos_j = r["POS"]
+                                mins_j = min(safe_float(r["Minutos"]), 90.0)
+                                
+                                if lista_gf or lista_gc:
+                                    gf_c = sum(1 for m_g in lista_gf if estaba_en_campo(rol_j, mins_j, m_g))
+                                    gc_c = sum(1 for m_g in lista_gc if estaba_en_campo(rol_j, mins_j, m_g))
+                                else:
+                                    gf_c = gf_final if mins_j >= 45 else 0
+                                    gc_c = gc_final if mins_j >= 45 else 0
+                                    
+                                ge_portero = gc_c if pos_j == "POR" else 0
+                                
+                                d_jug = {
+                                    "Minutos": mins_j,
+                                    "Goles": int(safe_float(r["Goles"])),
+                                    "Goles Encajados": ge_portero,
+                                    "GF_Campo": gf_c,
+                                    "GC_Campo": gc_c,
+                                    "Asistencias": int(safe_float(r["Asistencias"])),
+                                    "Amarillas": int(safe_float(r["Amarillas"])),
+                                    "Rojas": int(safe_float(r["Rojas"]))
+                                }
+                                if j_nom in nombres_plantilla_oficial:
+                                    stats_dict[j_nom] = d_jug
+                                else:
+                                    invitados_actualizados.append({"JUGADOR": j_nom, "POS": pos_j, "Rol": rol_j, **d_jug})
+                                    
+                            sesion["condicion"] = nueva_condicion
+                            sesion["goles_favor"] = gf_final
+                            sesion["goles_contra"] = gc_final
                             sesion["estadisticas_partido"] = stats_dict
                             sesion["estadisticas_invitados"] = invitados_actualizados
-                            sesion["goles_contra"] = goles_contra_totales
                             
-                            # NUEVO: Recalcular imputación al cambiar los minutos del partido
                             if sesion.get("informe_generado") and sesion.get("datos_informe"):
                                 from utils.math_helpers import aplicar_imputacion_gps_global
                                 sesion["datos_informe"] = aplicar_imputacion_gps_global(sesion["datos_informe"], sesion, st.session_state.plantilla)
 
                             guardar_datos(modulo="sesiones")
-                            st.success(f":material/check_circle: ¡Estadísticas guardadas y datos GPS re-imputados con éxito! (Goles en contra totales: {goles_contra_totales})")
+                            st.success(f":material/check_circle: ¡Estadísticas guardadas! Marcador: {gf_final} - {gc_final} y presencia en goles (+/-) calculada automáticamente.")
                             st.rerun()
 with tab_add:
     st.markdown("### :material/add_circle: Planificación de Sesiones")
