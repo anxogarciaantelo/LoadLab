@@ -558,27 +558,41 @@ if st.session_state.get("equipo_seleccionado", False):
     dict_zscore = calcular_zscore_wellness(df_master, hoy_str)
     dict_zscore_efi = calcular_zscores_eficiencia(df_master, hoy_str)
     
-    # 1. Extraer última sesión válida de CADA JUGADOR para evaluar Readiness y Eficiencia
+    # 1. Extraer última sesión con datos ORDENADA CRONOLÓGICAMENTE por fecha
     ultimas_sesiones = {}
-    sesiones_con_datos = [s for s in st.session_state.sesiones if s.get("informe_generado") and s["fecha"] <= hoy_str]
+    sesiones_con_datos = sorted(
+        [s for s in st.session_state.sesiones if s.get("informe_generado") and s["fecha"] <= hoy_str],
+        key=lambda x: x["fecha"]
+    )
     
     # --- NUEVA LÓGICA DE ENFERMERÍA ---
-    # Busca el estado exacto en la última sesión registrada con datos en la aplicación
+    # Lesionados según la última sesión con datos; Readaptación según el último ENTRENAMIENTO
     if sesiones_con_datos:
-        ult_sesion = sorted(sesiones_con_datos, key=lambda x: x["fecha"])[-1]
+        ult_sesion = sesiones_con_datos[-1]
         disp_ult = {limpiar_nombre(k): v for k, v in ult_sesion.get("disponibilidad", {}).items()}
+        
+        entrenamientos_pasados = sorted(
+            [s for s in st.session_state.sesiones if s.get("tipo") == "Entrenamiento" and s["fecha"] <= hoy_str],
+            key=lambda x: x["fecha"]
+        )
+        disp_ult_entreno = {limpiar_nombre(k): v for k, v in entrenamientos_pasados[-1].get("disponibilidad", {}).items()} if entrenamientos_pasados else {}
+
         for p in st.session_state.plantilla:
             jug_nom = p["JUGADOR"]
-            estado = disp_ult.get(limpiar_nombre(jug_nom), "Disponible")
-            if estado == "Lesionado":
+            jug_clean = limpiar_nombre(jug_nom)
+            estado_general = disp_ult.get(jug_clean, "Disponible")
+            estado_entreno = disp_ult_entreno.get(jug_clean, "Disponible")
+            
+            if estado_general == "Lesionado" or estado_entreno == "Lesionado":
                 bajas_medicas.append({"jug": jug_nom, "txt": "Lesionado"})
-            elif estado == "Readaptación":
+            elif estado_entreno == "Readaptación":
                 readaptacion.append({"jug": jug_nom, "txt": "Readaptación (RTP)"})
 
     for s in sesiones_con_datos:
         md_s = "MD" if "Partido" in str(s.get("tipo", "")) else s.get("descripcion", "TD")
         for d in s.get("datos_informe", []):
-            ultimas_sesiones[limpiar_nombre(d["JUGADOR"])] = {"fecha": s["fecha"], "md": md_s, "datos": d}
+            if safe_float(d.get("TQR", 0)) > 0 or safe_float(d.get("WELLNESS", 0)) > 0 or safe_float(d.get("MIN", 0)) > 0:
+                ultimas_sesiones[limpiar_nombre(d["JUGADOR"])] = {"fecha": s["fecha"], "md": md_s, "datos": d}
 
     for jug_limpio, info_ult in ultimas_sesiones.items():
         jug = info_ult["datos"]["JUGADOR"]
