@@ -383,13 +383,17 @@ def reconstruir_dataframes_globales():
         columnas_dinamicas = ['EWMA AGUDA', 'EWMA CRÓNICA', 'RATIO A/C', 'EWMA AGUDA HSR', 'EWMA CRÓNICA HSR', 'RATIO A/C HSR', 'EWMA AGUDA ACC', 'EWMA CRÓNICA ACC', 'RATIO A/C ACC']
         df_master.drop(columns=[col for col in columnas_dinamicas if col in df_master.columns], inplace=True, errors='ignore')
         
+        # Detectar únicamente días pre-sesión (solo Wellness matutino cargado, CARGA total del equipo == 0)
+        df_carga_eq = df_master.groupby('FECHA_DT')['CARGA'].sum() if 'CARGA' in df_master.columns else pd.Series(dtype=float)
+        fechas_pendientes_carga = df_carga_eq[df_carga_eq == 0].index
+
         for col_metrica, sufijo in metricas_ewma.items():
             if col_metrica not in df_master.columns: continue
                 
             df_pivot = df_master.pivot_table(index='FECHA_DT', columns='JUGADOR', values=col_metrica, aggfunc='sum').fillna(0)
             
             if not df_pivot.empty:
-                fechas_pendientes = df_pivot.index[df_pivot.sum(axis=1) == 0]
+                fechas_pendientes = df_pivot.index.intersection(fechas_pendientes_carga)
                 rango_fechas = pd.date_range(start=df_pivot.index.min() - pd.Timedelta(days=7), end=df_pivot.index.max(), freq='D')
                 df_pivot = df_pivot.reindex(rango_fechas, fill_value=0)
                 
