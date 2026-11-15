@@ -1091,9 +1091,9 @@ with tab_ses:
                             if ratio_acc >= 1.5:
                                 alertas_jugadores[jug]['carga'].append(f"🔴 **Spike Tensión (ACC):** A/C {ratio_acc:.2f}"); alertas_jugadores[jug]['total'] += 1
 
-                            # --- CÁLCULO DE EFICIENCIA (AISLADO POR MD) ---
+                            # --- CÁLCULO DE EFICIENCIA (AISLADO POR MD, ASUMIENDO GPS VIRTUAL COMO VÁLIDO) ---
                             sesion_contexto = sesion.get('descripcion', 'TD') if not es_partido else "Partido"
-                            df_hist_jug_md = df_master_hist[(df_master_hist['JUGADOR'] == jug) & (df_master_hist['FECHA'] < sesion["fecha"])].copy()
+                            df_hist_jug_md = st.session_state.df_master_informes[(st.session_state.df_master_informes['JUGADOR'] == jug) & (st.session_state.df_master_informes['FECHA'] < sesion["fecha"])].copy()
                             
                             if not es_partido:
                                 df_hist_jug_md = df_hist_jug_md[(df_hist_jug_md['TIPO_SESION'] == "Entrenamiento") & (df_hist_jug_md['MD'] == sesion_contexto)]
@@ -2227,6 +2227,14 @@ with tab_ses:
                             guardar_datos(modulo="sesiones")
                             st.success(":material/check_circle: Datos de la sesión guardados y calculados correctamente.")
                             st.rerun()
+                            
+                        elif del_manual:
+                            st.session_state.sesiones[idx_real]['datos_informe'] = []
+                            st.session_state.sesiones[idx_real]['informe_generado'] = False
+                            reconstruir_dataframes_globales()
+                            guardar_datos(modulo="sesiones")
+                            st.warning(":material/delete: Los datos de la sesión han sido vaciados correctamente.")
+                            st.rerun()
 
                 with t_exc:
                     st.caption("Asegúrate de haber configurado el nombre de las columnas en la pestaña de Configuración.")
@@ -2696,3 +2704,75 @@ with tab_add:
                 guardar_datos(modulo="sesiones")
                 st.success("¡Evento creado en el calendario!")
                 st.rerun()
+
+        if st.session_state.sesiones:
+            with st.container(border=True):
+                st.markdown("#### :material/edit_calendar: 3. Modificar o Eliminar Sesión Existente")
+                sesiones_ordenadas_ed = sorted(
+                    enumerate(st.session_state.sesiones),
+                    key=lambda x: x[1]["fecha"],
+                    reverse=True
+                )
+                opciones_ed = {
+                    idx_s: f"{s_obj['fecha']} | {s_obj.get('nombre_dinamico', s_obj['tipo'])} ({s_obj.get('rival') if 'Partido' in s_obj['tipo'] else s_obj.get('descripcion', 'TD')})"
+                    for idx_s, s_obj in sesiones_ordenadas_ed
+                }
+                idx_sel_ed = st.selectbox(
+                    "Selecciona el evento a gestionar:",
+                    options=list(opciones_ed.keys()),
+                    format_func=lambda x: opciones_ed[x],
+                    key="sel_edit_sesion_add"
+                )
+                ses_ed = st.session_state.sesiones[idx_sel_ed]
+                
+                fecha_ed_actual = datetime.strptime(ses_ed["fecha"], "%Y-%m-%d").date()
+                nueva_fecha_ed = st.date_input("Fecha del Evento:", value=fecha_ed_actual, key=f"f_ed_{idx_sel_ed}")
+                
+                tipos_lista = ["Entrenamiento", "Partido Oficial", "Partido Amistoso"]
+                idx_t = tipos_lista.index(ses_ed["tipo"]) if ses_ed.get("tipo") in tipos_lista else 0
+                nuevo_tipo_ed = st.selectbox("Tipo de Evento:", tipos_lista, index=idx_t, key=f"t_ed_{idx_sel_ed}")
+                
+                nueva_desc_ed = ""
+                nueva_comp_ed = ""
+                nuevo_rival_ed = ""
+                nueva_cond_ed = "Casa"
+                nueva_ciudad_ed = ses_ed.get("ciudad_manual", "")
+                
+                if nuevo_tipo_ed == "Entrenamiento":
+                    mds_lista = ["MD-6", "MD-5", "MD-4", "MD-3", "MD-2", "MD-1", "MD+1", "MD+2", "TD", "Post-Partido"]
+                    idx_md = mds_lista.index(ses_ed.get("descripcion")) if ses_ed.get("descripcion") in mds_lista else 8
+                    nueva_desc_ed = st.selectbox("Match Day:", mds_lista, index=idx_md, key=f"md_ed_{idx_sel_ed}")
+                else:
+                    if nuevo_tipo_ed == "Partido Oficial":
+                        comps_lista = ["Liga", "Copa"]
+                        idx_c = comps_lista.index(ses_ed.get("competicion")) if ses_ed.get("competicion") in comps_lista else 0
+                        nueva_comp_ed = st.selectbox("Competición:", comps_lista, index=idx_c, key=f"comp_ed_{idx_sel_ed}")
+                    c_er1, c_er2 = st.columns(2)
+                    nuevo_rival_ed = c_er1.text_input("Rival:", value=ses_ed.get("rival", ""), key=f"riv_ed_{idx_sel_ed}")
+                    conds_lista = ["Casa", "Fuera"]
+                    idx_cond = conds_lista.index(ses_ed.get("condicion")) if ses_ed.get("condicion") in conds_lista else 0
+                    nueva_cond_ed = c_er2.radio("Condición:", conds_lista, index=idx_cond, horizontal=True, key=f"cond_ed_{idx_sel_ed}")
+                    if nueva_cond_ed == "Fuera":
+                        nueva_ciudad_ed = st.text_input("Ciudad (Opcional):", value=ses_ed.get("ciudad_manual", ""), key=f"ciu_ed_{idx_sel_ed}")
+                
+                c_btn_ed, c_btn_del = st.columns(2)
+                if c_btn_ed.button(":material/save: Guardar Cambios", use_container_width=True, key=f"btn_save_ed_{idx_sel_ed}"):
+                    st.session_state.sesiones[idx_sel_ed]["fecha"] = str(nueva_fecha_ed)
+                    st.session_state.sesiones[idx_sel_ed]["tipo"] = nuevo_tipo_ed
+                    st.session_state.sesiones[idx_sel_ed]["descripcion"] = nueva_desc_ed
+                    st.session_state.sesiones[idx_sel_ed]["competicion"] = nueva_comp_ed
+                    st.session_state.sesiones[idx_sel_ed]["rival"] = nuevo_rival_ed
+                    st.session_state.sesiones[idx_sel_ed]["condicion"] = nueva_cond_ed
+                    st.session_state.sesiones[idx_sel_ed]["ciudad_manual"] = nueva_ciudad_ed
+                    guardar_datos(modulo="sesiones")
+                    st.success("¡Sesión actualizada correctamente!")
+                    st.rerun()
+                    
+                if c_btn_del.button(":material/delete_forever: Eliminar Sesión", use_container_width=True, key=f"btn_del_ed_{idx_sel_ed}"):
+                    if st.session_state.get("ses_activa_idx") == idx_sel_ed:
+                        st.session_state.ses_activa_idx = None
+                        st.session_state.ses_activa_view = None
+                    del st.session_state.sesiones[idx_sel_ed]
+                    guardar_datos(modulo="sesiones")
+                    st.warning("Sesión eliminada del calendario.")
+                    st.rerun()
