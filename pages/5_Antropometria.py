@@ -340,8 +340,9 @@ with tab_antro_jug:
                 altura_m = altura_cm / 100.0
                 
                 ffmi_actual = masa_magra_actual / (altura_m ** 2) if altura_m > 0 else 21.0
-                ffmi_min = max(20.0, ffmi_actual - 0.3)
-                ffmi_max = min(23.0, ffmi_actual + 0.3)
+                ffmi_base = min(max(ffmi_actual, 20.0), 23.0)
+                ffmi_min = max(20.0, ffmi_base - 0.3)
+                ffmi_max = min(23.0, ffmi_base + 0.3)
                 grasa_min, grasa_max = 8.0, 9.5
                 
                 peso_min = (ffmi_min * (altura_m ** 2)) / (1 - (grasa_min / 100))
