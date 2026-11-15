@@ -296,23 +296,46 @@ with c_alertas:
         st.success(":material/check_circle: Plantilla fuera de riesgo crítico. Buen trabajo de gestión de cargas.")
     else:
         for _, row in alto_riesgo.head(3).iterrows():
-            st.markdown(f"""
-            <div style="background: linear-gradient(145deg, #111318, #0b0e14); border: 1px solid #1c1f26; border-left: 4px solid #ef4444; padding: 15px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <div style="display: flex; align-items: center;">
-                        <span class="material-symbols-rounded" style="font-size: 1.2rem; color: #ef4444; margin-right: 8px;">warning</span>
-                        <strong style="color: #f8fafc; font-size: 1.1rem; text-transform: uppercase;">{row['JUGADOR']}</strong>
-                    </div>
-                    <span style="background: #ef4444; color: white; padding: 3px 8px; border-radius: 4px; font-weight: 800; font-size: 0.8rem;">{row['Riesgo_%']:.0f}% RIESGO</span>
-                </div>
-                <div style="font-size: 0.85rem; color: #94a3b8; display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
-                    <div>A/C Int: <b style="color: #f8fafc;">{row['Ratio_AC']:.2f}</b></div>
-                    <div>A/C HSR: <b style="color: #f8fafc;">{row['Ratio_AC_HSR']:.2f}</b></div>
-                    <div>Strain: <b style="color: #f8fafc;">{row['Strain_7d']:.0f}</b></div>
-                    <div>Z-Wellness: <b style="color: #f8fafc;">{row['Z_Wellness']:.1f}</b></div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            jug_al = row['JUGADOR']
+            riesgo_val = float(row['Riesgo_%'])
+            col_al = "#ef4444" if riesgo_val >= 70 else "#f59e0b"
+            dash_val = (min(max(riesgo_val, 0.0), 100.0) / 100.0) * 126.0
+
+            # Extraer últimos 7 días de carga para la Sparkline SVG
+            hist_7d = df_master[df_master['JUGADOR'] == jug_al].sort_values('FECHA').tail(7)['CARGA'].tolist()
+            if len(hist_7d) < 2:
+                hist_7d = [0, 0, 0, 0, 0, 0, safe_float(row.get('CARGA', 0))]
+            max_h = max(max(hist_7d), 1.0)
+            pts_spark = " ".join([f"{idx_s * (110.0 / (len(hist_7d) - 1)):.1f},{26.0 - (val_s / max_h * 22.0):.1f}" for idx_s, val_s in enumerate(hist_7d)])
+
+            alerta_card_html = (
+                f'<div style="background: radial-gradient(120% 100% at 100% 0%, {col_al}18 0%, #111318 70%); border: 1px solid rgba(255,255,255,0.07); border-left: 4px solid {col_al}; padding: 14px; border-radius: 10px; margin-bottom: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.35);">'
+                f'<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">'
+                f'<div>'
+                f'<div style="display: flex; align-items: center; gap: 6px;">'
+                f'<span class="material-symbols-rounded" style="font-size: 1.15rem; color: {col_al};">warning</span>'
+                f'<strong style="color: #f8fafc; font-size: 1.02rem; text-transform: uppercase;">{jug_al}</strong>'
+                f'</div>'
+                f'<span style="color: #64748b; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">TENDENCIA CARGA 7D</span>'
+                f'<svg width="110" height="28" style="display:block; margin-top:2px;"><polyline fill="none" stroke="#C5A059" stroke-width="2" points="{pts_spark}"/></svg>'
+                f'</div>'
+                f'<div style="text-align: center;">'
+                f'<svg viewBox="0 0 100 58" width="86" height="50">'
+                f'<path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#1c1f26" stroke-width="9" stroke-linecap="round"/>'
+                f'<path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="{col_al}" stroke-width="9" stroke-dasharray="{dash_val:.1f} 126" stroke-linecap="round"/>'
+                f'<text x="50" y="46" text-anchor="middle" fill="#f8fafc" font-family="JetBrains Mono, monospace" font-size="18" font-weight="800">{riesgo_val:.0f}%</text>'
+                f'</svg>'
+                f'</div>'
+                f'</div>'
+                f'<div class="font-mono-hud" style="font-size: 0.76rem; color: #94a3b8; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 8px;">'
+                f'<div>A/C Int: <b style="color: #f8fafc;">{row["Ratio_AC"]:.2f}</b></div>'
+                f'<div>A/C HSR: <b style="color: #f8fafc;">{row["Ratio_AC_HSR"]:.2f}</b></div>'
+                f'<div>Strain: <b style="color: #f8fafc;">{row["Strain_7d"]:.0f}</b></div>'
+                f'<div>Z-Well: <b style="color: #f8fafc;">{row["Z_Wellness"]:+.1f}</b></div>'
+                f'</div>'
+                f'</div>'
+            )
+            st.markdown(alerta_card_html, unsafe_allow_html=True)
 
 st.markdown("---")
 
