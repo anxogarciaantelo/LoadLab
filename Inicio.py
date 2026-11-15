@@ -594,20 +594,65 @@ if st.session_state.autenticado and not st.session_state.equipo_seleccionado:
 aplicar_color_sidebar()
 
 if st.session_state.get("equipo_seleccionado", False):
-    st.markdown("<br>", unsafe_allow_html=True)
-    
-    # --- 1. PREPARAR EL ESCUDO ---
     escudo = st.session_state.get("escudo_equipo")
     if escudo:
         img_src = escudo if str(escudo).startswith("http") else f"data:image/jpeg;base64,{escudo}"
-        img_html = f'<img src="{img_src}" style="width:140px; height:140px; object-fit: cover; border-radius:50%; margin-bottom: 15px; box-shadow: 0 8px 20px rgba(0,0,0,0.15);">'
+        img_html = f'<img src="{img_src}" style="width:68px; height:68px; object-fit:cover; border-radius:50%; border:2px solid #C5A059; box-shadow:0 4px 15px rgba(197,160,89,0.3); flex-shrink:0;">'
     else:
-        img_html = '<div style="display: flex; justify-content: center; align-items: center; height: 140px; margin-bottom: 15px;"><span class="material-symbols-rounded" style="font-size: 70px; color: #C5A059;">shield</span></div>'
+        img_html = '<div style="width:68px; height:68px; border-radius:50%; border:2px solid #C5A059; display:flex; align-items:center; justify-content:center; background:#0b0e14; flex-shrink:0;"><span class="material-symbols-rounded" style="font-size:36px; color:#C5A059;">shield</span></div>'
+
+    hoy_banner_str = str(date.today())
+    total_plantilla_b = len(st.session_state.get("plantilla", []))
+    ses_pasadas_b = sorted([s for s in st.session_state.sesiones if s.get("informe_generado") and s["fecha"] <= hoy_banner_str], key=lambda x: x["fecha"])
+    ent_pasados_b = sorted([s for s in st.session_state.sesiones if s.get("tipo") == "Entrenamiento" and s["fecha"] <= hoy_banner_str], key=lambda x: x["fecha"])
+    disp_b = {limpiar_nombre(k): v for k, v in (ent_pasados_b[-1].get("disponibilidad", {}) if ent_pasados_b else (ses_pasadas_b[-1].get("disponibilidad", {}) if ses_pasadas_b else {})).items()}
+    les_act_b = {limpiar_nombre(l["jugador"]) for l in st.session_state.get("lesiones", []) if l.get("estado") == "Activa"}
+    
+    disponibles_b = sum(1 for p in st.session_state.get("plantilla", []) if limpiar_nombre(p["JUGADOR"]) not in les_act_b and disp_b.get(limpiar_nombre(p["JUGADOR"]), "Disponible") not in ["Lesionado", "Readaptación", "Enfermo", "No disponible"])
+    
+    rd_vals_b = []
+    if ses_pasadas_b:
+        for d_b in ses_pasadas_b[-1].get("datos_informe", []):
+            tv, wv = safe_float(d_b.get("TQR", 0)), safe_float(d_b.get("WELLNESS", 0))
+            if tv > 0 and wv > 0:
+                rd_vals_b.append(((tv / 10.0) * 50.0) + (((35.0 - wv) / 30.0) * 50.0))
+    rd_medio_b = f"{np.mean(rd_vals_b):.0f}%" if rd_vals_b else "S/D"
+
+    nom_eq_b = st.session_state.get("nombre_equipo", "CLUB DEPORTIVO")
+    cat_eq_b = st.session_state.get("categoria_equipo", "Élite")
+    div_eq_b = st.session_state.get("division_equipo", "1ª División")
+    temp_eq_b = st.session_state.get("temporada_equipo", "2026/2027")
+
+    banner_html = (
+        f'<div style="background: radial-gradient(120% 140% at 0% 0%, rgba(197, 160, 89, 0.16) 0%, #111318 65%); border: 1px solid rgba(197, 160, 89, 0.25); border-left: 4px solid #C5A059; border-radius: 14px; padding: 16px 24px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.45);">'
+        f'<div style="display: flex; align-items: center; gap: 16px;">'
+        f'{img_html}'
+        f'<div>'
+        f'<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">'
+        f'<span style="background: rgba(197,160,89,0.15); color: #C5A059; border: 1px solid rgba(197,160,89,0.35); font-size: 0.65rem; font-weight: 800; padding: 2px 8px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.6px;">TEMPORADA {temp_eq_b}</span>'
+        f'<span style="color: #94a3b8; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">{cat_eq_b} • {div_eq_b}</span>'
+        f'</div>'
+        f'<h2 style="margin: 0; color: #f8fafc; font-size: 1.65rem; font-weight: 800; letter-spacing: -0.5px; text-transform: uppercase;">{nom_eq_b}</h2>'
+        f'</div>'
+        f'</div>'
+        f'<div style="display: flex; gap: 24px; align-items: center;">'
+        f'<div style="text-align: right; border-right: 1px solid rgba(255,255,255,0.08); padding-right: 20px;">'
+        f'<span style="font-size: 0.68rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; display: block;">DISPONIBILIDAD HOY</span>'
+        f'<span class="font-mono-hud" style="font-size: 1.35rem; color: #10b981; font-weight: 800;">{disponibles_b}/{total_plantilla_b} <span style="font-size: 0.75rem; color: #cbd5e1;">APTOS</span></span>'
+        f'</div>'
+        f'<div style="text-align: right;">'
+        f'<span style="font-size: 0.68rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; display: block;">READINESS PLANTILLA</span>'
+        f'<span class="font-mono-hud" style="font-size: 1.35rem; color: #C5A059; font-weight: 800;">{rd_medio_b}</span>'
+        f'</div>'
+        f'</div>'
+        f'</div>'
+    )
+    st.markdown(banner_html, unsafe_allow_html=True)
 
     # ==========================================
     # 🚨 TORRE DE CONTROL (DASHBOARD DIARIO)
     # ==========================================
-    st.markdown("### :material/analytics: Información Diaria")
+    st.markdown("### :material/analytics: Torre de Control Diaria")
 
     hoy_dt = date.today()
     hoy_str = str(hoy_dt)
@@ -928,15 +973,25 @@ if st.session_state.get("equipo_seleccionado", False):
                 gf = int(safe_float(p.get("goles_favor", 0)))
                 gc = int(safe_float(p.get("goles_contra", 0)))
                 rival = p.get("rival", "Rival")
+                cond_p = "CASA" if p.get("condicion", "Casa") == "Casa" else "FUERA"
+                comp_p = p.get("competicion", "AMIS")[:4].upper() if p.get("tipo") == "Partido Oficial" else "AMIS"
                 
                 if gf > gc: color_res, letra = "#10b981", "V"
                 elif gf < gc: color_res, letra = "#ef4444", "D"
                 else: color_res, letra = "#f59e0b", "E"
                 
-                # Se construye en una sola línea continua para evitar el bug del parser Markdown de Streamlit
-                html_ultimos += f"<div style='background: #111318; border: 1px solid #1c1f26; border-left: 3px solid {color_res}; border-radius: 6px; padding: 6px 10px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.15);'><div style='display: flex; align-items: center; gap: 8px; overflow: hidden;'><span style='color: {color_res}; font-weight: 900; font-size: 0.7rem; background: {color_res}20; padding: 2px 5px; border-radius: 4px;'>{letra}</span><span style='color: #94a3b8; font-size: 0.8rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;'>vs {rival}</span></div><span style='color: #f8fafc; font-size: 0.9rem; font-weight: 800; margin-left: 10px; flex-shrink: 0;'>{gf} - {gc}</span></div>"
-        else:
-            html_ultimos += "<div style='background: #111318; border: 1px solid #1c1f26; border-radius: 6px; padding: 10px; text-align: center;'><span style='color: #64748b; font-size: 0.75rem; font-weight: 700;'>Sin historial previo</span></div>"
+                html_ultimos += (
+                    f"<div style='background: linear-gradient(90deg, {color_res}12 0%, #111318 45%); border: 1px solid rgba(255,255,255,0.06); border-left: 3px solid {color_res}; border-radius: 8px; padding: 7px 10px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.25);'>"
+                    f"<div style='display: flex; align-items: center; gap: 7px; overflow: hidden;'>"
+                    f"<span class='font-mono-hud' style='color: {color_res}; font-weight: 800; font-size: 0.68rem; background: {color_res}20; border: 1px solid {color_res}40; padding: 1px 5px; border-radius: 4px;'>{letra}</span>"
+                    f"<div style='overflow: hidden;'>"
+                    f"<span style='color: #f8fafc; font-size: 0.78rem; font-weight: 800; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;'>{rival}</span>"
+                    f"<span style='color: #64748b; font-size: 0.6rem; font-weight: 800; letter-spacing: 0.4px;'>{comp_p} • {cond_p}</span>"
+                    f"</div>"
+                    f"</div>"
+                    f"<div class='font-mono-hud' style='background: #0b0e14; border: 1px solid rgba(197,160,89,0.25); padding: 2px 8px; border-radius: 5px; color: #f8fafc; font-size: 0.85rem; font-weight: 800; margin-left: 8px; flex-shrink: 0;'>{gf}<span style='color:#C5A059; margin:0 3px;'>:</span>{gc}</div>"
+                    f"</div>"
+                )
             
         html_ultimos += "</div>"
         st.markdown(html_ultimos, unsafe_allow_html=True)
