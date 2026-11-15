@@ -181,7 +181,7 @@ if not st.session_state.autenticado:
                 Domina el rendimiento.<br>Anticipa lesiones.<br><span style="background: linear-gradient(90deg, #C5A059, #f3e5ab); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Gana el fin de semana.</span>
             </h1>
             <p style="color: #94a3b8; font-size: 1.05rem; line-height: 1.6; margin-bottom: 28px; max-width: 92%;">
-                El sistema operativo integral para preparadores físicos, readaptadores y cuerpos técnicos. Unifica GPS, carga interna EWMA, perfiles Fuerza-Velocidad (VBT), composición corporal e Inteligencia Artificial predictiva en una sola plataforma.
+                El sistema operativo integral para preparadores físicos, readaptadores y cuerpos técnicos profesionales. Unifica tus datos individuales y de equipo en una exclusiva plataforma.
             </p>
             """, unsafe_allow_html=True)
             
@@ -247,9 +247,9 @@ if not st.session_state.autenticado:
         st.markdown("""
         <div style="background: rgba(17, 19, 24, 0.75); border-top: 1px solid rgba(197,160,89,0.15); border-bottom: 1px solid rgba(197,160,89,0.15); padding: 14px 20px; margin: 40px 0 35px 0; display: flex; justify-content: space-around; flex-wrap: wrap; gap: 15px; text-align: center;">
             <div><span style="color: #C5A059; font-weight: 800; font-size: 0.75rem; text-transform: uppercase;">MODELO DE CARGA</span><br><span style="color: #f8fafc; font-weight: 800; font-size: 0.9rem;">Uncoupled EWMA (Williams & Gabbett)</span></div>
-            <div><span style="color: #C5A059; font-weight: 800; font-size: 0.75rem; text-transform: uppercase;">FATIGA NEURO-METABÓLICA</span><br><span style="color: #f8fafc; font-weight: 800; font-size: 0.9rem;">Z-Score Intra-Sujeto 28d & Monotonía (Foster)</span></div>
-            <div><span style="color: #C5A059; font-weight: 800; font-size: 0.75rem; text-transform: uppercase;">BIOMECÁNICA & VBT</span><br><span style="color: #f8fafc; font-weight: 800; font-size: 0.9rem;">Perfil Fuerza-Velocidad (J.B. Morin / Samozino)</span></div>
-            <div><span style="color: #C5A059; font-weight: 800; font-size: 0.75rem; text-transform: uppercase;">EPIDEMIOLOGÍA CLÍNICA</span><br><span style="color: #f8fafc; font-weight: 800; font-size: 0.9rem;">Consenso UEFA ECIS (Incidencia & Burden /1000h)</span></div>
+            <div><span style="color: #C5A059; font-weight: 800; font-size: 0.75rem; text-transform: uppercase;">FATIGA NEURO-METABÓLICA</span><br><span style="color: #f8fafc; font-weight: 800; font-size: 0.9rem;">Z-Score Intra-Sujeto (Foster)</span></div>
+            <div><span style="color: #C5A059; font-weight: 800; font-size: 0.75rem; text-transform: uppercase;">VALORACIONES</span><br><span style="color: #f8fafc; font-weight: 800; font-size: 0.9rem;">FMS, CMJ, VBT (J.B. Morin / Samozino)</span></div>
+            <div><span style="color: #C5A059; font-weight: 800; font-size: 0.75rem; text-transform: uppercase;">EPIDEMIOLOGÍA CLÍNICA</span><br><span style="color: #f8fafc; font-weight: 800; font-size: 0.9rem;">Consenso UEFA ECIS</span></div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -258,12 +258,12 @@ if not st.session_state.autenticado:
         
         b_col1, b_col2, b_col3 = st.columns(3)
         bento_items = [
-            (b_col1, "monitoring", "1. Control de Carga & Periodización Táctica", "Algoritmo Uncoupled EWMA para Carga Interna, HSR (>21 km/h) y Tensión Mecánica (ACC/DCC). Incluye cálculo en vivo de Carga Compensatoria post-partido para suplentes y bandas objetivo por Match Day (MD-4 a MD-1)."),
-            (b_col2, "psychology", "2. Oráculo IA Predictivo (XGBoost)", "Motor híbrido que entrena con el historial de tu plantilla. Combina spikes de ACWR, daño excéntrico (DCC 7d), Z-Score de dolor, fatiga residual (Strain) y la 'Vacuna de Velocidad' (>85% VMax) para anticipar roturas musculares."),
-            (b_col3, "healing", "3. Motor Automatizado de Return to Play (RTP)", "Progresión inteligente en 4 fases. Evalúa automáticamente si el jugador tolera la carga sin regresión clínica (Dolor D+1 < 4) y verifica los 6 criterios de alta competitiva frente a su perfil pre-lesión."),
-            (b_col1, "fitness_center", "4. Laboratorio VBT, Isometría y Asimetrías", "Cálculo de 1RM y perfil Fuerza-Velocidad mediante regresión lineal (V0, F0 y R²), ratios clínicos H:Q de isquiosurales/cuádriceps (N/kg), déficit bilateral en CMJ y gráfico Tornado de asimetrías."),
-            (b_col2, "developer_board", "5. Pizarra Táctica 2D & Sinergias de Partido", "Recomendador algorítmico del Once Ideal según sistema táctico, estado de frescura (Readiness), ACWR e impacto competitivo (+/- cada 90'). Analiza tramos de gol de 15', factor revulsivo y parejas de oro."),
-            (b_col3, "picture_as_pdf", "6. Imputación GPS Virtual & Reporting PDF", "Nunca pierdas la trazabilidad cuando falte un dispositivo: el motor imputa la carga externa según rol, posición y minutos jugados, protegiendo los récords reales. Exporta dossieres PDF ejecutivos en 1 clic.")
+            (b_col1, "monitoring", "1. Control de Carga", "Algoritmo Uncoupled EWMA para Carga Interna, HSR y Tensión Mecánica. Incluye cálculo en vivo de carga compensatoria post-partido y bandas objetivo por Match Day."),
+            (b_col2, "psychology", "2. Sistema predictivo de lesiones (XGBoost)", "Motor híbrido que entrena con el historial de tu plantilla. Combina spikes de ACWR, daño excéntrico, Z-Score de dolor, fatiga y vacuna de velocidad para anticipar lesiones."),
+            (b_col3, "healing", "3. Motor Automatizado de Return to Play", "Progresión inteligente en 4 fases. Evalúa automáticamente si el jugador tolera la carga sin regresión clínica y verifica el alta competitiva frente a su perfil pre-lesión."),
+            (b_col1, "fitness_center", "4. Perfil de rendimiento y riesgo lesivo", "Cálculo de 1RM y perfil Fuerza-Velocidad, ratios clínicos de fuerza, déficit bilateral y asimetrías clínicas."),
+            (b_col2, "developer_board", "5. Recomendaciones Tácticas y Sinergias de Partido", "Recomendador algorítmico del Once Ideal según sistema táctico, Readiness, ACWR e impacto competitivo."),
+            (b_col3, "picture_as_pdf", "6. GPS Virtual e informes", "Nunca pierdas la trazabilidad cuando falte un dispositivo: el motor imputa la carga externa según rol, posición y minutos jugados, exportando informes PDF profesionales en 1 clic.")
         ]
         for col_b, ic_b, tit_b, desc_b in bento_items:
             with col_b:
