@@ -92,14 +92,17 @@ def calcular_ewma_historico(_sesiones, fecha_objetivo):
     for jug in df_hist['JUGADOR'].unique():
         res[jug] = {}
         
+    # Detectar sesiones abiertas hoy/mañana donde solo hay Wellness matutino y aún no se ha subido CARGA
+    df_carga_dia = df_hist.groupby('fecha')['CARGA'].sum() if 'CARGA' in df_hist.columns else pd.Series(dtype=float)
+    fechas_pendientes_carga = df_carga_dia[df_carga_dia == 0].index
+
     for col_metrica, sufijo in metricas.items():
         if col_metrica not in df_hist.columns: continue
         
         df_pivot = df_hist.pivot_table(index='fecha', columns='JUGADOR', values=col_metrica, aggfunc='sum').fillna(0)
         if df_pivot.empty: continue
         
-        # Detectar sesiones abiertas hoy/mañana donde solo hay Wellness y aún no se ha subido carga
-        fechas_pendientes = df_pivot.index[df_pivot.sum(axis=1) == 0]
+        fechas_pendientes = df_pivot.index.intersection(fechas_pendientes_carga)
             
         fecha_ini = min(df_pivot.index.min(), fecha_fin) - pd.Timedelta(days=7)
         rango_fechas = pd.date_range(start=fecha_ini, end=fecha_fin, freq='D')
