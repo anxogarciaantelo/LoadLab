@@ -159,7 +159,7 @@ if not st.session_state.autenticado:
         with c_nav2:
             st.markdown("""
             <div style="display: flex; justify-content: center; gap: 28px; padding-top: 14px; font-size: 0.85rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px;">
-                <span>Carga EWMA</span><span>•</span><span>Oráculo IA</span><span>•</span><span>Fuerza VBT</span><span>•</span><span>Protocolo RTP</span>
+                <span>Carga EWMA</span><span>•</span><span>Predicción de lesiones</span><span>•</span><span>Valoraciones</span><span>•</span><span>Análisis de rendimiento</span>
             </div>
             """, unsafe_allow_html=True)
         with c_nav3:
