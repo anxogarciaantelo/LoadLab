@@ -786,14 +786,63 @@ else:
                     plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)'
                 )
 
-                # 3. Densidades
-                fig_den1 = px.scatter(df_jug, x='m/min', y='HSR/min', text='JUGADOR', title="Densidad: Volumen vs Intensidad", size='VMAX')
-                fig_den1.update_traces(marker=dict(color="#0ea5e9", line=dict(width=2, color="DarkSlateGrey")), textposition='top center')
-                fig_den1.update_layout(xaxis=dict(range=[0, df_jug['m/min'].max()*1.5]), yaxis=dict(range=[0, df_jug['HSR/min'].max()*1.5]), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+                # 3. Densidades (Con contexto del grupo en la sesión)
+                df_grupo_den = df_ses[(df_ses['POS'] != 'POR') & (df_ses['ESTADO'].isin(["Disponible", "Titular", "Suplente", "Recuperación Post-Partido"]))].copy()
+                df_otros_den = df_grupo_den[df_grupo_den['JUGADOR'] != jug_sel]
                 
-                fig_den2 = px.scatter(df_jug, x='m/min', y='Mec/min', text='JUGADOR', title="Densidad: Volumen vs Tensión Mecánica")
-                fig_den2.update_traces(marker=dict(size=16, color="#8b5cf6", line=dict(width=2, color="DarkSlateGrey")), textposition='top center')
-                fig_den2.update_layout(xaxis=dict(range=[0, df_jug['m/min'].max()*1.5]), yaxis=dict(range=[0, df_jug['Mec/min'].max()*1.5]), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+                max_m_min = max(df_grupo_den['m/min'].max() if not df_grupo_den.empty else 0, df_jug['m/min'].max()) * 1.2
+                max_hsr_min = max(df_grupo_den['HSR/min'].max() if not df_grupo_den.empty else 0, df_jug['HSR/min'].max()) * 1.25
+                max_mec_min = max(df_grupo_den['Mec/min'].max() if not df_grupo_den.empty else 0, df_jug['Mec/min'].max()) * 1.25
+
+                fig_den1 = go.Figure()
+                if not df_otros_den.empty:
+                    fig_den1.add_trace(go.Scatter(
+                        x=df_otros_den['m/min'], y=df_otros_den['HSR/min'], mode='markers+text',
+                        text=df_otros_den['JUGADOR'], textposition='top center',
+                        textfont=dict(size=9, color='#64748b'),
+                        marker=dict(size=10, color='#cbd5e1', line=dict(width=1, color='#64748b')),
+                        name='Equipo'
+                    ))
+                    fig_den1.add_vline(x=df_grupo_den['m/min'].mean(), line_dash="dot", line_color="#94a3b8")
+                    fig_den1.add_hline(y=df_grupo_den['HSR/min'].mean(), line_dash="dot", line_color="#94a3b8")
+                fig_den1.add_trace(go.Scatter(
+                    x=df_jug['m/min'], y=df_jug['HSR/min'], mode='markers+text',
+                    text=df_jug['JUGADOR'], textposition='top center',
+                    textfont=dict(size=12, color='black', weight='bold'),
+                    marker=dict(size=16, color='#0ea5e9', line=dict(width=2, color='DarkSlateGrey')),
+                    name=jug_sel
+                ))
+                fig_den1.update_layout(
+                    title="Densidad: Volumen vs Intensidad",
+                    xaxis=dict(title="m/min", range=[0, max(max_m_min, 10)]),
+                    yaxis=dict(title="HSR/min", range=[0, max(max_hsr_min, 1)]),
+                    plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', showlegend=True
+                )
+
+                fig_den2 = go.Figure()
+                if not df_otros_den.empty:
+                    fig_den2.add_trace(go.Scatter(
+                        x=df_otros_den['m/min'], y=df_otros_den['Mec/min'], mode='markers+text',
+                        text=df_otros_den['JUGADOR'], textposition='top center',
+                        textfont=dict(size=9, color='#64748b'),
+                        marker=dict(size=10, color='#cbd5e1', line=dict(width=1, color='#64748b')),
+                        name='Equipo'
+                    ))
+                    fig_den2.add_vline(x=df_grupo_den['m/min'].mean(), line_dash="dot", line_color="#94a3b8")
+                    fig_den2.add_hline(y=df_grupo_den['Mec/min'].mean(), line_dash="dot", line_color="#94a3b8")
+                fig_den2.add_trace(go.Scatter(
+                    x=df_jug['m/min'], y=df_jug['Mec/min'], mode='markers+text',
+                    text=df_jug['JUGADOR'], textposition='top center',
+                    textfont=dict(size=12, color='black', weight='bold'),
+                    marker=dict(size=16, color='#8b5cf6', line=dict(width=2, color='DarkSlateGrey')),
+                    name=jug_sel
+                ))
+                fig_den2.update_layout(
+                    title="Densidad: Volumen vs Tensión Mecánica",
+                    xaxis=dict(title="m/min", range=[0, max(max_m_min, 10)]),
+                    yaxis=dict(title="Mec/min", range=[0, max(max_mec_min, 0.5)]),
+                    plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', showlegend=True
+                )
 
                 # Dicc. KPIs (Aseguramos la integridad de los datos para FPDF)
                 kpis_abs = {
