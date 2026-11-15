@@ -129,29 +129,174 @@ if not st.session_state.get("autenticado", False) and not st.session_state.get("
 st.markdown(cargar_css_global(), unsafe_allow_html=True)
 
 # ==========================================
-# 1. PANTALLA DE LOGIN / REGISTRO (DISEÑO SPLIT ÉLITE)
+# 1. LANDING PAGE COMERCIAL Y PANTALLA DE LOGIN / REGISTRO
 # ==========================================
 if not st.session_state.autenticado:
     set_login_background()
     
-    st.markdown("<div style='margin-top: 2vh;'></div>", unsafe_allow_html=True)
-    # Proporción ajustada: Izquierda (1.5) - Separación (0.2) - Login más ancho (1.2)
+    if "mostrar_login_view" not in st.session_state:
+        st.session_state.mostrar_login_view = False
+
+    import base64
+    import os
+    ruta_logo = os.path.join("assets", "logo_completo.png")
+    try:
+        with open(ruta_logo, "rb") as image_file:
+            logo_b64 = base64.b64encode(image_file.read()).decode()
+        logo_html_nav = f'<img src="data:image/png;base64,{logo_b64}" style="height: 46px; object-fit: contain;">'
+        logo_html = f'<img src="data:image/png;base64,{logo_b64}" style="width: 260px; margin-bottom: 10px;">'
+    except FileNotFoundError:
+        logo_html_nav = '<span style="font-size: 1.5rem; font-weight: 900; color: #f8fafc;">LOAD<span style="color: #C5A059;">LAB</span></span>'
+        logo_html = '<h2 style="font-size: 2.2rem; font-weight: 900; color: #f8fafc;">LOAD<span style="color: #C5A059;">LAB</span></h2>'
+
+    # ----------------------------------------------------
+    # A. VISTA LANDING PAGE COMERCIAL (ESCAPARATE SAAS)
+    # ----------------------------------------------------
+    if not st.session_state.mostrar_login_view:
+        c_nav1, c_nav2, c_nav3 = st.columns([1.5, 2.5, 1])
+        with c_nav1:
+            st.markdown(f"<div style='padding-top: 4px;'>{logo_html_nav}</div>", unsafe_allow_html=True)
+        with c_nav2:
+            st.markdown("""
+            <div style="display: flex; justify-content: center; gap: 28px; padding-top: 14px; font-size: 0.85rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px;">
+                <span>Carga EWMA</span><span>•</span><span>Oráculo IA</span><span>•</span><span>Fuerza VBT</span><span>•</span><span>Protocolo RTP</span>
+            </div>
+            """, unsafe_allow_html=True)
+        with c_nav3:
+            if st.button(":material/login: INICIAR SESIÓN", key="btn_nav_login", use_container_width=True):
+                st.session_state.mostrar_login_view = True
+                st.rerun()
+
+        st.markdown("<hr style='border-color: rgba(197,160,89,0.15); margin: 12px 0 35px 0;'>", unsafe_allow_html=True)
+
+        # HERO SECTION + HUD 3D PREVIEW
+        col_hero_txt, col_hero_hud = st.columns([1.15, 1.1], gap="large")
+        with col_hero_txt:
+            st.markdown("""
+            <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(197, 160, 89, 0.1); border: 1px solid rgba(197, 160, 89, 0.35); padding: 6px 14px; border-radius: 999px; margin-bottom: 18px;">
+                <span class="live-dot"></span>
+                <span style="color: #C5A059; font-size: 0.75rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;">ECOSISTEMA DE RENDIMIENTO DEPORTIVO DE ÉLITE</span>
+            </div>
+            <h1 style="font-size: 3.1rem; font-weight: 800; line-height: 1.08; color: #f8fafc; letter-spacing: -1px; margin-bottom: 18px;">
+                Domina la carga.<br>Anticipa lesiones.<br><span style="background: linear-gradient(90deg, #C5A059, #f3e5ab); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Gana el domingo.</span>
+            </h1>
+            <p style="color: #94a3b8; font-size: 1.05rem; line-height: 1.6; margin-bottom: 28px; max-width: 92%;">
+                El sistema operativo integral para preparadores físicos, readaptadores y cuerpos técnicos. Unifica GPS, carga interna EWMA, perfiles Fuerza-Velocidad (VBT), composición corporal e Inteligencia Artificial predictiva en una sola plataforma.
+            </p>
+            """, unsafe_allow_html=True)
+            
+            c_cta1, c_cta2 = st.columns([1.2, 1])
+            with c_cta1:
+                if st.button(":material/rocket_launch: ACCEDER A LA PLATAFORMA", key="btn_hero_login", use_container_width=True):
+                    st.session_state.mostrar_login_view = True
+                    st.rerun()
+            with c_cta2:
+                st.markdown("""
+                <div style="display: flex; align-items: center; height: 46px; padding-left: 10px; color: #cbd5e1; font-size: 0.85rem; font-weight: 700;">
+                    <span class="material-symbols-rounded" style="color: #10b981; margin-right: 6px;">verified</span> Estándar UEFA ECIS & FIFA EPTS
+                </div>
+                """, unsafe_allow_html=True)
+
+        with col_hero_hud:
+            st.markdown("""
+            <div style="background: radial-gradient(120% 120% at 50% 0%, rgba(197, 160, 89, 0.16) 0%, rgba(11, 14, 20, 0.95) 75%); border: 1px solid rgba(197, 160, 89, 0.3); border-top: 2px solid #C5A059; border-radius: 16px; padding: 20px; box-shadow: 0 30px 60px -15px rgba(0,0,0,0.85), 0 0 30px rgba(197,160,89,0.12); transform: perspective(1000px) rotateY(-4deg) rotateX(2deg);">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 10px; margin-bottom: 14px;">
+                    <div style="display: flex; gap: 6px; align-items: center;">
+                        <span style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444; display: inline-block;"></span>
+                        <span style="width: 10px; height: 10px; border-radius: 50%; background: #f59e0b; display: inline-block;"></span>
+                        <span style="width: 10px; height: 10px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+                        <span class="font-mono-hud" style="color: #94a3b8; font-size: 0.72rem; margin-left: 8px;">LOADLAB // TELEMETRY_HUD_V2.6</span>
+                    </div>
+                    <span class="font-mono-hud" style="color: #10b981; font-size: 0.72rem; background: rgba(16,185,129,0.12); padding: 2px 8px; border-radius: 4px; font-weight: 800;">● LIVE SYNC</span>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px;">
+                    <div style="background: #111318; border: 1px solid rgba(255,255,255,0.06); border-top: 2px solid #10b981; padding: 10px; border-radius: 8px; text-align: center;">
+                        <span style="font-size: 0.65rem; color: #94a3b8; font-weight: 800; display: block;">READINESS PLANTILLA</span>
+                        <span class="font-mono-hud" style="font-size: 1.45rem; color: #10b981; font-weight: 800;">88.4%</span>
+                        <span class="font-mono-hud" style="font-size: 0.65rem; color: #10b981; display: block;">▲ +4.2% vs MD-3</span>
+                    </div>
+                    <div style="background: #111318; border: 1px solid rgba(255,255,255,0.06); border-top: 2px solid #C5A059; padding: 10px; border-radius: 8px; text-align: center;">
+                        <span style="font-size: 0.65rem; color: #94a3b8; font-weight: 800; display: block;">ACWR UNCOUPLED</span>
+                        <span class="font-mono-hud" style="font-size: 1.45rem; color: #f8fafc; font-weight: 800;">1.08</span>
+                        <span style="font-size: 0.65rem; color: #C5A059; font-weight: 700; display: block;">SWEET SPOT ZONE</span>
+                    </div>
+                    <div style="background: #111318; border: 1px solid rgba(255,255,255,0.06); border-top: 2px solid #0ea5e9; padding: 10px; border-radius: 8px; text-align: center;">
+                        <span style="font-size: 0.65rem; color: #94a3b8; font-weight: 800; display: block;">CUMPLIMIENTO HSR</span>
+                        <span class="font-mono-hud" style="font-size: 1.45rem; color: #0ea5e9; font-weight: 800;">94.1%</span>
+                        <span class="font-mono-hud" style="font-size: 0.65rem; color: #94a3b8; display: block;">642m (>21 km/h)</span>
+                    </div>
+                </div>
+                <div style="background: #0b0e14; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 12px; margin-bottom: 10px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.72rem; color: #cbd5e1; font-weight: 800; margin-bottom: 8px;">
+                        <span>🧠 ORÁCULO IA (XGBOOST) — PREDICCIÓN A 7 DÍAS</span>
+                        <span class="font-mono-hud" style="color: #C5A059;">PRECISIÓN Z-SCORE + EWMA</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; background: rgba(239,68,68,0.1); border-left: 3px solid #ef4444; border-radius: 4px; margin-bottom: 6px;">
+                        <span style="font-size: 0.78rem; font-weight: 800; color: #f8fafc;">#10 M. Oyarzabal <span style="color:#94a3b8; font-weight:600;">(EXT)</span></span>
+                        <span class="font-mono-hud" style="font-size: 0.72rem; color: #ef4444; font-weight: 800;">A/C HSR: 1.54 | Z-Dolor: +1.8 ➔ 68% RIESGO</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; background: rgba(16,185,129,0.08); border-left: 3px solid #10b981; border-radius: 4px;">
+                        <span style="font-size: 0.78rem; font-weight: 800; color: #f8fafc;">#8 M. Merino <span style="color:#94a3b8; font-weight:600;">(MED)</span></span>
+                        <span class="font-mono-hud" style="font-size: 0.72rem; color: #10b981; font-weight: 800;">A/C INT: 1.04 | VMax >91% ➔ 6% ÓPTIMO</span>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        # CINTA DE AUTORIDAD CIENTÍFICA
+        st.markdown("""
+        <div style="background: rgba(17, 19, 24, 0.75); border-top: 1px solid rgba(197,160,89,0.15); border-bottom: 1px solid rgba(197,160,89,0.15); padding: 14px 20px; margin: 40px 0 35px 0; display: flex; justify-content: space-around; flex-wrap: wrap; gap: 15px; text-align: center;">
+            <div><span style="color: #C5A059; font-weight: 800; font-size: 0.75rem; text-transform: uppercase;">MODELO DE CARGA</span><br><span style="color: #f8fafc; font-weight: 800; font-size: 0.9rem;">Uncoupled EWMA (Williams & Gabbett)</span></div>
+            <div><span style="color: #C5A059; font-weight: 800; font-size: 0.75rem; text-transform: uppercase;">FATIGA NEURO-METABÓLICA</span><br><span style="color: #f8fafc; font-weight: 800; font-size: 0.9rem;">Z-Score Intra-Sujeto 28d & Monotonía (Foster)</span></div>
+            <div><span style="color: #C5A059; font-weight: 800; font-size: 0.75rem; text-transform: uppercase;">BIOMECÁNICA & VBT</span><br><span style="color: #f8fafc; font-weight: 800; font-size: 0.9rem;">Perfil Fuerza-Velocidad (J.B. Morin / Samozino)</span></div>
+            <div><span style="color: #C5A059; font-weight: 800; font-size: 0.75rem; text-transform: uppercase;">EPIDEMIOLOGÍA CLÍNICA</span><br><span style="color: #f8fafc; font-weight: 800; font-size: 0.9rem;">Consenso UEFA ECIS (Incidencia & Burden /1000h)</span></div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # BENTO GRID DE MÓDULOS
+        st.markdown("<h2 style='text-align: center; color: #f8fafc; font-weight: 800; font-size: 2rem; margin-bottom: 8px;'>Arquitectura de <span style='color: #C5A059;'>Grado Profesional</span></h2><p style='text-align: center; color: #94a3b8; margin-bottom: 30px;'>6 módulos interconectados en tiempo real para cubrir cada eslabón del rendimiento en fútbol.</p>", unsafe_allow_html=True)
+        
+        b_col1, b_col2, b_col3 = st.columns(3)
+        bento_items = [
+            (b_col1, "monitoring", "1. Control de Carga & Periodización Táctica", "Algoritmo Uncoupled EWMA para Carga Interna, HSR (>21 km/h) y Tensión Mecánica (ACC/DCC). Incluye cálculo en vivo de Carga Compensatoria post-partido para suplentes y bandas objetivo por Match Day (MD-4 a MD-1)."),
+            (b_col2, "psychology", "2. Oráculo IA Predictivo (XGBoost)", "Motor híbrido que entrena con el historial de tu plantilla. Combina spikes de ACWR, daño excéntrico (DCC 7d), Z-Score de dolor, fatiga residual (Strain) y la 'Vacuna de Velocidad' (>85% VMax) para anticipar roturas musculares."),
+            (b_col3, "healing", "3. Motor Automatizado de Return to Play (RTP)", "Progresión inteligente en 4 fases. Evalúa automáticamente si el jugador tolera la carga sin regresión clínica (Dolor D+1 < 4) y verifica los 6 criterios de alta competitiva frente a su perfil pre-lesión."),
+            (b_col1, "fitness_center", "4. Laboratorio VBT, Isometría y Asimetrías", "Cálculo de 1RM y perfil Fuerza-Velocidad mediante regresión lineal (V0, F0 y R²), ratios clínicos H:Q de isquiosurales/cuádriceps (N/kg), déficit bilateral en CMJ y gráfico Tornado de asimetrías."),
+            (b_col2, "developer_board", "5. Pizarra Táctica 2D & Sinergias de Partido", "Recomendador algorítmico del Once Ideal según sistema táctico, estado de frescura (Readiness), ACWR e impacto competitivo (+/- cada 90'). Analiza tramos de gol de 15', factor revulsivo y parejas de oro."),
+            (b_col3, "picture_as_pdf", "6. Imputación GPS Virtual & Reporting PDF", "Nunca pierdas la trazabilidad cuando falte un dispositivo: el motor imputa la carga externa según rol, posición y minutos jugados, protegiendo los récords reales. Exporta dossieres PDF ejecutivos en 1 clic.")
+        ]
+        for col_b, ic_b, tit_b, desc_b in bento_items:
+            with col_b:
+                st.markdown(f"""
+                <div style="background: radial-gradient(120% 100% at 50% 0%, rgba(197, 160, 89, 0.10) 0%, #111318 75%); border: 1px solid rgba(255,255,255,0.07); border-top: 2px solid #C5A059; border-radius: 12px; padding: 20px; margin-bottom: 18px; min-height: 200px; box-shadow: 0 10px 25px rgba(0,0,0,0.4);">
+                    <div style="background: rgba(197, 160, 89, 0.12); width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #C5A059; margin-bottom: 12px;">
+                        <span class="material-symbols-rounded" style="font-size: 1.6rem;">{ic_b}</span>
+                    </div>
+                    <h4 style="color: #f8fafc; font-size: 1.05rem; font-weight: 800; margin: 0 0 8px 0;">{tit_b}</h4>
+                    <p style="color: #94a3b8; font-size: 0.86rem; line-height: 1.5; margin: 0;">{desc_b}</p>
+                </div>
+                """, unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        _, c_bot_cta, _ = st.columns([1.5, 1.5, 1.5])
+        with c_bot_cta:
+            if st.button(":material/login: ENTRAR A LOADLAB / CREAR CUENTA", key="btn_footer_login", use_container_width=True):
+                st.session_state.mostrar_login_view = True
+                st.rerun()
+        st.stop()
+
+    # ----------------------------------------------------
+    # B. VISTA DE LOGIN / REGISTRO (DISEÑO SPLIT ÉLITE)
+    # ----------------------------------------------------
+    c_back_l, _ = st.columns([1, 4])
+    with c_back_l:
+        if st.button(":material/arrow_back: Volver a la presentación", key="btn_back_landing", use_container_width=True):
+            st.session_state.mostrar_login_view = False
+            st.rerun()
+
     col_info, col_espacio, col_login = st.columns([1.5, 0.2, 1.2])
     
     with col_info:
-        import base64
-        import os
-        
-        # Ruta exacta donde el sistema buscará tu logo
-        ruta_logo = os.path.join("assets", "logo_completo.png")
-        
-        try:
-            with open(ruta_logo, "rb") as image_file:
-                logo_b64 = base64.b64encode(image_file.read()).decode()
-            logo_html = f'<img src="data:image/png;base64,{logo_b64}" style="width: 280px; margin-bottom: 10px;">'
-        except FileNotFoundError:
-            logo_html = f'<div style="color: #ef4444; border: 1px solid #ef4444; padding: 10px; border-radius: 5px; margin-bottom: 20px;"><span class="material-symbols-rounded" style="vertical-align: text-bottom; font-size: 1.2rem; margin-right: 6px;">warning</span> FALTA EL LOGO: Crea una carpeta llamada "assets" y guarda ahí la imagen como "logo_completo.png"</div>'
-
         html_info = f"""<div style="padding-right: 20px;">
 {logo_html}
 <h1 style="font-size: 2.1rem; font-weight: 800; line-height: 1.2; margin-bottom: 15px; color: #E2E8F0; letter-spacing: -0.5px;">
@@ -161,7 +306,6 @@ Decisiones basadas en datos, <span style="color: #C5A059;">rendimiento de élite
 Centraliza y analiza las variables de rendimiento, carga y salud de tus futbolistas en un único ecosistema premium diseñado para cuerpos técnicos profesionales.
 </p>
 
-<!-- Tarjetas optimizadas para extenderse en horizontal y ocupar menos alto -->
 <div style="background: rgba(197, 160, 89, 0.03); border: 1px solid rgba(197, 160, 89, 0.15); padding: 12px 16px; border-radius: 10px; margin-bottom: 8px; display: flex; align-items: center; gap: 14px; backdrop-filter: blur(5px);">
 <div style="background: rgba(197, 160, 89, 0.1); padding: 8px; border-radius: 8px; color: #C5A059; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; flex-shrink: 0;"><span class="material-symbols-rounded" style="font-size: 1.5rem;">monitoring</span></div>
 <div>
