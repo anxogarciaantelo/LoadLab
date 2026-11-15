@@ -178,7 +178,7 @@ if not st.session_state.autenticado:
                 <span style="color: #C5A059; font-size: 0.75rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;">ECOSISTEMA DE RENDIMIENTO DEPORTIVO DE ÉLITE</span>
             </div>
             <h1 style="font-size: 3.1rem; font-weight: 800; line-height: 1.08; color: #f8fafc; letter-spacing: -1px; margin-bottom: 18px;">
-                Domina la carga.<br>Anticipa lesiones.<br><span style="background: linear-gradient(90deg, #C5A059, #f3e5ab); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Gana el domingo.</span>
+                Domina el rendimiento.<br>Anticipa lesiones.<br><span style="background: linear-gradient(90deg, #C5A059, #f3e5ab); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Gana el fin de semana.</span>
             </h1>
             <p style="color: #94a3b8; font-size: 1.05rem; line-height: 1.6; margin-bottom: 28px; max-width: 92%;">
                 El sistema operativo integral para preparadores físicos, readaptadores y cuerpos técnicos. Unifica GPS, carga interna EWMA, perfiles Fuerza-Velocidad (VBT), composición corporal e Inteligencia Artificial predictiva en una sola plataforma.
