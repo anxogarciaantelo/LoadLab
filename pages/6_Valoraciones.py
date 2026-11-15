@@ -301,16 +301,15 @@ with tab_informes:
                 ss_tot = np.sum((vels - np.mean(vels))**2)
                 r2 = 1 - (ss_res / ss_tot) if ss_tot > 0 else 0
                 
-                # 2. Variables teóricas del deportista
-                v0 = intercept
-                f0_kg_sistema = -intercept / slope if slope < 0 else 0
-                f0_kg_barra = max(f0_kg_sistema - (peso_actual * 0.89), 0)
+                # 2. Variables teóricas del deportista (V0 evaluada a 0 kg de carga externa en barra)
+                v0 = max(float(p(peso_actual * 0.89)), 0.0) if slope < 0 else 0.0
+                f0_kg_sistema = -intercept / slope if slope < 0 else 0.0
+                f0_kg_barra = max(f0_kg_sistema - (peso_actual * 0.89), 0.0)
                 
                 # Fuerza Relativa en Newtons (N/kg) para diagnóstico
-                f0_rel_N = (f0_kg_sistema * 9.81) / peso_actual if peso_actual > 0 else 0
+                f0_rel_N = (f0_kg_sistema * 9.81) / peso_actual if peso_actual > 0 else 0.0
                 
-                # 3. DIAGNÓSTICO DE FUERZA (Basado en umbrales, sin línea óptima)
-                # Umbrales estándar en sentadilla: F0 > 25 N/kg | V0 > 1.5 m/s
+                # 3. DIAGNÓSTICO DE FUERZA (Umbrales en sentadilla: F0 Sistema >= 25 N/kg | V0 Barra >= 1.5 m/s)
                 if f0_rel_N >= 25.0 and v0 >= 1.5:
                     cuadrante = "🟢 Perfil F-V Equilibrado"
                     pauta_fv = "Mantenimiento general."
@@ -324,13 +323,14 @@ with tab_informes:
                     cuadrante = "🔴 Déficit Global"
                     pauta_fv = "Requiere mejora integral de fuerza y velocidad."
 
-                # 4. GRÁFICO LIMPIO (Desde el Origen 0,0)
-                fig_sq = px.scatter(x=kgs_sistema, y=vels, labels={'x': 'Carga del Sistema (kg)', 'y': 'Velocidad (m/s)'}, title="Perfil F-V (Masa del Sistema)")
+                # 4. GRÁFICO LIMPIO (Coherente con V0 y F0 Barra)
+                p_barra = np.poly1d(np.polyfit(kgs_barra, vels, 1))
+                fig_sq = px.scatter(x=kgs_barra, y=vels, labels={'x': 'Carga en Barra (kg)', 'y': 'Velocidad (m/s)'}, title="Perfil Carga-Velocidad (Sentadilla)")
                 fig_sq.update_traces(marker=dict(size=10, color='#C5A059'))
-                x_trend_real = np.linspace(0, f0_kg_sistema, 50)
-                fig_sq.add_scatter(x=x_trend_real, y=p(x_trend_real), mode='lines', name='Tendencia Real', line=dict(color='#94a3b8', width=2))
-                fig_sq.update_xaxes(range=[0, f0_kg_sistema * 1.05], zeroline=True, zerolinewidth=1, zerolinecolor='#1c1f26')
-                fig_sq.update_yaxes(range=[0, v0 * 1.05], zeroline=True, zerolinewidth=1, zerolinecolor='#1c1f26')
+                x_trend_real = np.linspace(0, max(f0_kg_barra, kgs_barra.max()), 50)
+                fig_sq.add_scatter(x=x_trend_real, y=p_barra(x_trend_real), mode='lines', name='Tendencia Real', line=dict(color='#94a3b8', width=2))
+                fig_sq.update_xaxes(range=[0, max(f0_kg_barra, kgs_barra.max()) * 1.05], zeroline=True, zerolinewidth=1, zerolinecolor='#1c1f26')
+                fig_sq.update_yaxes(range=[0, max(v0, vels.max()) * 1.05], zeroline=True, zerolinewidth=1, zerolinecolor='#1c1f26')
                 
                 fig_sq.update_layout(height=350, margin=dict(l=20, r=20, t=40, b=20), legend=dict(yanchor="top", y=0.99, xanchor="right", x=0.99))
                 
@@ -547,27 +547,108 @@ with tab_informes:
                                 kgs_sistema = kgs_barra + (peso_act * 0.89)
                                 z = np.polyfit(kgs_sistema, vels, 1)
                                 p = np.poly1d(z)
-                                f0_kg_sistema = -z[1] / z[0] if z[0] < 0 else 0
-                                v0 = z[1]
-                                f0_kg_barra = max(f0_kg_sistema - (peso_act * 0.89), 0)
-                                f0_rel_N = (f0_kg_sistema * 9.81) / peso_act if peso_act > 0 else 0
+                                f0_kg_sistema = -z[1] / z[0] if z[0] < 0 else 0.0
+                                v0 = max(float(p(peso_act * 0.89)), 0.0) if z[0] < 0 else 0.0
+                                f0_kg_barra = max(f0_kg_sistema - (peso_act * 0.89), 0.0)
+                                f0_rel_N = (f0_kg_sistema * 9.81) / peso_act if peso_act > 0 else 0.0
                                 
                                 ss_res = np.sum((vels - p(kgs_sistema))**2)
                                 ss_tot = np.sum((vels - np.mean(vels))**2)
-                                r2 = 1 - (ss_res / ss_tot) if ss_tot > 0 else 0
+                                r2 = 1 - (ss_res / ss_tot) if ss_tot > 0 else 0.0
                                 
                                 if f0_rel_N >= 25.0 and v0 >= 1.5: cuadrante, pauta_fv = "🟢 Perfil F-V Equilibrado", "Mantenimiento general."
                                 elif f0_rel_N < 25.0 and v0 >= 1.5: cuadrante, pauta_fv = "🔴 Déficit de Fuerza", "Priorizar cargas pesadas (>80% 1RM) y fuerza máxima."
                                 elif f0_rel_N >= 25.0 and v0 < 1.5: cuadrante, pauta_fv = "🟡 Déficit de Velocidad", "Priorizar trabajo de potencia, balísticos y pliometría."
                                 else: cuadrante, pauta_fv = "🔴 Déficit Global", "Requiere mejora integral de fuerza y velocidad."
                                 
-                                fig_sq_m = px.scatter(x=kgs_sistema, y=vels, title="Perfil F-V (Masa del Sistema)", labels={'x': 'Carga del Sistema (kg)', 'y': 'Velocidad (m/s)'})
+                                p_barra_m = np.poly1d(np.polyfit(kgs_barra, vels, 1))
+                                fig_sq_m = px.scatter(x=kgs_barra, y=vels, title="Perfil Carga-Velocidad (Sentadilla)", labels={'x': 'Carga en Barra (kg)', 'y': 'Velocidad (m/s)'})
                                 fig_sq_m.update_traces(marker=dict(size=10, color='#dc2626'))
-                                x_tr = np.linspace(0, f0_kg_sistema, 50)
-                                fig_sq_m.add_scatter(x=x_tr, y=p(x_tr), mode='lines', name='Tendencia Real', line=dict(color='#1c1c1e', width=2))
-                                fig_sq_m.update_xaxes(range=[0, f0_kg_sistema * 1.05], zeroline=True, zerolinewidth=1, zerolinecolor='#e4e4e7')
-                                fig_sq_m.update_yaxes(range=[0, v0 * 1.05], zeroline=True, zerolinewidth=1, zerolinecolor='#e4e4e7')
+                                x_tr = np.linspace(0, max(f0_kg_barra, kgs_barra.max()), 50)
+                                fig_sq_m.add_scatter(x=x_tr, y=p_barra_m(x_tr), mode='lines', name='Tendencia Real', line=dict(color='#1c1c1e', width=2))
+                                fig_sq_m.update_xaxes(range=[0, max(f0_kg_barra, kgs_barra.max()) * 1.05], zeroline=True, zerolinewidth=1, zerolinecolor='#e4e4e7')
+                                fig_sq_m.update_yaxes(range=[0, max(v0, vels.max()) * 1.05], zeroline=True, zerolinewidth=1, zerolinecolor='#e4e4e7')
                                 fig_sq_m.update_layout(height=350, margin=dict(l=20, r=20, t=40, b=20), showlegend=False)
+
+                            def ext_kpis(v_obj, p_ref):
+                                return (safe_float(v_obj.get('cmj_bi', 0)), 
+                                        safe_float(v_obj.get('sh_bi', v_obj.get('sj_bi', 0))), 
+                                        safe_float(v_obj.get('rm_sq', v_obj.get('rm_sentadilla', 0))) / p_ref if p_ref > 0 else 0, 
+                                        ((safe_float(v_obj.get('iso_ext_d', 0)) + safe_float(v_obj.get('iso_ext_i', 0))) / 2) / p_ref if p_ref > 0 else 0, 
+                                        ((safe_float(v_obj.get('iso_flx_d', 0)) + safe_float(v_obj.get('iso_flx_i', 0))) / 2) / p_ref if p_ref > 0 else 0, 
+                                        ((safe_float(v_obj.get('iso_add_d', 0)) + safe_float(v_obj.get('iso_add_i', 0))) / 2) / p_ref if p_ref > 0 else 0)
+
+                            v_ref = {}
+                            for col in ['peso_corporal', 'cmj_bi', 'sh_bi', 'sj_bi', 'rm_sq', 'rm_sentadilla', 'iso_ext_d', 'iso_ext_i', 'iso_flx_d', 'iso_flx_i', 'iso_add_d', 'iso_add_i']:
+                                if col in df_eq.columns:
+                                    val_v = df_eq[col].apply(safe_float)
+                                    v_ref[col] = val_v[val_v > 0].mean() if not val_v[val_v > 0].empty else 0.0
+                                else: v_ref[col] = 0.0
+                            p_ini = v_ref['peso_corporal'] if v_ref['peso_corporal'] > 0 else 70.0
+                            
+                            c_r, sh_r, sq_r, e_r, i_r, a_r = ext_kpis(v_ref, p_ini)
+                            c_a, sh_a, sq_a, e_a, i_a, a_a = ext_kpis(v_latest, peso_act)
+                            mc, ms, mq, me, mi, ma = max(c_r, c_a, 1), max(sh_r, sh_a, 1), max(sq_r, sq_a, 0.1), max(e_r, e_a, 0.1), max(i_r, i_a, 0.1), max(a_r, a_a, 0.1)
+                            
+                            df_rad_m = pd.DataFrame({
+                                'Métrica': ['CMJ', 'Salto Horiz.', '1RM SQ', 'F. Cuádriceps', 'F. Isquios', 'F. Aductores'] * 2,
+                                'Valor': [(c_r/mc)*100, (sh_r/ms)*100, (sq_r/mq)*100, (e_r/me)*100, (i_r/mi)*100, (a_r/ma)*100] + [(c_a/mc)*100, (sh_a/ms)*100, (sq_a/mq)*100, (e_a/me)*100, (i_a/mi)*100, (a_a/ma)*100],
+                                'Test': ['Media del Equipo'] * 6 + ['Actual'] * 6
+                            })
+                            fig_rad_m = px.line_polar(df_rad_m, r='Valor', theta='Métrica', color='Test', line_close=True, color_discrete_map={'Media del Equipo': '#1c1c1e', 'Actual': '#dc2626'})
+                            fig_rad_m.update_traces(fill='toself', opacity=0.4)
+                            fig_rad_m.update_layout(polar=dict(radialaxis=dict(visible=False, range=[0, 100])), height=350, margin=dict(l=20, r=20, t=30, b=20), showlegend=False)
+
+                            pr_uni = [
+                                ("Mov: Rot. Ext Cadera", v_latest.get('mov_rot_ext_d',0), v_latest.get('mov_rot_ext_i',0)),
+                                ("Mov: Rot. Int Cadera", v_latest.get('mov_rot_int_d',0), v_latest.get('mov_rot_int_i',0)),
+                                ("Mov: Dorsiflexión", v_latest.get('mov_dorsi_d',0), v_latest.get('mov_dorsi_i',0)),
+                                ("CMJ Unilateral", v_latest.get('cmj_uni_d',0), v_latest.get('cmj_uni_i',0)),
+                                ("Salto Horizontal", v_latest.get('sh_d',0), v_latest.get('sh_i',0)),
+                                ("Fuerza ISO Cuádriceps", v_latest.get('iso_ext_d',0), v_latest.get('iso_ext_i',0)),
+                                ("Fuerza ISO Isquiosurales", v_latest.get('iso_flx_d',0), v_latest.get('iso_flx_i',0)),
+                                ("Fuerza ISO Aductores", v_latest.get('iso_add_d',0), v_latest.get('iso_add_i',0))
+                            ]
+                            vt, tt, ct, pt = [], [], [], []
+                            for n, d_val, i_val in pr_uni:
+                                d, i_v = safe_float(d_val), safe_float(i_val)
+                                mx = max(d, i_v)
+                                if mx == 0: vt.append(0); tt.append("0%"); ct.append('#64748b'); pt.append(n)
+                                else:
+                                    df_asim = (abs(d - i_v) / mx) * 100
+                                    if d > i_v: vt.append(df_asim); tt.append(f"{df_asim:.1f}%"); ct.append('#10833d'); pt.append(n)
+                                    elif i_v > d: vt.append(-df_asim); tt.append(f"{df_asim:.1f}%"); ct.append('#09274e'); pt.append(n)
+                                    else: vt.append(0); tt.append("0%"); ct.append('#64748b'); pt.append(n)
+                            df_tor_m = pd.DataFrame({'Prueba': pt, 'Asimetria': vt, 'Texto': tt, 'Color': ct}).iloc[::-1]
+                            fig_tor_m = go.Figure(go.Bar(y=df_tor_m['Prueba'], x=df_tor_m['Asimetria'], orientation='h', marker_color=df_tor_m['Color'], text=df_tor_m['Texto'], textposition='outside'))
+                            max_x = max(abs(df_tor_m['Asimetria']).max() + 8, 20)
+                            fig_tor_m.update_layout(title="Asimetrías Clínicas", xaxis=dict(range=[-max_x, max_x]), height=350, margin=dict(l=10, r=10, t=40, b=10))
+                            
+                            img_paths = {}
+                            for name, f_obj in [('fv', fig_sq_m), ('rad', fig_rad_m), ('tor', fig_tor_m)]:
+                                if f_obj:
+                                    f_obj.update_layout(paper_bgcolor="white", plot_bgcolor="white", font=dict(color="black"))
+                                    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
+                                    tmp.close()
+                                    f_obj.write_image(tmp.name, engine="kaleido", width=700, height=350, format="jpg")
+                                    img_paths[name] = tmp.name
+
+                            pdf_bytes_final = generar_pdf_valoracion_jugador(
+                                jug_masivo=jug_masivo,
+                                jug_datos=jug_datos,
+                                v_latest=v_latest,
+                                v_ref=v_ref,
+                                peso_act=peso_act,
+                                img_paths=img_paths,
+                                escudo_b64=st.session_state.get("escudo_equipo"),
+                                cuadrante=cuadrante,
+                                v0=v0,
+                                f0_kg_barra=f0_kg_barra,
+                                f0_rel_N=f0_rel_N,
+                                r2=r2,
+                                pauta_fv=pauta_fv
+                            )
+                            zip_file.writestr(f"Valoracion_{jug_masivo}.pdf", pdf_bytes_final)
 
                             def ext_kpis(v_obj, p_ref):
                                 return (safe_float(v_obj.get('cmj_bi', 0)), 
