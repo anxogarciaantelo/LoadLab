@@ -471,6 +471,8 @@ else:
 
                 comp_fases = [0, 0, 0, 0]
                 fase_actual = 0
+                while fase_actual < 3 and comp_fases[fase_actual] >= req_fases[fase_actual]:
+                    fase_actual += 1
                 historial_progresion = []
                 exposiciones_vmax = 0
 
@@ -527,8 +529,8 @@ else:
                         "Motivo / Notas": " | ".join(motivos) if motivos else "-"
                     })
                     
-                    # Avanzar fase si cumple requisitos
-                    if comp_fases[fase_actual] >= req_fases[fase_actual] and fase_actual < 3:
+                    # Avanzar fase(s) si cumple requisitos (saltando fases exentas con 0 sesiones)
+                    while fase_actual < 3 and comp_fases[fase_actual] >= req_fases[fase_actual]:
                         fase_actual += 1
 
                 # 5. RENDERIZADO VISUAL DE FASES
