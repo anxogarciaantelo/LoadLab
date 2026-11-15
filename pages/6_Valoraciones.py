@@ -323,14 +323,32 @@ with tab_informes:
                     cuadrante = "🔴 Déficit Global"
                     pauta_fv = "Requiere mejora integral de fuerza y velocidad."
 
-                # 4. GRÁFICO LIMPIO (Coherente con V0 y F0 Barra)
+                # 4. GRÁFICO CON BANDAS DE ENTRENAMIENTO VBT Y MARCADOR 1RM
                 p_barra = np.poly1d(np.polyfit(kgs_barra, vels, 1))
-                fig_sq = px.scatter(x=kgs_barra, y=vels, labels={'x': 'Carga en Barra (kg)', 'y': 'Velocidad (m/s)'}, title="Perfil Carga-Velocidad (Sentadilla)")
-                fig_sq.update_traces(marker=dict(size=10, color='#C5A059'))
+                max_x_fv = max(f0_kg_barra, kgs_barra.max(), sq_rm) * 1.08
+                max_y_fv = max(v0, vels.max(), 1.35) * 1.08
+
+                fig_sq = px.scatter(x=kgs_barra, y=vels, labels={'x': 'Carga en Barra (kg)', 'y': 'Velocidad Media Propulsiva (m/s)'}, title="Perfil Carga-Velocidad (Zonas VBT)")
+                fig_sq.update_traces(marker=dict(size=11, color='#C5A059', line=dict(width=1.5, color='#0b0e14')), name='Series Test')
+
+                # Bandas horizontales de zonas VBT
+                fig_sq.add_hrect(y0=0.00, y1=0.50, fillcolor="rgba(239, 68, 68, 0.08)", line_width=0, annotation_text="Fuerza Máxima (<0.50 m/s)", annotation_position="bottom right", annotation_font=dict(size=9, color="#ef4444"))
+                fig_sq.add_hrect(y0=0.50, y1=0.75, fillcolor="rgba(245, 158, 11, 0.08)", line_width=0, annotation_text="Fuerza-Velocidad (0.50-0.75)", annotation_position="top right", annotation_font=dict(size=9, color="#f59e0b"))
+                fig_sq.add_hrect(y0=0.75, y1=1.00, fillcolor="rgba(16, 185, 129, 0.08)", line_width=0, annotation_text="Velocidad-Fuerza (0.75-1.00)", annotation_position="top right", annotation_font=dict(size=9, color="#10b981"))
+                fig_sq.add_hrect(y0=1.00, y1=max_y_fv, fillcolor="rgba(14, 165, 233, 0.08)", line_width=0, annotation_text="Potencia / Balístico (>1.00)", annotation_position="top right", annotation_font=dict(size=9, color="#0ea5e9"))
+
                 x_trend_real = np.linspace(0, max(f0_kg_barra, kgs_barra.max()), 50)
-                fig_sq.add_scatter(x=x_trend_real, y=p_barra(x_trend_real), mode='lines', name='Tendencia Real', line=dict(color='#94a3b8', width=2))
-                fig_sq.update_xaxes(range=[0, max(f0_kg_barra, kgs_barra.max()) * 1.05], zeroline=True, zerolinewidth=1, zerolinecolor='#1c1f26')
-                fig_sq.update_yaxes(range=[0, max(v0, vels.max()) * 1.05], zeroline=True, zerolinewidth=1, zerolinecolor='#1c1f26')
+                fig_sq.add_scatter(x=x_trend_real, y=p_barra(x_trend_real), mode='lines', name='Recta F-V', line=dict(color='#e2e8f0', width=2, dash='dash'))
+
+                if sq_rm > 0:
+                    fig_sq.add_scatter(
+                        x=[sq_rm], y=[0.30], mode='markers+text', name='1RM Estimado',
+                        marker=dict(symbol='diamond', size=14, color='#ef4444', line=dict(width=2, color='#ffffff')),
+                        text=[f"1RM: {sq_rm}kg"], textposition="top center", textfont=dict(color="#ef4444", size=10, weight="bold")
+                    )
+
+                fig_sq.update_xaxes(range=[0, max_x_fv], zeroline=True, zerolinewidth=1, zerolinecolor='#1c1f26')
+                fig_sq.update_yaxes(range=[0, max_y_fv], zeroline=True, zerolinewidth=1, zerolinecolor='#1c1f26')
                 
                 fig_sq.update_layout(height=350, margin=dict(l=20, r=20, t=40, b=20), legend=dict(yanchor="top", y=0.99, xanchor="right", x=0.99))
                 
