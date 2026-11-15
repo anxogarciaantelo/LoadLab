@@ -472,6 +472,22 @@ else:
                         cg6.metric("HSR m / min", f"{(m_gps['DIS AI'] / prom_min):.2f}" if prom_min > 0 else "0.0")
                         cg7.metric("ACC / min", f"{(m_gps['ACC'] / prom_min):.2f}" if prom_min > 0 else "0.0")
 
+                        st.markdown("---")
+                        st.markdown("##### :material/speed: Espectro Metabólico de Zonas de Velocidad (Z1 - Z6)")
+                        zonas_vals = [safe_float(m_gps.get(f'Z{z}', 0)) for z in range(1, 7)]
+                        if sum(zonas_vals) > 0:
+                            etiquetas_z = ["Z1 (0-14 km/h)", "Z2 (14-21 km/h)", "Z3 (21-24 km/h)", "Z4 (24-27 km/h)", "Z5 (27-30 km/h)", "Z6 (>30 km/h)"]
+                            colores_z = ["#475569", "#0ea5e9", "#10b981", "#C5A059", "#f59e0b", "#ef4444"]
+                            df_z_ind = pd.DataFrame({"Zona": etiquetas_z, "Metros": zonas_vals})
+                            fig_z_ind = px.bar(
+                                df_z_ind, x="Metros", y="Zona", orientation="h", color="Zona",
+                                color_discrete_sequence=colores_z, text="Metros",
+                                title="Promedio de Metros por Zona Locomotora"
+                            )
+                            fig_z_ind.update_traces(texttemplate="%{text:.0f} m", textposition="outside")
+                            fig_z_ind.update_layout(showlegend=False, height=290, xaxis_title="Metros (m)", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
+                            st.plotly_chart(fig_z_ind, use_container_width=True, key=f"jug_zonas_{i}")
+                        
             with sub_tabs[3]:
                     les_jug = [l for l in st.session_state.lesiones if l['jugador'] == jugador['JUGADOR']]
                     if not les_jug:
