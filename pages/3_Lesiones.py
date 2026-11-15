@@ -152,10 +152,89 @@ else:
                 with k4: tarjeta_kpi_lesiones("Incidencia", f"{incidencia:.1f}", tooltip="Normativa UEFA ECIS:&#10;Global: 6-8 / 1000h&#10;Entrenos: 3-4 / 1000h&#10;Partidos: 20-25 / 1000h", color_borde="#ef4444")
                 with k5: tarjeta_kpi_lesiones("Burden", f"{burden:.0f}", tooltip="Normativa UEFA ECIS:&#10;Burden óptimo: < 150 días de baja / 1000h", color_borde="#ef4444")
                 
-        # 5. DIBUJAR GRÁFICOS EN MEDIO (Usando el contenedor reservado)
+        # 5. DIBUJAR GRÁFICOS EN MEDIO (Mapa Anatómico 2D + Gantt + Desglose)
         with cont_graficos:
-            st.markdown("#### :material/insights: Desglose Estadístico")
             if not df_filtrado.empty:
+                col_anat, col_gantt = st.columns([1.05, 1.45], gap="large")
+                with col_anat:
+                    st.markdown("#### :material/accessibility_new: Mapa Anatómico Térmico")
+                    conteo_z = df_filtrado['zona'].value_counts().to_dict()
+                    max_z = max(conteo_z.values()) if conteo_z else 1
+
+                    def color_zona_svg(nombre_z):
+                        c = conteo_z.get(nombre_z, 0)
+                        if c == 0: return "#1e293b", "0.45", "#475569"
+                        ratio = c / max_z
+                        if ratio >= 0.66: return "#ef4444", "0.85", "#fca5a5"
+                        elif ratio >= 0.33: return "#f59e0b", "0.80", "#fde68a"
+                        else: return "#C5A059", "0.75", "#fef08a"
+
+                    c_cab, o_cab, b_cab = color_zona_svg("Cabeza")
+                    c_tro, o_tro, b_tro = color_zona_svg("Tronco")
+                    c_exs, o_exs, b_exs = color_zona_svg("Extremidades Superiores")
+                    c_cad, o_cad, b_cad = color_zona_svg("Cadera - Ingles")
+                    c_mus, o_mus, b_mus = color_zona_svg("Muslo")
+                    c_rod, o_rod, b_rod = color_zona_svg("Rodilla")
+                    c_pie_p, o_pie_p, b_pie_p = color_zona_svg("Pierna")
+                    c_tob, o_tob, b_tob = color_zona_svg("Tobillo")
+                    c_pie, o_pie, b_pie = color_zona_svg("Pie")
+
+                    svg_body = (
+                        f'<div style="background: radial-gradient(circle at 50% 35%, rgba(197,160,89,0.10), #111318 75%); border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 14px; display: flex; align-items: center; justify-content: space-around;">'
+                        f'<svg viewBox="0 0 220 420" width="175" height="330">'
+                        f'<circle cx="110" cy="36" r="22" fill="{c_cab}" fill-opacity="{o_cab}" stroke="{b_cab}" stroke-width="2"><title>Cabeza: {conteo_z.get("Cabeza",0)}</title></circle>'
+                        f'<rect x="78" y="66" width="64" height="92" rx="14" fill="{c_tro}" fill-opacity="{o_tro}" stroke="{b_tro}" stroke-width="2"><title>Tronco: {conteo_z.get("Tronco",0)}</title></rect>'
+                        f'<rect x="46" y="70" width="24" height="105" rx="10" fill="{c_exs}" fill-opacity="{o_exs}" stroke="{b_exs}" stroke-width="2"><title>Ext. Superiores: {conteo_z.get("Extremidades Superiores",0)}</title></rect>'
+                        f'<rect x="150" y="70" width="24" height="105" rx="10" fill="{c_exs}" fill-opacity="{o_exs}" stroke="{b_exs}" stroke-width="2"><title>Ext. Superiores: {conteo_z.get("Extremidades Superiores",0)}</title></rect>'
+                        f'<rect x="76" y="162" width="68" height="34" rx="10" fill="{c_cad}" fill-opacity="{o_cad}" stroke="{b_cad}" stroke-width="2"><title>Cadera - Ingles: {conteo_z.get("Cadera - Ingles",0)}</title></rect>'
+                        f'<rect x="76" y="200" width="30" height="68" rx="10" fill="{c_mus}" fill-opacity="{o_mus}" stroke="{b_mus}" stroke-width="2"><title>Muslo: {conteo_z.get("Muslo",0)}</title></rect>'
+                        f'<rect x="114" y="200" width="30" height="68" rx="10" fill="{c_mus}" fill-opacity="{o_mus}" stroke="{b_mus}" stroke-width="2"><title>Muslo: {conteo_z.get("Muslo",0)}</title></rect>'
+                        f'<circle cx="91" cy="282" r="12" fill="{c_rod}" fill-opacity="{o_rod}" stroke="{b_rod}" stroke-width="2"><title>Rodilla: {conteo_z.get("Rodilla",0)}</title></circle>'
+                        f'<circle cx="129" cy="282" r="12" fill="{c_rod}" fill-opacity="{o_rod}" stroke="{b_rod}" stroke-width="2"><title>Rodilla: {conteo_z.get("Rodilla",0)}</title></circle>'
+                        f'<rect x="79" y="298" width="24" height="62" rx="8" fill="{c_pie_p}" fill-opacity="{o_pie_p}" stroke="{b_pie_p}" stroke-width="2"><title>Pierna: {conteo_z.get("Pierna",0)}</title></rect>'
+                        f'<rect x="117" y="298" width="24" height="62" rx="8" fill="{c_pie_p}" fill-opacity="{o_pie_p}" stroke="{b_pie_p}" stroke-width="2"><title>Pierna: {conteo_z.get("Pierna",0)}</title></rect>'
+                        f'<circle cx="91" cy="370" r="9" fill="{c_tob}" fill-opacity="{o_tob}" stroke="{b_tob}" stroke-width="2"><title>Tobillo: {conteo_z.get("Tobillo",0)}</title></circle>'
+                        f'<circle cx="129" cy="370" r="9" fill="{c_tob}" fill-opacity="{o_tob}" stroke="{b_tob}" stroke-width="2"><title>Tobillo: {conteo_z.get("Tobillo",0)}</title></circle>'
+                        f'<rect x="72" y="384" width="32" height="16" rx="6" fill="{c_pie}" fill-opacity="{o_pie}" stroke="{b_pie}" stroke-width="2"><title>Pie: {conteo_z.get("Pie",0)}</title></rect>'
+                        f'<rect x="116" y="384" width="32" height="16" rx="6" fill="{c_pie}" fill-opacity="{o_pie}" stroke="{b_pie}" stroke-width="2"><title>Pie: {conteo_z.get("Pie",0)}</title></rect>'
+                        f'</svg>'
+                        f'<div style="display:flex; flex-direction:column; gap:6px; min-width:130px;">'
+                        + "".join([
+                            f'<div style="display:flex; justify-content:space-between; align-items:center; background:#0b0e14; padding:4px 8px; border-radius:6px; border-left:3px solid {color_zona_svg(z_k)[0]};"><span style="font-size:0.72rem; color:#cbd5e1; font-weight:700;">{z_k}</span><span class="font-mono-hud" style="font-size:0.78rem; color:#f8fafc; font-weight:800;">{z_v}</span></div>'
+                            for z_k, z_v in sorted(conteo_z.items(), key=lambda item: item[1], reverse=True)
+                        ])
+                        + f'</div></div>'
+                    )
+                    st.markdown(svg_body, unsafe_allow_html=True)
+
+                with col_gantt:
+                    st.markdown("#### :material/view_timeline: Línea Temporal de Bajas (Gantt)")
+                    gantt_rows = []
+                    for _, r_l in df_filtrado.iterrows():
+                        f_ini_dt = pd.to_datetime(r_l["id_sesion"])
+                        d_real = max(int(calcular_dias_reales(r_l)), 1)
+                        f_fin_dt = f_ini_dt + pd.Timedelta(days=d_real)
+                        gantt_rows.append({
+                            "Jugador": r_l["jugador"],
+                            "Inicio": f_ini_dt,
+                            "Fin": f_fin_dt,
+                            "Tipo": f"{r_l['tipo']} ({r_l['zona']})",
+                            "Estado": r_l.get("estado", "Activa"),
+                            "Días": d_real
+                        })
+                    df_gantt = pd.DataFrame(gantt_rows)
+                    fig_gantt = px.timeline(
+                        df_gantt, x_start="Inicio", x_end="Fin", y="Jugador", color="Estado",
+                        hover_name="Tipo", text="Días",
+                        color_discrete_map={"Activa": "#ef4444", "Recuperado": "#10b981"}
+                    )
+                    fig_gantt.update_traces(texttemplate="%{text}d", textposition="inside")
+                    fig_gantt.update_yaxes(autorange="reversed")
+                    fig_gantt.update_layout(height=355, margin=dict(l=10, r=10, t=10, b=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis_title="")
+                    st.plotly_chart(fig_gantt, use_container_width=True)
+
+                st.markdown("---")
+                st.markdown("#### :material/insights: Desglose Estadístico")
                 cg1, cg2, cg3 = st.columns(3)
                 with cg1:
                     conteo_dur = df_filtrado['Gravedad'].value_counts().reset_index()
