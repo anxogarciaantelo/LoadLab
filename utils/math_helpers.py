@@ -651,14 +651,15 @@ def render_kpi_elite(titulo, valor, subtitulo="", icono="", color_borde="#C5A059
             
         tendencia_html = f"<div class='font-mono-hud' style='color: {color}; font-size: 0.78rem; font-weight: 700; margin-top: 8px; line-height: 1.2; text-align: center;'>{flecha} {abs(val_t):.1f}% <span style='font-family: Plus Jakarta Sans, sans-serif;'>{texto_personalizado}</span></div>"
 
-    html = f"""
-    <div style="background: radial-gradient(120% 100% at 50% 0%, {color_borde}18 0%, #111318 70%); border: 1px solid rgba(255,255,255,0.07); border-top: 2px solid {color_borde}; padding: 11px 9px; border-radius: 10px; box-shadow: 0 8px 18px -4px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08); display: flex; flex-direction: column; justify-content: center; height: 100%;">
-        <p style="color: #94a3b8; font-size: 0.75rem; font-weight: 800; margin: 0 0 6px 0; text-transform: uppercase; letter-spacing: 0.6px; line-height: 1.1; word-wrap: break-word; text-align: left;">{titulo} {icono}</p>
-        <h2 class="font-mono-hud" style="color: #f8fafc; font-size: 1.45rem; font-weight: 800; margin: 0; line-height: 1; text-align: center;">{valor}</h2>
-        {tendencia_html}
-        {f"<p style='color: {color_borde}; font-size: 0.68rem; font-weight: 700; margin: 6px 0 0 0; text-align: center;'>{subtitulo}</p>" if subtitulo else ""}
-    </div>
-    """
+    subtitulo_html = f"<p style='color: {color_borde}; font-size: 0.68rem; font-weight: 700; margin: 6px 0 0 0; text-align: center;'>{subtitulo}</p>" if subtitulo else ""
+    html = (
+        f'<div style="background: radial-gradient(120% 100% at 50% 0%, {color_borde}18 0%, #111318 70%); border: 1px solid rgba(255,255,255,0.07); border-top: 2px solid {color_borde}; padding: 11px 9px; border-radius: 10px; box-shadow: 0 8px 18px -4px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08); display: flex; flex-direction: column; justify-content: center; height: 100%;">'
+        f'<p style="color: #94a3b8; font-size: 0.75rem; font-weight: 800; margin: 0 0 6px 0; text-transform: uppercase; letter-spacing: 0.6px; line-height: 1.1; word-wrap: break-word; text-align: left;">{titulo} {icono}</p>'
+        f'<h2 class="font-mono-hud" style="color: #f8fafc; font-size: 1.45rem; font-weight: 800; margin: 0; line-height: 1; text-align: center;">{valor}</h2>'
+        f'{tendencia_html}'
+        f'{subtitulo_html}'
+        f'</div>'
+    )
     import streamlit as st
     st.markdown(html, unsafe_allow_html=True)
 def calcular_zscore_wellness(df_master, fecha_objetivo):
