@@ -38,8 +38,9 @@ def filtrar_partidos(competicion):
     else:
         return [p for p in partidos_totales if p.get("tipo") == "Partido Oficial" and p.get("competicion") == competicion]
 
-tab_equipo, tab_jugadores, tab_rivales = st.tabs([
+tab_equipo, tab_pizarra, tab_jugadores, tab_rivales = st.tabs([
     ":material/shield: Estadísticas de Equipo", 
+    ":material/developer_board: Pizarra Táctica & Sinergias",
     ":material/groups: Estadísticas de Jugadores", 
     ":material/sports_martial_arts: Estadísticas de Rival"
 ])
@@ -128,7 +129,129 @@ with tab_equipo:
             "GF/P": gf_pp_fuera, "GC/P": gc_pp_fuera
         }])
         mostrar_tabla_moderna(df_fuera.style.hide(axis="index").format({"Pts/P": "{:.2f}", "GF/P": "{:.2f}", "GC/P": "{:.2f}"}))
+    st.markdown("---")
+    # =========================================================================
+    # ⏱️ A2. DINÁMICA TEMPORAL DE GOLES (TRAMOS DE 15') Y SOSTENIBILIDAD FINAL
+    # =========================================================================
+    st.markdown("#### :material/timer: Dinámica Temporal de Goles (Tramos de 15') e Índice de Sostenibilidad")
+    st.caption("Analiza en qué tramos del partido el equipo es más letal o vulnerable a partir de los minutos de gol registrados.")
 
+    tramos_labels = ["1-15'", "16-30'", "31-45'+", "46-60'", "61-75'", "76-90'+"]
+    gf_tramos = {t: 0 for t in tramos_labels}
+    gc_tramos = {t: 0 for t in tramos_labels}
+
+    def asignar_tramo_15(minuto):
+        m = int(safe_float(minuto))
+        if m <= 15: return "1-15'"
+        elif m <= 30: return "16-30'"
+        elif m <= 45: return "31-45'+"
+        elif m <= 60: return "46-60'"
+        elif m <= 75: return "61-75'"
+        else: return "76-90'+"
+
+    for p in partidos_eq:
+        ev = p.get("estadisticas_partido", {}).get("_eventos_goles", {})
+        for mgf in ev.get("gf", []):
+            if safe_float(mgf) > 0: gf_tramos[asignar_tramo_15(mgf)] += 1
+        for mgc in ev.get("gc", []):
+            if safe_float(mgc) > 0: gc_tramos[asignar_tramo_15(mgc)] += 1
+
+    total_gf_ev = sum(gf_tramos.values())
+    total_gc_ev = sum(gc_tramos.values())
+
+    if total_gf_ev == 0 and total_gc_ev == 0:
+        st.info(":material/info: Registra los minutos exactos de los goles en 'Entrenamiento -> Sesiones -> Stats Partido' para desbloquear la distribución por tramos de 15 minutos.")
+    else:
+        df_tramos = pd.DataFrame({
+            "Tramo": tramos_labels,
+            "Goles a Favor": [gf_tramos[t] for t in tramos_labels],
+            "Goles en Contra": [gc_tramos[t] for t in tramos_labels]
+        })
+        df_tramos["Balance"] = df_tramos["Goles a Favor"] - df_tramos["Goles en Contra"]
+
+        tramo_letal = max(gf_tramos, key=gf_tramos.get) if total_gf_ev > 0 else "-"
+        tramo_vulnerable = max(gc_tramos, key=gc_tramos.get) if total_gc_ev > 0 else "-"
+        gf_ult30 = gf_tramos["61-75'"] + gf_tramos["76-90'+"]
+        gc_ult30 = gc_tramos["61-75'"] + gc_tramos["76-90'+"]
+        bal_ult30 = gf_ult30 - gc_ult30
+
+        ck_t1, ck_t2, ck_t3, ck_t4 = st.columns(4)
+        with ck_t1: render_kpi_elite("Tramo Más Letal", f"{tramo_letal}", subtitulo=f"{gf_tramos.get(tramo_letal, 0)} goles anotados", color_borde="#10b981")
+        with ck_t2: render_kpi_elite("Tramo Más Vulnerable", f"{tramo_vulnerable}", subtitulo=f"{gc_tramos.get(tramo_vulnerable, 0)} goles encajados", color_borde="#ef4444")
+        with ck_t3: render_kpi_elite("Balance Últimos 30' (61-90')", f"{bal_ult30:+d}", subtitulo=f"{gf_ult30} GF vs {gc_ult30} GC", color_borde="#10b981" if bal_ult30 >= 0 else "#ef4444")
+        with ck_t4:
+            pct_gc_final = (gc_ult30 / total_gc_ev * 100) if total_gc_ev > 0 else 0.0
+            est_sost = "Sólido al final" if pct_gc_final <= 35 else ("Alerta fatiga final" if pct_gc_final > 45 else "Estándar")
+            render_kpi_elite("% GC en Últimos 30'", f"{pct_gc_final:.0f}%", subtitulo=est_sost, color_borde="#10b981" if pct_gc_final <= 35 else "#f59e0b")
+
+        fig_tramos = go.Figure()
+        fig_tramos.add_trace(go.Bar(x=df_tramos["Tramo"], y=df_tramos["Goles a Favor"], name="Goles a Favor", marker_color="#10b981", text=df_tramos["Goles a Favor"], textposition="outside"))
+        fig_tramos.add_trace(go.Bar(x=df_tramos["Tramo"], y=df_tramos["Goles en Contra"], name="Goles en Contra", marker_color="#ef4444", text=df_tramos["Goles en Contra"], textposition="outside"))
+        fig_tramos.update_layout(barmode="group", height=320, title="Distribución de Goles por Tramos de 15 Minutos", yaxis_title="Nº de Goles", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+        st.plotly_chart(fig_tramos, use_container_width=True)
+
+    st.markdown("---")
+    # =========================================================================
+    # 🧬 B3 & B7. ADN FÍSICO DE LA VICTORIA Y RENDIMIENTO CLIMATOLÓGICO
+    # =========================================================================
+    col_adn, col_clima_st = st.columns(2)
+
+    with col_adn:
+        st.markdown("#### :material/biotech: ADN Físico del Resultado (GPS vs. Marcador)")
+        st.caption("Exigencia física media del equipo (normalizada a 90') según el resultado obtenido.")
+        registros_adn = []
+        for p in partidos_eq:
+            gf_p = int(safe_float(p.get("goles_favor", 0)))
+            gc_p = int(safe_float(p.get("goles_contra", 0)))
+            res_p = "Victoria" if gf_p > gc_p else ("Empate" if gf_p == gc_p else "Derrota")
+            
+            datos_inf = [d for d in p.get("datos_informe", []) if d.get("POS") != "POR" and safe_float(d.get("DIS", 0)) > 0]
+            if datos_inf:
+                min_sum = sum(safe_float(d.get("MIN_GPS", d.get("MIN", 0))) for d in datos_inf)
+                if min_sum > 0:
+                    registros_adn.append({
+                        "Resultado": res_p,
+                        "DIS (km/90')": (sum(safe_float(d.get("DIS", 0)) for d in datos_inf) / min_sum) * 90.0,
+                        "HSR (m/90')": (sum(safe_float(d.get("DIS AI", d.get("HID >21", 0))) for d in datos_inf) / min_sum) * 90.0,
+                        "Sprints (/90')": (sum(safe_float(d.get("Nº SPR", d.get("SPR >24", 0))) for d in datos_inf) / min_sum) * 90.0,
+                        "ACC+DCC (/90')": (sum(safe_float(d.get("ACC", 0)) + safe_float(d.get("DCC", 0)) for d in datos_inf) / min_sum) * 90.0
+                    })
+        if registros_adn:
+            df_adn = pd.DataFrame(registros_adn).groupby("Resultado").agg(
+                Partidos=("DIS (km/90')", "count"),
+                DIS_km=("DIS (km/90')", "mean"),
+                HSR_m=("HSR (m/90')", "mean"),
+                Sprints=("Sprints (/90')", "mean"),
+                ACC_DCC=("ACC+DCC (/90')", "mean")
+            ).reindex(["Victoria", "Empate", "Derrota"]).dropna(how="all").reset_index()
+            df_adn = df_adn.rename(columns={"DIS_km": "DIS (km)", "HSR_m": "HSR (m)", "ACC_DCC": "ACC+DCC"})
+            mostrar_tabla_moderna(df_adn.style.hide(axis="index").format({"Partidos": "{:.0f}", "DIS (km)": "{:.2f}", "HSR (m)": "{:.0f}", "Sprints": "{:.1f}", "ACC+DCC": "{:.0f}"}).background_gradient(subset=["HSR (m)", "DIS (km)"], cmap="Blues"))
+        else:
+            st.info("Procesa datos GPS en los partidos para correlacionar el despliegue físico con las victorias.")
+
+    with col_clima_st:
+        st.markdown("#### :material/partly_cloudy_day: Rendimiento Contextual y Climatológico")
+        st.caption("Balance competitivo y puntos por partido (Pts/P) según la meteorología registrada.")
+        reg_clima = []
+        for p in partidos_eq:
+            gf_p = int(safe_float(p.get("goles_favor", 0)))
+            gc_p = int(safe_float(p.get("goles_contra", 0)))
+            pts_p = 3 if gf_p > gc_p else (1 if gf_p == gc_p else 0)
+            cl = p.get("clima") or {}
+            estado_cl = cl.get("estado", "Sin datos") if isinstance(cl, dict) else "Sin datos"
+            temp_cl = safe_float(cl.get("temp", 0)) if isinstance(cl, dict) else 0
+            reg_clima.append({"Clima": estado_cl, "PJ": 1, "V": 1 if pts_p==3 else 0, "E": 1 if pts_p==1 else 0, "D": 1 if pts_p==0 else 0, "GF": gf_p, "GC": gc_p, "Pts": pts_p, "Temp": temp_cl})
+        if reg_clima:
+            df_cl = pd.DataFrame(reg_clima).groupby("Clima").agg(
+                PJ=("PJ", "sum"), V=("V", "sum"), E=("E", "sum"), D=("D", "sum"),
+                GF=("GF", "sum"), GC=("GC", "sum"), Pts=("Pts", "sum"), Temp_Media=("Temp", "mean")
+            ).reset_index()
+            df_cl["Pts/P"] = df_cl["Pts"] / df_cl["PJ"]
+            df_cl = df_cl.rename(columns={"Temp_Media": "Temp. Media (°C)"})
+            mostrar_tabla_moderna(df_cl[["Clima", "PJ", "V", "E", "D", "GF", "GC", "Pts/P", "Temp. Media (°C)"]].style.hide(axis="index").format({"Pts/P": "{:.2f}", "Temp. Media (°C)": "{:.1f}°C"}))
+        else:
+            st.info("No hay partidos suficientes para evaluar el impacto climatológico.")
+            
     # WIDGETS DE LIGA
     if filtro_competicion_eq == "Liga":
         comp_id = st.session_state.get("lapreferente_comp_id", "26710")
@@ -188,6 +311,288 @@ with tab_equipo:
                     st.session_state["lapreferente_copa_id"] = nuevo_copa_id
                     guardar_datos(modulo="configuracion")
                     st.success(":material/check_circle: ID de Copa actualizado correctamente.")
+# ==========================================
+# 📋 PESTAÑA NUEVA: PIZARRA TÁCTICA 2D & SINERGIAS
+# ==========================================
+with tab_pizarra:
+    st.markdown("### :material/developer_board: Pizarra Táctica Inteligente: Once Ideal de la Semana")
+    st.caption("Algoritmo de recomendación semanal: cruza Readiness (35%), Estado de Carga ACWR Sweet Spot (30%) e Impacto Competitivo +/- por 90' (35%), descartando automáticamente lesionados, jugadores en RTP y sancionados.")
+
+    c_sis1, c_sis2, c_sis3 = st.columns([1.2, 1.2, 1.6])
+    sistema_elegido = c_sis1.selectbox("1. Sistema Táctico:", ["1-4-3-3", "1-4-2-3-1", "1-4-4-2", "1-3-5-2"], key="sel_sis_tactico")
+    comp_pizarra = c_sis2.selectbox("2. Contexto Competitivo:", ["Liga", "Global", "Copa"], key="sel_comp_pizarra")
+    prioridad_alg = c_sis3.radio("3. Enfoque del Algoritmo:", ["Equilibrado (Élite)", "Máxima Frescura Física", "Máximo Rendimiento (+/-)"], horizontal=True, key="rad_prio_piz")
+
+    partidos_piz = filtrar_partidos(comp_pizarra)
+    
+    # 1. Identificar bajas médicas, readaptación y sancionados
+    ses_pasadas_piz = sorted([s for s in st.session_state.sesiones if s["fecha"] <= hoy_stats_str], key=lambda x: x["fecha"])
+    entrenos_piz = [s for s in ses_pasadas_piz if s.get("tipo") == "Entrenamiento"]
+    disp_ult_piz = {limpiar_nombre(k): v for k, v in ses_pasadas_piz[-1].get("disponibilidad", {}).items()} if ses_pasadas_piz else {}
+    disp_ent_piz = {limpiar_nombre(k): v for k, v in entrenos_piz[-1].get("disponibilidad", {}).items()} if entrenos_piz else {}
+    les_act_piz = {limpiar_nombre(l["jugador"]) for l in st.session_state.get("lesiones", []) if l.get("estado") == "Activa"}
+
+    # Sancionados en el último partido oficial
+    partidos_liga_ord = sorted(filtrar_partidos("Liga"), key=lambda x: x.get("fecha", ""))
+    stats_ult_liga = partidos_liga_ord[-1].get("estadisticas_partido", {}) if partidos_liga_ord else {}
+    acum_ta = {}
+    for p_l in partidos_liga_ord:
+        for j_k, v_k in p_l.get("estadisticas_partido", {}).items():
+            if isinstance(v_k, dict):
+                acum_ta[limpiar_nombre(j_k)] = acum_ta.get(limpiar_nombre(j_k), 0) + int(safe_float(v_k.get("Amarillas", 0)))
+
+    sancionados_set = set()
+    for j_k, v_k in stats_ult_liga.items():
+        if isinstance(v_k, dict):
+            jc = limpiar_nombre(j_k)
+            if int(safe_float(v_k.get("Rojas", 0))) > 0:
+                sancionados_set.add(jc)
+            elif int(safe_float(v_k.get("Amarillas", 0))) > 0 and acum_ta.get(jc, 0) > 0 and acum_ta.get(jc, 0) % 5 == 0:
+                sancionados_set.add(jc)
+
+    # 2. Extraer Readiness y EWMA actual
+    ult_rd_map = {}
+    for s_p in ses_pasadas_piz:
+        if s_p.get("informe_generado") and s_p.get("datos_informe"):
+            for d_p in s_p["datos_informe"]:
+                t_val, w_val = safe_float(d_p.get("TQR", 0)), safe_float(d_p.get("WELLNESS", 0))
+                if t_val > 0 and w_val > 0:
+                    ult_rd_map[limpiar_nombre(d_p["JUGADOR"])] = ((t_val / 10.0) * 50.0) + (((35.0 - w_val) / 30.0) * 50.0)
+
+    fecha_ewma_piz = ses_pasadas_piz[-1]["fecha"] if ses_pasadas_piz else hoy_stats_str
+    ewma_piz_dict = calcular_ewma_historico(st.session_state.sesiones, fecha_ewma_piz)
+    ewma_clean_map = {limpiar_nombre(k): v for k, v in ewma_piz_dict.items()}
+
+    # 3. Impacto competitivo por jugador
+    comp_map = {}
+    for p_m in partidos_piz:
+        st_p = p_m.get("estadisticas_partido", {})
+        for j_m, v_m in st_p.items():
+            if j_m == "_eventos_goles" or not isinstance(v_m, dict): continue
+            jm_c = limpiar_nombre(j_m)
+            if jm_c not in comp_map: comp_map[jm_c] = {"min": 0.0, "g": 0, "a": 0, "gf_c": 0, "gc_c": 0}
+            comp_map[jm_c]["min"] += safe_float(v_m.get("Minutos", 0))
+            comp_map[jm_c]["g"] += int(safe_float(v_m.get("Goles", 0)))
+            comp_map[jm_c]["a"] += int(safe_float(v_m.get("Asistencias", 0)))
+            comp_map[jm_c]["gf_c"] += int(safe_float(v_m.get("GF_Campo", 0)))
+            comp_map[jm_c]["gc_c"] += int(safe_float(v_m.get("GC_Campo", 0)))
+
+    max_min_eq = max([v["min"] for v in comp_map.values()], default=90.0)
+    if max_min_eq <= 0: max_min_eq = 90.0
+
+    # 4. Evaluar plantilla disponible
+    candidatos = []
+    no_aptos_info = []
+    for p in st.session_state.plantilla:
+        j_nom = p["JUGADOR"]
+        jc = limpiar_nombre(j_nom)
+        est_g = disp_ult_piz.get(jc, "Disponible")
+        est_e = disp_ent_piz.get(jc, "Disponible")
+        
+        if jc in les_act_piz or est_g == "Lesionado" or est_e == "Lesionado":
+            no_aptos_info.append(f"🔴 **{j_nom}** (Lesionado)")
+            continue
+        if est_e == "Readaptación":
+            no_aptos_info.append(f"🟡 **{j_nom}** (En Readaptación RTP)")
+            continue
+        if jc in sancionados_set:
+            no_aptos_info.append(f"🟥 **{j_nom}** (Sancionado)")
+            continue
+
+        rd_score = ult_rd_map.get(jc, 78.0)
+        ac_ratio = ewma_clean_map.get(jc, {}).get("RATIO A/C", 1.0)
+        if 0.80 <= ac_ratio <= 1.30: ac_score = 100.0
+        elif 1.30 < ac_ratio <= 1.50 or 0.65 <= ac_ratio < 0.80: ac_score = 68.0
+        else: ac_score = 35.0
+
+        c_st = comp_map.get(jc, {"min": 0.0, "g": 0, "a": 0, "gf_c": 0, "gc_c": 0})
+        mins_j = c_st["min"]
+        bal_90 = ((c_st["gf_c"] - c_st["gc_c"]) / mins_j * 90.0) if mins_j > 0 else 0.0
+        ga_90 = ((c_st["g"] + c_st["a"]) / mins_j * 90.0) if mins_j > 0 else 0.0
+        part_pct = min((mins_j / max_min_eq) * 100.0, 100.0)
+        imp_score = min(max(50.0 + (bal_90 * 12.0) + (ga_90 * 18.0) + (part_pct * 0.25), 20.0), 100.0)
+
+        if prioridad_alg == "Máxima Frescura Física":
+            score_total = (rd_score * 0.50) + (ac_score * 0.35) + (imp_score * 0.15)
+        elif prioridad_alg == "Máximo Rendimiento (+/-)":
+            score_total = (rd_score * 0.20) + (ac_score * 0.20) + (imp_score * 0.60)
+        else:
+            score_total = (rd_score * 0.35) + (ac_score * 0.30) + (imp_score * 0.35)
+
+        candidatos.append({
+            "JUGADOR": j_nom, "dorsal": p.get("dorsal", 99), "POS": p.get("POS", "DEF"),
+            "pos_1": p.get("pos_1", p.get("POS", "Central")), "pos_2": p.get("pos_2", "Ninguna"),
+            "lat": p.get("lateralidad", "Diestro"), "Score": round(score_total, 1),
+            "Readiness": round(rd_score, 0), "ACWR": round(ac_ratio, 2), "Impacto": round(imp_score, 0),
+            "Minutos": int(mins_j), "Bal_90": round(bal_90, 2)
+        })
+
+    # 5. Plantillas de coordenadas (X: 0-100 ancho, Y: 0-100 largo de portería propia a rival)
+    sistemas_coords = {
+        "1-4-3-3": [
+            ("POR", "Portero", "C", 50, 8),
+            ("LD", "Lateral", "D", 84, 26), ("DFC_D", "Central", "D", 62, 22), ("DFC_I", "Central", "I", 38, 22), ("LI", "Lateral", "I", 16, 26),
+            ("MCD", "Mediocentro", "C", 50, 45), ("MC_D", "Mediocentro", "D", 70, 56), ("MC_I", "Mediocentro", "I", 30, 56),
+            ("ED", "Extremo", "D", 82, 78), ("DC", "Delantero", "C", 50, 84), ("EI", "Extremo", "I", 18, 78)
+        ],
+        "1-4-2-3-1": [
+            ("POR", "Portero", "C", 50, 8),
+            ("LD", "Lateral", "D", 84, 26), ("DFC_D", "Central", "D", 62, 22), ("DFC_I", "Central", "I", 38, 22), ("LI", "Lateral", "I", 16, 26),
+            ("MCD_D", "Mediocentro", "D", 64, 44), ("MCD_I", "Mediocentro", "I", 36, 44),
+            ("ED", "Extremo", "D", 82, 68), ("MCO", "Mediapunta", "C", 50, 66), ("EI", "Extremo", "I", 18, 68),
+            ("DC", "Delantero", "C", 50, 85)
+        ],
+        "1-4-4-2": [
+            ("POR", "Portero", "C", 50, 8),
+            ("LD", "Lateral", "D", 84, 26), ("DFC_D", "Central", "D", 62, 22), ("DFC_I", "Central", "I", 38, 22), ("LI", "Lateral", "I", 16, 26),
+            ("MD", "Extremo", "D", 82, 54), ("MC_D", "Mediocentro", "D", 62, 50), ("MC_I", "Mediocentro", "I", 38, 50), ("MI", "Extremo", "I", 18, 54),
+            ("DC_D", "Delantero", "D", 62, 82), ("DC_I", "Delantero", "I", 38, 82)
+        ],
+        "1-3-5-2": [
+            ("POR", "Portero", "C", 50, 8),
+            ("DFC_D", "Central", "D", 74, 23), ("DFC_C", "Central", "C", 50, 20), ("DFC_I", "Central", "I", 26, 23),
+            ("CAD_D", "Lateral", "D", 86, 52), ("MC_D", "Mediocentro", "D", 66, 50), ("MCD", "Mediocentro", "C", 50, 42), ("MC_I", "Mediocentro", "I", 34, 50), ("CAD_I", "Lateral", "I", 14, 52),
+            ("DC_D", "Delantero", "D", 62, 82), ("DC_I", "Delantero", "I", 38, 82)
+        ]
+    }
+
+    mapa_gen = {"Portero": "POR", "Central": "DEF", "Lateral": "DEF", "Mediocentro": "MED", "Mediapunta": "MED", "Extremo": "ATA", "Delantero": "ATA"}
+    usados = set()
+    once_titular = []
+
+    for rol_cod, pos_req, lado_req, x_pos, y_pos in sistemas_coords[sistema_elegido]:
+        mejor_cand = None
+        mejor_val = -999.0
+        for c in candidatos:
+            if c["JUGADOR"] in usados: continue
+            if pos_req == "Portero" and c["POS"] != "POR": continue
+            if pos_req != "Portero" and c["POS"] == "POR": continue
+            
+            if c["pos_1"] == pos_req: bonus_pos = 25.0
+            elif c["pos_2"] == pos_req: bonus_pos = 14.0
+            elif c["POS"] == mapa_gen.get(pos_req, ""): bonus_pos = 4.0
+            else: bonus_pos = -25.0
+
+            bonus_lat = 0.0
+            if lado_req == "I" and c["lat"] in ["Zurdo", "Ambidiestro"]: bonus_lat = 6.0
+            elif lado_req == "D" and c["lat"] in ["Diestro", "Ambidiestro"]: bonus_lat = 4.0
+
+            val_final = c["Score"] + bonus_pos + bonus_lat
+            if val_final > mejor_val:
+                mejor_val = val_final
+                mejor_cand = c
+
+        if mejor_cand:
+            usados.add(mejor_cand["JUGADOR"])
+            once_titular.append({"Rol_Pizarra": rol_cod, "X": x_pos, "Y": y_pos, **mejor_cand})
+
+    suplentes_rec = sorted([c for c in candidatos if c["JUGADOR"] not in usados], key=lambda x: x["Score"], reverse=True)[:5]
+
+    col_campo, col_banq = st.columns([1.55, 1], gap="large")
+    with col_campo:
+        fig_pitch = go.Figure()
+        # Césped y líneas reglamentarias
+        fig_pitch.add_shape(type="rect", x0=0, y0=0, x1=100, y1=100, fillcolor="#0d2818", line=dict(color="#C5A059", width=2), layer="below")
+        fig_pitch.add_shape(type="line", x0=0, y0=50, x1=100, y1=50, line=dict(color="rgba(255,255,255,0.35)", width=1.5), layer="below")
+        fig_pitch.add_shape(type="circle", x0=36, y0=40, x1=64, y1=60, line=dict(color="rgba(255,255,255,0.35)", width=1.5), layer="below")
+        fig_pitch.add_shape(type="rect", x0=22, y0=0, x1=78, y1=16, line=dict(color="rgba(255,255,255,0.35)", width=1.5), layer="below")
+        fig_pitch.add_shape(type="rect", x0=22, y0=84, x1=78, y1=100, line=dict(color="rgba(255,255,255,0.35)", width=1.5), layer="below")
+
+        if once_titular:
+            df_once = pd.DataFrame(once_titular)
+            colores_nodo = ["#10b981" if r >= 78 else ("#C5A059" if r >= 65 else "#f59e0b") for r in df_once["Score"]]
+            textos_nodo = [f"<b>#{r['dorsal']} {r['JUGADOR'].split()[0]}</b><br><span style='font-size:10px;'>{r['Rol_Pizarra']} | {r['Score']:.0f} pts</span>" for _, r in df_once.iterrows()]
+            
+            fig_pitch.add_trace(go.Scatter(
+                x=df_once["X"], y=df_once["Y"], mode="markers+text",
+                marker=dict(size=28, color=colores_nodo, line=dict(width=2.5, color="#0b0e14")),
+                text=textos_nodo, textposition="bottom center",
+                textfont=dict(color="#f8fafc", size=11, family="Plus Jakarta Sans"),
+                hovertemplate="<b>%{customdata[0]}</b> (#%{customdata[1]})<br>Demarcación: %{customdata[2]}<br>Score Total: %{customdata[3]} pts<br>Readiness: %{customdata[4]}% | ACWR: %{customdata[5]}<extra></extra>",
+                customdata=df_once[["JUGADOR", "dorsal", "pos_1", "Score", "Readiness", "ACWR"]].values
+            ))
+
+        fig_pitch.update_layout(
+            height=580, margin=dict(l=10, r=10, t=30, b=10),
+            xaxis=dict(range=[-4, 104], visible=False, fixedrange=True),
+            yaxis=dict(range=[-6, 104], visible=False, fixedrange=True),
+            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+            title=dict(text=f"<b>ONCE RECOMENDADO ({sistema_elegido})</b>", x=0.5, font=dict(color="#C5A059", size=14))
+        )
+        st.plotly_chart(fig_pitch, use_container_width=True)
+
+    with col_banq:
+        st.markdown("#### :material/bolt: Banquillo de Impacto (Top 5)")
+        for s_j in suplentes_rec:
+            st.markdown(f"""
+            <div style="background: #111318; border: 1px solid rgba(255,255,255,0.06); border-left: 4px solid #C5A059; padding: 10px 12px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <strong style="color: #f8fafc; font-size: 0.92rem;">#{s_j['dorsal']} {s_j['JUGADOR']}</strong>
+                    <span style="color: #94a3b8; font-size: 0.75rem; display: block;">{s_j['pos_1']} ({s_j['lat']}) | ACWR: {s_j['ACWR']} | RD: {s_j['Readiness']:.0f}%</span>
+                </div>
+                <span class="font-mono-hud" style="background: rgba(197,160,89,0.15); color: #C5A059; font-weight: 800; padding: 4px 8px; border-radius: 6px; font-size: 0.85rem;">{s_j['Score']:.1f} pts</span>
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown("#### :material/block: Descartados para la Convocatoria")
+        if no_aptos_info:
+            for na in no_aptos_info:
+                st.markdown(f"<div style='font-size: 0.82rem; color: #cbd5e1; margin-bottom: 4px;'>{na}</div>", unsafe_allow_html=True)
+        else:
+            st.success(":material/check_circle: Toda la plantilla está disponible y sin sanciones.")
+
+    st.markdown("---")
+    # =========================================================================
+    # 🤝 B5. SINERGIAS Y "SOCIEDADES DE ORO" (PAREJAS EN EL CÉSPED)
+    # =========================================================================
+    st.markdown("#### :material/handshake: Sinergias y 'Sociedades de Oro' (Parejas Titulares)")
+    st.caption("Identifica qué parejas de futbolistas logran mayor promedio de puntos (Pts/P) y menor tasa de goles encajados (GC/P) cuando salen juntos de inicio.")
+    
+    linea_sin = st.radio("Filtrar sinergia por línea:", ["Parejas Defensivas (DEF)", "Sociedades en Mediocampo (MED)", "Sociedades Ofensivas (ATA/MED)", "Cualquier Pareja de Campo"], horizontal=True, key="rad_sinergia")
+    pos_map_sin = {p["JUGADOR"]: p.get("POS", "DEF") for p in st.session_state.plantilla}
+
+    from itertools import combinations
+    parejas_stats = {}
+    for p_s in partidos_piz:
+        disp_p = {limpiar_nombre(k): v for k, v in p_s.get("disponibilidad", {}).items()}
+        gf_s = int(safe_float(p_s.get("goles_favor", 0)))
+        gc_s = int(safe_float(p_s.get("goles_contra", 0)))
+        pts_s = 3 if gf_s > gc_s else (1 if gf_s == gc_s else 0)
+
+        titulares_p = []
+        for pl in st.session_state.plantilla:
+            jn = pl["JUGADOR"]
+            pos_j = pl.get("POS", "DEF")
+            if pos_j == "POR": continue
+            if disp_p.get(limpiar_nombre(jn)) == "Titular":
+                if linea_sin == "Parejas Defensivas (DEF)" and pos_j != "DEF": continue
+                if linea_sin == "Sociedades en Mediocampo (MED)" and pos_j != "MED": continue
+                if linea_sin == "Sociedades Ofensivas (ATA/MED)" and pos_j not in ["ATA", "MED"]: continue
+                titulares_p.append(jn)
+
+        for j1, j2 in combinations(sorted(titulares_p), 2):
+            par_key = f"{j1} + {j2}"
+            if par_key not in parejas_stats:
+                parejas_stats[par_key] = {"Pareja": par_key, "PJ Juntos": 0, "V": 0, "GF": 0, "GC": 0, "Pts": 0}
+            parejas_stats[par_key]["PJ Juntos"] += 1
+            parejas_stats[par_key]["GF"] += gf_s
+            parejas_stats[par_key]["GC"] += gc_s
+            parejas_stats[par_key]["Pts"] += pts_s
+            if pts_s == 3: parejas_stats[par_key]["V"] += 1
+
+    if parejas_stats:
+        df_par = pd.DataFrame(list(parejas_stats.values()))
+        min_pj_par = 2 if df_par["PJ Juntos"].max() >= 2 else 1
+        df_par = df_par[df_par["PJ Juntos"] >= min_pj_par].copy()
+        df_par["Pts/P"] = df_par["Pts"] / df_par["PJ Juntos"]
+        df_par["GF/P"] = df_par["GF"] / df_par["PJ Juntos"]
+        df_par["GC/P"] = df_par["GC"] / df_par["PJ Juntos"]
+        df_par["% Vict."] = (df_par["V"] / df_par["PJ Juntos"]) * 100.0
+        df_par = df_par.sort_values(by=["Pts/P", "PJ Juntos", "GC/P"], ascending=[False, False, True]).head(10)
+        mostrar_tabla_moderna(df_par[["Pareja", "PJ Juntos", "% Vict.", "Pts/P", "GF/P", "GC/P"]].style.hide(axis="index").format({"% Vict.": "{:.0f}%", "Pts/P": "{:.2f}", "GF/P": "{:.2f}", "GC/P": "{:.2f}"}).background_gradient(subset=["Pts/P"], cmap="Greens").background_gradient(subset=["GC/P"], cmap="Reds"))
+    else:
+        st.info("No hay suficientes partidos con titulares registrados para calcular sinergias.")
+
 
 # ==========================================
 # 👤 PESTAÑA 2: ESTADÍSTICAS DE JUGADORES
@@ -483,6 +888,76 @@ with tab_jugadores:
                            
         mostrar_tabla_moderna(estilo_jugadores)
         st.caption("Acrónimos: Conv. (Convocatorias) | PJ (Partidos Jugados) | MIN (Minutos) | G (Goles) | A (Asistencias) | GE (Goles Encajados POR) | GF/GC Campo (Goles del equipo con el jugador en el césped) | GF/90' y GC/90' (Goles a favor y en contra por cada 90 min en el campo).")
+
+st.markdown("---")
+        # =========================================================================
+        # ⚡ B4 & B6. FACTOR REVULSIVO Y RANKING JUGADOR TALISMÁN (Δ PUNTOS)
+        # =========================================================================
+        col_rev, col_tal = st.columns(2)
+
+        with col_rev:
+            st.markdown("#### :material/bolt: Impacto desde el Banquillo ('Factor Revulsivo')")
+            st.caption("Rendimiento exclusivo actuando como Suplente (Goles, Asistencias y +/- en campo saliendo desde el banquillo).")
+            datos_rev = []
+            for p_j in st.session_state.plantilla:
+                jn = p_j["JUGADOR"]
+                jc = limpiar_nombre(jn)
+                pj_sup, min_sup, g_sup, a_sup, gf_sup, gc_sup = 0, 0.0, 0, 0, 0, 0
+                for part in partidos_jug:
+                    disp_map = {limpiar_nombre(k): v for k, v in part.get("disponibilidad", {}).items()}
+                    st_map = {limpiar_nombre(k): v for k, v in part.get("estadisticas_partido", {}).items() if isinstance(v, dict)}
+                    if disp_map.get(jc) == "Suplente" and jc in st_map:
+                        m_s = safe_float(st_map[jc].get("Minutos", 0))
+                        if m_s > 0:
+                            pj_sup += 1
+                            min_sup += m_s
+                            g_sup += int(safe_float(st_map[jc].get("Goles", 0)))
+                            a_sup += int(safe_float(st_map[jc].get("Asistencias", 0)))
+                            gf_sup += int(safe_float(st_map[jc].get("GF_Campo", 0)))
+                            gc_sup += int(safe_float(st_map[jc].get("GC_Campo", 0)))
+                if pj_sup > 0:
+                    ga_90_sup = ((g_sup + a_sup) / min_sup * 90.0) if min_sup > 0 else 0.0
+                    datos_rev.append({
+                        "JUGADOR": jn, "PJ Sup.": pj_sup, "MIN Sup.": int(min_sup),
+                        "G+A Sup.": g_sup + a_sup, "G+A / 90'": ga_90_sup, "+/- Sup.": gf_sup - gc_sup
+                    })
+            if datos_rev:
+                df_rev = pd.DataFrame(datos_rev).sort_values(by=["G+A Sup.", "+/- Sup.", "MIN Sup."], ascending=[False, False, False]).head(8)
+                mostrar_tabla_moderna(df_rev.style.hide(axis="index").format({"G+A / 90'": "{:.2f}", "+/- Sup.": lambda x: f"+{int(x)}" if x > 0 else str(int(x))}).background_gradient(subset=["G+A Sup.", "+/- Sup."], cmap="Greens"))
+            else:
+                st.info("Aún no hay participaciones registradas saliendo desde el banquillo.")
+
+        with col_tal:
+            st.markdown("#### :material/workspace_premium: Jugador Talismán (Diferencial de Puntos Con vs. Sin él)")
+            st.caption("Compara los Puntos por Partido (Pts/P) que logra el equipo cuando el jugador disputa ≥45' frente a cuando no juega.")
+            datos_tal = []
+            for p_j in st.session_state.plantilla:
+                jn = p_j["JUGADOR"]
+                jc = limpiar_nombre(jn)
+                pts_con, pj_con, pts_sin, pj_sin = 0, 0, 0, 0
+                for part in partidos_jug:
+                    gf_t = int(safe_float(part.get("goles_favor", 0)))
+                    gc_t = int(safe_float(part.get("goles_contra", 0)))
+                    pts_t = 3 if gf_t > gc_t else (1 if gf_t == gc_t else 0)
+                    st_map = {limpiar_nombre(k): v for k, v in part.get("estadisticas_partido", {}).items() if isinstance(v, dict)}
+                    m_jug = safe_float(st_map.get(jc, {}).get("Minutos", 0))
+                    if m_jug >= 45.0:
+                        pj_con += 1; pts_con += pts_t
+                    else:
+                        pj_sin += 1; pts_sin += pts_t
+                if pj_con >= 1 and pj_sin >= 1:
+                    ppg_con = pts_con / pj_con
+                    ppg_sin = pts_sin / pj_sin
+                    datos_tal.append({
+                        "JUGADOR": jn, "PJ (≥45')": pj_con, "Pts/P CON él": ppg_con,
+                        "Pts/P SIN él": ppg_sin, "Δ Impacto Pts": ppg_con - ppg_sin
+                    })
+            if datos_tal:
+                df_tal = pd.DataFrame(datos_tal).sort_values(by=["Δ Impacto Pts", "Pts/P CON él"], ascending=[False, False]).head(8)
+                mostrar_tabla_moderna(df_tal.style.hide(axis="index").format({"Pts/P CON él": "{:.2f}", "Pts/P SIN él": "{:.2f}", "Δ Impacto Pts": "{:+.2f}"}).background_gradient(subset=["Δ Impacto Pts"], cmap="RdYlGn"))
+            else:
+                st.info("Se necesitan más jornadas disputadas para contrastar el diferencial de puntos con/sin cada jugador.")
+                
 # ==========================================
 # 🆚 PESTAÑA 3: ESTADÍSTICAS DE RIVAL
 # ==========================================
