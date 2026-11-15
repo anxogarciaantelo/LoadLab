@@ -2630,11 +2630,11 @@ with tab_ses:
                             st.rerun()
 with tab_add:
     st.markdown("### :material/add_circle: Planificación de Sesiones")
-    st.caption("Selecciona la fecha e introduce los datos del evento para registrarlo en el calendario.")
+    st.caption("Gestiona el calendario del equipo: añade nuevos eventos a la izquierda o modifica/elimina los existentes a la derecha.")
     
-    col_add1, col_add2, col_add3 = st.columns([1, 2, 1])
+    col_izq_add, col_der_edit = st.columns(2, gap="large")
     
-    with col_add2:
+    with col_izq_add:
         with st.container(border=True):
             st.markdown("#### :material/calendar_month: 1. Fecha del Evento")
             dia_clicado = st.date_input("Selecciona una fecha:", date.today())
@@ -2705,6 +2705,7 @@ with tab_add:
                 st.success("¡Evento creado en el calendario!")
                 st.rerun()
 
+    with col_der_edit:
         if st.session_state.sesiones:
             with st.container(border=True):
                 st.markdown("#### :material/edit_calendar: 3. Modificar o Eliminar Sesión Existente")
