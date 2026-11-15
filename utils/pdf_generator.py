@@ -902,12 +902,31 @@ def generar_pdf_valoracion_jugador(jug_masivo, jug_datos, v_latest, v_ref, peso_
     f_fd, f_fi = v_latest.get('iso_flx_d',0), v_latest.get('iso_flx_i',0)
     f_ad, f_ai = v_latest.get('iso_add_d',0), v_latest.get('iso_add_i',0)
     a_e, a_f, a_a = calc_asimetria(f_ed, f_ei), calc_asimetria(f_fd, f_fi), calc_asimetria(f_ad, f_ai)
+    
     draw_card(pdf, 10, y_iso, w_3, 16, "Extension (Cuad)", f"{f_ed} N", f"{f_ei} N", "Der:", "Izq:", "Asim. Cuadriceps:", no_emo(badge_asi_detallado(a_e, f_ed, f_ei)))
     draw_card(pdf, 10+w_3+5, y_iso, w_3, 16, "Flexion (Isq)", f"{f_fd} N", f"{f_fi} N", "Der:", "Izq:", "Asim. Isquiosurales:", no_emo(badge_asi_detallado(a_f, f_fd, f_fi)))
     draw_card(pdf, 10+(w_3*2)+10, y_iso, w_3, 16, "Aduccion", f"{f_ad} N", f"{f_ai} N", "Der:", "Izq:", "Asim. Aduccion:", no_emo(badge_asi_detallado(a_a, f_ad, f_ai)))
 
+    y_rat = y_iso + 28
+    r_hq_d = round(safe_float(f_fd)/safe_float(f_ed), 2) if safe_float(f_ed)>0 else 0
+    r_hq_i = round(safe_float(f_fi)/safe_float(f_ei), 2) if safe_float(f_ei)>0 else 0
+    r_e_d = round(safe_float(f_ed)/peso_act, 2) if peso_act>0 else 0
+    r_e_i = round(safe_float(f_ei)/peso_act, 2) if peso_act>0 else 0
+    r_f_d = round(safe_float(f_fd)/peso_act, 2) if peso_act>0 else 0
+    r_f_i = round(safe_float(f_fi)/peso_act, 2) if peso_act>0 else 0
+
+    pdf.set_xy(10, y_rat-2)
+    pdf.set_font("Arial", 'B', 8)
+    pdf.set_text_color(100, 100, 100)
+    pdf.cell(200, 4, "Ratios Clinicos de Equilibrio y Fuerza Relativa (N/kg)", ln=True)
+    draw_card(pdf, 10, y_rat+4, w_4, 16, "ISQ/CUAD (D)", f"{r_hq_d}")
+    draw_card(pdf, 10+w_4+5, y_rat+4, w_4, 16, "ISQ/CUAD (I)", f"{r_hq_i}")
+    draw_card(pdf, 10+(w_4*2)+10, y_rat+4, w_4, 16, "CUADRICEPS (D/I)", f"{r_e_d} | {r_e_i} N/kg")
+    draw_card(pdf, 10+(w_4*3)+15, y_rat+4, w_4, 16, "ISQUIOSURAL (D/I)", f"{r_f_d} | {r_f_i} N/kg")
+
     pdf.add_page()
     pdf.set_font("Arial", 'B', 12)
+    pdf.set_text_color(0, 0, 0)
     pdf.cell(200, 8, "Fuerza Maxima (Sentadilla)", ln=True)
     y_sq = pdf.get_y()
     rm_sq = safe_float(v_latest.get('rm_sq', v_latest.get('rm_sentadilla', 0)))
@@ -922,6 +941,7 @@ def generar_pdf_valoracion_jugador(jug_masivo, jug_datos, v_latest, v_ref, peso_
     
     pdf.set_xy(150, y_fv+10)
     pdf.set_fill_color(240, 248, 255)
+    pdf.set_draw_color(220, 220, 220)
     pdf.cell(127, 45, "", border=1, fill=True)
     pdf.set_xy(155, y_fv+15)
     pdf.set_font("Arial", 'B', 8)
@@ -945,11 +965,74 @@ def generar_pdf_valoracion_jugador(jug_masivo, jug_datos, v_latest, v_ref, peso_
     pdf.set_text_color(0, 0, 0)
     pdf.cell(20, 6, f"{f0_kg_barra:.1f} kg", ln=1)
 
+    pdf.set_x(155)
+    pdf.set_font("Arial", 'B', 8)
+    pdf.set_text_color(30, 80, 140)
+    pdf.cell(18, 6, "F0 Relativa:", ln=0)
+    pdf.set_font("Arial", '', 8)
+    pdf.set_text_color(0, 0, 0)
+    pdf.cell(20, 6, f"{f0_rel_N:.1f} N/kg", ln=1)
+
+    pdf.set_x(155)
+    pdf.set_font("Arial", 'B', 8)
+    pdf.set_text_color(30, 80, 140)
+    pdf.cell(25, 6, "Fiabilidad del test:", ln=0)
+    pdf.set_font("Arial", '', 8)
+    pdf.set_text_color(0, 0, 0)
+    fiab_txt = "Excelente" if r2>=0.95 else ("Aceptable" if r2>=0.90 else "Pobre")
+    pdf.cell(50, 6, f"{r2:.3f} ({fiab_txt})", ln=1)
+
+    pdf.set_xy(155, pdf.get_y() + 2)
+    pdf.set_font("Arial", 'I', 8)
+    pdf.set_text_color(80, 80, 80)
+    pdf.multi_cell(115, 5, clean_txt(pauta_fv))
+
+    y_cargas = y_fv + 75
+    pdf.set_xy(10, y_cargas)
+    pdf.set_font("Arial", 'B', 12)
+    pdf.set_text_color(0, 0, 0)
+    pdf.cell(200, 8, "Estimacion de Cargas y Ejercicios Complementarios", ln=True)
+    
+    pdf.set_fill_color(245, 245, 245)
+    pdf.set_draw_color(220, 220, 220)
+    pdf.set_font("Arial", 'B', 8)
+    pdf.cell(50, 8, "Ejercicio Principal", border=1, fill=True)
+    pdf.cell(25, 8, "1RM (100%)", border=1, fill=True, align='C')
+    pdf.cell(20, 8, "80%", border=1, fill=True, align='C')
+    pdf.cell(20, 8, "60%", border=1, fill=True, align='C')
+    pdf.cell(20, 8, "40%", border=1, fill=True, align='C')
+    pdf.ln()
+    
+    for ej_nom, mult in [("Sentadilla", 1.0), ("Peso Muerto (115% SQ)", 1.15), ("Empuje de Cadera (125% SQ)", 1.25)]:
+        val_rm = round(rm_sq * mult, 1)
+        pdf.set_font("Arial", '', 8)
+        pdf.cell(50, 8, ej_nom, border=1)
+        pdf.set_font("Arial", 'B', 8)
+        pdf.cell(25, 8, f"{val_rm} kg", border=1, align='C')
+        pdf.set_font("Arial", '', 8)
+        pdf.cell(20, 8, f"{round(val_rm*0.8,1)} kg", border=1, align='C')
+        pdf.cell(20, 8, f"{round(val_rm*0.6,1)} kg", border=1, align='C')
+        pdf.cell(20, 8, f"{round(val_rm*0.4,1)} kg", border=1, align='C')
+        pdf.ln()
+    pdf.ln(4)
+
+    pdf.set_font("Arial", 'B', 8)
+    pdf.cell(200, 6, "Estimacion 1RM en Ejercicios Complementarios:", ln=True)
+    pdf.set_font("Arial", '', 8)
+    kettle = "32-40 kg" if rm_sq >= 130 else ("24-32 kg" if rm_sq >= 90 else "16-24 kg")
+    pdf.cell(200, 5, f" - Peso Muerto Rumano (RDL): {round(rm_sq*0.9,1)} kg (90% SQ)", ln=True)
+    pdf.cell(200, 5, f" - Sentadilla Bulgara: {round(rm_sq*0.5,1)} kg (50% SQ - Por pierna)", ln=True)
+    pdf.cell(200, 5, f" - Zancada / Lunge: {round(rm_sq*0.45,1)} kg (45% SQ - Por pierna)", ln=True)
+    pdf.cell(200, 5, f" - Kettlebell Swing (Pesado): No aplica 1RM. Carga sugerida por nivel de fuerza: {kettle}", ln=True)
+
     pdf.add_page()
     pdf.set_font("Arial", 'B', 12)
     pdf.cell(200, 8, "Perfil Evolutivo y Asimetrias", ln=True)
     if 'rad' in img_paths: pdf.image(img_paths['rad'], x=10, y=25, w=130)
     if 'tor' in img_paths: pdf.image(img_paths['tor'], x=150, y=25, w=130)
+
+    for path in img_paths.values():
+        if path and os.path.exists(path): os.unlink(path)
 
     out = pdf.output(dest='S')
     return out.encode('latin-1') if isinstance(out, str) else bytes(out)
