@@ -889,7 +889,7 @@ with tab_jugadores:
         mostrar_tabla_moderna(estilo_jugadores)
         st.caption("Acrónimos: Conv. (Convocatorias) | PJ (Partidos Jugados) | MIN (Minutos) | G (Goles) | A (Asistencias) | GE (Goles Encajados POR) | GF/GC Campo (Goles del equipo con el jugador en el césped) | GF/90' y GC/90' (Goles a favor y en contra por cada 90 min en el campo).")
 
-st.markdown("---")
+        st.markdown("---")
         # =========================================================================
         # ⚡ B4 & B6. FACTOR REVULSIVO Y RANKING JUGADOR TALISMÁN (Δ PUNTOS)
         # =========================================================================
