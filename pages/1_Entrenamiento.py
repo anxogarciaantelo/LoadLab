@@ -327,7 +327,34 @@ with tab_temp:
                     fig_mec.add_trace(go.Scatter(x=df_temporada['Microciclo'], y=df_temporada['DCC'], name="Deceleraciones", mode="lines+markers", line=dict(color="#ef4444", width=2)))
                     fig_mec.update_layout(title="Carga Mecánica", yaxis_title="Cantidad", plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
                     st.plotly_chart(fig_mec, use_container_width=True)
-
+                st.markdown("---")
+                st.markdown("#### :material/equalizer: Ondulación y Distribución por Match Day (Cajas y Violín)")
+                st.caption("Verifica que los días de carga (MD-4 / MD-3) y los días de tapering (MD-2 / MD-1) mantengan una diferenciación fisiológica clara sin solaparse.")
+                df_md_dist = st.session_state.df_master_informes[
+                    (st.session_state.df_master_informes['TIPO_SESION'] == 'Entrenamiento') &
+                    (st.session_state.df_master_informes['ESTADO'].isin(['Disponible', 'Recuperación Post-Partido'])) &
+                    (st.session_state.df_master_informes['POS'] != 'POR')
+                ].copy()
+                if not df_md_dist.empty and 'MD' in df_md_dist.columns:
+                    orden_mds_v = ["MD+1", "MD+2", "MD-5", "MD-4", "MD-3", "MD-2", "MD-1", "TD"]
+                    mds_disp_v = [m for m in orden_mds_v if m in df_md_dist['MD'].unique()]
+                    cv1, cv2 = st.columns(2)
+                    with cv1:
+                        fig_v_carga = px.violin(
+                            df_md_dist[df_md_dist['CARGA'] > 0], x='MD', y='CARGA', color='MD',
+                            box=True, points="outliers", category_orders={"MD": mds_disp_v},
+                            title="Distribución de Carga Interna (UA) por Match Day"
+                        )
+                        fig_v_carga.update_layout(showlegend=False, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', height=340)
+                        st.plotly_chart(fig_v_carga, use_container_width=True)
+                    with cv2:
+                        fig_v_hsr = px.box(
+                            df_md_dist[df_md_dist['DIS'] > 0], x='MD', y='DIS AI', color='MD',
+                            notched=True, category_orders={"MD": mds_disp_v},
+                            title="Distribución de HSR (>21 km/h) por Match Day"
+                        )
+                        fig_v_hsr.update_layout(showlegend=False, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', height=340)
+                        st.plotly_chart(fig_v_hsr, use_container_width=True)
                 st.markdown("---")
                 
                 # --- TABLA INTERACTIVA (FILTRABLE Y ORDENABLE) ---
@@ -866,12 +893,18 @@ with tab_ses:
                             col_card, c_b1, c_b2, c_b3, c_b4, c_b5 = st.columns([3.2, 1, 1, 1, 1, 1])
                             
                             with col_card:
-                                st.markdown(f"""
-                                <div style='background-color: #0b0e14; border: 1px solid #1c1f26; border-left: 3px solid {color_borde}; border-radius: 6px; padding: 4px 8px; height: 48px; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.15); margin-bottom: 8px;'>
-                                    <strong style='color: #f8fafc; font-size: 0.9rem; line-height: 1;'>{tipo_str}</strong>
-                                    <span style='color: #94a3b8; font-size: 0.7rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px;'>{sub}</span>
-                                </div>
-                                """, unsafe_allow_html=True)
+                                if es_partido:
+                                    gf_s = sesion.get("goles_favor")
+                                    gc_s = sesion.get("goles_contra")
+                                    cond_s = "CASA" if sesion.get("condicion", "Casa") == "Casa" else "FUERA"
+                                    tiene_marcador = gf_s is not None and gc_s is not None and (sesion.get("estadisticas_partido") or sesion.get("fecha", "9999") < str(date.today()))
+                                    score_pill = f"<span class='font-mono-hud' style='background:#111318; border:1px solid rgba(197,160,89,0.35); padding:2px 6px; border-radius:4px; color:#f8fafc; font-size:0.78rem; font-weight:800;'>{int(safe_float(gf_s))}:{int(safe_float(gc_s))}</span>" if tiene_marcador else f"<span style='font-size:0.62rem; color:#C5A059; font-weight:800;'>{cond_s}</span>"
+                                    card_s_html = f"<div style='background: linear-gradient(90deg, rgba(220,38,38,0.12) 0%, #0b0e14 60%); border: 1px solid rgba(255,255,255,0.07); border-left: 3px solid {color_borde}; border-radius: 6px; padding: 4px 8px; height: 48px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 6px rgba(0,0,0,0.25); margin-bottom: 8px;'><div style='overflow:hidden;'><strong class='font-mono-hud' style='color: #f8fafc; font-size: 0.85rem; line-height: 1; display:block;'>{tipo_str}</strong><span style='color: #cbd5e1; font-size: 0.68rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display:block; margin-top: 2px;'>vs {sub}</span></div>{score_pill}</div>"
+                                else:
+                                    clima_s = sesion.get("clima") or {}
+                                    temp_pill = f"<span class='font-mono-hud' style='font-size:0.65rem; color:#94a3b8;'>{clima_s.get('temp'):.0f}°C</span>" if isinstance(clima_s, dict) and clima_s.get("temp") is not None else ""
+                                    card_s_html = f"<div style='background: linear-gradient(90deg, rgba(16,185,129,0.10) 0%, #0b0e14 60%); border: 1px solid rgba(255,255,255,0.07); border-left: 3px solid {color_borde}; border-radius: 6px; padding: 4px 8px; height: 48px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 6px rgba(0,0,0,0.25); margin-bottom: 8px;'><div><strong class='font-mono-hud' style='color: #f8fafc; font-size: 0.85rem; line-height: 1; display:block;'>{tipo_str}</strong><span class='status-pill pill-green' style='margin-top:3px; padding:1px 6px; font-size:0.6rem;'>{sub}</span></div>{temp_pill}</div>"
+                                st.markdown(card_s_html, unsafe_allow_html=True)
                                 
                             if c_b1.button(":material/local_hospital:", key=f"bd_{idx_real}", help="Disponibilidad", use_container_width=True): toggle_view(idx_real, "disp"); st.rerun()
                             if c_b2.button(":material/bar_chart:", key=f"bi_{idx_real}", help="Informe", use_container_width=True): toggle_view(idx_real, "inf"); st.rerun()
@@ -1516,8 +1549,16 @@ with tab_ses:
                             
                             css_dark_table = "<style>.modern-dark-table { width: 100%; border-collapse: collapse; font-family: sans-serif; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4); background-color: #111318; color: #f8fafc; margin-bottom: 20px; } .modern-dark-table thead tr { background-color: #0b0e14; color: #C5A059; } .modern-dark-table th { padding: 12px 15px; font-weight: 800; text-transform: uppercase; font-size: 0.8rem; text-align: center !important; border-bottom: 2px solid #1c1f26; } .modern-dark-table td { padding: 10px 15px; text-align: center !important; border-bottom: 1px solid #1c1f26; font-weight: 700; font-size: 0.95rem; } .modern-dark-table tbody tr:hover td { filter: brightness(1.2); }</style>"
                             
+                            def fmt_estado_pill(val):
+                                v = str(val)
+                                if v in ["Disponible", "Titular"]: return f"<span class='status-pill pill-green'>{v}</span>"
+                                if v == "Suplente": return f"<span class='status-pill pill-blue'>{v}</span>"
+                                if "Recuperación" in v: return f"<span class='status-pill pill-purple'>Recup. Post</span>"
+                                if v == "Readaptación": return f"<span class='status-pill pill-amber'>RTP</span>"
+                                return f"<span class='status-pill pill-red'>{v}</span>"
+
                             estilo_ci = (df_tabla_riesgo.style.hide(axis="index")
-                                         .format({"MIN": "{:.0f}'", "RPE": "{:.0f}", "CARGA": "{:.0f}", "EWMA AGUDA": "{:.0f}", "EWMA CRÓNICA": "{:.0f}", "A/C INT": "{:.2f}", "A/C HSR": "{:.2f}", "A/C ACC": "{:.2f}"})
+                                         .format({"ESTADO": fmt_estado_pill, "MIN": "{:.0f}'", "RPE": "{:.0f}", "CARGA": "{:.0f}", "EWMA AGUDA": "{:.0f}", "EWMA CRÓNICA": "{:.0f}", "A/C INT": "{:.2f}", "A/C HSR": "{:.2f}", "A/C ACC": "{:.2f}"})
                                          .map(lambda x: f"background-color: {color_ratio_ac(x)}; color: black; font-weight: bold;" if isinstance(x, (int, float)) else "", subset=['A/C INT', 'A/C HSR', 'A/C ACC'])
                                          .set_table_attributes('class="modern-dark-table"'))
                             st.markdown(css_dark_table + estilo_ci.to_html(), unsafe_allow_html=True)
@@ -1770,8 +1811,14 @@ with tab_ses:
                             
                             css_dark_table = "<style>.modern-dark-table { width: 100%; border-collapse: collapse; font-family: sans-serif; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4); background-color: #111318; color: #f8fafc; margin-bottom: 20px; } .modern-dark-table thead tr { background-color: #0b0e14; color: #C5A059; } .modern-dark-table th { padding: 12px 15px; font-weight: 800; text-transform: uppercase; font-size: 0.8rem; text-align: center !important; border-bottom: 2px solid #1c1f26; } .modern-dark-table td { padding: 10px 15px; text-align: center !important; border-bottom: 1px solid #1c1f26; font-weight: 700; font-size: 0.95rem; } .modern-dark-table tbody tr:hover td { filter: brightness(1.2); }</style>"
                             
+                            def fmt_barra_vmax(val):
+                                v = safe_float(val)
+                                col = "#10b981" if v >= 85 else ("#C5A059" if v >= 75 else "#64748b")
+                                w = min(max(v, 0), 100)
+                                return f"<div style='display:flex; align-items:center; gap:6px; justify-content:center;'><span style='min-width:42px;'>{v:.1f}%</span><div style='width:45px; height:5px; background:#1c1f26; border-radius:3px; overflow:hidden;'><div style='width:{w:.0f}%; height:100%; background:{col};'></div></div></div>"
+
                             estilo_ce = (df_tabla_ce[cols_ver_ce].style.hide(axis="index")
-                                         .format({"DIS": "{:.2f}", "% DIS (Part)": "{:.2f}%", "DIS AI": "{:.0f}", "% HSR (Part)": "{:.2f}%", "ACC": "{:.0f}", "DCC": "{:.0f}", "DCC:ACC": "{:.2f}", "VMAX": "{:.2f}", "% VMAX": "{:.2f}%"})
+                                         .format({"DIS": "{:.2f}", "% DIS (Part)": "{:.1f}%", "DIS AI": "{:.0f}", "% HSR (Part)": "{:.1f}%", "ACC": "{:.0f}", "DCC": "{:.0f}", "DCC:ACC": "{:.2f}", "VMAX": "{:.2f}", "% VMAX": fmt_barra_vmax})
                                          .map(lambda x: "color: #ef4444; font-weight: bold;" if isinstance(x, (int, float)) and x > 1.3 else "", subset=['DCC:ACC'])
                                          .set_table_attributes('class="modern-dark-table"'))
                             st.markdown(css_dark_table + estilo_ce.to_html(), unsafe_allow_html=True)
