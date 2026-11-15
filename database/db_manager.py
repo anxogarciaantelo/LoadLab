@@ -138,27 +138,52 @@ def guardar_datos(modulo="todo"):
     if "equipo_id" not in st.session_state: return
     eq_id = st.session_state.equipo_id
 
-    # --- NUEVA FUNCIÓN DE SEGURIDAD (ANTI PÉRDIDA DE DATOS) ---
+    # --- NUEVA FUNCIÓN DE SEGURIDAD (ANTI PÉRDIDA DE DATOS Y ANTI-DUPLICADOS) ---
     def safe_sync(tabla, datos_nuevos):
         if "equipo_id" not in st.session_state: return
+        if st.session_state.get(f"_sync_lock_{tabla}", False): return
+        st.session_state[f"_sync_lock_{tabla}"] = True
         eq_id = st.session_state.equipo_id
         
-        # 1. Hacemos backup rápido de lo que hay en la BD ahora mismo
+        # 1. Backup limpio sin claves primarias ('id', 'created_at') para evitar colisiones al restaurar
         backup_res = supabase.table(tabla).select("*").eq("equipo_id", eq_id).execute()
-        backup = backup_res.data if backup_res else []
+        backup = [
+            {k: v for k, v in row.items() if k not in ("id", "created_at")}
+            for row in (backup_res.data if backup_res else [])
+        ]
         try:
-            # 2. Borramos el historial clonado
+            # 2. Deduplicar payload en memoria antes de enviar a Supabase
+            datos_limpios = []
+            vistos = set()
+            for item in (datos_nuevos or []):
+                if tabla == "sesiones":
+                    uid = f"{item.get('fecha')}_{item.get('tipo')}_{item.get('descripcion','')}_{item.get('rival','')}"
+                elif tabla == "plantilla":
+                    uid = str(item.get("jugador", "")).strip().lower()
+                elif tabla == "lesiones_historial":
+                    uid = f"{item.get('id_sesion','')}_{item.get('jugador','')}_{item.get('tipo','')}"
+                elif tabla == "antropometria_historial":
+                    uid = f"{item.get('fecha','')}_{item.get('jugador','')}"
+                else:
+                    uid = str(item)
+                if uid not in vistos:
+                    vistos.add(uid)
+                    datos_limpios.append(item)
+
+            # 3. Borrado e inserción por lotes
             supabase.table(tabla).delete().eq("equipo_id", eq_id).execute()
-            # 3. Insertamos la lista limpia en bloques
-            if datos_nuevos:
-                for i in range(0, len(datos_nuevos), 100):
-                    supabase.table(tabla).insert(datos_nuevos[i:i+100]).execute()
+            if datos_limpios:
+                for i in range(0, len(datos_limpios), 100):
+                    supabase.table(tabla).insert(datos_limpios[i:i+100]).execute()
         except Exception as e:
             print(f"Error crítico en {tabla}: {e}. Restaurando backup...")
             if backup:
+                supabase.table(tabla).delete().eq("equipo_id", eq_id).execute()
                 for i in range(0, len(backup), 100):
                     supabase.table(tabla).insert(backup[i:i+100]).execute()
             raise e
+        finally:
+            st.session_state[f"_sync_lock_{tabla}"] = False
     # -----------------------------------------------------------
 
     try:
