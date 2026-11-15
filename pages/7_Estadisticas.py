@@ -281,13 +281,22 @@ with tab_jugadores:
     if filtro_competicion_jug in ["Liga", "Global"]:
         apercibidos = []
         sancionados = []
+        
+        partidos_jug_ord = sorted(partidos_jug, key=lambda x: x.get("fecha", ""))
+        stats_ult_partido = partidos_jug_ord[-1].get("estadisticas_partido", {}) if partidos_jug_ord else {}
+        
         for jug, d in datos_jugadores.items():
             tarjetas = d["Amarillas"]
-            if tarjetas > 0:
-                if tarjetas % 5 == 4:
-                    apercibidos.append(f"{jug} ({tarjetas} TA)")
-                elif tarjetas % 5 == 0:
-                    sancionados.append(f"{jug} ({tarjetas} TA)")
+            st_ult_j = stats_ult_partido.get(jug, {}) if isinstance(stats_ult_partido.get(jug), dict) else {}
+            vio_amarilla_ult = int(safe_float(st_ult_j.get("Amarillas", 0))) > 0
+            vio_roja_ult = int(safe_float(st_ult_j.get("Rojas", 0))) > 0
+            
+            if vio_roja_ult:
+                sancionados.append(f"{jug} (Tarjeta Roja)")
+            elif tarjetas > 0 and tarjetas % 5 == 0 and vio_amarilla_ult:
+                sancionados.append(f"{jug} ({tarjetas} TA - Cumple ciclo)")
+            elif tarjetas > 0 and tarjetas % 5 == 4:
+                apercibidos.append(f"{jug} ({tarjetas} TA)")
                     
         if apercibidos or sancionados:
             st.markdown("#### :material/balance: Alertas Disciplinarias (Ciclos de 5 Amarillas)")
