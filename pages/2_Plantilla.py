@@ -47,7 +47,23 @@ if st.session_state.vista_plantilla == ":material/groups: Plantilla":
             st.session_state.index_pestana_activa = 0
 
         jugadores_lista = plantilla_ordenada
+        hoy_pl_str = str(date.today())
         
+        # Pre-cálculo de Estado en Vivo y último Readiness por jugador
+        ses_pasadas_pl = sorted([s for s in st.session_state.sesiones if s["fecha"] <= hoy_pl_str], key=lambda x: x["fecha"])
+        entrenos_pasados_pl = [s for s in ses_pasadas_pl if s.get("tipo") == "Entrenamiento"]
+        disp_ult_pl = {limpiar_nombre(k): v for k, v in ses_pasadas_pl[-1].get("disponibilidad", {}).items()} if ses_pasadas_pl else {}
+        disp_ent_pl = {limpiar_nombre(k): v for k, v in entrenos_pasados_pl[-1].get("disponibilidad", {}).items()} if entrenos_pasados_pl else {}
+        les_activas_pl = {limpiar_nombre(l["jugador"]) for l in st.session_state.get("lesiones", []) if l.get("estado") == "Activa"}
+        
+        ult_readiness_pl = {}
+        for s_pl in ses_pasadas_pl:
+            if s_pl.get("informe_generado") and s_pl.get("datos_informe"):
+                for d_pl in s_pl["datos_informe"]:
+                    t_v, w_v = safe_float(d_pl.get("TQR", 0)), safe_float(d_pl.get("WELLNESS", 0))
+                    if t_v > 0 and w_v > 0:
+                        ult_readiness_pl[limpiar_nombre(d_pl["JUGADOR"])] = ((t_v / 10.0) * 50.0) + (((35.0 - w_v) / 30.0) * 50.0)
+
         for i in range(0, len(jugadores_lista), 6):
             cols = st.columns(6)
             for j in range(6):
@@ -55,22 +71,53 @@ if st.session_state.vista_plantilla == ":material/groups: Plantilla":
                 if idx_global < len(jugadores_lista):
                     jug = jugadores_lista[idx_global]
                     with cols[j]:
+                        nombre = jug['JUGADOR']
+                        j_clean = limpiar_nombre(nombre)
+                        dorsal = jug.get("dorsal", "-")
+                        pos_esp = jug.get("pos_1", jug.get("POS", "JUG"))
+                        
+                        # Estado en vivo
+                        est_gen = disp_ult_pl.get(j_clean, "Disponible")
+                        est_ent = disp_ent_pl.get(j_clean, "Disponible")
+                        if j_clean in les_activas_pl or est_gen == "Lesionado" or est_ent == "Lesionado":
+                            est_txt, est_col = "BAJA", "#ef4444"
+                        elif est_ent == "Readaptación":
+                            est_txt, est_col = "RTP", "#f59e0b"
+                        else:
+                            est_txt, est_col = "DISP", "#10b981"
+                            
+                        # Readiness Bar
+                        rd_val = ult_readiness_pl.get(j_clean, 0.0)
+                        rd_col = "#10b981" if rd_val >= 75 else ("#f59e0b" if rd_val >= 60 else ("#ef4444" if rd_val > 0 else "#334155"))
+                        rd_txt = f"{rd_val:.0f}%" if rd_val > 0 else "S/D"
+                        
                         if jug.get("foto"):
                             try:
                                 img_src = jug["foto"] if str(jug["foto"]).startswith("http") else f"data:image/jpeg;base64,{jug['foto']}"
-                                # Eliminado el style inline. Ahora lo controla .card-elite img del CSS
-                                img_html = f'<img src="{img_src}">'
+                                img_html = f'<img src="{img_src}" style="border-color: {est_col};">'
                             except:
-                                img_html = '<div style="margin-bottom: 5px; line-height: 1; display: flex; justify-content: center;"><span class="material-symbols-rounded" style="font-size: 40px; color: #64748b;">person</span></div>'
+                                img_html = f'<div style="height: 58px; width: 58px; margin: 4px auto 6px auto; border-radius: 50%; border: 2px solid {est_col}; display: flex; align-items: center; justify-content: center; background: #0b0e14;"><span class="material-symbols-rounded" style="font-size: 34px; color: #64748b;">person</span></div>'
                         else:
-                            img_html = '<div style="margin-bottom: 5px; line-height: 1; display: flex; justify-content: center;"><span class="material-symbols-rounded" style="font-size: 40px; color: #64748b;">person</span></div>'
-                        
-                        nombre = jug['JUGADOR']
+                            img_html = f'<div style="height: 58px; width: 58px; margin: 4px auto 6px auto; border-radius: 50%; border: 2px solid {est_col}; display: flex; align-items: center; justify-content: center; background: #0b0e14;"><span class="material-symbols-rounded" style="font-size: 34px; color: #64748b;">person</span></div>'
                         
                         tarjeta_html = f"""
                         <div class="card-elite">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                                <span class="font-mono-hud" style="font-size: 0.78rem; font-weight: 800; color: #C5A059;">#{dorsal}</span>
+                                <span style="font-size: 0.6rem; font-weight: 800; color: {est_col}; background: {est_col}18; border: 1px solid {est_col}40; padding: 1px 5px; border-radius: 4px; letter-spacing: 0.4px;">{est_txt}</span>
+                            </div>
                             {img_html}
                             <h4 title="{nombre}">{nombre}</h4>
+                            <span style="font-size: 0.68rem; color: #94a3b8; font-weight: 700; text-transform: uppercase; display: block; margin-bottom: 6px;">{pos_esp}</span>
+                            <div style="background: #0b0e14; border-radius: 4px; padding: 3px 6px; border: 1px solid rgba(255,255,255,0.04);">
+                                <div style="display: flex; justify-content: space-between; font-size: 0.6rem; color: #94a3b8; font-weight: 700; margin-bottom: 2px;">
+                                    <span>READINESS</span>
+                                    <span class="font-mono-hud" style="color: {rd_col}; font-weight: 800;">{rd_txt}</span>
+                                </div>
+                                <div style="background: #1c1f26; height: 4px; border-radius: 2px; overflow: hidden;">
+                                    <div style="background: {rd_col}; width: {min(rd_val, 100):.0f}%; height: 100%;"></div>
+                                </div>
+                            </div>
                         </div>
                         """
                         st.markdown(tarjeta_html, unsafe_allow_html=True)
