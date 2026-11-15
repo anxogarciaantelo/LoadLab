@@ -77,11 +77,61 @@ html, body, [class*="css"], .stMarkdown p, .stText p, label, .stSelectbox, .stTe
     border-right: 1px solid rgba(197, 160, 89, 0.1) !important;
 }
 
-/* Elementos activos o seleccionados */
-.stTabs [aria-selected="true"] {
-    color: #C5A059 !important; /* Dorado */
-    border-bottom: 2px solid #C5A059 !important;
+/* --- NAVEGACIÓN POR PESTAÑAS: SEGMENTED GLASS PILLS --- */
+.stTabs [data-baseweb="tab-list"] {
+    background: rgba(17, 19, 24, 0.85) !important;
+    border: 1px solid rgba(197, 160, 89, 0.2) !important;
+    border-radius: 12px !important;
+    padding: 5px 6px !important;
+    gap: 6px !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 8px 20px rgba(0, 0, 0, 0.4) !important;
+    backdrop-filter: blur(10px) !important;
+    margin-bottom: 14px !important;
 }
+.stTabs [data-baseweb="tab"] {
+    border-radius: 8px !important;
+    padding: 8px 16px !important;
+    font-weight: 700 !important;
+    font-size: 0.82rem !important;
+    color: #94a3b8 !important;
+    border: 1px solid transparent !important;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    height: auto !important;
+}
+.stTabs [data-baseweb="tab"]:hover {
+    color: #f8fafc !important;
+    background: rgba(255, 255, 255, 0.04) !important;
+}
+.stTabs [aria-selected="true"] {
+    background: radial-gradient(120% 100% at 50% 0%, rgba(197, 160, 89, 0.28) 0%, rgba(22, 25, 34, 0.95) 100%) !important;
+    color: #C5A059 !important;
+    border: 1px solid rgba(197, 160, 89, 0.45) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+}
+.stTabs [data-baseweb="tab-highlight"],
+.stTabs [data-baseweb="tab-border"] {
+    display: none !important;
+}
+
+/* --- PÍLDORAS DE ESTADO E INDICADORES EN TABLAS --- */
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+.pill-green { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.35); }
+.pill-gold { background: rgba(197, 160, 89, 0.15); color: #C5A059; border: 1px solid rgba(197, 160, 89, 0.35); }
+.pill-blue { background: rgba(14, 165, 233, 0.15); color: #0ea5e9; border: 1px solid rgba(14, 165, 233, 0.35); }
+.pill-purple { background: rgba(139, 92, 246, 0.15); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.35); }
+.pill-amber { background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.35); }
+.pill-red { background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.35); }
 
 /* Hacer el header transparente pero sin destruirlo, para que viva la flecha */
 header[data-testid="stHeader"] { 
