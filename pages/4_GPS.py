@@ -479,6 +479,30 @@ else:
                 """, unsafe_allow_html=True)
 
             st.markdown("---")
+            cols_z_disp = [c for c in ['Z2', 'Z3', 'Z4', 'Z5', 'Z6'] if c in df_perfil.columns]
+            if cols_z_disp and df_perfil[cols_z_disp].sum().sum() > 0:
+                st.markdown("---")
+                st.markdown("#### :material/stacked_bar_chart: Espectro Locomotor de Media y Alta Velocidad (Z2 a Z6)")
+                st.caption("Distribución de metros recorridos por encima de 14 km/h (excluyendo Z1 de marcha/trote suave para resaltar el perfil metabólico intenso).")
+                df_z_grp = df_perfil.groupby('JUGADOR')[cols_z_disp].mean().reset_index()
+                df_z_grp['Total_Int'] = df_z_grp[cols_z_disp].sum(axis=1)
+                df_z_grp = df_z_grp[df_z_grp['Total_Int'] > 0].sort_values('Total_Int', ascending=True)
+                if not df_z_grp.empty:
+                    nombres_z_map = {'Z2': 'Z2 (14-21 km/h)', 'Z3': 'Z3 (21-24 km/h)', 'Z4': 'Z4 (24-27 km/h)', 'Z5': 'Z5 (27-30 km/h)', 'Z6': 'Z6 (>30 km/h)'}
+                    colores_z_map = {'Z2': '#0ea5e9', 'Z3': '#10b981', 'Z4': '#C5A059', 'Z5': '#f59e0b', 'Z6': '#ef4444'}
+                    fig_z_eq = go.Figure()
+                    for cz in cols_z_disp:
+                        fig_z_eq.add_trace(go.Bar(
+                            y=df_z_grp['JUGADOR'], x=df_z_grp[cz], name=nombres_z_map.get(cz, cz),
+                            orientation='h', marker_color=colores_z_map.get(cz, '#C5A059')
+                        ))
+                    fig_z_eq.update_layout(
+                        barmode='stack', height=max(320, len(df_z_grp) * 26),
+                        xaxis_title="Metros Acumulados (>14 km/h)", yaxis_title="",
+                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)"
+                    )
+                    st.plotly_chart(fig_z_eq, use_container_width=True)
             st.markdown("#### :material/grid_on: Análisis Detallado (Heatmap de Intensidad)")
             
             df_tabla = df_perfil.groupby(['JUGADOR', 'POS']).agg({
