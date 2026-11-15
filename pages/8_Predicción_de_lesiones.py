@@ -102,11 +102,10 @@ def construir_dataset_entrenamiento(df_master, lesiones, plantilla):
         )
         group['Z_Wellness'] = pd.Series(group['Z_Wellness'], index=group.index).replace(0.0, np.nan).ffill(limit=2).fillna(0.0)
         
-        # --- VACUNA DE VELOCIDAD (Días sin alcanzar el 85% de VMax) ---
-        vmax_historica = group['VMAX'].max()
-        if vmax_historica > 25.0:
-            group['Es_Pico_VMax'] = group['VMAX'] >= (vmax_historica * 0.85)
-            # Transformamos explícitamente el índice a Series para habilitar el .ffill()
+        # --- VACUNA DE VELOCIDAD (Días sin alcanzar el 85% de su VMax acumulada hasta la fecha) ---
+        vmax_acum = group['VMAX'].expanding().max()
+        if group['VMAX'].max() > 25.0:
+            group['Es_Pico_VMax'] = (vmax_acum > 25.0) & (group['VMAX'] >= (vmax_acum * 0.85))
             group['Ultimo_Pico'] = group.index.to_series().where(group['Es_Pico_VMax']).ffill()
             group['Dias_Sin_VMax'] = (group.index - group['Ultimo_Pico']).dt.days.fillna(14.0)
         else:
@@ -133,17 +132,21 @@ def construir_dataset_entrenamiento(df_master, lesiones, plantilla):
     # 3. Target: Lesiones MUSCULARES/TENDINOSAS SIN CONTACTO
     df_features['Lesion_Target'] = 0
     fechas_lesiones = [
-        (l['jugador'], pd.to_datetime(l['id_sesion'])) 
+        (
+            l['jugador'],
+            pd.to_datetime(l['id_sesion']),
+            int(safe_float(l.get('dias_baja'))) if safe_float(l.get('dias_baja')) > 0 else 21
+        )
         for l in lesiones 
         if l.get('tipo') in ["Muscular", "Tendinosa"] and l.get('contacto') == "No"
     ]
     
     mask_bajas_global = pd.Series(False, index=df_features.index)
-    for jug, fecha_lesion in fechas_lesiones:
+    for jug, fecha_lesion, dias_baja_real in fechas_lesiones:
         mask_riesgo = (df_features['JUGADOR'] == jug) & (df_features['FECHA'] >= fecha_lesion - pd.Timedelta(days=7)) & (df_features['FECHA'] < fecha_lesion)
         df_features.loc[mask_riesgo, 'Lesion_Target'] = 1
         
-        mask_baja_jugador = (df_features['JUGADOR'] == jug) & (df_features['FECHA'] >= fecha_lesion) & (df_features['FECHA'] <= fecha_lesion + pd.Timedelta(days=21))
+        mask_baja_jugador = (df_features['JUGADOR'] == jug) & (df_features['FECHA'] >= fecha_lesion) & (df_features['FECHA'] <= fecha_lesion + pd.Timedelta(days=dias_baja_real))
         mask_bajas_global = mask_bajas_global | mask_baja_jugador
         
     return df_features[~mask_bajas_global].copy()
