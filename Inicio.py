@@ -112,9 +112,9 @@ if not st.session_state.get("autenticado", False) and not st.session_state.get("
     if token and refresh and uid:
         try:
             res = supabase.auth.set_session(token, refresh)
-            st.session_state.usuario_id = uid
-            st.session_state.access_token = token
-            st.session_state.refresh_token = refresh
+            st.session_state.usuario_id = res.user.id if res and res.user else uid
+            st.session_state.access_token = res.session.access_token if res and res.session else token
+            st.session_state.refresh_token = res.session.refresh_token if res and res.session else refresh
             st.session_state.autenticado = True
             st.rerun()
         except Exception:
