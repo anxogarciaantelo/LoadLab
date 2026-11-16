@@ -8,11 +8,35 @@ url = st.secrets["SUPABASE_URL"]
 key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
 
-if "access_token" in st.session_state and "refresh_token" in st.session_state:
-    try:
-        supabase.auth.set_session(st.session_state.access_token, st.session_state.refresh_token)
-    except:
-        pass
+def asegurar_sesion_supabase():
+    if "access_token" in st.session_state and "refresh_token" in st.session_state:
+        try:
+            res = supabase.auth.set_session(st.session_state.access_token, st.session_state.refresh_token)
+            if res and res.session:
+                st.session_state.access_token = res.session.access_token
+                st.session_state.refresh_token = res.session.refresh_token
+        except Exception:
+            pass
+
+asegurar_sesion_supabase()
+
+def sanitizar_para_supabase(obj):
+    """Convierte tipos de NumPy/Pandas y limpia NaN/Inf para que PostgreSQL JSONB nunca rechace el guardado."""
+    if isinstance(obj, dict):
+        return {str(k): sanitizar_para_supabase(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [sanitizar_para_supabase(x) for x in obj]
+    elif isinstance(obj, (np.integer,)):
+        return int(obj)
+    elif isinstance(obj, (np.floating, float)):
+        if np.isnan(obj) or np.isinf(obj):
+            return 0.0
+        return float(obj)
+    elif isinstance(obj, (np.bool_, bool)):
+        return bool(obj)
+    elif pd.isna(obj):
+        return None
+    return obj
 
 def limpiar_nombre_archivo(texto):
     texto_limpio = ''.join(c for c in unicodedata.normalize('NFD', texto) if unicodedata.category(c) != 'Mn')
@@ -20,6 +44,7 @@ def limpiar_nombre_archivo(texto):
 
 @st.cache_data(ttl=3600, show_spinner=False)
 def fetch_datos_equipo_supabase(equipo_id):
+    asegurar_sesion_supabase()
     res_eq = supabase.table("equipos").select("*").eq("id", equipo_id).execute()
     res_plan = supabase.table("plantilla").select("*").eq("equipo_id", equipo_id).execute()
     res_ses = supabase.table("sesiones").select("*").eq("equipo_id", equipo_id).execute()
@@ -67,41 +92,39 @@ def cargar_datos_equipo(equipo_id):
             st.session_state.lesiones = les_data
             st.session_state.antropometria = [a["datos"] for a in ant_data]
 
-            # --- PARCHE DE AUTOLIMPIEZA DE DUPLICADOS ---
-            vistos_ses = set()
-            sesiones_limpias = []
+            # --- PARCHE DE AUTOLIMPIEZA DE DUPLICADOS (PRIORIZA DATOS MÁS RECIENTES / COMPLETOS) ---
+            mapa_ses = {}
             for s in st.session_state.sesiones:
                 uid = f"{s['fecha']}_{s['tipo']}_{s.get('descripcion','')}_{s.get('rival','')}"
-                if uid not in vistos_ses:
-                    vistos_ses.add(uid)
-                    sesiones_limpias.append(s)
-            st.session_state.sesiones = sesiones_limpias
+                if uid not in mapa_ses:
+                    mapa_ses[uid] = s
+                else:
+                    prev = mapa_ses[uid]
+                    tiene_datos_nuevo = bool(s.get("informe_generado") and s.get("datos_informe"))
+                    tiene_datos_prev = bool(prev.get("informe_generado") and prev.get("datos_informe"))
+                    tiene_stats_nuevo = bool(s.get("estadisticas_partido"))
+                    tiene_stats_prev = bool(prev.get("estadisticas_partido"))
+                    # Sobrescribimos con el registro más reciente salvo que el nuevo esté vacío y el previo tenga datos
+                    if tiene_datos_nuevo or not tiene_datos_prev or (tiene_stats_nuevo and not tiene_stats_prev):
+                        mapa_ses[uid] = s
+            st.session_state.sesiones = list(mapa_ses.values())
             
-            vistos_plan = set()
-            plan_limpia = []
+            mapa_plan = {}
             for p in st.session_state.plantilla:
-                if p["JUGADOR"] not in vistos_plan:
-                    vistos_plan.add(p["JUGADOR"])
-                    plan_limpia.append(p)
-            st.session_state.plantilla = plan_limpia
+                mapa_plan[p["JUGADOR"]] = p
+            st.session_state.plantilla = list(mapa_plan.values())
 
-            vistos_les = set()
-            les_limpias = []
+            mapa_les = {}
             for l in st.session_state.lesiones:
                 uid_les = f"{l.get('id_sesion','')}_{l.get('jugador','')}_{l.get('tipo','')}"
-                if uid_les not in vistos_les:
-                    vistos_les.add(uid_les)
-                    les_limpias.append(l)
-            st.session_state.lesiones = les_limpias
+                mapa_les[uid_les] = l
+            st.session_state.lesiones = list(mapa_les.values())
 
-            vistos_ant = set()
-            ant_limpias = []
+            mapa_ant = {}
             for a in st.session_state.antropometria:
                 uid_ant = f"{a.get('fecha','')}_{a.get('jugador','')}"
-                if uid_ant not in vistos_ant:
-                    vistos_ant.add(uid_ant)
-                    ant_limpias.append(a)
-            st.session_state.antropometria = ant_limpias
+                mapa_ant[uid_ant] = a
+            st.session_state.antropometria = list(mapa_ant.values())
             # --------------------------------------------
 
             cfg = cfg_data[0] if cfg_data else {}
@@ -135,52 +158,60 @@ def cargar_datos_equipo(equipo_id):
     return False
 
 def guardar_datos(modulo="todo"):
-    if "equipo_id" not in st.session_state: return
+    if "equipo_id" not in st.session_state: return False
     eq_id = st.session_state.equipo_id
+    asegurar_sesion_supabase()
 
-    # --- NUEVA FUNCIÓN DE SEGURIDAD (ANTI PÉRDIDA DE DATOS Y ANTI-DUPLICADOS) ---
+    # --- FUNCIÓN DE SEGURIDAD (ANTI PÉRDIDA DE DATOS Y ANTI-DUPLICADOS) ---
     def safe_sync(tabla, datos_nuevos):
         if "equipo_id" not in st.session_state: return
         if st.session_state.get(f"_sync_lock_{tabla}", False): return
         st.session_state[f"_sync_lock_{tabla}"] = True
         eq_id = st.session_state.equipo_id
         
-        # 1. Backup limpio sin claves primarias ('id', 'created_at') para evitar colisiones al restaurar
+        # 1. Backup limpio sin claves primarias ('id', 'created_at')
         backup_res = supabase.table(tabla).select("*").eq("equipo_id", eq_id).execute()
+        ids_existentes = [row["id"] for row in (backup_res.data if backup_res else []) if "id" in row]
         backup = [
             {k: v for k, v in row.items() if k not in ("id", "created_at")}
             for row in (backup_res.data if backup_res else [])
         ]
         try:
-            # 2. Deduplicar payload en memoria antes de enviar a Supabase
-            datos_limpios = []
-            vistos = set()
-            for item in (datos_nuevos or []):
+            # 2. Deduplicar (quedándose siempre con la última versión en memoria) y sanitizar JSON
+            mapa_limpios = {}
+            for idx_item, item in enumerate(datos_nuevos or []):
+                item_clean = sanitizar_para_supabase(item)
                 if tabla == "sesiones":
-                    uid = f"{item.get('fecha')}_{item.get('tipo')}_{item.get('descripcion','')}_{item.get('rival','')}"
+                    uid = f"{item_clean.get('fecha')}_{item_clean.get('tipo')}_{item_clean.get('descripcion','')}_{item_clean.get('rival','')}"
                 elif tabla == "plantilla":
-                    uid = str(item.get("jugador", "")).strip().lower()
+                    uid = str(item_clean.get("jugador", "")).strip().lower()
                 elif tabla == "lesiones_historial":
-                    uid = f"{item.get('id_sesion','')}_{item.get('jugador','')}_{item.get('tipo','')}"
+                    uid = f"{item_clean.get('id_sesion','')}_{item_clean.get('jugador','')}_{item_clean.get('tipo','')}"
                 elif tabla == "antropometria_historial":
-                    uid = f"{item.get('fecha','')}_{item.get('jugador','')}"
+                    uid = f"{item_clean.get('fecha','')}_{item_clean.get('jugador','')}"
                 else:
-                    uid = str(item)
-                if uid not in vistos:
-                    vistos.add(uid)
-                    datos_limpios.append(item)
+                    uid = f"{idx_item}_{str(item_clean)}"
+                mapa_limpios[uid] = item_clean
 
-            # 3. Borrado e inserción por lotes
+            datos_limpios = list(mapa_limpios.values())
+
+            # 3. Borrado explícito (por equipo_id y refuerzo por IDs primarios)
             supabase.table(tabla).delete().eq("equipo_id", eq_id).execute()
+            if ids_existentes:
+                for i in range(0, len(ids_existentes), 100):
+                    supabase.table(tabla).delete().in_("id", ids_existentes[i:i+100]).execute()
+
+            # 4. Inserción en lotes pequeños (20 para sesiones pesadas, 50 para el resto)
+            batch_size = 20 if tabla == "sesiones" else 50
             if datos_limpios:
-                for i in range(0, len(datos_limpios), 100):
-                    supabase.table(tabla).insert(datos_limpios[i:i+100]).execute()
+                for i in range(0, len(datos_limpios), batch_size):
+                    supabase.table(tabla).insert(datos_limpios[i:i+batch_size]).execute()
         except Exception as e:
             print(f"Error crítico en {tabla}: {e}. Restaurando backup...")
             if backup:
                 supabase.table(tabla).delete().eq("equipo_id", eq_id).execute()
-                for i in range(0, len(backup), 100):
-                    supabase.table(tabla).insert(backup[i:i+100]).execute()
+                for i in range(0, len(backup), 20):
+                    supabase.table(tabla).insert(backup[i:i+20]).execute()
             raise e
         finally:
             st.session_state[f"_sync_lock_{tabla}"] = False
@@ -287,11 +318,13 @@ def guardar_datos(modulo="todo"):
         # Siempre que guardemos un dato en la BD (sea el módulo que sea), 
         # borramos la caché para que al salir y entrar descargue la información real.
         fetch_datos_equipo_supabase.clear()
-
         reconstruir_dataframes_globales()
+        return True
             
     except Exception as e:
-        st.error(f"Error al guardar en Supabase: {e}")
+        st.error(f"🚨 Error crítico al guardar en Supabase ({modulo}): {e}")
+        st.stop()
+        return False
 
 import pandas as pd
 
