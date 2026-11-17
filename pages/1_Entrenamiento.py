@@ -770,7 +770,7 @@ with tab_micro:
                         st.download_button(
                             label=":material/download: Descargar PDF",
                             data=st.session_state[pdf_key],
-                            file_name=f"M{idx_real}.pdf",
+                            file_name=f"M{int(row['Micro_Num'])}.pdf",
                             mime="application/pdf",
                             key=f"btn_descarga_pdf_{num_sem}_{idx_real}"
                         )
@@ -2099,12 +2099,12 @@ with tab_ses:
                             fecha_f = datetime.strptime(sesion['fecha'], "%Y-%m-%d").strftime("%d-%m-%Y")
                             
                             if "Partido" in sesion.get("tipo", ""):
-                                rival = sesion.get("rival", "Rival")
+                                rival = sesion.get("rival", "Rival").strip()
                                 pref = "J" if "Oficial" in sesion.get("tipo", "") else "A"
-                                nombre_archivo_pdf = f"{pref}{num}_vs_{rival.replace(' ', '_')}.pdf"
+                                nombre_archivo_pdf = f"{pref}{num} vs {rival}.pdf"
                             else:
                                 md = sesion.get("descripcion", "TD")
-                                nombre_archivo_pdf = f"S{num}_{md}_{fecha_f}.pdf"
+                                nombre_archivo_pdf = f"S{num} {md} {fecha_f}.pdf"
 
                             with c_pdf1:
                                 st.download_button(
