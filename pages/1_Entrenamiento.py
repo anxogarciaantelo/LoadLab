@@ -48,11 +48,12 @@ for s in sesiones_crono:
  
 st.subheader(":material/calendar_month: Entrenamiento")
 
-tab_cal, tab_temp, tab_micro, tab_ses, tab_add = st.tabs([
+tab_cal, tab_temp, tab_micro, tab_ses, tab_sim, tab_add = st.tabs([
     ":material/calendar_view_month: Calendario", 
     ":material/emoji_events: Temporada", 
     ":material/sync: Microciclos", 
     ":material/list_alt: Sesiones", 
+    ":material/science: Simulador de Carga",
     ":material/add_circle: Añadir Sesión"
 ])
 
@@ -362,7 +363,6 @@ with tab_temp:
                 st.caption("Puedes clickar en el nombre de cualquier columna para ordenar los datos de mayor a menor, o usar la lupa para buscar.")
                 
                 df_temporada_show = df_temporada.sort_values("ID", ascending=False).drop(columns=["ID"])
-                # Excluir las sub-columnas de Wellness para no saturar la vista
                 cols_mostrar = [c for c in df_temporada_show.columns if c not in ['Fatiga', 'Sueño', 'Dolor', 'Estrés', 'Humor']]
                 
                 css_dark_table = "<style>.modern-dark-table { width: 100%; border-collapse: collapse; font-family: sans-serif; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4); background-color: #111318; color: #f8fafc; margin-bottom: 20px; } .modern-dark-table thead tr { background-color: #0b0e14; color: #C5A059; } .modern-dark-table th { padding: 12px 15px; font-weight: 800; text-transform: uppercase; font-size: 0.8rem; text-align: center !important; border-bottom: 2px solid #1c1f26; } .modern-dark-table td { padding: 10px 15px; text-align: center !important; border-bottom: 1px solid #1c1f26; font-weight: 700; font-size: 0.95rem; } .modern-dark-table tbody tr:hover td { filter: brightness(1.2); }</style>"
@@ -381,6 +381,138 @@ with tab_temp:
                     .set_table_attributes('class="modern-dark-table"'))
                 
                 st.markdown(css_dark_table + estilo_temporada.to_html(), unsafe_allow_html=True)
+
+                # =========================================================================
+                # 🧬 CRUCE ANTROPOMETRÍA x GPS: DECADENCIA DE VMAX POR ALTERACIÓN CORPORAL
+                # =========================================================================
+                st.markdown("---")
+                st.markdown("#### :material/monitor_weight: Impacto de la Composición Corporal en la Velocidad Máxima (Antropometría × GPS)")
+                st.caption("Cruza cada control antropométrico con el pico real de VMax (±15 días, excluyendo GPS virtual) para detectar si la hipertrofia (Kg Magros / FFMI) o el aumento de % Graso están restando velocidad punta al futbolista.")
+
+                antros_raw = st.session_state.get("antropometria", [])
+                df_gps_vmax = st.session_state.df_master_informes.copy()
+                if not df_gps_vmax.empty and 'GPS_VIRTUAL' in df_gps_vmax.columns:
+                    df_gps_vmax = df_gps_vmax[df_gps_vmax['GPS_VIRTUAL'] != True]
+
+                if not antros_raw or df_gps_vmax.empty or 'VMAX' not in df_gps_vmax.columns:
+                    st.info(":material/info: Se requieren registros en el módulo de Antropometría y datos GPS reales para cruzar la evolución corporal con la VMax.")
+                else:
+                    dict_alt_m = {limpiar_nombre(p["JUGADOR"]): safe_float(p.get("altura", 178)) / 100.0 for p in st.session_state.plantilla}
+                    dict_pos_p = {limpiar_nombre(p["JUGADOR"]): p.get("POS", "DEF") for p in st.session_state.plantilla}
+                    df_gps_vmax['FECHA_DT'] = pd.to_datetime(df_gps_vmax['FECHA'], errors='coerce')
+                    df_gps_vmax['JUG_CLEAN'] = df_gps_vmax['JUGADOR'].apply(limpiar_nombre)
+
+                    cruce_rows = []
+                    for a in antros_raw:
+                        j_nom = a.get("jugador", "")
+                        jc = limpiar_nombre(j_nom)
+                        if dict_pos_p.get(jc) == "POR":
+                            continue
+                        f_ant_dt = pd.to_datetime(a.get("fecha"), errors='coerce')
+                        peso_v = safe_float(a.get("Peso", 0))
+                        if pd.isna(f_ant_dt) or peso_v <= 0:
+                            continue
+                        sum_p = safe_float(a.get("P_Tricipital")) + safe_float(a.get("P_Subescapular")) + safe_float(a.get("P_Suprailiaco")) + safe_float(a.get("P_Abdominal"))
+                        pct_graso = (sum_p * 0.1537) + 5.783 if sum_p > 0 else 10.0
+                        kg_magros = peso_v * (1.0 - (pct_graso / 100.0))
+                        alt_m = dict_alt_m.get(jc, 1.78)
+                        ffmi_v = kg_magros / (alt_m ** 2) if alt_m > 0 else 21.0
+
+                        # Ventana [-15, +21] días alrededor del pesaje (fallback: mismo mes)
+                        sub_g = df_gps_vmax[
+                            (df_gps_vmax['JUG_CLEAN'] == jc) &
+                            (df_gps_vmax['VMAX'] > 22.0) &
+                            (df_gps_vmax['FECHA_DT'] >= f_ant_dt - pd.Timedelta(days=15)) &
+                            (df_gps_vmax['FECHA_DT'] <= f_ant_dt + pd.Timedelta(days=21))
+                        ]
+                        if sub_g.empty:
+                            sub_g = df_gps_vmax[
+                                (df_gps_vmax['JUG_CLEAN'] == jc) &
+                                (df_gps_vmax['VMAX'] > 22.0) &
+                                (df_gps_vmax['FECHA_DT'].dt.to_period('M') == f_ant_dt.to_period('M'))
+                            ]
+                        if not sub_g.empty:
+                            vmax_pico = float(sub_g['VMAX'].max())
+                            cruce_rows.append({
+                                "JUGADOR": j_nom, "POS": dict_pos_p.get(jc, "DEF"), "FECHA": f_ant_dt.strftime("%Y-%m-%d"),
+                                "FECHA_DT": f_ant_dt, "Peso (kg)": round(peso_v, 1), "Kg Magros": round(kg_magros, 2),
+                                "FFMI": round(ffmi_v, 2), "% Graso": round(pct_graso, 2), "VMax (km/h)": round(vmax_pico, 2)
+                            })
+
+                    if not cruce_rows:
+                        st.info(":material/info: Aún no coinciden controles antropométricos con sesiones GPS reales cercanas en el tiempo.")
+                    else:
+                        df_cruce = pd.DataFrame(cruce_rows).sort_values(["JUGADOR", "FECHA_DT"]).reset_index(drop=True)
+                        c_bi1, c_bi2 = st.columns([1, 2])
+                        var_x_bio = c_bi1.radio("Variable Corporal en Eje X:", ["Kg Magros", "FFMI", "% Graso", "Peso (kg)"], horizontal=True, key="rad_bio_vmax")
+                        jug_bio_filtro = c_bi2.selectbox("Aislar trayectoria de futbolista:", ["Toda la Plantilla (Vista Global)"] + sorted(df_cruce["JUGADOR"].unique().tolist()), key="sel_jug_bio_vmax")
+
+                        df_plot_bio = df_cruce if jug_bio_filtro == "Toda la Plantilla (Vista Global)" else df_cruce[df_cruce["JUGADOR"] == jug_bio_filtro]
+
+                        fig_bio = px.scatter(
+                            df_plot_bio, x=var_x_bio, y="VMax (km/h)", color="JUGADOR" if jug_bio_filtro != "Toda la Plantilla (Vista Global)" else "POS",
+                            hover_name="JUGADOR", hover_data=["FECHA", "Peso (kg)", "Kg Magros", "FFMI", "% Graso", "VMax (km/h)"],
+                            text="JUGADOR" if jug_bio_filtro == "Toda la Plantilla (Vista Global)" else "FECHA",
+                            title=f"Relación Biodinámica: {var_x_bio} vs. Velocidad Máxima (km/h)",
+                            color_discrete_map={"DEF": "#00b4d8", "MED": "#10b981", "ATA": "#ef4444"} if jug_bio_filtro == "Toda la Plantilla (Vista Global)" else None
+                        )
+                        fig_bio.update_traces(textposition="top center", marker=dict(size=12, opacity=0.9, line=dict(width=1.5, color="#0b0e14")))
+
+                        # Conectar los puntos cronológicos de cada jugador para ver su vector evolutivo
+                        for j_tr, df_j_tr in df_plot_bio.groupby("JUGADOR"):
+                            if len(df_j_tr) >= 2:
+                                fig_bio.add_trace(go.Scatter(
+                                    x=df_j_tr[var_x_bio], y=df_j_tr["VMax (km/h)"], mode="lines",
+                                    line=dict(color="rgba(197, 160, 89, 0.55)", width=2, dash="dot"),
+                                    showlegend=False, hoverinfo="skip"
+                                ))
+
+                        fig_bio.update_layout(height=380, plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
+                        st.plotly_chart(fig_bio, use_container_width=True)
+
+                        # Diagnóstico longitudinal (Comparativa 1er Control vs Último Control por jugador)
+                        diag_bio_rows = []
+                        for j_nom_b, df_jb in df_cruce.groupby("JUGADOR"):
+                            if len(df_jb) >= 2:
+                                ini_b, fin_b = df_jb.iloc[0], df_jb.iloc[-1]
+                                d_magro = fin_b["Kg Magros"] - ini_b["Kg Magros"]
+                                d_ffmi = fin_b["FFMI"] - ini_b["FFMI"]
+                                d_grasa = fin_b["% Graso"] - ini_b["% Graso"]
+                                d_vmax = fin_b["VMax (km/h)"] - ini_b["VMax (km/h)"]
+
+                                if d_vmax <= -0.4 and d_magro >= 0.5:
+                                    diag_txt = "🔴 Decadencia por Hipertrofia No Funcional (+Masa Magra / -VMax)"
+                                elif d_vmax <= -0.4 and d_grasa >= 0.4:
+                                    diag_txt = "🔴 Decadencia por Lastre Adiposo (+% Graso / -VMax)"
+                                elif d_vmax >= 0.3 and d_ffmi >= 0.1:
+                                    diag_txt = "🟢 Potenciación Neuromuscular (+FFMI y +VMax)"
+                                elif d_vmax >= 0.2 and d_grasa <= -0.3:
+                                    diag_txt = "🟢 Optimización Relación Potencia/Peso (-% Graso / +VMax)"
+                                elif d_vmax <= -0.4:
+                                    diag_txt = "🟡 Caída de VMax (Fatiga Neuromuscular / Sin lastre corporal)"
+                                else:
+                                    diag_txt = "⚪ Estable / Equilibrio Biodinámico"
+
+                                diag_bio_rows.append({
+                                    "JUGADOR": j_nom_b, "Controles": len(df_jb),
+                                    "Kg Magros (Actual)": fin_b["Kg Magros"], "Δ Kg Magros": d_magro,
+                                    "FFMI (Actual)": fin_b["FFMI"], "Δ % Graso": d_grasa,
+                                    "VMax Actual": fin_b["VMax (km/h)"], "Δ VMax (km/h)": d_vmax,
+                                    "Diagnóstico Biodinámico": diag_txt
+                                })
+
+                        if diag_bio_rows:
+                            st.markdown("##### :material/biotech: Diagnóstico Longitudinal de Alteración Corporal vs. VMax")
+                            df_diag_bio = pd.DataFrame(diag_bio_rows).sort_values("Δ VMax (km/h)", ascending=True)
+                            estilo_bio = (df_diag_bio.style.hide(axis="index")
+                                .format({
+                                    "Kg Magros (Actual)": "{:.1f} kg", "Δ Kg Magros": "{:+.2f} kg",
+                                    "FFMI (Actual)": "{:.2f}", "Δ % Graso": "{:+.2f}%",
+                                    "VMax Actual": "{:.1f} km/h", "Δ VMax (km/h)": "{:+.2f} km/h"
+                                })
+                                .map(lambda x: "color: #ef4444; font-weight: 800;" if isinstance(x, (int, float)) and x <= -0.4 else ("color: #10b981; font-weight: 800;" if isinstance(x, (int, float)) and x >= 0.3 else ""), subset=["Δ VMax (km/h)"])
+                                .set_table_attributes('class="modern-dark-table"'))
+                            st.markdown(css_dark_table + estilo_bio.to_html(), unsafe_allow_html=True)
 
 with tab_micro:
     if not st.session_state.sesiones:
@@ -1823,6 +1955,82 @@ with tab_ses:
                                          .set_table_attributes('class="modern-dark-table"'))
                             st.markdown(css_dark_table + estilo_ce.to_html(), unsafe_allow_html=True)
                         
+                        # =========================================================================
+                        # ⚡ COSTE DE INEFICIENCIA EN REVULSIVOS (PACING DE SUPLENTES EN PARTIDO)
+                        # =========================================================================
+                        if es_partido:
+                            st.markdown("---")
+                            st.markdown("#### :material/speed: Pacing y Coste de Ineficiencia en Revulsivos (Suplentes vs. Titulares)")
+                            st.caption("Compara la densidad mecánica (ACC/min y ACC+DCC/min) y metabólica (m/min y HSR/min) de los suplentes que entran frescos frente a los titulares que acumularon fatiga en este mismo partido.")
+
+                            df_pacing = df_informe[(df_informe['DIS'] > 0) & (df_informe['POS'] != 'POR')].copy()
+                            if 'GPS_VIRTUAL' in df_pacing.columns:
+                                df_pacing = df_pacing[df_pacing['GPS_VIRTUAL'] != True]
+
+                            if not df_pacing.empty:
+                                df_pacing['MIN_EF'] = np.where(df_pacing.get('MIN_GPS', df_pacing['MIN']) > 0, df_pacing.get('MIN_GPS', df_pacing['MIN']), df_pacing['MIN'])
+                                df_pacing = df_pacing[df_pacing['MIN_EF'] >= 5].copy()
+                                df_pacing['ACC/min'] = df_pacing['ACC'] / df_pacing['MIN_EF']
+                                df_pacing['MEC/min'] = (df_pacing['ACC'] + df_pacing['DCC']) / df_pacing['MIN_EF']
+                                df_pacing['m/min'] = (df_pacing['DIS'] * 1000.0) / df_pacing['MIN_EF']
+                                df_pacing['HSR/min'] = df_pacing['DIS AI'] / df_pacing['MIN_EF']
+
+                                df_tit_pac = df_pacing[df_pacing['ESTADO'] == 'Titular']
+                                df_sup_pac = df_pacing[df_pacing['ESTADO'] == 'Suplente']
+
+                                if not df_tit_pac.empty and not df_sup_pac.empty:
+                                    ref_eq_acc = df_tit_pac['ACC/min'].mean()
+                                    ref_eq_mec = df_tit_pac['MEC/min'].mean()
+                                    ref_eq_m = df_tit_pac['m/min'].mean()
+                                    ref_eq_hsr = df_tit_pac['HSR/min'].mean()
+                                    ref_pos_pac = df_tit_pac.groupby('POS')[['ACC/min', 'MEC/min', 'm/min', 'HSR/min']].mean().to_dict('index')
+
+                                    rows_revulsivos = []
+                                    for _, r_sup in df_sup_pac.iterrows():
+                                        pos_s = r_sup['POS']
+                                        r_ref = ref_pos_pac.get(pos_s, {'ACC/min': ref_eq_acc, 'MEC/min': ref_eq_mec, 'm/min': ref_eq_m, 'HSR/min': ref_eq_hsr})
+                                        base_acc = r_ref['ACC/min'] if r_ref['ACC/min'] > 0 else ref_eq_acc
+                                        base_mec = r_ref['MEC/min'] if r_ref['MEC/min'] > 0 else ref_eq_mec
+                                        base_m = r_ref['m/min'] if r_ref['m/min'] > 0 else ref_eq_m
+
+                                        diff_acc_pct = ((r_sup['ACC/min'] - base_acc) / base_acc * 100.0) if base_acc > 0 else 0.0
+                                        diff_mec_pct = ((r_sup['MEC/min'] - base_mec) / base_mec * 100.0) if base_mec > 0 else 0.0
+                                        diff_m_pct = ((r_sup['m/min'] - base_m) / base_m * 100.0) if base_m > 0 else 0.0
+
+                                        if diff_acc_pct < 0 or diff_mec_pct < 0:
+                                            est_pac = "🔴 Coste de Ineficiencia (Inferior a Titulares fatigados)"
+                                        elif diff_acc_pct < 10.0:
+                                            est_pac = "🟡 Ritmo Neutro (Sin plus de frescura < +10%)"
+                                        else:
+                                            est_pac = "🟢 Revulsivo de Alto Impacto (≥ +10% ritmo mecánico)"
+
+                                        rows_revulsivos.append({
+                                            "JUGADOR": r_sup['JUGADOR'], "POS": pos_s, "Minutos": r_sup['MIN_EF'],
+                                            "ACC/min (Sup)": r_sup['ACC/min'], "ACC/min (Tit)": base_acc, "Δ% ACC/min": diff_acc_pct,
+                                            "MEC/min (Sup)": r_sup['MEC/min'], "MEC/min (Tit)": base_mec, "Δ% MEC/min": diff_mec_pct,
+                                            "m/min (Sup)": r_sup['m/min'], "Δ% m/min": diff_m_pct, "Diagnóstico Pacing": est_pac
+                                        })
+
+                                    df_rev_res = pd.DataFrame(rows_revulsivos).sort_values("Δ% ACC/min", ascending=True)
+                                    ineficientes = df_rev_res[df_rev_res["Δ% ACC/min"] < 0]
+                                    if not ineficientes.empty:
+                                        nombres_inef = ", ".join([f"**{r['JUGADOR']}** ({r['Δ% ACC/min']:+.1f}% ACC/min en {r['Minutos']:.0f}')" for _, r in ineficientes.iterrows()])
+                                        st.error(f":material/warning: **Alerta de Ineficiencia en Revulsivos:** {nombres_inef} registraron una densidad de aceleración inferior a la media de los titulares de su línea pese a entrar sin fatiga acumulada.")
+                                    else:
+                                        st.success(":material/bolt: Todos los suplentes con GPS real superaron la densidad mecánica media de los titulares.")
+
+                                    estilo_pac = (df_rev_res.style.hide(axis="index")
+                                        .format({
+                                            "Minutos": "{:.0f}'", "ACC/min (Sup)": "{:.2f}", "ACC/min (Tit)": "{:.2f}", "Δ% ACC/min": "{:+.1f}%",
+                                            "MEC/min (Sup)": "{:.2f}", "MEC/min (Tit)": "{:.2f}", "Δ% MEC/min": "{:+.1f}%",
+                                            "m/min (Sup)": "{:.1f}", "Δ% m/min": "{:+.1f}%"
+                                        })
+                                        .map(lambda x: "color: #ef4444; font-weight: 800;" if isinstance(x, (int, float)) and x < 0 else ("color: #10b981; font-weight: 800;" if isinstance(x, (int, float)) and x >= 10 else "color: #f59e0b; font-weight: 800;"), subset=["Δ% ACC/min", "Δ% MEC/min"])
+                                        .set_table_attributes('class="modern-dark-table"'))
+                                    st.markdown(css_dark_table + estilo_pac.to_html(), unsafe_allow_html=True)
+                                else:
+                                    st.info("No hay suficientes titulares y suplentes con datos GPS reales (no virtuales) en este partido para contrastar el Pacing.")
+
                         # --- MÓDULO DE CARGA COMPENSATORIA (MD+1 / MD+2 / Post-Partido) ---
                         es_compensatoria = not es_partido and sesion.get('descripcion') in ['MD+1', 'MD+2', 'Post-Partido']
                         
@@ -2675,6 +2883,171 @@ with tab_ses:
                             guardar_datos(modulo="sesiones")
                             st.success(f":material/check_circle: ¡Estadísticas guardadas! Marcador: {gf_final} - {gc_final} y presencia en goles (+/-) calculada automáticamente.")
                             st.rerun()
+with tab_sim:
+    st.markdown("### :material/science: Simulador de Carga Pre-Sesión (Forecasting ACWR)")
+    st.caption("Proyecta matemáticamente cómo quedarán los Ratios Agudo/Crónico (Uncoupled EWMA) de Carga Interna, HSR (>21 km/h) y Tensión Mecánica (ACC >3 m/s²) al finalizar la tarea o sesión según su orientación táctica y duración.")
+
+    if not st.session_state.plantilla:
+        st.info("Añade jugadores en la sección Plantilla para utilizar el simulador.")
+    else:
+        with st.container(border=True):
+            cs_1, cs_2, cs_3, cs_4 = st.columns([1.6, 1, 1, 1.2])
+            Perfiles_Tarea = {
+                "Espacios Reducidos / Tensión (MD-4)": {"md_codes": ["MD-4"], "rpe_def": 7.0, "hsr_pm": 3.2, "acc_pm": 0.95},
+                "Espacios Amplios / Intensidad (MD-3)": {"md_codes": ["MD-3"], "rpe_def": 7.5, "hsr_pm": 6.8, "acc_pm": 0.65},
+                "Técnico-Táctico / Mixto (TD)": {"md_codes": ["TD", "MD-5"], "rpe_def": 6.0, "hsr_pm": 4.5, "acc_pm": 0.70},
+                "Activación / Tapering (MD-2 / MD-1)": {"md_codes": ["MD-2", "MD-1"], "rpe_def": 4.0, "hsr_pm": 2.2, "acc_pm": 0.45},
+                "Compensatorio / Post-Partido (MD+1)": {"md_codes": ["MD+1", "Post-Partido"], "rpe_def": 6.5, "hsr_pm": 5.5, "acc_pm": 0.80},
+                "Partido Competitivo (MD)": {"md_codes": ["MD"], "rpe_def": 8.5, "hsr_pm": 7.5, "acc_pm": 0.85}
+            }
+            tipo_tarea_sim = cs_1.selectbox("1. Orientación de la Tarea / Sesión:", list(Perfiles_Tarea.keys()), key="sim_tipo_tarea")
+            cfg_t = Perfiles_Tarea[tipo_tarea_sim]
+            min_sim = cs_2.number_input("2. Duración (Minutos):", min_value=10, max_value=120, value=65, step=5, key="sim_min")
+            rpe_sim = cs_3.slider("3. RPE Esperado (1-10):", min_value=1.0, max_value=10.0, value=float(cfg_t["rpe_def"]), step=0.5, key="sim_rpe")
+            factor_int_sim = cs_4.slider("4. Intensidad GPS vs Media (%):", min_value=60, max_value=140, value=100, step=5, key="sim_f_int") / 100.0
+
+        hoy_sim_str = str(date.today())
+        ewma_pre_sim = calcular_ewma_historico(st.session_state.sesiones, hoy_sim_str)
+        df_hist_sim = st.session_state.df_master_informes.copy()
+        if not df_hist_sim.empty and 'GPS_VIRTUAL' in df_hist_sim.columns:
+            df_hist_sim = df_hist_sim[df_hist_sim['GPS_VIRTUAL'] != True]
+
+        # Calcular densidades históricas reales por jugador y por posición en ese tipo de tarea
+        den_jug_hist = {}
+        den_pos_hist = {}
+        if not df_hist_sim.empty:
+            df_h_valid = df_hist_sim[(df_hist_sim['DIS'] > 0) & (df_hist_sim['MIN'] > 0) & (df_hist_sim['MD'].isin(cfg_t["md_codes"]))].copy()
+            if df_h_valid.empty:
+                df_h_valid = df_hist_sim[(df_hist_sim['DIS'] > 0) & (df_hist_sim['MIN'] > 0)].copy()
+            if not df_h_valid.empty:
+                min_ef_h = np.where(df_h_valid.get('MIN_GPS', df_h_valid['MIN']) > 0, df_h_valid.get('MIN_GPS', df_h_valid['MIN']), df_h_valid['MIN'])
+                df_h_valid['hsr_pm'] = df_h_valid['DIS AI'] / min_ef_h
+                df_h_valid['acc_pm'] = df_h_valid['ACC'] / min_ef_h
+                den_jug_hist = df_h_valid.groupby('JUGADOR')[['hsr_pm', 'acc_pm']].mean().to_dict('index')
+                den_pos_hist = df_h_valid.groupby('POS')[['hsr_pm', 'acc_pm']].mean().to_dict('index')
+
+        # Excluir lesionados activos del simulador por defecto
+        les_act_sim = {limpiar_nombre(l["jugador"]) for l in st.session_state.get("lesiones", []) if l.get("estado") == "Activa"}
+        alpha_aguda = 2.0 / (7.0 + 1.0) # 0.25 (Uncoupled EWMA 7d)
+
+        sim_rows = []
+        for p in st.session_state.plantilla:
+            j_nom = p["JUGADOR"]
+            pos_j = p.get("POS", "DEF")
+            if limpiar_nombre(j_nom) in les_act_sim:
+                continue
+
+            ew_j = ewma_pre_sim.get(j_nom, {})
+            ag_int_pre = safe_float(ew_j.get("EWMA AGUDA", 1200.0))
+            cr_int_pre = max(safe_float(ew_j.get("EWMA CRÓNICA", 1200.0)), 10.0)
+            ac_int_pre = safe_float(ew_j.get("RATIO A/C", 1.0))
+
+            ag_hsr_pre = safe_float(ew_j.get("EWMA AGUDA HSR", 800.0))
+            cr_hsr_pre = max(safe_float(ew_j.get("EWMA CRÓNICA HSR", 800.0)), 1.0)
+            ac_hsr_pre = safe_float(ew_j.get("RATIO A/C HSR", 1.0))
+
+            ag_acc_pre = safe_float(ew_j.get("EWMA AGUDA ACC", 120.0))
+            cr_acc_pre = max(safe_float(ew_j.get("EWMA CRÓNICA ACC", 120.0)), 1.0)
+            ac_acc_pre = safe_float(ew_j.get("RATIO A/C ACC", 1.0))
+
+            # Densidad específica del jugador -> fallback posición -> fallback estándar tarea
+            d_hsr = den_jug_hist.get(j_nom, {}).get('hsr_pm', den_pos_hist.get(pos_j, {}).get('hsr_pm', cfg_t["hsr_pm"]))
+            d_acc = den_jug_hist.get(j_nom, {}).get('acc_pm', den_pos_hist.get(pos_j, {}).get('acc_pm', cfg_t["acc_pm"]))
+
+            carga_proy = min_sim * rpe_sim
+            hsr_proy = (min_sim * d_hsr * factor_int_sim) if pos_j != "POR" else 0.0
+            acc_proy = (min_sim * d_acc * factor_int_sim) if pos_j != "POR" else (min_sim * 0.25 * factor_int_sim)
+
+            # Proyección matemática exacta Uncoupled EWMA
+            ag_int_post = (ag_int_pre * (1.0 - alpha_aguda)) + ((carga_proy * 7.0) * alpha_aguda)
+            ac_int_post = min(ag_int_post / cr_int_pre, 4.0) if ew_j else 1.0
+
+            ag_hsr_post = (ag_hsr_pre * (1.0 - alpha_aguda)) + ((hsr_proy * 7.0) * alpha_aguda)
+            ac_hsr_post = min(ag_hsr_post / cr_hsr_pre, 4.0) if (ew_j and pos_j != "POR") else 1.0
+
+            ag_acc_post = (ag_acc_pre * (1.0 - alpha_aguda)) + ((acc_proy * 7.0) * alpha_aguda)
+            ac_acc_post = min(ag_acc_post / cr_acc_pre, 4.0) if ew_j else 1.0
+
+            # Cálculo del Techo de Minutos Seguro (para no superar A/C = 1.45 en ninguna dimensión)
+            limites_min = [120.0]
+            if ew_j:
+                max_carga_segura = ((1.45 * cr_int_pre) - (ag_int_pre * 0.75)) / (7.0 * 0.25)
+                if rpe_sim > 0:
+                    limites_min.append(max(0.0, max_carga_segura / rpe_sim))
+                if pos_j != "POR" and d_hsr * factor_int_sim > 0:
+                    max_hsr_seguro = ((1.45 * cr_hsr_pre) - (ag_hsr_pre * 0.75)) / (7.0 * 0.25)
+                    limites_min.append(max(0.0, max_hsr_seguro / (d_hsr * factor_int_sim)))
+                if pos_j != "POR" and d_acc * factor_int_sim > 0:
+                    max_acc_seguro = ((1.45 * cr_acc_pre) - (ag_acc_pre * 0.75)) / (7.0 * 0.25)
+                    limites_min.append(max(0.0, max_acc_seguro / (d_acc * factor_int_sim)))
+            techo_min = min(limites_min)
+
+            max_ac_post = max(ac_int_post, ac_hsr_post, ac_acc_post)
+            if max_ac_post >= 1.50:
+                pauta = f"🔴 RIESGO SPIKE: Limitar a máx. {techo_min:.0f}' (Comodín / Fuera en últimas series)"
+            elif max_ac_post >= 1.35:
+                pauta = f"🟡 PRECAUCIÓN: Cerca del límite (Techo seguro: {techo_min:.0f}')"
+            elif ac_int_post < 0.80:
+                pauta = "🔵 SUBCARGA: Admite bloque compensatorio extra"
+            else:
+                pauta = "🟢 SWEET SPOT: Carga óptima asimilable"
+
+            sim_rows.append({
+                "JUGADOR": j_nom, "POS": pos_j,
+                "Carga Proy.": carga_proy, "HSR Proy. (m)": hsr_proy, "ACC Proy.": acc_proy,
+                "A/C INT (Actual)": ac_int_pre, "A/C INT (Post)": ac_int_post,
+                "A/C HSR (Actual)": ac_hsr_pre, "A/C HSR (Post)": ac_hsr_post,
+                "A/C ACC (Actual)": ac_acc_pre, "A/C ACC (Post)": ac_acc_post,
+                "Techo Seguro (min)": min(techo_min, 120.0), "Pauta Fisiológica": pauta
+            })
+
+        df_sim = pd.DataFrame(sim_rows)
+        if not df_sim.empty:
+            en_sweet = len(df_sim[(df_sim["A/C INT (Post)"] >= 0.8) & (df_sim["A/C INT (Post)"] <= 1.35) & (df_sim["A/C HSR (Post)"] <= 1.45) & (df_sim["A/C ACC (Post)"] <= 1.45)])
+            en_riesgo = len(df_sim[(df_sim["A/C INT (Post)"] >= 1.5) | (df_sim["A/C HSR (Post)"] >= 1.5) | (df_sim["A/C ACC (Post)"] >= 1.5)])
+
+            ks1, ks2, ks3, ks4 = st.columns(4)
+            with ks1: render_kpi_elite("En Sweet Spot (Post)", f"{en_sweet}/{len(df_sim)}", color_borde="#10b981")
+            with ks2: render_kpi_elite("Jugadores en Spike (≥1.5)", f"{en_riesgo}", color_borde="#ef4444" if en_riesgo > 0 else "#10b981")
+            with ks3: render_kpi_elite("A/C Interno Medio (Post)", f"{df_sim['A/C INT (Post)'].mean():.2f}", subtitulo=f"Pre: {df_sim['A/C INT (Actual)'].mean():.2f}", color_borde="#C5A059")
+            with ks4: render_kpi_elite("A/C HSR Medio (Post)", f"{df_sim[df_sim['POS']!='POR']['A/C HSR (Post)'].mean():.2f}", subtitulo=f"HSR medio: {df_sim[df_sim['POS']!='POR']['HSR Proy. (m)'].mean():.0f} m", color_borde="#0ea5e9")
+
+            st.markdown("---")
+            df_sim_sort = df_sim.sort_values("A/C INT (Post)", ascending=True)
+            fig_sim = go.Figure()
+            fig_sim.add_vrect(x0=0.80, x1=1.30, fillcolor="rgba(16, 185, 129, 0.12)", line_width=0, annotation_text="Sweet Spot (0.8-1.3)", annotation_position="top left")
+            fig_sim.add_vrect(x0=1.50, x1=max(2.0, df_sim_sort["A/C INT (Post)"].max() * 1.1), fillcolor="rgba(239, 68, 68, 0.12)", line_width=0, annotation_text="Zona Peligro (>1.5)", annotation_position="top right")
+
+            fig_sim.add_trace(go.Scatter(
+                x=df_sim_sort["A/C INT (Actual)"], y=df_sim_sort["JUGADOR"], mode="markers",
+                name="A/C Actual (Pre-Sesión)", marker=dict(color="#94a3b8", size=9, symbol="circle")
+            ))
+            fig_sim.add_trace(go.Scatter(
+                x=df_sim_sort["A/C INT (Post)"], y=df_sim_sort["JUGADOR"], mode="markers",
+                name="A/C Proyectado (Post-Sesión)", marker=dict(color="#C5A059", size=12, symbol="diamond", line=dict(width=1.5, color="#0b0e14"))
+            ))
+            fig_sim.update_layout(
+                title="Desplazamiento Proyectado del Ratio A/C (Pre ➔ Post Sesión)",
+                xaxis_title="Ratio Agudo/Crónico (ACWR)", yaxis_title="",
+                height=max(360, len(df_sim_sort) * 24), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            )
+            st.plotly_chart(fig_sim, use_container_width=True)
+
+            css_dark_table = "<style>.modern-dark-table { width: 100%; border-collapse: collapse; font-family: sans-serif; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4); background-color: #111318; color: #f8fafc; margin-bottom: 20px; } .modern-dark-table thead tr { background-color: #0b0e14; color: #C5A059; } .modern-dark-table th { padding: 12px 15px; font-weight: 800; text-transform: uppercase; font-size: 0.8rem; text-align: center !important; border-bottom: 2px solid #1c1f26; } .modern-dark-table td { padding: 10px 15px; text-align: center !important; border-bottom: 1px solid #1c1f26; font-weight: 700; font-size: 0.95rem; } .modern-dark-table tbody tr:hover td { filter: brightness(1.2); }</style>"
+            df_sim_table = df_sim.sort_values("A/C INT (Post)", ascending=False)
+            estilo_sim = (df_sim_table.style.hide(axis="index")
+                .format({
+                    "Carga Proy.": "{:.0f} UA", "HSR Proy. (m)": "{:.0f} m", "ACC Proy.": "{:.0f}",
+                    "A/C INT (Actual)": "{:.2f}", "A/C INT (Post)": "{:.2f}",
+                    "A/C HSR (Actual)": "{:.2f}", "A/C HSR (Post)": "{:.2f}",
+                    "A/C ACC (Actual)": "{:.2f}", "A/C ACC (Post)": "{:.2f}",
+                    "Techo Seguro (min)": "{:.0f}'"
+                })
+                .map(lambda x: f"background-color: {color_ratio_ac(x)}; color: black; font-weight: bold;" if isinstance(x, (int, float)) else "", subset=["A/C INT (Post)", "A/C HSR (Post)", "A/C ACC (Post)"])
+                .set_table_attributes('class="modern-dark-table"'))
+            st.markdown(css_dark_table + estilo_sim.to_html(), unsafe_allow_html=True)
+
 with tab_add:
     st.markdown("### :material/add_circle: Planificación de Sesiones")
     st.caption("Gestiona el calendario del equipo: añade nuevos eventos a la izquierda o modifica/elimina los existentes a la derecha.")
