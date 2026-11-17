@@ -112,13 +112,15 @@ if not st.session_state.get("autenticado", False) and not st.session_state.get("
     if token and refresh and uid:
         try:
             res = supabase.auth.set_session(token, refresh)
+            new_access = res.session.access_token if res and res.session else token
+            new_refresh = res.session.refresh_token if res and res.session else refresh
             st.session_state.usuario_id = res.user.id if res and res.user else uid
-            st.session_state.access_token = res.session.access_token if res and res.session else token
-            st.session_state.refresh_token = res.session.refresh_token if res and res.session else refresh
+            st.session_state.access_token = new_access
+            st.session_state.refresh_token = new_refresh
+            supabase.postgrest.auth(new_access)
             st.session_state.autenticado = True
             st.rerun()
         except Exception:
-            # Si el token ha caducado tras semanas, limpiamos las cookies rotas
             cookie_manager.delete("loadlab_access", key="del_err1")
             cookie_manager.delete("loadlab_refresh", key="del_err2")
             cookie_manager.delete("loadlab_uid", key="del_err3")
