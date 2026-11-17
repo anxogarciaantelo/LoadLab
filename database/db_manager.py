@@ -4,19 +4,23 @@ import base64
 import unicodedata
 import numpy as np
 
-url = st.secrets["SUPABASE_URL"]
-key = st.secrets["SUPABASE_KEY"]
-supabase = create_client(url, key)
-
-def asegurar_sesion_supabase():
-    if "access_token" in st.session_state and "refresh_token" in st.session_state:
+url = st.secrets["SUPABASE_def asegurar_sesion_supabase():
+    if "access_token" in st.session_state and st.session_state.access_token:
         try:
-            res = supabase.auth.set_session(st.session_state.access_token, st.session_state.refresh_token)
-            if res and res.session:
-                st.session_state.access_token = res.session.access_token
-                st.session_state.refresh_token = res.session.refresh_token
+            supabase.postgrest.auth(st.session_state.access_token)
         except Exception:
             pass
+        if "refresh_token" in st.session_state and st.session_state.refresh_token:
+            try:
+                sesion_actual = supabase.auth.get_session()
+                if not sesion_actual:
+                    res = supabase.auth.set_session(st.session_state.access_token, st.session_state.refresh_token)
+                    if res and res.session:
+                        st.session_state.access_token = res.session.access_token
+                        st.session_state.refresh_token = res.session.refresh_token
+                        supabase.postgrest.auth(res.session.access_token)
+            except Exception:
+                pass
 
 asegurar_sesion_supabase()
 
@@ -34,24 +38,61 @@ def sanitizar_para_supabase(obj):
         return float(obj)
     elif isinstance(obj, (np.bool_, bool)):
         return bool(obj)
-    elif pd.isna(obj):
+    elif obj is None:
         return None
+    try:
+        if pd.isna(obj):
+            return None
+    except Exception:
+        pass
     return obj
 
 def limpiar_nombre_archivo(texto):
     texto_limpio = ''.join(c for c in unicodedata.normalize('NFD', texto) if unicodedata.category(c) != 'Mn')
     return texto_limpio.replace(' ', '_').lower()
 
+def _fetch_all_tabla(tabla, equipo_id):
+    """Descarga todas las filas ordenadas cronológicamente por ID sin el límite de 1.000 filas de Supabase."""
+    rows = []
+    offset = 0
+    step = 1000
+    while True:
+        try:
+            res = supabase.table(tabla).select("*").eq("equipo_id", equipo_id).order("id", desc=False).range(offset, offset + step - 1).execute()
+        except Exception:
+            res = supabase.table(tabla).select("*").eq("equipo_id", equipo_id).range(offset, offset + step - 1).execute()
+        batch = res.data if res and res.data else []
+        rows.extend(batch)
+        if len(batch) < step:
+            break
+        offset += step
+    return rows
+
 @st.cache_data(ttl=3600, show_spinner=False)
 def fetch_datos_equipo_supabase(equipo_id):
     asegurar_sesion_supabase()
     res_eq = supabase.table("equipos").select("*").eq("id", equipo_id).execute()
-    res_plan = supabase.table("plantilla").select("*").eq("equipo_id", equipo_id).execute()
-    res_ses = supabase.table("sesiones").select("*").eq("equipo_id", equipo_id).execute()
-    res_les = supabase.table("lesiones_historial").select("*").eq("equipo_id", equipo_id).execute()
-    res_ant = supabase.table("antropometria_historial").select("*").eq("equipo_id", equipo_id).execute()
+    plan_data = _fetch_all_tabla("plantilla", equipo_id)
+    ses_data = _fetch_all_tabla("sesiones", equipo_id)
+    les_data = _fetch_all_tabla("lesiones_historial", equipo_id)
+    ant_data = _fetch_all_tabla("antropometria_historial", equipo_id)
     res_cfg = supabase.table("configuracion_equipo").select("*").eq("equipo_id", equipo_id).execute()
-    return res_eq.data, res_plan.data, res_ses.data, res_les.data, res_ant.data, res_cfg.data
+    return res_eq.data, plan_data, ses_data, les_data, ant_data, res_cfg.data
+
+def _score_completitud_sesion(s):
+    """Calcula la riqueza de datos de una sesión para no perder nunca informes, stats ni disponibilidad."""
+    score = 0
+    if s.get("informe_generado") and s.get("datos_informe"):
+        score += 100 + len(s.get("datos_informe", []))
+    if s.get("estadisticas_partido") and len(s.get("estadisticas_partido", {})) > 0:
+        score += 50 + len(s.get("estadisticas_partido", {}))
+    if s.get("disponibilidad") and len(s.get("disponibilidad", {})) > 0:
+        score += 20
+    if s.get("goles_favor") is not None or s.get("goles_contra") is not None:
+        score += 10
+    if s.get("clima"):
+        score += 5
+    return score
 
 def cargar_datos_equipo(equipo_id):
     try:
@@ -73,7 +114,7 @@ def cargar_datos_equipo(equipo_id):
                     "JUGADOR": p["jugador"], "POS": p["pos"], "pos_1": p["pos_1"],
                     "pos_2": p["pos_2"], "edad": p["edad"], "dorsal": p["dorsal"],
                     "altura": p["altura"], "lateralidad": p["lateralidad"],
-                    "foto": p["foto_url"] # AHORA CARGAMOS LA URL LIGERA
+                    "foto": p["foto_url"]
                 })
             st.session_state.plantilla = plantilla
 
@@ -84,15 +125,15 @@ def cargar_datos_equipo(equipo_id):
                     "competicion": s["competicion"], "rival": s["rival"], "condicion": s["condicion"],
                     "ciudad_manual": s["ciudad_manual"], "goles_favor": s["goles_favor"],
                     "goles_contra": s["goles_contra"], "clima": s["clima"],
-                    "disponibilidad": s["disponibilidad"], "estadisticas_partido": s["estadisticas_partido"],
-                    "estadisticas_invitados": s["estadisticas_invitados"], "informe_generado": s["informe_generado"],
-                    "datos_informe": s["datos_informe"]
+                    "disponibilidad": s["disponibilidad"] or {}, "estadisticas_partido": s["estadisticas_partido"] or {},
+                    "estadisticas_invitados": s["estadisticas_invitados"] or [], "informe_generado": bool(s["informe_generado"]),
+                    "datos_informe": s["datos_informe"] or []
                 })
             st.session_state.sesiones = sesiones
             st.session_state.lesiones = les_data
-            st.session_state.antropometria = [a["datos"] for a in ant_data]
+            st.session_state.antropometria = [a["datos"] for a in ant_data if isinstance(a.get("datos"), dict)]
 
-            # --- PARCHE DE AUTOLIMPIEZA DE DUPLICADOS (PRIORIZA DATOS MÁS RECIENTES / COMPLETOS) ---
+            # --- DEDUPLICACIÓN INTELIGENTE CON FUSIÓN DE CAMPOS ---
             mapa_ses = {}
             for s in st.session_state.sesiones:
                 uid = f"{s['fecha']}_{s['tipo']}_{s.get('descripcion','')}_{s.get('rival','')}"
@@ -100,13 +141,20 @@ def cargar_datos_equipo(equipo_id):
                     mapa_ses[uid] = s
                 else:
                     prev = mapa_ses[uid]
-                    tiene_datos_nuevo = bool(s.get("informe_generado") and s.get("datos_informe"))
-                    tiene_datos_prev = bool(prev.get("informe_generado") and prev.get("datos_informe"))
-                    tiene_stats_nuevo = bool(s.get("estadisticas_partido"))
-                    tiene_stats_prev = bool(prev.get("estadisticas_partido"))
-                    # Sobrescribimos con el registro más reciente salvo que el nuevo esté vacío y el previo tenga datos
-                    if tiene_datos_nuevo or not tiene_datos_prev or (tiene_stats_nuevo and not tiene_stats_prev):
-                        mapa_ses[uid] = s
+                    # Fusionar campos valiosos si una copia tiene stats y la otra tiene informe GPS
+                    merged = s.copy() if _score_completitud_sesion(s) >= _score_completitud_sesion(prev) else prev.copy()
+                    if not (merged.get("informe_generado") and merged.get("datos_informe")) and (prev.get("informe_generado") and prev.get("datos_informe")):
+                        merged["informe_generado"] = True
+                        merged["datos_informe"] = prev["datos_informe"]
+                    if not merged.get("estadisticas_partido") and prev.get("estadisticas_partido"):
+                        merged["estadisticas_partido"] = prev["estadisticas_partido"]
+                        if merged.get("goles_favor") is None: merged["goles_favor"] = prev.get("goles_favor")
+                        if merged.get("goles_contra") is None: merged["goles_contra"] = prev.get("goles_contra")
+                    if not merged.get("disponibilidad") and prev.get("disponibilidad"):
+                        merged["disponibilidad"] = prev["disponibilidad"]
+                    if not merged.get("estadisticas_invitados") and prev.get("estadisticas_invitados"):
+                        merged["estadisticas_invitados"] = prev["estadisticas_invitados"]
+                    mapa_ses[uid] = merged
             st.session_state.sesiones = list(mapa_ses.values())
             
             mapa_plan = {}
@@ -125,7 +173,6 @@ def cargar_datos_equipo(equipo_id):
                 uid_ant = f"{a.get('fecha','')}_{a.get('jugador','')}"
                 mapa_ant[uid_ant] = a
             st.session_state.antropometria = list(mapa_ant.values())
-            # --------------------------------------------
 
             cfg = cfg_data[0] if cfg_data else {}
             st.session_state.val_inicial = cfg.get("val_inicial", [])
@@ -133,6 +180,10 @@ def cargar_datos_equipo(equipo_id):
             st.session_state.val_1rm = cfg.get("val_1rm", [])
             st.session_state.ubicacion_local = cfg.get("ubicacion_local", "Santiago de Compostela")
             st.session_state.rivales_guardados = cfg.get("rivales_guardados", {})
+            if cfg.get("lapreferente_comp_id"):
+                st.session_state.lapreferente_comp_id = cfg.get("lapreferente_comp_id")
+            if cfg.get("lapreferente_copa_id"):
+                st.session_state.lapreferente_copa_id = cfg.get("lapreferente_copa_id")
             
             st.session_state.config_mapeo = cfg.get("config_mapeo", {})
             if not st.session_state.config_mapeo:
@@ -145,7 +196,7 @@ def cargar_datos_equipo(equipo_id):
                         "hid_21": "HID distance (> 21.00 km/h)", "hid_24": "HID distance (> 24.00 km/h)", 
                         "spr_24": "# of Sprints (> 24.00 km/h)", "spr_27": "# of Sprints (> 30.00 km/h)",
                         "acc_max": "ACC. MÁXIMA", "acc_2": "# of Accelerations (> 2.00 m/s²)", "acc_3": "# of Accelerations (> 3.00 m/s²)", "acc_4": "# of Accelerations (> 4.00 m/s²)",
-                        "dcc_2": "# of Decelerations (> 2.00 m/s²)", "dcc_3": "# of Decelerations (> 3.00 m/s²)", "dcc_4": "# of Decelerations (> 4.00 m/s²)",
+                        "dcc_2": "# of Decelerations (> 2.00 m/s²)", "dcc_3": "# of Decelerations (> 3.00 m/s²)", "dcc_4": "# of Decelerations (> 4.00 m/s²) ",
                         "r_0_7": "Distance Speed Range (0 - 7 km)", "r_7_14": "Distance Speed Range (7 - 14 km)", "r_14_21": "Distance Speed Range (14 - 21 km)",
                         "r_21_24": "Distance Speed Range (21 - 24 km)", "r_24_27": "Distance Speed Range (24 - 27 km)", "r_27_30": "Distance Speed Range (27 - 30 km)", "r_30_45": "Distance Speed Range (30 - 45 km)"
                     }
@@ -162,22 +213,19 @@ def guardar_datos(modulo="todo"):
     eq_id = st.session_state.equipo_id
     asegurar_sesion_supabase()
 
-    # --- FUNCIÓN DE SEGURIDAD (ANTI PÉRDIDA DE DATOS Y ANTI-DUPLICADOS) ---
     def safe_sync(tabla, datos_nuevos):
         if "equipo_id" not in st.session_state: return
-        if st.session_state.get(f"_sync_lock_{tabla}", False): return
-        st.session_state[f"_sync_lock_{tabla}"] = True
         eq_id = st.session_state.equipo_id
         
-        # 1. Backup limpio sin claves primarias ('id', 'created_at')
-        backup_res = supabase.table(tabla).select("*").eq("equipo_id", eq_id).execute()
-        ids_existentes = [row["id"] for row in (backup_res.data if backup_res else []) if "id" in row]
+        # 1. Obtener todas las filas existentes (incluso si superaron las 1.000)
+        filas_existentes = _fetch_all_tabla(tabla, eq_id)
+        ids_existentes = [row["id"] for row in filas_existentes if "id" in row]
         backup = [
             {k: v for k, v in row.items() if k not in ("id", "created_at")}
-            for row in (backup_res.data if backup_res else [])
+            for row in filas_existentes
         ]
         try:
-            # 2. Deduplicar (quedándose siempre con la última versión en memoria) y sanitizar JSON
+            # 2. Deduplicar en memoria y sanitizar tipos para PostgreSQL JSONB
             mapa_limpios = {}
             for idx_item, item in enumerate(datos_nuevos or []):
                 item_clean = sanitizar_para_supabase(item)
@@ -195,13 +243,13 @@ def guardar_datos(modulo="todo"):
 
             datos_limpios = list(mapa_limpios.values())
 
-            # 3. Borrado explícito (por equipo_id y refuerzo por IDs primarios)
+            # 3. Borrado completo por equipo_id y por lotes de IDs
             supabase.table(tabla).delete().eq("equipo_id", eq_id).execute()
             if ids_existentes:
                 for i in range(0, len(ids_existentes), 100):
                     supabase.table(tabla).delete().in_("id", ids_existentes[i:i+100]).execute()
 
-            # 4. Inserción en lotes pequeños (20 para sesiones pesadas, 50 para el resto)
+            # 4. Inserción en lotes seguros
             batch_size = 20 if tabla == "sesiones" else 50
             if datos_limpios:
                 for i in range(0, len(datos_limpios), batch_size):
@@ -213,36 +261,24 @@ def guardar_datos(modulo="todo"):
                 for i in range(0, len(backup), 20):
                     supabase.table(tabla).insert(backup[i:i+20]).execute()
             raise e
-        finally:
-            st.session_state[f"_sync_lock_{tabla}"] = False
-    # -----------------------------------------------------------
 
     try:
         # 1. GUARDAR EQUIPO Y CONFIGURACIÓN
-        # 1. GUARDAR EQUIPO Y CONFIGURACIÓN
         if modulo in ["todo", "equipo", "configuracion"]:
-            
-            # --- NUEVA LÓGICA PARA EL ESCUDO ---
             escudo_actual = st.session_state.get("escudo_equipo")
-            # Si hay escudo y NO es una URL (es decir, acaba de ser subido en Base64)
             if escudo_actual and not str(escudo_actual).startswith("http") and len(escudo_actual) > 1000:
                 try:
                     b64_clean = escudo_actual.split(",")[1] if escudo_actual.startswith("data:image") else escudo_actual
-                    import base64
                     img_bytes = base64.b64decode(b64_clean)
                     nombre_arch = f"{eq_id}/escudo_club.jpg"
-                    
-                    # Lo subimos al mismo bucket de los jugadores
                     supabase.storage.from_("loadlab_media").upload(nombre_arch, img_bytes, file_options={"content-type": "image/jpeg", "upsert": "true"})
-                    
                     import time
                     url_base = supabase.storage.from_("loadlab_media").get_public_url(nombre_arch)
-                    escudo_actual = f"{url_base}?t={int(time.time())}" # Cache-busting
+                    escudo_actual = f"{url_base}?t={int(time.time())}"
                     st.session_state.escudo_equipo = escudo_actual
                 except Exception as e:
                     print(f"Error subiendo escudo: {e}")
 
-            # Ahora guardamos en la base de datos (Aunque la columna se llame 'escudo_base64', guardará la URL corta)
             supabase.table("equipos").update({
                 "nombre": st.session_state.nombre_equipo, "categoria": st.session_state.categoria_equipo,
                 "division": st.session_state.division_equipo, "temporada": st.session_state.temporada_equipo,
@@ -269,7 +305,7 @@ def guardar_datos(modulo="todo"):
                         supabase.storage.from_("loadlab_media").upload(nombre_arch, img_bytes, file_options={"content-type": "image/jpeg", "x-upsert": "true"})
                         import time
                         url_base = supabase.storage.from_("loadlab_media").get_public_url(nombre_arch)
-                        foto_url = f"{url_base}?t={int(time.time())}" # Cache-busting
+                        foto_url = f"{url_base}?t={int(time.time())}"
                         p["foto"] = foto_url
                     except Exception as e:
                         print(f"Error subiendo foto al guardar: {e}")
@@ -290,9 +326,9 @@ def guardar_datos(modulo="todo"):
                     "equipo_id": eq_id, "fecha": s.get("fecha"), "tipo": s.get("tipo"), "descripcion": s.get("descripcion"),
                     "competicion": s.get("competicion"), "rival": s.get("rival"), "condicion": s.get("condicion"),
                     "ciudad_manual": s.get("ciudad_manual"), "goles_favor": s.get("goles_favor"), "goles_contra": s.get("goles_contra"),
-                    "clima": s.get("clima", {}), "disponibilidad": s.get("disponibilidad", {}), "estadisticas_partido": s.get("estadisticas_partido", {}),
-                    "estadisticas_invitados": s.get("estadisticas_invitados", []), "informe_generado": s.get("informe_generado", False),
-                    "datos_informe": s.get("datos_informe", [])
+                    "clima": s.get("clima") or {}, "disponibilidad": s.get("disponibilidad") or {}, "estadisticas_partido": s.get("estadisticas_partido") or {},
+                    "estadisticas_invitados": s.get("estadisticas_invitados") or [], "informe_generado": bool(s.get("informe_generado", False)),
+                    "datos_informe": s.get("datos_informe") or []
                 })
             safe_sync("sesiones", sesiones_db)
 
@@ -314,9 +350,6 @@ def guardar_datos(modulo="todo"):
             antro_db = [{"equipo_id": eq_id, "fecha": a.get("fecha"), "jugador": a.get("jugador"), "datos": a} for a in st.session_state.antropometria]
             safe_sync("antropometria_historial", antro_db)
 
-        # LIMPIEZA DE CACHÉ OBLIGATORIA:
-        # Siempre que guardemos un dato en la BD (sea el módulo que sea), 
-        # borramos la caché para que al salir y entrar descargue la información real.
         fetch_datos_equipo_supabase.clear()
         reconstruir_dataframes_globales()
         return True
