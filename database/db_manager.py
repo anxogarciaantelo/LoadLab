@@ -4,7 +4,11 @@ import base64
 import unicodedata
 import numpy as np
 
-url = st.secrets["SUPABASE_def asegurar_sesion_supabase():
+url = st.secrets["SUPABASE_URL"]
+key = st.secrets["SUPABASE_KEY"]
+supabase = create_client(url, key)
+
+def asegurar_sesion_supabase():
     if "access_token" in st.session_state and st.session_state.access_token:
         try:
             supabase.postgrest.auth(st.session_state.access_token)
