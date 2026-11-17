@@ -384,33 +384,54 @@ import requests
 from geopy.geocoders import Nominatim
 import streamlit as st
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(ttl=86400, show_spinner=False)
 def obtener_coordenadas(ciudad):
     if not ciudad: return None, None
+    # 1. API rápida de Geocoding de Open-Meteo (no bloquea IPs de Streamlit Cloud)
     try:
-        geolocator = Nominatim(user_agent="loadlab_sports_app") 
-        location = geolocator.geocode(ciudad, timeout=5)
+        url_geo = f"https://geocoding-api.open-meteo.com/v1/search?name={ requests.utils.quote(str(ciudad).strip()) }&count=1&language=es&format=json"
+        r_geo = requests.get(url_geo, timeout=3).json()
+        if r_geo.get("results"):
+            return r_geo["results"][0]["latitude"], r_geo["results"][0]["longitude"]
+    except Exception:
+        pass
+    # 2. Fallback a Nominatim con timeout corto
+    try:
+        geolocator = Nominatim(user_agent="loadlab_elite_v2")
+        location = geolocator.geocode(ciudad, timeout=3)
         if location:
             return location.latitude, location.longitude
-    except:
+    except Exception:
         pass
     return None, None
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False)
 def obtener_clima(ciudad, fecha_str):
+    if not ciudad or not fecha_str:
+        return None
+    try:
+        fecha_dt = datetime.strptime(str(fecha_str)[:10], "%Y-%m-%d").date()
+        dias_diferencia = (fecha_dt - datetime.today().date()).days
+        # No existe previsión meteorológica a más de 15 días vista
+        if dias_diferencia > 15:
+            return None
+    except Exception:
+        dias_diferencia = 0
+
     lat, lon = obtener_coordenadas(ciudad)
     if not lat or not lon:
         return None
     
     try:
-        # 1. Primero intentamos con el archivo histórico (Ideal para sesiones de semanas pasadas)
-        url_archive = f"https://archive-api.open-meteo.com/v1/archive?latitude={lat}&longitude={lon}&daily=temperature_2m_max,precipitation_sum&timezone=auto&start_date={fecha_str}&end_date={fecha_str}"
-        response = requests.get(url_archive).json()
+        response = {}
+        # Solo llamamos al archivo histórico si la sesión es de hace más de 5 días
+        if dias_diferencia < -5:
+            url_archive = f"https://archive-api.open-meteo.com/v1/archive?latitude={lat}&longitude={lon}&daily=temperature_2m_max,precipitation_sum&timezone=auto&start_date={fecha_str}&end_date={fecha_str}"
+            response = requests.get(url_archive, timeout=3).json()
         
-        # 2. Si da error (porque la fecha es de hoy o de hace solo 2 días), usamos el pronóstico actual
         if "error" in response or "daily" not in response:
             url_forecast = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&daily=temperature_2m_max,precipitation_sum&timezone=auto&start_date={fecha_str}&end_date={fecha_str}"
-            response = requests.get(url_forecast).json()
+            response = requests.get(url_forecast, timeout=3).json()
 
         if "daily" in response and response["daily"].get("temperature_2m_max"):
             t_max = response["daily"]["temperature_2m_max"][0]
